@@ -31,7 +31,7 @@ See `.env.example`. Summary:
 | `NEXTAUTH_SECRET` | Session-JWT signing secret. `openssl rand -base64 32`. |
 | `STEAM_API_KEY` | One app key, server-side only, never sent to the client. |
 | `AUTH_CODE_ENCRYPTION_KEY` | 32-byte hex; encrypts per-user Valve auth codes at rest. |
-| `WRITE_ENABLED` | `"true"` enables the stage-batched write-back to Valve. |
+| `WRITE_ENABLED` | `"true"` enables the stage-batched write-back to Valve (**destructive** — overwrites the owner's live picks). Defaults `false`; leave off for the first tournament run, flip on only for deploy-smoke. |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web Push keypair. Generate: `npx web-push generate-vapid-keys`. |
 | `VAPID_SUBJECT` | `mailto:` contact for push. |
 | `STAGE_LOCKS_JSON` | (optional) per-section pick cutoffs for the reminder job, e.g. `{"105":{"name":"Stage I","lockAt":"2026-06-02T09:00:00Z"}}`. |
