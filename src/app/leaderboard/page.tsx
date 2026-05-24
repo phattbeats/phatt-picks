@@ -258,6 +258,20 @@ export default async function LeaderboardPage() {
             })}
           </div>
         )}
+
+        {/* Results freshness + required CC-BY-SA attribution (handoff §16) */}
+        <footer style={{ marginTop: "var(--space-6)", paddingTop: "var(--space-4)", borderTop: "1px solid var(--bg3)", textAlign: "center" }}>
+          <p style={{ color: "var(--text-low)", fontSize: "0.75rem", margin: 0 }}>
+            Scores update from official results as each stage completes.
+          </p>
+          <p style={{ color: "var(--text-low)", fontSize: "0.6875rem", margin: "var(--space-1) 0 0" }}>
+            Results:{" "}
+            <a href="https://liquipedia.net" target="_blank" rel="noopener noreferrer" style={{ color: "var(--text-mid)" }}>
+              Liquipedia
+            </a>{" "}
+            (CC-BY-SA 3.0)
+          </p>
+        </footer>
       </div>
       <MobileNav />
     </>

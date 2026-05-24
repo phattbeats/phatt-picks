@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { PwaRegister } from "@/components/PwaRegister";
 
 export const metadata: Metadata = {
   title: "phaTT Picks",
@@ -30,7 +31,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" style={{ background: "var(--bg0)" }}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <PwaRegister />
+      </body>
     </html>
   );
 }
