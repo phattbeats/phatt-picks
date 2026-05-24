@@ -13,6 +13,8 @@
 
 import { parseSafeJson } from "./bigint";
 import type { PredictionsEnvelope } from "./predictions";
+import type { ItemsEnvelope } from "./items";
+import { buildUploadBody, type UploadPick } from "./write-core";
 
 const BASE = "https://api.steampowered.com/ICSGOTournaments_730";
 
@@ -68,5 +70,59 @@ export async function fetchTournamentPredictions(
   const text = await res.text();
   if (!res.ok) throw new ValveApiError(res.status, "GetTournamentPredictions");
   // bigint-safe: itemids are 17+ digits and JSON.parse would corrupt them (rule #2).
+  return parseSafeJson(text) as PredictionsEnvelope;
+}
+
+/**
+ * Read a user's owned lockable tournament items. The `type:"team"` items carry
+ * the itemids the write path must lock (handoff §5). itemids are bigints —
+ * parsed bigint-safe (rule #2) so they stay strings end-to-end.
+ */
+export async function fetchTournamentItems(
+  event: number,
+  steamId: string,
+  steamidkey: string,
+): Promise<ItemsEnvelope> {
+  const qs = new URLSearchParams({
+    key: requireKey(),
+    event: String(event),
+    steamid: steamId,
+    steamidkey,
+  });
+  const res = await fetch(`${BASE}/GetTournamentItems/v1/?${qs.toString()}`, {
+    cache: "no-store",
+  });
+  const text = await res.text();
+  if (!res.ok) throw new ValveApiError(res.status, "GetTournamentItems");
+  return parseSafeJson(text) as ItemsEnvelope;
+}
+
+/**
+ * Write a batch of picks (a whole stage, or the whole playoff bracket) in one
+ * indexed call (handoff §0.1/§8). Picks are sent as the documented 1-based
+ * indexed params built by write-core; itemids go out as exact digit strings
+ * (rule #2). On 200, returns the parsed envelope so the caller can adopt any
+ * itemids Valve assigned. A non-200 throws ValveApiError carrying the status so
+ * the caller can degrade (rule #7) — failures are surfaced, never silently
+ * retried (rule #8).
+ */
+export async function uploadTournamentPredictions(
+  event: number,
+  steamId: string,
+  steamidkey: string,
+  picks: UploadPick[],
+): Promise<PredictionsEnvelope> {
+  const body = buildUploadBody(
+    { key: requireKey(), event, steamid: steamId, steamidkey },
+    picks,
+  );
+  const res = await fetch(`${BASE}/UploadTournamentPredictions/v1/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: body.toString(),
+    cache: "no-store",
+  });
+  const text = await res.text();
+  if (!res.ok) throw new ValveApiError(res.status, "UploadTournamentPredictions");
   return parseSafeJson(text) as PredictionsEnvelope;
 }
