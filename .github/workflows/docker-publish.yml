@@ -17,6 +17,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -43,6 +45,7 @@ jobs:
             type=semver,pattern={{version}}
 
       - name: Build and push
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -51,3 +54,48 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # Prove the published image actually boots: schema push + server start + health.
+  smoke-test:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run the image with throwaway config
+        run: |
+          docker run -d --name picks -p 3000:3000 \
+            -e DATABASE_URL="file:/data/smoke.db" \
+            -e NEXTAUTH_URL="http://localhost:3000" \
+            -e NEXTAUTH_SECRET="smoke-test-secret-not-real" \
+            -e STEAM_API_KEY="0000000000000000" \
+            -e AUTH_CODE_ENCRYPTION_KEY="$(openssl rand -hex 32)" \
+            -e VAPID_PUBLIC_KEY="smoke" \
+            -e VAPID_PRIVATE_KEY="smoke" \
+            -e VAPID_SUBJECT="mailto:smoke@phatt.tech" \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build-and-push.outputs.digest }}
+
+      - name: Wait for /api/health to report ok
+        run: |
+          for i in $(seq 1 40); do
+            body=$(curl -fsS http://localhost:3000/api/health 2>/dev/null || true)
+            echo "attempt $i: $body"
+            if echo "$body" | grep -q '"status":"ok"'; then
+              echo "Container booted and health is green."
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::Health never went green"; docker logs picks; exit 1
+
+      - name: Container logs (always)
+        if: always()
+        run: docker logs picks || true
