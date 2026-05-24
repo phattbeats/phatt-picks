@@ -67,7 +67,7 @@ export default async function AuthCodeHelpPage() {
 
   return (
     <>
-      <div className="with-nav" style={{ padding: "var(--space-4)", position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+      <div style={{ padding: "var(--space-4) var(--space-4) calc(72px + env(safe-area-inset-bottom) + var(--space-4))", position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
         <header>
           <h1 style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: "1.5rem", fontWeight: 700, color: "var(--text-hi)", margin: 0 }}>
             Connect your Steam picks

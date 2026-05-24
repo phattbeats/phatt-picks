@@ -37,8 +37,14 @@ function ensureVapid(): boolean {
   const cfg = configured();
   if (!cfg) return false;
   if (!vapidReady) {
-    webpush.setVapidDetails(cfg.subject, cfg.publicKey, cfg.privateKey);
-    vapidReady = true;
+    try {
+      // Throws on a malformed subject (must be mailto: or https URL). Treat that
+      // as "push unavailable" rather than letting it 500 a request.
+      webpush.setVapidDetails(cfg.subject, cfg.publicKey, cfg.privateKey);
+      vapidReady = true;
+    } catch {
+      return false;
+    }
   }
   return true;
 }

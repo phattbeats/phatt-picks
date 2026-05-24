@@ -1,4 +1,5 @@
 import { MobileNav } from "@/components/ui/MobileNav";
+import { LastUpdated } from "@/components/LastUpdated";
 import { prisma } from "@/lib/db";
 import { getCommittedLayout } from "@/lib/layout";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
@@ -20,6 +21,12 @@ export default async function LeaderboardPage() {
   const outcomes = await prisma.stageOutcome.findMany({
     where: { eventId: EVENT_ID },
   });
+
+  // Latest scored-result time → drives the leaderboard "last updated" line (§16).
+  const latestResolvedAt = outcomes.reduce<Date | null>(
+    (max, o) => (max === null || o.resolvedAt > max ? o.resolvedAt : max),
+    null,
+  );
 
   const outcomeMap: OutcomeMap = {};
   for (const o of outcomes) {
@@ -262,7 +269,11 @@ export default async function LeaderboardPage() {
         {/* Results freshness + required CC-BY-SA attribution (handoff §16) */}
         <footer style={{ marginTop: "var(--space-6)", paddingTop: "var(--space-4)", borderTop: "1px solid var(--bg3)", textAlign: "center" }}>
           <p style={{ color: "var(--text-low)", fontSize: "0.75rem", margin: 0 }}>
-            Scores update from official results as each stage completes.
+            {latestResolvedAt ? (
+              <LastUpdated iso={latestResolvedAt.toISOString()} />
+            ) : (
+              "Scores update from official results as each stage completes."
+            )}
           </p>
           <p style={{ color: "var(--text-low)", fontSize: "0.6875rem", margin: "var(--space-1) 0 0" }}>
             Results:{" "}
