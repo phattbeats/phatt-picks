@@ -1,0 +1,55 @@
+{
+  "_note": "VERIFICATION FIXTURE — not live results. A hand-derived known case used by verify-m4-scoring.ts to prove the scoring engine against expected totals. Team pickids are real IEM Cologne 2026 layout pickids; outcomes/picks are invented for the test.",
+  "outcomes": [
+    { "sectionId": 105, "groupId": 271, "slotIndex": 0, "winnerPickId": 115 },
+    { "sectionId": 105, "groupId": 271, "slotIndex": 1, "winnerPickId": 135 },
+    { "sectionId": 105, "groupId": 271, "slotIndex": 2, "winnerPickId": 95 },
+    { "sectionId": 105, "groupId": 271, "slotIndex": 3, "winnerPickId": 137 },
+    { "sectionId": 105, "groupId": 271, "slotIndex": 4, "winnerPickId": 69 },
+    { "sectionId": 105, "groupId": 271, "slotIndex": 5, "winnerPickId": 140 },
+    { "sectionId": 105, "groupId": 271, "slotIndex": 6, "winnerPickId": 80 },
+    { "sectionId": 105, "groupId": 271, "slotIndex": 7, "winnerPickId": 147 },
+    { "sectionId": 105, "groupId": 271, "slotIndex": 8, "winnerPickId": 87 },
+    { "sectionId": 105, "groupId": 271, "slotIndex": 9, "winnerPickId": 74 },
+    { "sectionId": 108, "groupId": 274, "slotIndex": 0, "winnerPickId": 115 },
+    { "sectionId": 110, "groupId": 280, "slotIndex": 0, "winnerPickId": 135 }
+  ],
+  "players": {
+    "alice": {
+      "_desc": "local player, perfect on every resolved slot: 10 Swiss (10x1) + QF1 (12) + GF (7)",
+      "expectedTotal": 29,
+      "picks": [
+        { "sectionId": 105, "groupId": 271, "slotIndex": 0, "pickId": 115 },
+        { "sectionId": 105, "groupId": 271, "slotIndex": 1, "pickId": 135 },
+        { "sectionId": 105, "groupId": 271, "slotIndex": 2, "pickId": 95 },
+        { "sectionId": 105, "groupId": 271, "slotIndex": 3, "pickId": 137 },
+        { "sectionId": 105, "groupId": 271, "slotIndex": 4, "pickId": 69 },
+        { "sectionId": 105, "groupId": 271, "slotIndex": 5, "pickId": 140 },
+        { "sectionId": 105, "groupId": 271, "slotIndex": 6, "pickId": 80 },
+        { "sectionId": 105, "groupId": 271, "slotIndex": 7, "pickId": 147 },
+        { "sectionId": 105, "groupId": 271, "slotIndex": 8, "pickId": 87 },
+        { "sectionId": 105, "groupId": 271, "slotIndex": 9, "pickId": 74 },
+        { "sectionId": 108, "groupId": 274, "slotIndex": 0, "pickId": 115 },
+        { "sectionId": 110, "groupId": 280, "slotIndex": 0, "pickId": 135 }
+      ]
+    },
+    "bob": {
+      "_desc": "connected player, 6/10 Swiss correct + wrong QF1 + correct GF: 6x1 + 0 + 7",
+      "expectedTotal": 13,
+      "picks": [
+        { "sectionId": 105, "groupId": 271, "slotIndex": 0, "pickId": 115 },
+        { "sectionId": 105, "groupId": 271, "slotIndex": 1, "pickId": 135 },
+        { "sectionId": 105, "groupId": 271, "slotIndex": 2, "pickId": 95 },
+        { "sectionId": 105, "groupId": 271, "slotIndex": 3, "pickId": 137 },
+        { "sectionId": 105, "groupId": 271, "slotIndex": 4, "pickId": 69 },
+        { "sectionId": 105, "groupId": 271, "slotIndex": 5, "pickId": 140 },
+        { "sectionId": 105, "groupId": 271, "slotIndex": 6, "pickId": 48 },
+        { "sectionId": 105, "groupId": 271, "slotIndex": 7, "pickId": 48 },
+        { "sectionId": 105, "groupId": 271, "slotIndex": 8, "pickId": 48 },
+        { "sectionId": 105, "groupId": 271, "slotIndex": 9, "pickId": 48 },
+        { "sectionId": 108, "groupId": 274, "slotIndex": 0, "pickId": 135 },
+        { "sectionId": 110, "groupId": 280, "slotIndex": 0, "pickId": 135 }
+      ]
+    }
+  }
+}

@@ -8,8 +8,9 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getCommittedLayout, buildTeamMap } from "@/lib/layout";
+import { getCommittedLayout } from "@/lib/layout";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
+import { visibleCoinTier } from "@/lib/coin-core";
 import { getSession } from "@/lib/session";
 
 const EVENT_ID = 26;
@@ -85,17 +86,14 @@ export async function GET() {
     const picks = playerPickMap[pid] ?? {};
     const score = scorePlayer(layout, picks, outcomeMap);
 
-    // Coin gating: ONLY show coin when synced && hasViewerPass && hasValveCoin
-    const showCoin = meta.synced && meta.hasViewerPass && meta.hasValveCoin;
-
     return {
       playerId: pid,
       displayName: meta.displayName,
       avatarUrl: meta.avatarUrl,
       isLocal: meta.isLocal,
       synced: meta.synced,
-      // Coin: null unless all three conditions met
-      coinTier: showCoin ? meta.coinTier : null,
+      // Coin gate (rule #4) — null unless synced && hasViewerPass && hasValveCoin.
+      coinTier: visibleCoinTier(meta),
       score: score.total,
       bySection: score.bySection,
       isSelf: session?.playerId === pid,
