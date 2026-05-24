@@ -1,10 +1,17 @@
 services:
   phatt-picks:
+    # Pull the published image; override with `docker compose build` to build locally.
+    image: ghcr.io/phattbeats/phatt-picks:latest
     build: .
     container_name: phatt-picks
     restart: unless-stopped
     networks:
       - phattvip
+    # SWAG on phattvip proxies to this container by name on port 3000, so no
+    # published port is needed in production. For direct/LAN testing without
+    # SWAG, uncomment to reach it at http://<unraid-ip>:3000.
+    # ports:
+    #   - "3000:3000"
     volumes:
       # SQLite on appdata mount — NOT a FUSE share
       - /mnt/user/appdata/phatt-picks:/data
@@ -17,6 +24,9 @@ services:
       - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
       - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
       - VAPID_SUBJECT=${VAPID_SUBJECT}
+      # Optional: enable destructive write-back to Valve, and per-stage pick locks
+      - WRITE_ENABLED=${WRITE_ENABLED:-false}
+      - STAGE_LOCKS_JSON=${STAGE_LOCKS_JSON:-}
       - NODE_ENV=production
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
