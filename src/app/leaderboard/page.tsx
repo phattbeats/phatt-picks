@@ -2,6 +2,7 @@ import { MobileNav } from "@/components/ui/MobileNav";
 import { prisma } from "@/lib/db";
 import { getCommittedLayout } from "@/lib/layout";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
+import { visibleCoinTier } from "@/lib/coin-core";
 import { getSession } from "@/lib/session";
 
 const EVENT_ID = 26;
@@ -76,14 +77,14 @@ export default async function LeaderboardPage() {
     .map(([pid, meta]) => {
       const picks = playerPickMap[pid] ?? {};
       const score = scorePlayer(layout, picks, outcomeMap);
-      const showCoin = meta.synced && meta.hasViewerPass && meta.hasValveCoin;
       return {
         playerId: pid,
         displayName: meta.displayName,
         avatarUrl: meta.avatarUrl,
         isLocal: meta.isLocal,
         synced: meta.synced,
-        coinTier: showCoin ? meta.coinTier : null,
+        // Coin gate (rule #4) — null unless synced && hasViewerPass && hasValveCoin.
+        coinTier: visibleCoinTier(meta),
         score: score.total,
         isSelf: session?.playerId === pid,
       };
@@ -108,6 +109,24 @@ export default async function LeaderboardPage() {
           <p style={{ color: "var(--text-mid)", fontSize: "0.875rem", margin: "var(--space-1) 0 0" }}>
             {rows.length} participant{rows.length !== 1 ? "s" : ""} · IEM Cologne 2026
           </p>
+          {rows.length >= 2 && (
+            <a
+              href="/leaderboard/compare"
+              style={{
+                display: "inline-block",
+                marginTop: "var(--space-3)",
+                fontFamily: "'Rajdhani', sans-serif",
+                fontWeight: 600,
+                fontSize: "0.8125rem",
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                color: "var(--accent)",
+                textDecoration: "none",
+              }}
+            >
+              Compare picks →
+            </a>
+          )}
         </header>
 
         {rows.length === 0 ? (
