@@ -2,21 +2,16 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import type { LogoTier } from "@/lib/logos";
 
 interface TeamLogoProps {
-  logoSlug: string;   // from layout's team.logo field
+  tiers: LogoTier[]; // ordered candidates from resolveLogoTiers()
   teamName: string;
-  pickid: number;     // 0 = TBD
   size?: number;
-  byMykelUrl?: string; // resolved URL from ByMykel (optional)
 }
 
-/** Two-letter monogram for fallback / TBD slots. */
-function Monogram({ name, size }: { name: string; size: number }) {
-  const letters = name === "TBD"
-    ? "?"
-    : name.split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase().slice(0, 2);
-
+/** Two-letter monogram badge — the terminal fallback and TBD slot. */
+function Monogram({ label, teamName, size }: { label: string; teamName: string; size: number }) {
   return (
     <div
       style={{
@@ -33,32 +28,36 @@ function Monogram({ name, size }: { name: string; size: number }) {
         color: "var(--text-mid)",
         flexShrink: 0,
       }}
-      aria-label={name}
+      aria-label={teamName}
+      title={teamName}
     >
-      {letters}
+      {label}
     </div>
   );
 }
 
-export function TeamLogo({ logoSlug, teamName, pickid, size = 32, byMykelUrl }: TeamLogoProps) {
-  const [failed, setFailed] = useState(false);
+/**
+ * Renders the first logo tier that loads, advancing past image tiers that
+ * 404 / fail. The last tier is always a monogram, so this can never render
+ * a broken image.
+ */
+export function TeamLogo({ tiers, teamName, size = 32 }: TeamLogoProps) {
+  const [index, setIndex] = useState(0);
+  const current = tiers[Math.min(index, tiers.length - 1)];
 
-  if (pickid === 0) {
-    return <Monogram name="TBD" size={size} />;
-  }
-
-  if (failed || !byMykelUrl) {
-    return <Monogram name={teamName} size={size} />;
+  if (!current || current.kind === "monogram") {
+    return <Monogram label={current?.kind === "monogram" ? current.label : "?"} teamName={teamName} size={size} />;
   }
 
   return (
     <Image
-      src={byMykelUrl}
+      src={current.src}
       alt={teamName}
+      title={teamName}
       width={size}
       height={size}
-      style={{ borderRadius: 4, objectFit: "contain" }}
-      onError={() => setFailed(true)}
+      style={{ borderRadius: 4, objectFit: "contain", flexShrink: 0 }}
+      onError={() => setIndex((i) => i + 1)}
       unoptimized
     />
   );

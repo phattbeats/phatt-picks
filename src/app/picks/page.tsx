@@ -3,6 +3,8 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { mirrorPlayerPredictionsThrottled } from "@/lib/predictions-sync";
 import { MobileNav } from "@/components/ui/MobileNav";
+import { TeamLogo } from "@/components/ui/TeamLogo";
+import { resolveLogoTiers } from "@/lib/logos";
 
 const EVENT_ID = 26;
 
@@ -189,9 +191,12 @@ export default async function PicksPage({
                             {slot.index + 1}
                           </span>
                           {team ? (
-                            <span style={{ color: "var(--text-hi)", fontSize: "0.875rem", fontWeight: 500 }}>
-                              {team.name}
-                            </span>
+                            <>
+                              <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={28} />
+                              <span style={{ color: "var(--text-hi)", fontSize: "0.875rem", fontWeight: 500 }}>
+                                {team.name}
+                              </span>
+                            </>
                           ) : (
                             <span style={{ color: "var(--text-low)", fontSize: "0.875rem" }}>
                               — Pick a team
@@ -228,13 +233,6 @@ export default async function PicksPage({
                         .map((teamSlot) => {
                           const t = teamMap.get(teamSlot.pickid);
                           if (!t) return null;
-                          const monogram = t.name
-                            .split(/\s+/)
-                            .slice(0, 2)
-                            .map((w) => w[0])
-                            .join("")
-                            .toUpperCase()
-                            .slice(0, 2);
 
                           return (
                             <div
@@ -252,24 +250,7 @@ export default async function PicksPage({
                                 minHeight: 44,
                               }}
                             >
-                              <span
-                                style={{
-                                  width: 24,
-                                  height: 24,
-                                  borderRadius: "50%",
-                                  background: "var(--bg2)",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  fontFamily: "'Rajdhani', sans-serif",
-                                  fontWeight: 700,
-                                  fontSize: "0.625rem",
-                                  color: "var(--text-mid)",
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {monogram}
-                              </span>
+                              <TeamLogo tiers={resolveLogoTiers(t)} teamName={t.name} size={24} />
                               {t.name}
                             </div>
                           );
