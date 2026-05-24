@@ -1,0 +1,32 @@
+services:
+  phatt-picks:
+    build: .
+    container_name: phatt-picks
+    restart: unless-stopped
+    networks:
+      - phattvip
+    volumes:
+      # SQLite on appdata mount — NOT a FUSE share
+      - /mnt/user/appdata/phatt-picks:/data
+    environment:
+      - DATABASE_URL=file:/data/phatt-picks.db
+      - NEXTAUTH_URL=https://pickems.phatt.vip
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - STEAM_API_KEY=${STEAM_API_KEY}
+      - AUTH_CODE_ENCRYPTION_KEY=${AUTH_CODE_ENCRYPTION_KEY}
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
+      - VAPID_SUBJECT=${VAPID_SUBJECT}
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "com.unraid.docker.managed=true"
+
+networks:
+  phattvip:
+    external: true

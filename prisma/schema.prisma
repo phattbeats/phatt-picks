@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Players: both local and Steam-synced
+model Player {
+  id            String   @id @default(cuid())
+  displayName   String
+  avatarUrl     String?
+  steamId       String?  @unique  // 17-digit SteamID64, stored as string
+  authCode      String?           // encrypted per-user auth code for Valve API
+  isLocal       Boolean  @default(true)
+  hasViewerPass Boolean  @default(false)
+  hasValveCoin  Boolean  @default(false)
+  coinTier      String?           // "bronze" | "silver" | "gold" | "diamond" — null unless hasValveCoin
+  synced        Boolean  @default(false) // true when picks confirmed synced from Valve
+  inviteCode    String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  picks             Pick[]
+  pushSubscriptions PushSubscription[]
+}
+
+// Individual slot picks — one row per (player, event, section, group, slotIndex)
+// itemId stored as string — bigint (17+ digits) cannot be safely represented as JS number
+model Pick {
+  id        String   @id @default(cuid())
+  playerId  String
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  eventId   Int      // always keyed — multi-event from day one
+  sectionId Int
+  groupId   Int
+  slotIndex Int
+  pickId    Int      // team pickid from layout; 0 = TBD/unset
+  itemId    String   // bigint stored as string ("17293822569790899385")
+  isLocal   Boolean  @default(true) // false when confirmed written to Valve
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([playerId, eventId, sectionId, groupId, slotIndex])
+  @@index([eventId, sectionId])
+}
+
+// Stage outcomes (what actually happened) — used for scoring
+// Source: "valve" (oracle API) or "liquipedia" (MediaWiki API fallback)
+model StageOutcome {
+  id         String   @id @default(cuid())
+  eventId    Int
+  sectionId  Int
+  groupId    Int
+  slotIndex  Int
+  winnerPickId Int    // team pickid that won
+  source     String   // "valve" | "liquipedia"
+  resolvedAt DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([eventId, sectionId, groupId, slotIndex])
+  @@index([eventId])
+}
+
+// Cached layout/predictions from Valve API — refreshed periodically during event
+model LayoutCache {
+  id        String   @id @default(cuid())
+  eventId   Int      @unique
+  data      String   // JSON string — bigints serialized as strings before storage
+  fetchedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// PWA push subscriptions
+model PushSubscription {
+  id       String   @id @default(cuid())
+  playerId String
+  player   Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  endpoint String   @unique
+  keys     String   // JSON {p256dh, auth}
+  createdAt DateTime @default(now())
+
+  @@index([playerId])
+}

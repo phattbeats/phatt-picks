@@ -1,0 +1,71 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+/* Design system tokens — from DESIGN-SYSTEM-SHEET.md */
+:root {
+  --bg0: #0a0a0b;
+  --bg1: #121214;
+  --bg2: #1a1a1d;
+  --bg3: #232326;
+  --text-hi: #fafafa;
+  --text-mid: #a1a1aa;
+  --text-low: #52525b;
+  --accent: #ef4444;
+  --accent-2: #f97316;
+  --correct: #22c55e;
+  --wrong: #71717a;
+  --closing-soon: #f59e0b;
+  --info: #3b82f6;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --ease-sharp: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 400ms;
+}
+
+@theme inline {
+  --color-background: var(--bg0);
+  --color-foreground: var(--text-hi);
+}
+
+* { box-sizing: border-box; }
+
+html {
+  background: var(--bg0);
+  color: var(--text-hi);
+  font-family: 'Inter', sans-serif;
+  font-feature-settings: 'tnum' 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100dvh;
+  background: var(--bg0);
+  position: relative;
+}
+
+/* Grid texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.3;
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0 2px, rgba(255,255,255,0.01) 2px 4px),
+    repeating-linear-gradient(90deg, transparent 0 2px, rgba(255,255,255,0.01) 2px 4px);
+}
+
+.font-display { font-family: 'Rajdhani', sans-serif; }
+.with-nav { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bottom)); }
