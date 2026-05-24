@@ -1,7 +1,7 @@
-import { Suspense } from "react";
 import { getCommittedLayout } from "@/lib/layout";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
+import { mirrorPlayerPredictionsThrottled } from "@/lib/predictions-sync";
 import { MobileNav } from "@/components/ui/MobileNav";
 
 const EVENT_ID = 26;
@@ -15,6 +15,13 @@ export default async function PicksPage({
   const layout = getCommittedLayout();
   const session = await getSession();
 
+  // Connected players: pull live Valve picks into the Pick table before reading
+  // (throttled + graceful — a Valve outage just falls back to stored picks).
+  // Local players have no steamId and skip this path entirely (rule #6).
+  if (session?.steamId) {
+    await mirrorPlayerPredictionsThrottled(session.playerId, EVENT_ID);
+  }
+
   // Default to first section (sectionid 105)
   const activeSectionId = params.section
     ? parseInt(params.section, 10)
@@ -23,7 +30,7 @@ export default async function PicksPage({
   const section = layout.sections.find((s) => s.sectionid === activeSectionId);
 
   // Load player's picks if authenticated
-  let myPicks: Record<number, Record<number, number>> = {}; // groupId → slotIndex → pickId
+  const myPicks: Record<number, Record<number, number>> = {}; // groupId → slotIndex → pickId
   if (session) {
     const picks = await prisma.pick.findMany({
       where: { playerId: session.playerId, eventId: EVENT_ID, sectionId: activeSectionId },
