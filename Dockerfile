@@ -34,6 +34,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# su-exec lets the entrypoint drop from root → nextjs after fixing /data perms.
+RUN apk add --no-cache su-exec
+
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
@@ -51,7 +54,11 @@ COPY --from=builder /app/prisma ./prisma
 # the standalone copy placed above.
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
-USER nextjs
+COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# No USER directive — entrypoint starts as root so it can chown the bind-mounted
+# /data, then exec's as nextjs via su-exec before launching the app.
 
 EXPOSE 3000
 
@@ -61,6 +68,7 @@ ENV HOSTNAME="0.0.0.0"
 # Sync the schema into the (possibly fresh) SQLite file, then start. This repo
 # manages schema via `prisma db push` rather than migration files, so push —
 # not `migrate deploy` — is what creates the tables.
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["sh", "-c", "node_modules/.bin/prisma db push --skip-generate && node server.js"]
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
