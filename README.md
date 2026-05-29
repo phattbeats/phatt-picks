@@ -60,6 +60,17 @@ landing page onboards a friend in one tap — local play needs no Steam account.
 
 ## Deployment (owner wires SWAG)
 
+Images are published to `ghcr.io/phattbeats/phatt-picks`. Pull `:latest` to track `main`, or pin to
+a release tag for rollback:
+
+```bash
+docker pull ghcr.io/phattbeats/phatt-picks:latest      # always-current main
+docker pull ghcr.io/phattbeats/phatt-picks:v0.9.0      # pinnable release
+docker pull ghcr.io/phattbeats/phatt-picks:0.9         # latest patch in the 0.9 line
+```
+
+Cutting a release = push a `vX.Y.Z` git tag; CI publishes `:vX.Y.Z`, `:X.Y`, and updates `:latest`.
+
 Build the container to join `phattvip` with the DB on a non-FUSE appdata path. SWAG proxy-conf the
 owner installs:
 
