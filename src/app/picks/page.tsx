@@ -4,6 +4,11 @@ import { prisma } from "@/lib/db";
 import { mirrorPlayerPredictionsThrottled } from "@/lib/predictions-sync";
 import { MobileNav } from "@/components/ui/MobileNav";
 import { PicksBoard } from "@/components/PicksBoard";
+import {
+  buildResolvedKeys,
+  isStagePickable,
+  type StagePickability,
+} from "@/lib/stage-gate-core";
 
 const EVENT_ID = 26;
 
@@ -29,6 +34,26 @@ export default async function PicksPage({
     : layout.sections[0].sectionid;
 
   const section = layout.sections.find((s) => s.sectionid === activeSectionId);
+
+  // PHA-841: gate downstream stages until previous-stage outcomes resolve.
+  // The committed layout ships every stage `picks_allowed:true` and the
+  // playoff sections carry `pickid:0` placeholders — without this gate the
+  // UI lets players pick teams that haven't been determined yet.
+  const resolvedRows = await prisma.stageOutcome.findMany({
+    where: { eventId: EVENT_ID },
+    select: { sectionId: true, groupId: true, slotIndex: true },
+  });
+  const resolvedKeys = buildResolvedKeys(resolvedRows);
+
+  const sectionPickability: Map<number, StagePickability> = new Map(
+    layout.sections.map((s) => [
+      s.sectionid,
+      isStagePickable(layout, resolvedKeys, s.sectionid),
+    ]),
+  );
+  const activePickability =
+    sectionPickability.get(activeSectionId) ??
+    ({ pickable: false, reason: "unknown-section" } as StagePickability);
 
   // Load player's picks if authenticated
   const myPicks: Record<number, Record<number, number>> = {}; // groupId → slotIndex → pickId
@@ -73,28 +98,71 @@ export default async function PicksPage({
           {layout.sections.map((s) => {
             const active = s.sectionid === activeSectionId;
             const label = s.name.split(" | ")[0];
+            const pick = sectionPickability.get(s.sectionid)!;
+            const locked = !pick.pickable;
+            const tabBg = active
+              ? "var(--accent)"
+              : locked
+                ? "var(--bg1)"
+                : "var(--bg2)";
+            const tabColor = active
+              ? "#fff"
+              : locked
+                ? "var(--text-low)"
+                : "var(--text-mid)";
+            const lockTitle =
+              pick.pickable
+                ? undefined
+                : pick.reason === "previous-stage-unresolved"
+                  ? `Locked — opens after ${pick.previousSectionName}`
+                  : pick.reason === "locked-by-valve"
+                    ? "Locked by Valve"
+                    : "Locked";
+
+            const tabStyle = {
+              flexShrink: 0,
+              padding: "var(--space-2) var(--space-4)",
+              borderRadius: "var(--radius-sm)",
+              background: tabBg,
+              color: tabColor,
+              textDecoration: "none",
+              fontFamily: "'Rajdhani', sans-serif",
+              fontWeight: 600,
+              fontSize: "0.875rem",
+              letterSpacing: "0.05em",
+              textTransform: "uppercase" as const,
+              whiteSpace: "nowrap" as const,
+              minHeight: 44,
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-1)",
+              opacity: locked && !active ? 0.7 : 1,
+              border:
+                locked && !active ? "1px dashed var(--bg3)" : "1px solid transparent",
+              cursor: locked && !active ? "not-allowed" : "pointer",
+            };
+
+            // Locked, non-active tabs are inert: render a <span>, not an <a>.
+            // The lock icon + title carry the affordance.
+            if (locked && !active) {
+              return (
+                <span
+                  key={s.sectionid}
+                  role="link"
+                  aria-disabled="true"
+                  title={lockTitle}
+                  style={tabStyle}
+                >
+                  <span aria-hidden="true" style={{ fontSize: "0.85em" }}>
+                    {"\u{1F512}"}
+                  </span>
+                  {label}
+                </span>
+              );
+            }
+
             return (
-              <a
-                key={s.sectionid}
-                href={`/picks?section=${s.sectionid}`}
-                style={{
-                  flexShrink: 0,
-                  padding: "var(--space-2) var(--space-4)",
-                  borderRadius: "var(--radius-sm)",
-                  background: active ? "var(--accent)" : "var(--bg2)",
-                  color: active ? "#fff" : "var(--text-mid)",
-                  textDecoration: "none",
-                  fontFamily: "'Rajdhani', sans-serif",
-                  fontWeight: 600,
-                  fontSize: "0.875rem",
-                  letterSpacing: "0.05em",
-                  textTransform: "uppercase",
-                  whiteSpace: "nowrap",
-                  minHeight: 44,
-                  display: "flex",
-                  alignItems: "center",
-                }}
-              >
+              <a key={s.sectionid} href={`/picks?section=${s.sectionid}`} style={tabStyle}>
                 {label}
               </a>
             );
@@ -102,7 +170,9 @@ export default async function PicksPage({
         </div>
 
         {/* Stage content */}
-        {section ? (
+        {!section ? (
+          <p style={{ color: "var(--text-mid)" }}>Section not found.</p>
+        ) : activePickability.pickable ? (
           <PicksBoard
             section={section}
             teams={layout.teams}
@@ -111,7 +181,7 @@ export default async function PicksPage({
             eventId={EVENT_ID}
           />
         ) : (
-          <p style={{ color: "var(--text-mid)" }}>Section not found.</p>
+          <LockedStageCard pickability={activePickability} />
         )}
 
         {!session && (
@@ -151,5 +221,73 @@ export default async function PicksPage({
       </div>
       <MobileNav />
     </>
+  );
+}
+
+function LockedStageCard({ pickability }: { pickability: StagePickability }) {
+  const heading =
+    pickability.pickable
+      ? "Locked"
+      : pickability.reason === "previous-stage-unresolved"
+        ? `Opens after ${pickability.previousSectionName}`
+        : pickability.reason === "locked-by-valve"
+          ? "Locked by Valve"
+          : "Locked";
+  const subline =
+    pickability.pickable
+      ? undefined
+      : pickability.reason === "previous-stage-unresolved"
+        ? "Teams for this stage aren't set yet. Picks open automatically once the previous stage's results are in."
+        : pickability.reason === "locked-by-valve"
+          ? "Valve closed the pick window for this stage. Results will appear here as matches complete."
+          : "This stage isn't available.";
+
+  return (
+    <div
+      style={{
+        background: "var(--bg1)",
+        border: "1px dashed var(--bg3)",
+        borderRadius: "var(--radius-lg)",
+        padding: "var(--space-6)",
+        textAlign: "center",
+      }}
+    >
+      <div
+        aria-hidden="true"
+        style={{
+          fontSize: "2rem",
+          marginBottom: "var(--space-3)",
+          color: "var(--text-mid)",
+        }}
+      >
+        {"\u{1F512}"}
+      </div>
+      <h2
+        style={{
+          fontFamily: "'Rajdhani', sans-serif",
+          fontWeight: 700,
+          fontSize: "1.125rem",
+          color: "var(--text-hi)",
+          margin: "0 0 var(--space-2)",
+          letterSpacing: "0.03em",
+        }}
+      >
+        {heading}
+      </h2>
+      {subline && (
+        <p
+          style={{
+            color: "var(--text-mid)",
+            fontSize: "0.875rem",
+            margin: 0,
+            maxWidth: 320,
+            marginInline: "auto",
+            lineHeight: 1.5,
+          }}
+        >
+          {subline}
+        </p>
+      )}
+    </div>
   );
 }

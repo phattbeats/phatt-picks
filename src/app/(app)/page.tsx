@@ -1,8 +1,24 @@
 import { Logo } from "@/components/ui/Logo";
 import { getCommittedLayout } from "@/lib/layout";
+import { prisma } from "@/lib/db";
+import { buildResolvedKeys, isStagePickable } from "@/lib/stage-gate-core";
 
-export default function DashboardPage() {
+const EVENT_ID = 26;
+
+// Stage lock state depends on live StageOutcome rows — render fresh each
+// request so the home page unlocks the next stage automatically as ingestion
+// resolves results (PHA-841).
+export const dynamic = "force-dynamic";
+
+export default async function DashboardPage() {
   const layout = getCommittedLayout();
+
+  // PHA-841: reflect the same stage-pickability gate the /picks page enforces.
+  const resolvedRows = await prisma.stageOutcome.findMany({
+    where: { eventId: EVENT_ID },
+    select: { sectionId: true, groupId: true, slotIndex: true },
+  });
+  const resolvedKeys = buildResolvedKeys(resolvedRows);
 
   return (
     <div style={{ padding: "var(--space-4)", minHeight: "100dvh" }}>
@@ -122,41 +138,85 @@ export default function DashboardPage() {
             const ptsPerPick = group?.points_per_pick ?? 0;
             const picks = group?.picks?.length ?? 0;
             const isPlayoff = section.sectionid >= 108;
+            const pick = isStagePickable(layout, resolvedKeys, section.sectionid);
+            const locked = !pick.pickable;
+
+            const label = section.name.split(" | ")[0];
+            const subline = locked
+              ? pick.reason === "previous-stage-unresolved"
+                ? `Opens after ${pick.previousSectionName}`
+                : pick.reason === "locked-by-valve"
+                  ? "Locked by Valve"
+                  : "Locked"
+              : `${picks} picks · ${ptsPerPick} pt${ptsPerPick !== 1 ? "s" : ""}/pick`;
+
+            const cardStyle = {
+              background: "var(--bg1)",
+              border: locked ? "1px dashed var(--bg3)" : "1px solid var(--bg3)",
+              borderRadius: "var(--radius-md)",
+              padding: "var(--space-4)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              textDecoration: "none",
+              color: "inherit",
+              opacity: locked ? 0.7 : 1,
+              cursor: locked ? "not-allowed" : "pointer",
+              transition: `background var(--duration-fast) var(--ease-sharp)`,
+            } as const;
+
+            const inner = (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                  {locked && (
+                    <span aria-hidden="true" style={{ fontSize: "0.95rem", color: "var(--text-low)" }}>
+                      {"\u{1F512}"}
+                    </span>
+                  )}
+                  <div>
+                    <p
+                      style={{
+                        fontFamily: "'Rajdhani', sans-serif",
+                        fontWeight: 600,
+                        fontSize: "1rem",
+                        color: locked ? "var(--text-mid)" : "var(--text-hi)",
+                        margin: 0,
+                      }}
+                    >
+                      {label}
+                    </p>
+                    <p style={{ color: "var(--text-mid)", fontSize: "0.75rem", margin: "2px 0 0" }}>
+                      {subline}
+                    </p>
+                  </div>
+                </div>
+                <span style={{ color: "var(--text-low)", fontSize: "1rem" }}>
+                  {locked ? "" : "›"}
+                </span>
+              </>
+            );
+
+            if (locked) {
+              return (
+                <div
+                  key={section.sectionid}
+                  role="link"
+                  aria-disabled="true"
+                  title={subline}
+                  style={cardStyle}
+                >
+                  {inner}
+                </div>
+              );
+            }
 
             return (
               <a
                 key={section.sectionid}
                 href={isPlayoff ? "/playoffs" : `/picks?section=${section.sectionid}`}
-                style={{
-                  background: "var(--bg1)",
-                  border: "1px solid var(--bg3)",
-                  borderRadius: "var(--radius-md)",
-                  padding: "var(--space-4)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  textDecoration: "none",
-                  color: "inherit",
-                  transition: `background var(--duration-fast) var(--ease-sharp)`,
-                }}
+                style={cardStyle}
               >
-                <div>
-                  <p
-                    style={{
-                      fontFamily: "'Rajdhani', sans-serif",
-                      fontWeight: 600,
-                      fontSize: "1rem",
-                      color: "var(--text-hi)",
-                      margin: 0,
-                    }}
-                  >
-                    {section.name.split(" | ")[0]}
-                  </p>
-                  <p style={{ color: "var(--text-mid)", fontSize: "0.75rem", margin: "2px 0 0" }}>
-                    {picks} picks · {ptsPerPick} pt{ptsPerPick !== 1 ? "s" : ""}/pick
-                  </p>
-                </div>
-                <span style={{ color: "var(--text-low)", fontSize: "1rem" }}>›</span>
+                {inner}
               </a>
             );
           })}
