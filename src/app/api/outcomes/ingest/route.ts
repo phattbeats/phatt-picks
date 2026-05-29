@@ -1,9 +1,12 @@
 /**
  * Outcome ingestion trigger — POST resolves stage results into StageOutcome.
  *
- * Session-gated (operational action). In production this is driven by a cron/
- * admin path during the event; the hard-cache logic in ingestOutcomes makes it
- * safe to call repeatedly — it only hits a source when slots remain unresolved.
+ * Session-gated (operational action). Any scheduler/cron that calls this route
+ * MUST treat a `reason: "no-locked-unresolved"` response as authoritative and
+ * back off until stage state changes — the ingest is event-gated (PHA-844),
+ * not on a polling timer. ingestOutcomes makes the same gate authoritative
+ * regardless of caller, so a misbehaving scheduler still makes zero source
+ * calls pre-event; this route just exposes the gate to caller diagnostics.
  */
 
 import { NextResponse } from "next/server";

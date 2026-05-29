@@ -79,6 +79,17 @@ server {
 }
 ```
 
+## Outcome ingestion cadence (PHA-844)
+
+`POST /api/outcomes/ingest` is event-gated, not poll-driven. It returns
+`source: "none", reason: "no-locked-unresolved"` whenever the live layout has
+zero locked stages with missing `StageOutcome` rows — i.e. pre-event. A
+scheduler/cron pointed at this route MUST honor that signal and back off until
+stage locks roll over; in that state the route makes **zero** outbound calls to
+Liquipedia. The persisted `SourceState.lastCallAt` enforces the 1-req-per-30s
+Liquipedia min-interval across container restarts, so even a restart loop
+cannot violate the API terms. Regression: `node scripts/verify-outcomes-gate.ts`.
+
 ## Attribution
 
 Match results / outcomes: [Liquipedia](https://liquipedia.net) (CC-BY-SA 3.0). Team logos:

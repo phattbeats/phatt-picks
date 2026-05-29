@@ -74,6 +74,18 @@ model LayoutCache {
   updatedAt DateTime @updatedAt
 }
 
+// Per-source state for outcome ingestion — persisted throttle (PHA-844).
+// The in-process min-interval gate in liquipedia.ts resets every container
+// restart, so a restart-loop pre-event could still hammer the API. This row
+// records the wall-clock timestamp of the last successful (or attempted)
+// source call; the gate consults it before any new request.
+model SourceState {
+  id           String   @id @default(cuid())
+  source       String   @unique // "liquipedia" | "valve"
+  lastCallAt   DateTime
+  updatedAt    DateTime @updatedAt
+}
+
 // PWA push subscriptions
 model PushSubscription {
   id       String   @id @default(cuid())

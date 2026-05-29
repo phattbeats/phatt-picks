@@ -17,13 +17,14 @@
  */
 
 import { prisma } from "./db";
-import { getCommittedLayout, type Layout } from "./layout";
+import { getCommittedLayout } from "./layout";
 import {
   normalizeOutcomes,
+  pickLockedUnresolvedSlots,
   type NormalizedOutcome,
   type RawResolvedSlot,
 } from "./outcomes-core";
-import { fetchLiquipediaResults } from "./liquipedia";
+import { fetchLiquipediaResults, LiquipediaThrottledError } from "./liquipedia";
 
 export interface IngestSummary {
   eventId: number;
@@ -33,19 +34,8 @@ export interface IngestSummary {
   written: number;
   rejected: number;
   error?: string;
-}
-
-/** Every (sectionId, groupId, slotIndex) the layout defines a result for. */
-function allSlots(layout: Layout): RawResolvedSlot[] {
-  const slots: RawResolvedSlot[] = [];
-  for (const s of layout.sections) {
-    for (const g of s.groups) {
-      for (const p of g.picks) {
-        slots.push({ sectionId: s.sectionid, groupId: g.groupid, slotIndex: p.index, winnerPickId: 0 });
-      }
-    }
-  }
-  return slots;
+  /** Why no source call happened — set when source === "none". */
+  reason?: "no-locked-unresolved" | "fully-resolved" | "throttled" | "source-error";
 }
 
 /**
@@ -74,13 +64,21 @@ export async function ingestOutcomes(eventId: number): Promise<IngestSummary> {
   const resolvedKey = new Set(existing.map((o) => `${o.sectionId}:${o.groupId}:${o.slotIndex}`));
   const resolvedBefore = resolvedKey.size;
 
-  const unresolved = allSlots(layout).filter(
-    (s) => !resolvedKey.has(`${s.sectionId}:${s.groupId}:${s.slotIndex}`)
-  );
-
-  // Cache hard: nothing left to resolve → no source call at all.
-  if (unresolved.length === 0) {
-    return { eventId, source: "none", resolvedBefore, resolvedAfter: resolvedBefore, written: 0, rejected: 0 };
+  // Gate on stage state, not just resolved rows. Only stages whose pick window
+  // has CLOSED can have results — pre-event every stage is open, so this is []
+  // and we never touch the source (PHA-844: the old `unresolved` set was the
+  // entire layout pre-event, hammering Liquipedia on every tick).
+  const lockedUnresolved = pickLockedUnresolvedSlots(layout, resolvedKey);
+  if (lockedUnresolved.length === 0) {
+    return {
+      eventId,
+      source: "none",
+      resolvedBefore,
+      resolvedAfter: resolvedBefore,
+      written: 0,
+      rejected: 0,
+      reason: resolvedBefore > 0 ? "fully-resolved" : "no-locked-unresolved",
+    };
   }
 
   let raw: RawResolvedSlot[] = [];
@@ -99,9 +97,30 @@ export async function ingestOutcomes(eventId: number): Promise<IngestSummary> {
       source = "liquipedia";
     }
   } catch (e) {
+    // Persisted throttle blocked the call: not an outage, just "try later".
+    if (e instanceof LiquipediaThrottledError) {
+      return {
+        eventId,
+        source: "none",
+        resolvedBefore,
+        resolvedAfter: resolvedBefore,
+        written: 0,
+        rejected: 0,
+        reason: "throttled",
+      };
+    }
     // Source outage: keep what we have, report, do not throw into the caller.
     error = e instanceof Error ? e.message : String(e);
-    return { eventId, source: "none", resolvedBefore, resolvedAfter: resolvedBefore, written: 0, rejected: 0, error };
+    return {
+      eventId,
+      source: "none",
+      resolvedBefore,
+      resolvedAfter: resolvedBefore,
+      written: 0,
+      rejected: 0,
+      error,
+      reason: "source-error",
+    };
   }
 
   // Only persist slots not already resolved (terminal rows are never rewritten).

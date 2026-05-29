@@ -27,6 +27,50 @@ export interface RawResolvedSlot {
   winnerPickId: number;
 }
 
+/** Identity of a slot (no winner) — used to enumerate ingest candidates. */
+export interface SlotRef {
+  sectionId: number;
+  groupId: number;
+  slotIndex: number;
+}
+
+/**
+ * Slots eligible for outcome ingestion: those whose pick window has CLOSED
+ * (`picks_allowed === false`) and which do not yet have a resolved row.
+ *
+ * Why locked-only: results can only exist after picks lock. Filtering on
+ * "unresolved" alone (the old behavior) treats every open stage as a candidate
+ * pre-event, which makes the ingest tick call the source on every poll — the
+ * Liquipedia bug that triggered PHA-844. Locked-and-unresolved yields the empty
+ * set against the all-open layout, so the caller can short-circuit before any
+ * source request.
+ *
+ * Pure: takes the layout and an already-fetched set of resolved-slot keys
+ * (`"sectionId:groupId:slotIndex"`), returns the filtered list. The caller is
+ * responsible for DB I/O.
+ */
+export function pickLockedUnresolvedSlots(
+  layout: Layout,
+  resolvedKey: ReadonlySet<string>
+): SlotRef[] {
+  const out: SlotRef[] = [];
+  for (const section of layout.sections) {
+    for (const group of section.groups) {
+      if (group.picks_allowed) continue; // stage still open — no results possible
+      for (const p of group.picks) {
+        const key = `${section.sectionid}:${group.groupid}:${p.index}`;
+        if (resolvedKey.has(key)) continue; // terminal — already in StageOutcome
+        out.push({
+          sectionId: section.sectionid,
+          groupId: group.groupid,
+          slotIndex: p.index,
+        });
+      }
+    }
+  }
+  return out;
+}
+
 /** A validated outcome row ready to persist. */
 export interface NormalizedOutcome extends RawResolvedSlot {
   source: OutcomeSource;
