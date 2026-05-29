@@ -48,6 +48,24 @@ function proveItemidPrecision(): void {
     String(naiveItemid) !== "17293822569791947961",
     `JSON.parse→${naiveItemid}`,
   );
+
+  // PHA-847 regression: bigints in ARRAY position must also survive intact.
+  // Old regex `:\s*(\d{16,})` only matched object-value position, so array
+  // elements after the first (preceded by `,`/`[`, not `:`) got corrupted.
+  const arrRaw = `{"ids":[17293822569790899385,17293822569790964921]}`;
+  const arr = parseSafeJson(arrRaw) as { ids: unknown[] };
+  check(
+    "parseSafeJson preserves bigints inside arrays (PHA-847)",
+    arr.ids[0] === "17293822569790899385" && arr.ids[1] === "17293822569790964921",
+    JSON.stringify(arr.ids),
+  );
+  const naiveArr = JSON.parse(arrRaw) as { ids: number[] };
+  check(
+    "JSON.parse WOULD corrupt array bigints",
+    String(naiveArr.ids[0]) !== "17293822569790899385" ||
+      String(naiveArr.ids[1]) !== "17293822569790964921",
+    JSON.stringify(naiveArr.ids),
+  );
 }
 
 // [2] scoring weights — read from the layout, verified against the fixture.
