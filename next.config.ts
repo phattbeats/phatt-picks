@@ -2,6 +2,12 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Dev-only: permits HMR resources for hosts listed via ALLOWED_DEV_ORIGINS
+  // (comma-separated). Ignored by production builds.
+  allowedDevOrigins:
+    process.env.ALLOWED_DEV_ORIGINS?.split(",")
+      .map((s) => s.trim())
+      .filter(Boolean) ?? [],
   experimental: {
     // Silence BigInt serialization warnings — we handle this manually
   },

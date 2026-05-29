@@ -2,7 +2,10 @@
  * Picks API — GET (read player's picks) and POST (upsert a batch).
  *
  * POST body: { eventId, sectionId, picks: [{ groupId, slotIndex, pickId, itemId }] }
- * itemId must be a digit string (bigint). Never accept it as a number.
+ * itemId is a digit string (bigint) — never accept it as a number — or "" when
+ * the player just set the pick locally and Valve hasn't assigned an itemid yet
+ * (the write path resolves it from GetTournamentItems at upload time).
+ * pickId 0 = clear/TBD.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -47,12 +50,17 @@ export async function POST(req: NextRequest) {
   for (const pick of picks) {
     const { groupId, slotIndex, pickId, itemId } = pick;
 
-    // Validate itemId is a digit string — never accept as a number
+    // Local picks may not have an itemId yet (Valve assigns at upload time);
+    // anything else must be a digit string — never accept it as a number.
     let safeItemId: string;
-    try {
-      safeItemId = assertBigIntString(itemId, "itemId");
-    } catch {
-      return NextResponse.json({ error: `Invalid itemId: ${itemId}` }, { status: 400 });
+    if (itemId === undefined || itemId === null || itemId === "") {
+      safeItemId = "";
+    } else {
+      try {
+        safeItemId = assertBigIntString(itemId, "itemId");
+      } catch {
+        return NextResponse.json({ error: `Invalid itemId: ${itemId}` }, { status: 400 });
+      }
     }
 
     upserts.push(

@@ -3,8 +3,7 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { mirrorPlayerPredictionsThrottled } from "@/lib/predictions-sync";
 import { MobileNav } from "@/components/ui/MobileNav";
-import { TeamLogo } from "@/components/ui/TeamLogo";
-import { resolveLogoTiers } from "@/lib/logos";
+import { PicksBoard } from "@/components/PicksBoard";
 
 const EVENT_ID = 26;
 
@@ -42,9 +41,6 @@ export default async function PicksPage({
       myPicks[pick.groupId][pick.slotIndex] = pick.pickId;
     }
   }
-
-  // Build team lookup
-  const teamMap = new Map(layout.teams.map((t) => [t.pickid, t]));
 
   return (
     <>
@@ -107,160 +103,13 @@ export default async function PicksPage({
 
         {/* Stage content */}
         {section ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-            {section.groups.map((group) => {
-              const ptsPerPick = group.points_per_pick;
-              const groupPicksMap = myPicks[group.groupid] ?? {};
-
-              return (
-                <div
-                  key={group.groupid}
-                  style={{
-                    background: "var(--bg1)",
-                    border: "1px solid var(--bg3)",
-                    borderRadius: "var(--radius-lg)",
-                    overflow: "hidden",
-                  }}
-                >
-                  {/* Group header */}
-                  <div
-                    style={{
-                      padding: "var(--space-3) var(--space-4)",
-                      borderBottom: "1px solid var(--bg3)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontFamily: "'Rajdhani', sans-serif",
-                        fontWeight: 600,
-                        fontSize: "0.875rem",
-                        letterSpacing: "0.05em",
-                        textTransform: "uppercase",
-                        color: "var(--text-mid)",
-                      }}
-                    >
-                      {group.name.split(" | ")[0]}
-                    </span>
-                    <span
-                      style={{
-                        fontFamily: "'Rajdhani', sans-serif",
-                        fontWeight: 700,
-                        fontSize: "0.75rem",
-                        color: "var(--accent)",
-                        letterSpacing: "0.05em",
-                      }}
-                    >
-                      {ptsPerPick} PT{ptsPerPick !== 1 ? "S" : ""}/PICK
-                    </span>
-                  </div>
-
-                  {/* Pick slots */}
-                  <div style={{ padding: "var(--space-3)" }}>
-                    {group.picks.map((slot) => {
-                      const pickedId = groupPicksMap[slot.index];
-                      const team = pickedId ? teamMap.get(pickedId) : null;
-
-                      return (
-                        <div
-                          key={slot.index}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "var(--space-3)",
-                            padding: "var(--space-2) var(--space-3)",
-                            borderRadius: "var(--radius-md)",
-                            background: team ? "var(--bg2)" : "transparent",
-                            border: team ? "1px solid var(--bg3)" : "1px dashed var(--bg3)",
-                            marginBottom: "var(--space-2)",
-                            minHeight: 44,
-                          }}
-                        >
-                          <span
-                            style={{
-                              width: 20,
-                              fontFamily: "'Rajdhani', sans-serif",
-                              fontWeight: 700,
-                              fontSize: "0.75rem",
-                              color: "var(--text-low)",
-                              textAlign: "center",
-                            }}
-                          >
-                            {slot.index + 1}
-                          </span>
-                          {team ? (
-                            <>
-                              <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={28} />
-                              <span style={{ color: "var(--text-hi)", fontSize: "0.875rem", fontWeight: 500 }}>
-                                {team.name}
-                              </span>
-                            </>
-                          ) : (
-                            <span style={{ color: "var(--text-low)", fontSize: "0.875rem" }}>
-                              — Pick a team
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Available teams */}
-                  <div
-                    style={{
-                      padding: "var(--space-3) var(--space-4)",
-                      borderTop: "1px solid var(--bg3)",
-                    }}
-                  >
-                    <p
-                      style={{
-                        fontFamily: "'Rajdhani', sans-serif",
-                        fontSize: "0.625rem",
-                        fontWeight: 600,
-                        letterSpacing: "0.1em",
-                        textTransform: "uppercase",
-                        color: "var(--text-low)",
-                        margin: "0 0 var(--space-2)",
-                      }}
-                    >
-                      Teams ({group.teams.filter((t) => t.pickid !== 0).length})
-                    </p>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
-                      {group.teams
-                        .filter((t) => t.pickid !== 0)
-                        .map((teamSlot) => {
-                          const t = teamMap.get(teamSlot.pickid);
-                          if (!t) return null;
-
-                          return (
-                            <div
-                              key={teamSlot.pickid}
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "var(--space-2)",
-                                padding: "var(--space-2) var(--space-3)",
-                                background: "var(--bg3)",
-                                borderRadius: "var(--radius-sm)",
-                                fontSize: "0.75rem",
-                                color: "var(--text-hi)",
-                                cursor: "pointer",
-                                minHeight: 44,
-                              }}
-                            >
-                              <TeamLogo tiers={resolveLogoTiers(t)} teamName={t.name} size={24} />
-                              {t.name}
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <PicksBoard
+            section={section}
+            teams={layout.teams}
+            initialPicks={myPicks}
+            enabled={!!session}
+            eventId={EVENT_ID}
+          />
         ) : (
           <p style={{ color: "var(--text-mid)" }}>Section not found.</p>
         )}
