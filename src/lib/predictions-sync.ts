@@ -85,6 +85,10 @@ export async function mirrorPlayerPredictions(
 
   // A successful read = this player's picks are synced from Valve. The synced
   // flag gates the coin (rule #4) and marks rows as Valve-sourced for scoring.
+  // Known conflation: set on read-mirror, not just write. "We've seen their
+  // Valve picks" stands in for "their picks are on Valve" — the coin gate leans
+  // on that. Defensible because anything we mirrored is by definition already
+  // on Valve at read time; just be aware if write semantics ever diverge.
   await prisma.player.update({ where: { id: playerId }, data: { synced: true } });
 
   return { ok: true, mirrored };

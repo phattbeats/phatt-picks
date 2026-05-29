@@ -50,8 +50,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Prisma schema for the startup schema push
 COPY --from=builder /app/prisma ./prisma
 # Full dependency tree so the Prisma CLI + engines exist at runtime — Next's
-# standalone trace omits the CLI. This overlays the minimal node_modules that
-# the standalone copy placed above.
+# standalone trace omits the CLI, and the CMD below calls `prisma db push` at
+# boot to sync the schema (this repo has no migration history). Known choice:
+# accepts a fatter runner image in exchange for one-shot schema sync on start.
+# Overlays the minimal node_modules that the standalone copy placed above.
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
