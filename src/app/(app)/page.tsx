@@ -20,20 +20,45 @@ export default function DashboardPage() {
         <Logo size={32} />
         <a
           href="/profile"
+          aria-label="Your profile"
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: "50%",
-            background: "var(--bg3)",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
+            gap: "var(--space-2)",
+            padding: "4px 12px 4px 4px",
+            borderRadius: "999px",
+            background: "var(--bg3)",
             color: "var(--text-mid)",
             textDecoration: "none",
-            fontSize: "1rem",
+            minHeight: 36,
           }}
         >
-          ◎
+          <span
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: "50%",
+              background: "var(--bg2)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "0.9375rem",
+            }}
+          >
+            ◎
+          </span>
+          <span
+            style={{
+              fontFamily: "'Rajdhani', sans-serif",
+              fontWeight: 700,
+              fontSize: "0.75rem",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "var(--text-hi)",
+            }}
+          >
+            You
+          </span>
         </a>
       </header>
 

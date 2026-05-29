@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { MobileNav } from "@/components/ui/MobileNav";
 import { LastUpdated } from "@/components/LastUpdated";
 import { prisma } from "@/lib/db";
@@ -165,8 +166,9 @@ export default async function LeaderboardPage() {
               const isSelf = row.isSelf;
 
               return (
-                <div
+                <Link
                   key={row.playerId}
+                  href={`/players/${encodeURIComponent(row.playerId)}`}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -176,6 +178,9 @@ export default async function LeaderboardPage() {
                     border: isSelf ? "1px solid rgba(239,68,68,0.3)" : "1px solid var(--bg3)",
                     borderRadius: "var(--radius-md)",
                     minHeight: 56,
+                    textDecoration: "none",
+                    color: "inherit",
+                    cursor: "pointer",
                   }}
                 >
                   {/* Rank */}
@@ -279,7 +284,9 @@ export default async function LeaderboardPage() {
                   >
                     {row.score}
                   </span>
-                </div>
+                  {/* Affordance: chevron tells the tap-target story */}
+                  <span style={{ color: "var(--text-low)", fontSize: "1rem", marginLeft: "var(--space-1)" }}>›</span>
+                </Link>
               );
             })}
           </div>

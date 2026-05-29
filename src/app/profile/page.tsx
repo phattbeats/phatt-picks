@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { MobileNav } from "@/components/ui/MobileNav";
 import { PushToggle } from "@/components/PushToggle";
 import { InviteLink } from "@/components/InviteLink";
@@ -27,7 +26,7 @@ const sectionLabel: React.CSSProperties = {
 /** Profile / settings hub — identity, push opt-in, invite, install, account. */
 export default async function ProfilePage() {
   const session = await getSession();
-  if (!session) redirect("/login");
+  if (!session) return <SignedOutProfile />;
 
   const connected = Boolean(session.steamId);
   const initials = session.displayName.slice(0, 2).toUpperCase();
@@ -131,6 +130,84 @@ export default async function ProfilePage() {
           </a>
           <a href="/api/auth/logout" style={{ color: "var(--text-low)", fontSize: "0.875rem", textDecoration: "none" }}>
             › Sign out
+          </a>
+        </div>
+      </div>
+      <MobileNav />
+    </>
+  );
+}
+
+/**
+ * Signed-out fallback: prior code hard-redirected to /login, which combined with
+ * the local-auth dedup bug ([[phatt-picks-m8-3-auth-dedup-state]]) looked like a
+ * redirect loop. Show a friendly "session expired" card instead.
+ */
+function SignedOutProfile() {
+  return (
+    <>
+      <div style={{ padding: "var(--space-4) var(--space-4) calc(72px + env(safe-area-inset-bottom) + var(--space-4))", position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+        <header style={{ marginBottom: "var(--space-2)" }}>
+          <h1 style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: "1.5rem", fontWeight: 700, color: "var(--text-hi)", margin: 0 }}>
+            You
+          </h1>
+        </header>
+
+        <div style={cardStyle}>
+          <p style={sectionLabel}>Session expired</p>
+          <p style={{ color: "var(--text-mid)", fontSize: "0.875rem", margin: 0, lineHeight: 1.5 }}>
+            Sign in again to manage your account and picks.
+          </p>
+          <a
+            href="/api/auth/steam"
+            style={{
+              textAlign: "center",
+              background: "var(--accent)",
+              color: "#fff",
+              borderRadius: "var(--radius-md)",
+              padding: "12px",
+              textDecoration: "none",
+              fontFamily: "'Rajdhani', sans-serif",
+              fontWeight: 700,
+              fontSize: "0.875rem",
+              letterSpacing: "0.05em",
+              textTransform: "uppercase",
+              minHeight: 44,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            Connect with Steam
+          </a>
+          <a
+            href="/api/auth/local"
+            style={{
+              textAlign: "center",
+              background: "var(--bg2)",
+              border: "1px solid var(--bg3)",
+              color: "var(--text-mid)",
+              borderRadius: "var(--radius-md)",
+              padding: "10px",
+              textDecoration: "none",
+              fontFamily: "'Rajdhani', sans-serif",
+              fontWeight: 600,
+              fontSize: "0.875rem",
+              letterSpacing: "0.05em",
+              textTransform: "uppercase",
+              minHeight: 44,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            Play locally
+          </a>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+          <a href="/help/auth-code" style={{ color: "var(--text-mid)", fontSize: "0.875rem", textDecoration: "none" }}>
+            › How Steam sync &amp; the auth code work
           </a>
         </div>
       </div>
