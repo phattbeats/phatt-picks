@@ -9,11 +9,13 @@ import { NextRequest, NextResponse } from "next/server";
 import Openid from "openid";
 import { SignJWT } from "jose";
 import { prisma } from "@/lib/db";
+import { shouldUseSecureCookie } from "@/lib/session-cookie-core";
 
 const { RelyingParty } = Openid;
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 const RETURN_URL = `${BASE_URL}/api/auth/steam/callback`;
 const REALM = BASE_URL;
+const SESSION_COOKIE_SECURE = shouldUseSecureCookie(BASE_URL);
 
 const STEAM_ID_RE = /^https:\/\/steamcommunity\.com\/openid\/id\/(\d+)$/;
 
@@ -83,7 +85,7 @@ export async function GET(req: NextRequest) {
           sameSite: "lax",
           path: "/",
           maxAge: 60 * 60 * 24 * 7,
-          secure: process.env.NODE_ENV === "production",
+          secure: SESSION_COOKIE_SECURE,
         });
 
         resolve(response);

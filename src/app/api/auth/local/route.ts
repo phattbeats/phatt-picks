@@ -28,10 +28,12 @@ import {
   sanitizeDisplayName,
   type LocalSessionView,
 } from "@/lib/local-auth-core";
+import { shouldUseSecureCookie } from "@/lib/session-cookie-core";
 
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
 const SESSION_TTL = "30d";
+const SESSION_COOKIE_SECURE = shouldUseSecureCookie(BASE_URL);
 
 function getSessionSecret(): Uint8Array {
   const secret = process.env.NEXTAUTH_SECRET;
@@ -70,7 +72,7 @@ async function reuseLocalSession(playerId: string): Promise<NextResponse | null>
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
-    secure: process.env.NODE_ENV === "production",
+    secure: SESSION_COOKIE_SECURE,
   });
   return response;
 }
@@ -97,7 +99,7 @@ async function createLocalPlayer(displayName: string): Promise<NextResponse> {
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
-    secure: process.env.NODE_ENV === "production",
+    secure: SESSION_COOKIE_SECURE,
   });
   return response;
 }
