@@ -71,7 +71,7 @@ export default function LoginPage() {
         </a>
 
         <a
-          href="/api/auth/local"
+          href="/login/local"
           style={{
             display: "flex",
             alignItems: "center",

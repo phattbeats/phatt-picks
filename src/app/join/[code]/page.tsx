@@ -76,7 +76,7 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
       {/* Onboarding paths */}
       <div style={{ width: "100%", maxWidth: 320, display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
         <a
-          href="/api/auth/local"
+          href="/login/local"
           style={{
             display: "flex",
             alignItems: "center",

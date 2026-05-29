@@ -153,7 +153,7 @@ export default async function LeaderboardPage() {
                 sign in
               </a>{" "}
               or{" "}
-              <a href="/api/auth/local" style={{ color: "var(--text-mid)" }}>
+              <a href="/login/local" style={{ color: "var(--text-mid)" }}>
                 play locally
               </a>
             </p>
