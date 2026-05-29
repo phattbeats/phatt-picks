@@ -33,3 +33,12 @@ export function isStageLocked(group: LockableGroup, hasResolvedOutcome = false):
 export function arePicksRevealed(group: LockableGroup, hasResolvedOutcome = false): boolean {
   return isStageLocked(group, hasResolvedOutcome);
 }
+
+/**
+ * Inverse of isStageLocked: can a player still edit picks in this group?
+ * The write path uses this to reject POST /api/picks once the stage closes —
+ * "saving a pick == locking it" only makes sense while writes are accepted.
+ */
+export function isStageWritable(group: LockableGroup, hasResolvedOutcome = false): boolean {
+  return group.picks_allowed === true && hasResolvedOutcome !== true;
+}

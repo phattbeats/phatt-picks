@@ -81,3 +81,7 @@ export function buildSectionByGroup(layout: Layout): Map<number, Section> {
 export function parseLayoutJson(raw: string): LayoutEnvelope {
   return parseSafeJson(raw) as LayoutEnvelope;
 }
+
+// Pure layout-shape helpers (no fixture/bigint deps) live in ./layout-core
+// so verify-picks-guard can import them under node without a bundler.
+export { validatePickAgainstLayout } from "./layout-core";
