@@ -179,6 +179,7 @@ export default async function PicksPage({
             initialPicks={myPicks}
             enabled={!!session}
             eventId={EVENT_ID}
+            steamLinked={!!session?.steamId}
           />
         ) : (
           <LockedStageCard pickability={activePickability} />
