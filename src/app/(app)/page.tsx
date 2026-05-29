@@ -1,7 +1,10 @@
+import Image from "next/image";
 import { Logo } from "@/components/ui/Logo";
 import { getCommittedLayout } from "@/lib/layout";
 import { prisma } from "@/lib/db";
 import { buildResolvedKeys, isStagePickable } from "@/lib/stage-gate-core";
+import { getSession } from "@/lib/session";
+import { resolveTopbarYou } from "@/lib/topbar-you-core";
 
 const EVENT_ID = 26;
 
@@ -20,6 +23,18 @@ export default async function DashboardPage() {
   });
   const resolvedKeys = buildResolvedKeys(resolvedRows);
 
+  // PHA-851: hydrate the top-bar chip with the signed-in player's identity.
+  // Steam users get their persona avatar; local users get initials; anonymous
+  // visitors keep the existing "◎ You" fallback.
+  const session = await getSession();
+  const playerRow = session
+    ? await prisma.player.findUnique({
+        where: { id: session.playerId },
+        select: { avatarUrl: true },
+      })
+    : null;
+  const topbar = resolveTopbarYou({ session, avatarUrl: playerRow?.avatarUrl });
+
   return (
     <div style={{ padding: "var(--space-4)", minHeight: "100dvh" }}>
       {/* Header */}
@@ -36,7 +51,7 @@ export default async function DashboardPage() {
         <Logo size={32} />
         <a
           href="/profile"
-          aria-label="Your profile"
+          aria-label={topbar.kind === "anonymous" ? "Your profile" : `Your profile — ${topbar.label}`}
           style={{
             display: "flex",
             alignItems: "center",
@@ -58,10 +73,27 @@ export default async function DashboardPage() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: "0.9375rem",
+              fontSize: topbar.kind === "initials" ? "0.75rem" : "0.9375rem",
+              fontFamily: topbar.kind === "initials" ? "'Rajdhani', sans-serif" : undefined,
+              fontWeight: topbar.kind === "initials" ? 700 : undefined,
+              color: topbar.kind === "initials" ? "var(--text-hi)" : undefined,
+              overflow: "hidden",
             }}
           >
-            ◎
+            {topbar.kind === "avatar" ? (
+              <Image
+                src={topbar.avatarUrl}
+                alt=""
+                width={28}
+                height={28}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                unoptimized
+              />
+            ) : topbar.kind === "initials" ? (
+              topbar.initials
+            ) : (
+              "◎"
+            )}
           </span>
           <span
             style={{
@@ -71,9 +103,13 @@ export default async function DashboardPage() {
               letterSpacing: "0.08em",
               textTransform: "uppercase",
               color: "var(--text-hi)",
+              maxWidth: 140,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}
           >
-            You
+            {topbar.kind === "anonymous" ? "You" : topbar.label}
           </span>
         </a>
       </header>
