@@ -119,6 +119,13 @@ function proveCoinGate(): void {
   check("synced + pass, NO coin → hidden", visibleCoinTier({ ...base, hasValveCoin: false, coinTier: null }) === null);
   check("synced + coin, NO pass → hidden", visibleCoinTier({ ...base, hasViewerPass: false }) === null);
   check("pass + coin but NOT synced → hidden", visibleCoinTier({ ...base, synced: false }) === null);
+  // Realistic Cologne beta state: synced player, hasViewerPass:false because the
+  // write path hasn't probed items yet AND hasValveCoin/coinTier intentionally
+  // unset (cutoffs unverified — spec §6). Coin must stay hidden.
+  check(
+    "synced + hasViewerPass:false (beta realistic state) → hidden",
+    visibleCoinTier({ isLocal: false, synced: true, hasViewerPass: false, hasValveCoin: false, coinTier: null }) === null,
+  );
 }
 
 // [5] reveal gate — picks hidden until lock.

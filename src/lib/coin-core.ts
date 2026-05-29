@@ -19,6 +19,13 @@ export interface CoinFlags {
 }
 
 /** True only when all three coin conditions hold (and the player is not local). */
+// NOTE (Cologne beta): hasViewerPass is set from GetTournamentItems (non-empty
+// type:"team" items = pass owned) by the write path in picks-write.ts. hasValveCoin
+// and coinTier are intentionally never set yet — Valve's tier cutoffs
+// (Bronze→Silver→Gold→Diamond) are unverified (spec §6) and must NOT be guessed.
+// Result: the coin does not render this event by design. Wire hasValveCoin/coinTier
+// only once real cutoffs are obtained from a player's live coin state or a
+// documented prior Major.
 export function shouldShowCoin(p: CoinFlags): boolean {
   // Local players can never satisfy this: they are never `synced`. The explicit
   // !isLocal guard is belt-and-suspenders so the rule reads literally.

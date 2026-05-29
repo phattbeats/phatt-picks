@@ -208,6 +208,13 @@ async function resolveAndUpload(
   try {
     const items = await fetchTournamentItems(eventId, steamId, authCode);
     itemIdByTeam = buildItemIdMap(items);
+    // Reflect pass ownership from Valve's own answer: a non-empty type:"team"
+    // items map = the player owns this event's viewer pass (rule #4, spec §6).
+    // hasValveCoin / coinTier stay untouched — their cutoffs are unverified.
+    await prisma.player.update({
+      where: { id: playerId },
+      data: { hasViewerPass: itemIdByTeam.size > 0 },
+    });
   } catch (e) {
     if (e instanceof ValveApiError) {
       const disposition = classifyWriteFailure(e.status);
