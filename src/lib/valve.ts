@@ -176,16 +176,30 @@ async function uploadSinglePick(
 }
 
 /**
+ * Spacing between consecutive single-pick uploads. Live smoke (PHA-853) showed
+ * Valve's tournament endpoint 429s when hammered: first request 200, then
+ * 429s in tight succession, and a single 200 leaks through after ~600ms when
+ * the token bucket refills. 1500ms is a conservative cap that keeps a full
+ * 10-pick Swiss stage at ~15s — slow but within mobile-tap patience.
+ */
+const PICK_UPLOAD_DELAY_MS = 1500;
+
+/**
+ * Extra wait before retrying a single 429. The token bucket needs more headroom
+ * than the normal cadence when it just refused us, and Steam's `Retry-After`
+ * is rarely populated for this endpoint.
+ */
+const RETRY_429_DELAY_MS = 3500;
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/**
  * Upload a batch of picks (a whole Swiss stage, or the whole playoff bracket)
  * as N sequential single-pick calls (PHA-853 — Valve only accepts the
- * unsuffixed single-pick shape; indexed batch returns 400). Serial, not
- * parallel, to stay polite to the API (and match what the live CS2 client does
- * on each user click). Returns one SinglePickResult per pick, in input order.
- *
- * The shape change vs the prior batched API: callers used to get a single
- * PredictionsEnvelope on success; now they iterate and reconcile each pick
- * individually. Picks that 200 keep going; picks that fail are surfaced
- * per-pick so a partial-success doesn't lose data.
+ * unsuffixed single-pick shape; indexed batch returns 400). Throttled with a
+ * {@link PICK_UPLOAD_DELAY_MS} pause between picks; on 429 we wait
+ * {@link RETRY_429_DELAY_MS} and retry that pick once. Anything still failing
+ * is surfaced per-pick so a partial-success doesn't lose data.
  */
 export async function uploadTournamentPredictions(
   event: number,
@@ -194,8 +208,14 @@ export async function uploadTournamentPredictions(
   picks: UploadPick[],
 ): Promise<SinglePickResult[]> {
   const out: SinglePickResult[] = [];
-  for (const p of picks) {
-    out.push(await uploadSinglePick(event, steamId, steamidkey, p));
+  for (let i = 0; i < picks.length; i++) {
+    if (i > 0) await sleep(PICK_UPLOAD_DELAY_MS);
+    let result = await uploadSinglePick(event, steamId, steamidkey, picks[i]);
+    if (!result.ok && result.status === 429) {
+      await sleep(RETRY_429_DELAY_MS);
+      result = await uploadSinglePick(event, steamId, steamidkey, picks[i]);
+    }
+    out.push(result);
   }
   return out;
 }

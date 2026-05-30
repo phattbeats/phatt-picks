@@ -50,17 +50,20 @@ function describe(r: WriteResult | null, unsaved: boolean): UIState {
   if (r.skipped === "no-steam-id") {
     return { pill: "Steam account not linked", pillTone: "warn" };
   }
+  // Partial success: some picks landed before the failure. Lead with the
+  // synced count so the pill doesn't read as a total wipeout when 8/10 worked.
+  const partial = r.synced > 0 ? `${r.synced} synced · ` : "";
   if (r.degraded) {
     const detail = r.error ? ` (${r.error.slice(0, 80)})` : "";
     return {
-      pill: `Steam unavailable — saved locally${detail}`,
+      pill: `${partial}Steam unavailable — saved locally${detail}`,
       pillTone: "warn",
     };
   }
   if (r.escalate) {
     const detail = r.error ? ` — ${r.error}` : "";
     return {
-      pill: `Sync error${r.status ? ` (${r.status})` : ""}${detail}`,
+      pill: `${partial}Sync error${r.status ? ` (${r.status})` : ""}${detail}`,
       pillTone: "error",
     };
   }
