@@ -19,6 +19,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { parseSafeJson } from "../src/lib/bigint.ts";
+import { parsePredictions } from "../src/lib/predictions-core.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const fixture = (name: string) =>
@@ -100,9 +101,50 @@ function provePredictionsSnapshot(): void {
   check("committed predictions snapshot has 0 picks", Array.isArray(picks) && picks.length === 0, `len=${picks.length}`);
 }
 
+// [4] PHA-853: drop predictions placeholders (Valve returns groupid+index
+//     without sectionid/pickid for slots a stage has touched but not filled).
+function provePlaceholderDrop(): void {
+  console.log("\n[4] PLACEHOLDER DROP (PHA-853) — slots with missing sectionid/pickid are filtered, not upserted as NaN");
+  const env = {
+    result: {
+      picks: [
+        // Real pick — keeps.
+        { sectionid: 105, groupid: 271, index: 0, pickid: 115, itemid: "17293822569791947961" },
+        // Valve placeholder for a touched-but-unfilled slot (Brandon's PHA-853 case).
+        { groupid: 271, index: 7 } as never,
+        { groupid: 271, index: 8 } as never,
+        { groupid: 271, index: 9 } as never,
+        // Real playoff pick — keeps.
+        { sectionid: 108, groupid: 274, index: 0, pickid: 89, itemid: "17293822569790899385" },
+      ],
+    },
+  };
+  const out = parsePredictions(env);
+  check("only the 2 real picks survive", out.length === 2, `got ${out.length}`);
+  check("no NaN sectionId in output",
+    out.every((p) => Number.isFinite(p.sectionId)),
+    JSON.stringify(out.map((p) => p.sectionId)));
+  check("no NaN pickId in output",
+    out.every((p) => Number.isFinite(p.pickId)),
+    JSON.stringify(out.map((p) => p.pickId)));
+  check("real picks pass through unchanged",
+    out[0].sectionId === 105 && out[0].pickId === 115 && out[1].sectionId === 108 && out[1].pickId === 89);
+
+  // Sanity: an all-real envelope drops nothing.
+  const cleanOut = parsePredictions({
+    result: {
+      picks: [
+        { sectionid: 105, groupid: 271, index: 0, pickid: 115, itemid: "17293822569791947961" },
+      ],
+    },
+  });
+  check("clean envelope: nothing dropped", cleanOut.length === 1);
+}
+
 console.log("=== phaTT Picks M3 read-pipeline verification ===");
 proveItemidPrecision();
 proveWeights();
 provePredictionsSnapshot();
+provePlaceholderDrop();
 console.log(`\n${failures === 0 ? "M3 READ CHECKS PASSED" : `M3 READ CHECKS FAILED — ${failures} failure(s)`}`);
 process.exit(failures === 0 ? 0 : 1);
