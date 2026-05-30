@@ -31,7 +31,6 @@ import type { Section } from "@/lib/layout";
 
 const EVENT_ID = 26;
 
-export const revalidate = 60;
 
 function ordSuffix(n: number): string {
   const v = n % 100;

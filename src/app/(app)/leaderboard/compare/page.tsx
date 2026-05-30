@@ -20,7 +20,6 @@ import { refreshOutcomesOnRead } from "@/lib/outcomes";
 
 const EVENT_ID = 26;
 
-export const revalidate = 60;
 
 function toPlayerPickMap(picks: { sectionId: number; groupId: number; slotIndex: number; pickId: number }[]): PlayerPickMap[string] {
   const m: PlayerPickMap[string] = {};

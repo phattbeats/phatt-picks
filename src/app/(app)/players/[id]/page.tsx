@@ -49,7 +49,6 @@ function bucketLabelFor(sectionId: number, group: Section["groups"][number], slo
   return hit.label.replace(" ADVANCED", "").replace(" ELIMINATED", "");
 }
 
-export const revalidate = 60;
 
 export default async function PlayerProfilePage({
   params,

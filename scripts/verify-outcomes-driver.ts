@@ -59,12 +59,15 @@ check(
     /after\(run\)/.test(outcomes),
 );
 check(
-  "deferred task swallows errors (never throws into a read/render path)",
-  /runDeferred[\s\S]*?\.catch\(/.test(outcomes),
+  "deferred task swallows errors — .catch inside runDeferred's run closure",
+  // Pin the .catch to the runDeferred body, not any arbitrary downstream .catch.
+  /function runDeferred[\s\S]{0,400}\.catch\(/.test(outcomes),
 );
 check(
-  "claim is best-effort (a DB hiccup never permanently blocks the driver)",
-  /claimOutcomesRefreshSlot[\s\S]*?catch \{[\s\S]*?return true;/.test(outcomes),
+  "claim is best-effort (outer catch grants slot on any DB error)",
+  // Inner catch returns false (create race / within floor).
+  // Outer catch returns true (DB hiccup — allow rather than block forever).
+  /claimOutcomesRefreshSlot[\s\S]*?return false;[\s\S]*?} catch \{[\s\S]{0,80}return true;/.test(outcomes),
 );
 
 console.log("\noutcomes-driver - source fetch is bounded (can't hang the deferred run)");

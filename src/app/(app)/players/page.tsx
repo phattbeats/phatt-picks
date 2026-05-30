@@ -9,7 +9,6 @@ import { UserDirectory, type DirRow } from "@/components/heat/UserDirectory";
 
 const EVENT_ID = 26;
 
-export const revalidate = 60;
 export const metadata = { title: "Directory · HOTLINE" };
 
 export default async function DirectoryPage() {
