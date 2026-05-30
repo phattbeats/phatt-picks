@@ -26,6 +26,11 @@ interface Props {
 const SAVED_FLASH_MS = 1200;
 const DND_MIME = "application/x-phatt-picks-team";
 
+// Logo sizes — deliberately large so the crest is the dominant element of a
+// pick (Brandon's PHA-855 feedback: logos must be a lot bigger, tiles square).
+const SLOT_LOGO = 40;
+const TILE_LOGO = 52;
+
 export function PicksBoard({
   section,
   teams,
@@ -157,13 +162,16 @@ export function PicksBoard({
   };
 
   const isSwiss = isSwissSection(section.sectionid);
+  const selectedTeam = selected ? teamMap.get(selected) : null;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+    <div className="pickboard">
       {section.groups.map((group) => {
         const ptsPerPick = group.points_per_pick;
         const groupPicksMap = picks[group.groupid] ?? {};
         const usedTeamIds = new Set(Object.values(groupPicksMap).filter((p) => p > 0));
+        const filledCount = usedTeamIds.size;
+        const slotTotal = group.picks.length;
 
         // Swiss stages → bucket the flat slots by predicted-outcome convention
         // (PHA-853). Non-Swiss (playoffs) → single "all slots" bucket so a QF
@@ -172,117 +180,56 @@ export function PicksBoard({
           ? bucketSwissSlots(group.picks.length)
           : [{ label: group.name.split(" | ")[0], slotIndexes: group.picks.map((p) => p.index) }];
 
+        const poolTeams = group.teams.filter((t) => t.pickid !== 0);
+
         return (
-          <div
-            key={group.groupid}
-            style={{
-              background: "var(--bg1)",
-              border: "1px solid var(--bg3)",
-              borderRadius: "var(--radius-lg)",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                padding: "var(--space-3) var(--space-4)",
-                borderBottom: "1px solid var(--bg3)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: "'Rajdhani', sans-serif",
-                  fontWeight: 600,
-                  fontSize: "0.875rem",
-                  letterSpacing: "0.05em",
-                  textTransform: "uppercase",
-                  color: "var(--text-mid)",
-                }}
-              >
-                {group.name.split(" | ")[0]}
-              </span>
-              <span
-                style={{
-                  fontFamily: "'Rajdhani', sans-serif",
-                  fontWeight: 700,
-                  fontSize: "0.75rem",
-                  color: "var(--accent)",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                {ptsPerPick} PT{ptsPerPick !== 1 ? "S" : ""}/PICK
+          <div key={group.groupid} className="pickgroup">
+            <div className="pickgroup-head">
+              <span className="pickgroup-name">{group.name.split(" | ")[0]}</span>
+              <span className="pickgroup-pts">
+                {ptsPerPick} PT{ptsPerPick !== 1 ? "S" : ""}/PICK · {filledCount}/{slotTotal}
               </span>
             </div>
 
-            <div style={{ padding: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-              {buckets.map((bucket) => (
-                <div
-                  key={bucket.label}
-                  style={{
-                    background: "var(--bg0, transparent)",
-                    border: "1px solid var(--bg3)",
-                    borderRadius: "var(--radius-md)",
-                    padding: "var(--space-2) var(--space-3)",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      marginBottom: "var(--space-2)",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontFamily: "'Rajdhani', sans-serif",
-                        fontWeight: 700,
-                        fontSize: "0.75rem",
-                        letterSpacing: "0.1em",
-                        textTransform: "uppercase",
-                        color: "var(--text-hi)",
-                      }}
-                    >
-                      {bucket.label}
-                    </span>
-                    <span
-                      style={{
-                        fontFamily: "'Rajdhani', sans-serif",
-                        fontSize: "0.6875rem",
-                        color: "var(--text-low)",
-                      }}
-                    >
-                      {bucket.slotIndexes.length} pick
-                      {bucket.slotIndexes.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
+            <div className="pickgroup-body">
+              {/* Slots */}
+              <div className={`bucket-cols${isSwiss ? " swiss" : ""}`}>
+                {buckets.map((bucket) => (
+                  <div key={bucket.label} className="bucket">
+                    <div className="bucket-label">
+                      <span>{bucket.label}</span>
+                      <span className="count">
+                        {bucket.slotIndexes.filter((i) => groupPicksMap[i]).length}/
+                        {bucket.slotIndexes.length}
+                      </span>
+                    </div>
 
-                  <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
                     {bucket.slotIndexes.map((slotIndex) => {
                       const pickedId = groupPicksMap[slotIndex];
                       const team = pickedId ? teamMap.get(pickedId) : null;
                       const key = slotKey(group.groupid, slotIndex);
                       const save = saveStates[key];
-                      const armed = enabled && selected !== null;
-                      const hovered = enabled && dragOverKey === key;
-                      const interactive = enabled;
-                      const borderColor =
-                        save === "error"
-                          ? "var(--accent)"
-                          : save === "saved"
-                            ? "var(--correct, var(--accent))"
-                            : hovered || armed
-                              ? "var(--accent)"
-                              : "var(--bg3)";
+                      const armed = enabled && selected !== null && !team;
+                      const over = enabled && dragOverKey === key;
+
+                      const cls = [
+                        "pslot",
+                        team ? "filled" : "",
+                        armed ? "armed" : "",
+                        over ? "over" : "",
+                        save === "saved" ? "saved" : "",
+                        save === "error" ? "error" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ");
 
                       return (
                         <button
                           key={slotIndex}
                           type="button"
+                          className={cls}
                           onClick={() => handleSlotTap(group.groupid, slotIndex)}
-                          disabled={!interactive}
+                          disabled={!enabled}
                           draggable={!!team && enabled}
                           onDragStart={(e) => {
                             if (!team) return;
@@ -317,123 +264,83 @@ export function PicksBoard({
                               ? `${bucket.label} slot: ${team.name}. Tap to ${armed ? "replace" : "clear"}, or drag to move.`
                               : `${bucket.label} slot: empty. ${armed ? "Tap to assign selected team." : "Drag a team here or tap a team first."}`
                           }
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "var(--space-3)",
-                            padding: "var(--space-2) var(--space-3)",
-                            borderRadius: "var(--radius-md)",
-                            background: team
-                              ? "var(--bg2)"
-                              : hovered || armed
-                                ? "rgba(255,255,255,0.04)"
-                                : "transparent",
-                            border: `${team || hovered || armed ? "1px solid" : "1px dashed"} ${borderColor}`,
-                            minHeight: 44,
-                            width: "100%",
-                            textAlign: "left",
-                            cursor: interactive ? (team ? "grab" : "pointer") : "default",
-                            color: "inherit",
-                            font: "inherit",
-                            transition: "border-color var(--duration-fast) var(--ease-sharp), background var(--duration-fast) var(--ease-sharp)",
-                          }}
                         >
                           {team ? (
                             <>
                               <TeamLogo
                                 tiers={resolveLogoTiers(team)}
                                 teamName={team.name}
-                                size={28}
+                                size={SLOT_LOGO}
                               />
-                              <span
-                                style={{
-                                  color: "var(--text-hi)",
-                                  fontSize: "0.875rem",
-                                  fontWeight: 500,
-                                  flex: 1,
-                                }}
-                              >
-                                {team.name}
-                              </span>
+                              <span className="pslot-name">{team.name}</span>
                             </>
                           ) : (
-                            <span
-                              style={{
-                                color: "var(--text-low)",
-                                fontSize: "0.875rem",
-                                flex: 1,
-                              }}
-                            >
-                              {armed
-                                ? "Tap to assign"
-                                : hovered
-                                  ? "Drop to assign"
-                                  : "— Drag or tap a team"}
+                            <span className="pslot-ph">
+                              {armed ? "Tap to assign" : over ? "Drop to assign" : "Drag or tap a team"}
                             </span>
                           )}
                           {save && (
                             <span
+                              className="pslot-state"
                               style={{
-                                fontFamily: "'Rajdhani', sans-serif",
-                                fontSize: "0.6875rem",
-                                letterSpacing: "0.08em",
-                                textTransform: "uppercase",
                                 color:
                                   save === "error"
-                                    ? "var(--accent)"
+                                    ? "var(--ember)"
                                     : save === "saved"
-                                      ? "var(--correct, var(--accent))"
-                                      : "var(--text-low)",
+                                      ? "var(--tac-green)"
+                                      : "var(--ink-low)",
                               }}
                             >
                               {save === "saving" ? "Saving" : save === "saved" ? "Saved" : "Retry"}
+                            </span>
+                          )}
+                          {team && enabled && (
+                            <span
+                              className="pslot-remove"
+                              role="button"
+                              aria-label={`Remove ${team.name}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                clearSlot(group.groupid, slotIndex);
+                              }}
+                            >
+                              <svg viewBox="0 0 24 24">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                              </svg>
                             </span>
                           )}
                         </button>
                       );
                     })}
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
 
-            <div
-              style={{
-                padding: "var(--space-3) var(--space-4)",
-                borderTop: "1px solid var(--bg3)",
-              }}
-            >
-              <p
-                style={{
-                  fontFamily: "'Rajdhani', sans-serif",
-                  fontSize: "0.625rem",
-                  fontWeight: 600,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  color: "var(--text-low)",
-                  margin: "0 0 var(--space-2)",
-                }}
-              >
-                Teams ({group.teams.filter((t) => t.pickid !== 0).length})
-                {enabled && selected !== null && (
-                  <span style={{ marginLeft: "var(--space-2)", color: "var(--accent)" }}>
-                    Tap a slot or drag
-                  </span>
+              {/* Team pool — square tiles, big logos */}
+              <div className="pool">
+                <div className="pool-head">
+                  <span className="pool-title">Team Pool · {poolTeams.length}</span>
+                  <span className="pool-hint">Drag or tap to pick</span>
+                </div>
+                {enabled && selectedTeam && (
+                  <div className="pool-armed-hint">{selectedTeam.name} — tap a slot to assign</div>
                 )}
-              </p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
-                {group.teams
-                  .filter((t) => t.pickid !== 0)
-                  .map((teamSlot) => {
+                <div className="pool-grid">
+                  {poolTeams.map((teamSlot) => {
                     const t = teamMap.get(teamSlot.pickid);
                     if (!t) return null;
                     const isSelected = selected === t.pickid;
                     const isUsed = usedTeamIds.has(t.pickid);
+                    const cls = ["ptile", isSelected ? "selected" : "", isUsed ? "used" : ""]
+                      .filter(Boolean)
+                      .join(" ");
 
                     return (
                       <button
                         key={teamSlot.pickid}
                         type="button"
+                        className={cls}
                         onClick={() => handleTeamTap(t.pickid)}
                         disabled={!enabled}
                         draggable={enabled}
@@ -444,29 +351,13 @@ export function PicksBoard({
                         }}
                         aria-pressed={isSelected}
                         aria-label={`${t.name}${isUsed ? " (already picked)" : ""}${isSelected ? " — selected" : ""}`}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "var(--space-2)",
-                          padding: "var(--space-2) var(--space-3)",
-                          background: isSelected ? "var(--accent)" : "var(--bg3)",
-                          border: isSelected ? "1px solid var(--accent)" : "1px solid transparent",
-                          borderRadius: "var(--radius-sm)",
-                          fontSize: "0.75rem",
-                          color: isSelected ? "#fff" : "var(--text-hi)",
-                          cursor: enabled ? "grab" : "default",
-                          opacity: !enabled ? 0.6 : isUsed && !isSelected ? 0.5 : 1,
-                          minHeight: 44,
-                          font: "inherit",
-                          transition:
-                            "background var(--duration-fast) var(--ease-sharp), border-color var(--duration-fast) var(--ease-sharp)",
-                        }}
                       >
-                        <TeamLogo tiers={resolveLogoTiers(t)} teamName={t.name} size={24} />
-                        {t.name}
+                        <TeamLogo tiers={resolveLogoTiers(t)} teamName={t.name} size={TILE_LOGO} />
+                        <span className="ptile-name">{t.name}</span>
                       </button>
                     );
                   })}
+                </div>
               </div>
             </div>
           </div>

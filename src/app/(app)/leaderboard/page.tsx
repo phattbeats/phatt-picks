@@ -158,11 +158,61 @@ export default async function LeaderboardPage() {
           </p>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {rows.map((row, idx) => (
-            <LeaderRow key={row.playerId} row={row} rank={idx + 1} />
-          ))}
-        </div>
+        <>
+          {/* Podium — top 3 (mockup 04). Order 2 · 1 · 3 so #1 centers. */}
+          {rows.length >= 3 && (
+            <div className="podium">
+              {[1, 0, 2].map((i) => {
+                const row = rows[i];
+                const rank = i + 1;
+                const first = i === 0;
+                return (
+                  <Link
+                    key={row.playerId}
+                    href={`/players/${encodeURIComponent(row.playerId)}`}
+                    className={`podium-slot${first ? " first brk" : ""}`}
+                  >
+                    {first && (
+                      <>
+                        <span className="br-tr" />
+                        <span className="br-bl" />
+                      </>
+                    )}
+                    <span className="podium-rank">[ {String(rank).padStart(2, "0")} ]</span>
+                    <span className="podium-av">
+                      {row.avatarUrl ? (
+                        <Image src={row.avatarUrl} alt="" width={first ? 52 : 44} height={first ? 52 : 44} unoptimized style={{ objectFit: "cover", width: "100%", height: "100%" }} />
+                      ) : (
+                        row.displayName.slice(0, 2).toUpperCase()
+                      )}
+                    </span>
+                    <span className="podium-name">{row.displayName}</span>
+                    <span className="podium-score">{row.score}</span>
+                    <span className="podium-pts">pts</span>
+                    {row.coinTier && <span className={`coin-sticker ${row.coinTier}`} title={`${row.coinTier} coin`} />}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Full rankings */}
+          <div className="section-label" style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 9,
+            letterSpacing: "0.16em",
+            textTransform: "uppercase",
+            color: "var(--ink-low)",
+            margin: "4px 0 2px",
+          }}>
+            Full Rankings
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {rows.map((row, idx) => (
+              <LeaderRow key={row.playerId} row={row} rank={idx + 1} />
+            ))}
+          </div>
+        </>
       )}
 
       <footer style={{
@@ -326,14 +376,17 @@ function LeaderRow({
           )}
         </div>
         {row.coinTier && (
-          <span style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 10,
-            letterSpacing: "0.08em",
-            color: "var(--ink-mid)",
-            textTransform: "uppercase",
-          }}>
-            {row.coinTier} coin
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span className={`coin-sticker ${row.coinTier}`} title={`${row.coinTier} coin`} />
+            <span style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 10,
+              letterSpacing: "0.08em",
+              color: "var(--ink-mid)",
+              textTransform: "uppercase",
+            }}>
+              {row.coinTier} coin
+            </span>
           </span>
         )}
       </div>

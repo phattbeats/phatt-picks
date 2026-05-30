@@ -16,8 +16,21 @@ import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring"
 import { arePicksRevealed } from "@/lib/reveal-core";
 import { visibleCoinTier } from "@/lib/coin-core";
 import { getSession } from "@/lib/session";
+import { TeamLogo } from "@/components/ui/TeamLogo";
+import { resolveLogoTiers } from "@/lib/logos";
+import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
+import type { Section } from "@/lib/layout";
 
 const EVENT_ID = 26;
+
+/** Short pick-type tag for a slot (3:0 / 3:1·3:2 / 0:3 for Swiss; — otherwise). */
+function bucketLabelFor(sectionId: number, group: Section["groups"][number], slotIndex: number): string | null {
+  if (!isSwissSection(sectionId)) return null;
+  const buckets = bucketSwissSlots(group.picks.length);
+  const hit = buckets.find((b) => b.slotIndexes.includes(slotIndex));
+  if (!hit || hit.label === "PICKS") return null;
+  return hit.label.replace(" ADVANCED", "").replace(" ELIMINATED", "");
+}
 
 export const revalidate = 60;
 
@@ -61,11 +74,6 @@ export default async function PlayerProfilePage({
 
   const score = scorePlayer(layout, pickMap, outcomeMap).total;
   const coinTier = visibleCoinTier(player);
-
-  const teamName = (pickId: number | undefined): string => {
-    if (!pickId) return "—";
-    return teamMap.get(pickId)?.name ?? `#${pickId}`;
-  };
 
   return (
     <>
@@ -221,65 +229,55 @@ export default async function PlayerProfilePage({
                 return (
                   <div
                     key={group.groupid}
-                    style={{
-                      background: "var(--bg1)",
-                      border: "1px solid var(--bg3)",
-                      borderRadius: "var(--radius-md)",
-                      overflow: "hidden",
-                      marginBottom: "var(--space-2)",
-                    }}
+                    className="pickgroup"
+                    style={{ marginBottom: 8 }}
                   >
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "var(--space-2) var(--space-3)",
-                        borderBottom: revealed ? "1px solid var(--bg3)" : "none",
-                      }}
-                    >
-                      <span style={{ fontSize: "0.75rem", color: "var(--text-mid)", fontWeight: 600 }}>
+                    <div className="pickgroup-head">
+                      <span className="pickgroup-name" style={{ fontSize: 14 }}>
                         {group.name.split(" | ").slice(-1)[0]}
                       </span>
-                      <span style={{ fontSize: "0.6875rem", color: "var(--accent)", fontFamily: "'Rajdhani', sans-serif", fontWeight: 700 }}>
+                      <span className="pickgroup-pts">
                         {group.points_per_pick} PT{group.points_per_pick !== 1 ? "S" : ""}/PICK
                       </span>
                     </div>
 
                     {!revealed ? (
-                      <div style={{ padding: "var(--space-3)", textAlign: "center", color: "var(--text-low)", fontSize: "0.8125rem" }}>
-                        🔒 Picks hidden until this stage locks
+                      <div style={{ padding: 20, textAlign: "center", color: "var(--ink-low)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                        🔒 Hidden until this stage locks
                       </div>
                     ) : (
-                      <div style={{ padding: "var(--space-2) var(--space-3)" }}>
-                        {group.picks.map((slot) => {
-                          const pick = groupPicks[slot.index];
-                          const winner = groupOutcomes[slot.index];
-                          const hit = winner !== undefined && pick === winner;
-                          const miss = winner !== undefined && pick !== undefined && pick !== winner;
-                          const color = hit ? "var(--correct)" : "var(--text-mid)";
-                          return (
-                            <div
-                              key={slot.index}
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                padding: "var(--space-1) 0",
-                                fontSize: "0.8125rem",
-                              }}
-                            >
-                              <span style={{ color, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                {hit && <strong>✓ </strong>}
-                                {miss && <span style={{ color: "var(--text-low)" }}>✗ </span>}
-                                {teamName(pick)}
-                              </span>
-                              <span style={{ color: "var(--text-low)", fontSize: "0.625rem" }}>
-                                {group.picks.length > 1 ? `#${slot.index + 1}` : ""}
-                              </span>
-                            </div>
-                          );
-                        })}
+                      <div style={{ padding: 14 }}>
+                        <div className="pickcards">
+                          {group.picks.map((slot) => {
+                            const pick = groupPicks[slot.index];
+                            const team = pick ? teamMap.get(pick) : null;
+                            const winner = groupOutcomes[slot.index];
+                            const hit = winner !== undefined && pick === winner;
+                            const wrong = winner !== undefined && pick !== undefined && pick !== winner;
+                            const typeLabel = bucketLabelFor(section.sectionid, group, slot.index);
+                            return (
+                              <div
+                                key={slot.index}
+                                className={`pickcard${hit ? " correct" : wrong ? " wrong" : ""}`}
+                              >
+                                {team ? (
+                                  <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={44} />
+                                ) : (
+                                  <div style={{ width: 44, height: 44, display: "grid", placeItems: "center", color: "var(--ink-low)", fontFamily: "var(--font-mono)", fontSize: 18 }}>—</div>
+                                )}
+                                <span className="pickcard-team">{team ? team.name : "—"}</span>
+                                <span className="pickcard-row">
+                                  {typeLabel && <span className="pickcard-type">{typeLabel}</span>}
+                                  {winner !== undefined && (
+                                    <span className={`pickcard-icon ${hit ? "correct" : "wrong"}`}>
+                                      {hit ? "✓" : "✗"}
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
