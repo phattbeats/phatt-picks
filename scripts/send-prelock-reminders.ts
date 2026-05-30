@@ -11,6 +11,11 @@
  *   {"105":{"name":"Stage I","lockAt":"2026-06-02T09:00:00Z"}, ...}
  * Absent/empty → safe no-op (we never invent a cutoff). Designed to be run on a
  * short cadence (e.g. every 5 min); notify-core's fire-window makes that idempotent.
+ *
+ * Committed Cologne Swiss-stage value (PHA-865 — keep in sync with
+ * COLOGNE_LOCK_SCHEDULE in src/lib/lock-schedule-core.ts; lockAt = day-1 first
+ * match, 12:30 CEST = 10:30 UTC). Playoffs added once their schedule publishes:
+ *   STAGE_LOCKS_JSON='{"105":{"name":"Stage I","lockAt":"2026-06-02T10:30:00Z"},"106":{"name":"Stage II","lockAt":"2026-06-06T10:30:00Z"},"107":{"name":"Stage III","lockAt":"2026-06-11T10:30:00Z"}}'
  */
 
 import { prisma } from "@/lib/db";

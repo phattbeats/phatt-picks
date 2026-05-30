@@ -40,20 +40,36 @@ function check(name: string, cond: boolean) {
   }
 }
 
-console.log("\nlock-schedule - committed default is empty (truthful no-clock)");
+console.log("\nlock-schedule - committed Cologne schedule (PHA-865)");
 
-// Every section in the layout resolves to null under the committed schedule
-// until Brandon commits the published times. This is the intended default:
-// no fabricated countdown ships.
+// Swiss stages are lit with their day-1 first-match instant (12:30 CEST =
+// 10:30 UTC). Playoff sections stay dark until the bracket schedule publishes.
+const COMMITTED_LIT: Readonly<Record<number, string>> = {
+  105: "2026-06-02T10:30:00Z",
+  106: "2026-06-06T10:30:00Z",
+  107: "2026-06-11T10:30:00Z",
+};
+const COMMITTED_DARK = [108, 109, 110];
+
 for (const s of layout.sections) {
+  const label = s.name.split(" | ")[0];
+  const expected = COMMITTED_LIT[s.sectionid] ?? null;
   check(
-    `section ${s.sectionid} (${s.name.split(" | ")[0]}) -> null on empty schedule`,
-    lockTimeForSection(s.sectionid) === null,
+    expected === null
+      ? `section ${s.sectionid} (${label}) -> dark (no published lock time)`
+      : `section ${s.sectionid} (${label}) -> ${expected}`,
+    lockTimeForSection(s.sectionid) === expected,
   );
 }
 check(
-  "committed schedule ships empty",
-  Object.keys(COLOGNE_LOCK_SCHEDULE).length === 0,
+  "playoff sections (108/109/110) all dark until bracket schedule publishes",
+  COMMITTED_DARK.every((id) => lockTimeForSection(id) === null),
+);
+check(
+  "every committed instant is a valid future-or-any ISO UTC value",
+  Object.values(COLOGNE_LOCK_SCHEDULE).every(
+    (v) => typeof v === "string" && !Number.isNaN(Date.parse(v)),
+  ),
 );
 
 console.log("\nlock-schedule - populated schedule resolves valid instants");

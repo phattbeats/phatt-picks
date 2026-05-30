@@ -23,25 +23,33 @@
 export type LockSchedule = Readonly<Record<number, string>>;
 
 /**
- * Committed IEM Cologne 2026 per-stage lock schedule.
+ * Committed IEM Cologne 2026 per-stage lock schedule (PHA-865).
  *
- * EMPTY until Brandon commits the published lock times (PHA-856). The section
- * ids below map to the committed cologne-layout fixture:
+ * Section ids map to the committed cologne-layout fixture:
  *   105 Stage I · 106 Stage II · 107 Stage III ·
  *   108 Quarterfinals · 109 Semifinals · 110 Grand Final
  *
- * To wire the clock, fill in the authoritative UTC lock instant per stage, e.g.
- *   105: "2026-06-01T09:00:00Z",
- * Sections left out (or set to a non-ISO / past placeholder) simply show no
- * countdown — that is the intended, truthful default.
+ * LOCK SEMANTICS: a stage's picks lock when its first match begins — that is
+ * also when Valve flips `picks_allowed` (the stage-gate source of truth). So
+ * each value below is the UTC instant of the stage's day-1 first match.
+ *
+ * SWISS STAGES are lit: HLTV, Liquipedia and cs.money all give a 12:30 CEST
+ * (= 10:30 UTC) first match for Stage 1 (Jun 2), Stage 2 (Jun 6) and Stage 3.
+ * Stage 3's date is Liquipedia/cs.money's Jun 11 (Wikipedia says Jun 12) —
+ * confirmed with Brandon on PHA-865 before go-live.
+ *
+ * PLAYOFF sections (108/109/110) stay DARK on purpose: the bracket runs in the
+ * Jun 18–21 window but the per-round day + start time are still TBD on every
+ * source. A null value renders no countdown — the truthful default until the
+ * playoff schedule is published. Fill these in once authoritative.
  */
 export const COLOGNE_LOCK_SCHEDULE: LockSchedule = {
-  // 105: "2026-06-01T09:00:00Z",
-  // 106: "...",
-  // 107: "...",
-  // 108: "...",
-  // 109: "...",
-  // 110: "...",
+  105: "2026-06-02T10:30:00Z", // Stage I  — Jun 2, 12:30 CEST first match
+  106: "2026-06-06T10:30:00Z", // Stage II — Jun 6, 12:30 CEST first match
+  107: "2026-06-11T10:30:00Z", // Stage III — Jun 11, 12:30 CEST first match
+  // 108: Quarterfinals — Jun 18–21 window, per-round time TBD
+  // 109: Semifinals    — Jun 18–21 window, per-round time TBD
+  // 110: Grand Final   — Jun 21 (likely), time TBD
 };
 
 /**
