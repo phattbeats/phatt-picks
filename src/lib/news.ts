@@ -25,8 +25,18 @@ import {
 } from "./news-core";
 import { fetchHltvWire, HltvThrottledError } from "./hltv";
 
-/** Read the wire, newest-first, capped at `limit`. Never throws. */
+/**
+ * Read the wire, newest-first, capped at `limit`. Never throws.
+ *
+ * Triggers a best-effort self-refresh first so the wire stays populated with
+ * zero ops — no external cron is needed for the closed alpha (and the ingest
+ * route is session-gated, so a headless scheduler can't drive it anyway).
+ * `ingestNews` self-throttles via the persisted 5-min HLTV floor and never
+ * throws, so this is a no-network no-op when warm and degrades silently to the
+ * existing rows + seed on a source outage. (PHA-859 / alpha.)
+ */
 export async function getWireItems(limit = 30): Promise<WireItem[]> {
+  await ingestNews().catch(() => {}); // belt-and-suspenders; ingestNews already never throws
   const seed = seedWireItems();
   let dbItems: WireItem[] = [];
   try {
