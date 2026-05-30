@@ -6,8 +6,6 @@
  * to serve stale picks/scores. The fetch handler is a network passthrough.
  */
 
-const SW_VERSION = "phatt-picks-v1";
-
 self.addEventListener("install", () => {
   // Activate this SW immediately on first install / update.
   self.skipWaiting();

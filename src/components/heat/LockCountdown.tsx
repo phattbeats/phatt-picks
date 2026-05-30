@@ -42,6 +42,10 @@ export function LockCountdown({
 
   useEffect(() => {
     if (!Number.isFinite(target)) return;
+    // Sync to the wall clock immediately on mount so the clock appears at once
+    // rather than after the first 1s tick; the null→now transition is exactly
+    // the post-hydration sync this component is built around (see header note).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setNow(Date.now());
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);

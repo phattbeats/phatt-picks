@@ -105,19 +105,3 @@ export function parsePredictions(envelope: PredictionsEnvelope): Prediction[] {
   }
   return out;
 }
-
-/**
- * Reshape predictions into the picks-page lookup: sectionId → groupId →
- * slotIndex → pickId. Matches the `myPicks` shape the picks screen renders.
- */
-export function indexPredictionsByPick(
-  preds: Prediction[],
-): Record<number, Record<number, Record<number, number>>> {
-  const out: Record<number, Record<number, Record<number, number>>> = {};
-  for (const p of preds) {
-    out[p.sectionId] ??= {};
-    out[p.sectionId][p.groupId] ??= {};
-    out[p.sectionId][p.groupId][p.slotIndex] = p.pickId;
-  }
-  return out;
-}

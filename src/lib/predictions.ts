@@ -19,8 +19,6 @@ import {
 
 export {
   parsePredictions,
-  indexPredictionsByPick,
-  toItemIdString,
   type RawPrediction,
   type PredictionsEnvelope,
   type Prediction,
