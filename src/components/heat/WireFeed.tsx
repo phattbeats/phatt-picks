@@ -1,4 +1,4 @@
-import { timeAgo, type WireItem } from "@/lib/news-core";
+import { safeHttpUrl, timeAgo, type WireItem } from "@/lib/news-core";
 
 /**
  * Mockup-17 wire feed (PHA-857). Pure presentational server component: it takes
@@ -67,6 +67,9 @@ function ImageSlot({
   url: string | null;
   size: { w: number | string; h: number };
 }) {
+  // Sink-side scheme guard (defense-in-depth): even if a hostile URL reached the
+  // DB before the ingest-side guard existed, it is neutralized at render. (PHA-860)
+  const safe = safeHttpUrl(url);
   return (
     <div
       className="brk"
@@ -75,8 +78,8 @@ function ImageSlot({
         flex: "none",
         width: size.w,
         height: size.h,
-        background: url
-          ? `center/cover no-repeat url(${JSON.stringify(url)})`
+        background: safe
+          ? `center/cover no-repeat url(${JSON.stringify(safe)})`
           : "linear-gradient(135deg, var(--surf-2), var(--surf-1))",
         border: "1px solid var(--hair-2)",
         overflow: "hidden",
@@ -84,7 +87,7 @@ function ImageSlot({
     >
       <span className="br-tr" />
       <span className="br-bl" />
-      {!url && (
+      {!safe && (
         <span style={{
           position: "absolute",
           inset: 0,
@@ -113,8 +116,12 @@ function Wrapper({
   style: React.CSSProperties;
 }) {
   const baseStyle = { textDecoration: "none", color: "inherit", ...style };
-  return href ? (
-    <a href={href} target="_blank" rel="noopener noreferrer" style={baseStyle}>
+  // Sink-side scheme guard (defense-in-depth): React renders a javascript: href
+  // verbatim, so validate the scheme at the actual sink, not just at ingest. A
+  // hostile/unsupported scheme falls back to a non-link <div>. (PHA-860)
+  const safeHref = safeHttpUrl(href);
+  return safeHref ? (
+    <a href={safeHref} target="_blank" rel="noopener noreferrer" style={baseStyle}>
       {children}
     </a>
   ) : (

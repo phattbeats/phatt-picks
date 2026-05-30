@@ -69,6 +69,30 @@ export const COLOGNE_NEWS_SEED: readonly NewsSeedItem[] = [
 
 const DEFAULT_SOURCE = "phatt";
 
+/**
+ * Allow only safe URL shapes for the hrefs + image backgrounds the wire renders:
+ * absolute http(s) URLs and same-origin root-relative paths (the curated seed
+ * uses e.g. "/news/x.jpg"). Everything else — `javascript:`, `data:`,
+ * `vbscript:`, protocol-relative `//host` — collapses to null. Wire items are
+ * sourced from attacker-influenceable RSS (HLTV `<link>` / `<media:content url>`),
+ * and React renders a `javascript:` href verbatim, so an unvalidated sourceUrl is
+ * a stored-XSS sink. This is the shared guard applied at ingest, at seed
+ * normalization, AND at the render sink (PHA-860 review, defense-in-depth).
+ */
+export function safeHttpUrl(raw: string | null | undefined): string | null {
+  if (typeof raw !== "string") return null;
+  const s = raw.trim();
+  if (s.length === 0) return null;
+  // Same-origin root-relative path — but not protocol-relative "//host".
+  if (s.startsWith("/") && !s.startsWith("//")) return s;
+  try {
+    const proto = new URL(s).protocol;
+    return proto === "http:" || proto === "https:" ? s : null;
+  } catch {
+    return null; // not an absolute URL with a parseable scheme → reject
+  }
+}
+
 /** Normalize + validate one seed entry → WireItem, or null when unusable. */
 export function normalizeSeed(seed: NewsSeedItem): WireItem | null {
   if (!seed || typeof seed.externalId !== "string" || seed.externalId.length === 0) {
@@ -83,10 +107,10 @@ export function normalizeSeed(seed: NewsSeedItem): WireItem | null {
   return {
     externalId: seed.externalId,
     source: seed.source?.trim() || DEFAULT_SOURCE,
-    sourceUrl: seed.sourceUrl?.trim() || null,
+    sourceUrl: safeHttpUrl(seed.sourceUrl),
     headline,
     summary: seed.summary?.trim() || null,
-    imageUrl: seed.imageUrl?.trim() || null,
+    imageUrl: safeHttpUrl(seed.imageUrl),
     publishedAt: ms,
     pinned: seed.pinned === true,
   };
@@ -112,8 +136,24 @@ export function sortWire(items: readonly WireItem[]): WireItem[] {
 }
 
 /**
+ * Re-validate a stored/ingested item's URLs at read time. DB rows (incl.
+ * automated HLTV pulls) bypass `normalizeSeed`, and rows ingested before this
+ * guard existed may carry a hostile `javascript:`/`data:` URL — so the read
+ * path is the chokepoint that guarantees nothing unsafe reaches the renderer,
+ * with no DB migration required. (PHA-860 review.)
+ */
+function sanitizeWireUrls(it: WireItem): WireItem {
+  const sourceUrl = safeHttpUrl(it.sourceUrl);
+  const imageUrl = safeHttpUrl(it.imageUrl);
+  return sourceUrl === it.sourceUrl && imageUrl === it.imageUrl
+    ? it
+    : { ...it, sourceUrl, imageUrl };
+}
+
+/**
  * Merge DB rows with the committed seed, deduped by externalId. DB rows win
  * (they may carry edits / an automated pull's freshest copy), then sorted.
+ * Every returned item's URLs are scheme-validated (see sanitizeWireUrls).
  */
 export function mergeWire(
   dbItems: readonly WireItem[],
@@ -122,7 +162,7 @@ export function mergeWire(
   const byId = new Map<string, WireItem>();
   for (const s of seedItems) byId.set(s.externalId, s);
   for (const d of dbItems) byId.set(d.externalId, d); // DB overrides seed
-  return sortWire([...byId.values()]);
+  return sortWire([...byId.values()].map(sanitizeWireUrls));
 }
 
 /** Compact human "time-ago" for the wire meta line. */

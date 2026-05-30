@@ -15,6 +15,7 @@ import {
   seedWireItems,
   sortWire,
   mergeWire,
+  safeHttpUrl,
   timeAgo,
   type NewsSeedItem,
   type WireItem,
@@ -40,6 +41,34 @@ check(
   "empty merge → empty wire (honest no-signal state)",
   mergeWire([], []).length === 0,
 );
+
+console.log("\nnews-core - URL scheme guard (PHA-860 stored-XSS hardening)");
+check("https passes", safeHttpUrl("https://hltv.org/x") === "https://hltv.org/x");
+check("http passes", safeHttpUrl("http://a.b/c") === "http://a.b/c");
+check("same-origin relative passes", safeHttpUrl("/news/x.jpg") === "/news/x.jpg");
+check("surrounding whitespace trimmed", safeHttpUrl("  https://t.test  ") === "https://t.test");
+check("javascript: blocked", safeHttpUrl("javascript:alert(document.cookie)") === null);
+check("JavaScript: (case) blocked", safeHttpUrl("JavaScript:alert(1)") === null);
+check("data: blocked", safeHttpUrl("data:text/html,<script>1</script>") === null);
+check("vbscript: blocked", safeHttpUrl("vbscript:msgbox(1)") === null);
+check("protocol-relative //host blocked", safeHttpUrl("//evil.com/x") === null);
+check("mailto: blocked", safeHttpUrl("mailto:a@b.c") === null);
+check("garbage blocked", safeHttpUrl("not a url") === null);
+check("null blocked", safeHttpUrl(null) === null);
+{
+  // End-to-end: a stored DB row carrying a hostile URL must come out of the read
+  // chokepoint with sourceUrl/imageUrl stripped — no migration needed.
+  const poisoned: WireItem = {
+    externalId: "hltv:evil", source: "hltv",
+    sourceUrl: "javascript:fetch('/api/picks',{method:'POST'})",
+    headline: "Click me", summary: null, imageUrl: "javascript:1",
+    publishedAt: 1000, pinned: false,
+  };
+  const row = mergeWire([poisoned], [])[0];
+  check("mergeWire strips hostile sourceUrl from stored row", row.sourceUrl === null);
+  check("mergeWire strips hostile imageUrl from stored row", row.imageUrl === null);
+  check("mergeWire keeps the headline (content preserved)", row.headline === "Click me");
+}
 
 console.log("\nnews-core - seed normalization + validation");
 const good: NewsSeedItem = {

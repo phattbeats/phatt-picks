@@ -121,6 +121,10 @@ export function parseHltvRss(
       publishedAt: ms,
       pinned: false, // curated items lead the wire; automated pulls never pin
     });
+    // NOTE: sourceUrl/imageUrl are NOT scheme-validated here — they are
+    // sanitized at the read chokepoint (news-core mergeWire) and again at the
+    // render sink (WireFeed). Keeping this module free of a *runtime* news-core
+    // import preserves its bare-node loadability for the verify harness.
   }
 
   return items;
