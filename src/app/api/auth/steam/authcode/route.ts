@@ -14,6 +14,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { encryptAuthCode } from "@/lib/crypto";
+import { mirrorPlayerPredictions } from "@/lib/predictions-sync";
+
+const EVENT_ID = 26;
 
 // Valve auth codes are uppercase alphanumeric in a 4-5-4 hyphenated shape (e.g. ABCD-12345-WXYZ).
 const AUTH_CODE_RE = /^[A-Z0-9]{4}-[A-Z0-9]{5}-[A-Z0-9]{4}$/;
@@ -46,8 +49,21 @@ export async function POST(req: NextRequest) {
     data: { authCode: encryptAuthCode(authCode) },
   });
 
-  // Confirm storage without ever returning the plaintext or ciphertext.
-  return NextResponse.json({ ok: true, hasAuthCode: true });
+  // PHA-853: as soon as the auth code is stored, pull any existing/partial
+  // Valve picks into the local Pick table so the user's next /picks visit
+  // shows what's already on their Steam account (no manual sync click).
+  // Mirror failures don't fail the save — the encrypted code is already
+  // persisted, and the page-load mirror will retry within 60s.
+  const mirror = await mirrorPlayerPredictions(session.playerId, EVENT_ID).catch(
+    (e) => ({ ok: false, mirrored: 0, error: e instanceof Error ? e.message : String(e) }),
+  );
+
+  return NextResponse.json({
+    ok: true,
+    hasAuthCode: true,
+    mirrored: mirror.mirrored,
+    mirrorOk: mirror.ok,
+  });
 }
 
 export async function DELETE() {

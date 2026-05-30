@@ -29,11 +29,22 @@ export function AuthCodeForm({ initiallySet }: { initiallySet: boolean }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ authCode: normalized }),
       });
-      const data = (await res.json()) as { ok?: boolean; error?: string };
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        mirrored?: number;
+        mirrorOk?: boolean;
+      };
       if (res.ok && data.ok) {
         setSaved(true);
         setValue("");
-        setMsg("Saved. Your official picks will mirror in within a few minutes.");
+        if (data.mirrorOk && (data.mirrored ?? 0) > 0) {
+          setMsg(`Saved. Imported ${data.mirrored} pick${data.mirrored === 1 ? "" : "s"} from Steam.`);
+        } else if (data.mirrorOk) {
+          setMsg("Saved. No existing picks on Steam yet — start picking on /picks.");
+        } else {
+          setMsg("Saved. Couldn't pull existing picks from Steam right now; we'll retry on your next /picks visit.");
+        }
       } else if (data.error === "steam_account_required") {
         setMsg("Sign in with Steam first — local players don't need a code.");
       } else {
