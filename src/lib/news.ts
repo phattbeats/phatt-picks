@@ -7,11 +7,13 @@
  * missing (deploy hasn't run `prisma db push`) or the DB is unreachable, it
  * degrades to the seed alone, which itself may be empty → honest empty state.
  *
- * `ingestNews` is the write path. Today it upserts the committed seed (idempotent
- * by externalId). It is the single hook point for an automated source: a future
- * RSS / HLTV pull resolves to the same `WireItem[]` and flows through the same
- * upsert, so the rest of the app is source-agnostic. Like outcome ingestion it
- * is safe to call repeatedly and makes zero external calls today.
+ * `ingestNews` is the write path. It upserts the committed curated seed
+ * (idempotent by externalId) and then attempts the automated HLTV RSS pull
+ * (PHA-859), upserting whatever it resolves through the SAME path. Both sources
+ * resolve to the same `WireItem[]`, so the rest of the app stays
+ * source-agnostic. The automated pull is best-effort: a throttle or a source
+ * outage degrades to "seed only" and is reported in the summary — it never
+ * throws into the caller. Safe to call repeatedly.
  */
 
 import { prisma } from "./db";
@@ -21,6 +23,7 @@ import {
   seedWireItems,
   sortWire,
 } from "./news-core";
+import { fetchHltvWire, HltvThrottledError } from "./hltv";
 
 /** Read the wire, newest-first, capped at `limit`. Never throws. */
 export async function getWireItems(limit = 30): Promise<WireItem[]> {
@@ -48,41 +51,83 @@ export async function getWireItems(limit = 30): Promise<WireItem[]> {
   return mergeWire(dbItems, seed).slice(0, limit);
 }
 
-export type IngestNewsSummary = {
+/** Outcome of the best-effort automated pull, surfaced in the summary. */
+export type AutomatedPullSummary = {
+  source: "hltv";
+  /** ok = pulled & upserted; throttled = refresh floor blocked it; empty = feed
+   *  had no usable items; error = network / non-200 (e.g. Cloudflare gate). */
+  status: "ok" | "throttled" | "empty" | "error";
+  fetched: number;
   upserted: number;
-  source: "seed";
+  detail?: string;
 };
 
-/**
- * Upsert the committed curated seed into NewsItem (idempotent by externalId).
- * The hook point for an automated pull: resolve external stories to
- * `WireItem[]` and upsert them here too.
- */
-export async function ingestNews(): Promise<IngestNewsSummary> {
-  const items = seedWireItems();
+export type IngestNewsSummary = {
+  /** Total rows upserted across all sources this run. */
+  upserted: number;
+  seedUpserted: number;
+  automated: AutomatedPullSummary;
+};
+
+/** Upsert WireItems into NewsItem (idempotent by externalId). Returns the count. */
+async function upsertWireItems(items: readonly WireItem[]): Promise<number> {
   for (const it of items) {
+    const fields = {
+      source: it.source,
+      sourceUrl: it.sourceUrl,
+      headline: it.headline,
+      summary: it.summary,
+      imageUrl: it.imageUrl,
+      publishedAt: new Date(it.publishedAt),
+      pinned: it.pinned,
+    };
     await prisma.newsItem.upsert({
       where: { externalId: it.externalId },
-      create: {
-        externalId: it.externalId,
-        source: it.source,
-        sourceUrl: it.sourceUrl,
-        headline: it.headline,
-        summary: it.summary,
-        imageUrl: it.imageUrl,
-        publishedAt: new Date(it.publishedAt),
-        pinned: it.pinned,
-      },
-      update: {
-        source: it.source,
-        sourceUrl: it.sourceUrl,
-        headline: it.headline,
-        summary: it.summary,
-        imageUrl: it.imageUrl,
-        publishedAt: new Date(it.publishedAt),
-        pinned: it.pinned,
-      },
+      create: { externalId: it.externalId, ...fields },
+      update: fields,
     });
   }
-  return { upserted: items.length, source: "seed" };
+  return items.length;
+}
+
+/**
+ * Run the automated HLTV pull and upsert it. Best-effort: a throttle, an empty
+ * feed, or a source outage all resolve to a reported status, never a throw —
+ * the curated seed is the floor the wire always has. Callers (the cron/routine)
+ * should treat a `throttled` or `empty` status as authoritative and back off.
+ */
+async function ingestAutomated(): Promise<AutomatedPullSummary> {
+  try {
+    const items = await fetchHltvWire();
+    if (items.length === 0) return { source: "hltv", status: "empty", fetched: 0, upserted: 0 };
+    const upserted = await upsertWireItems(items);
+    return { source: "hltv", status: "ok", fetched: items.length, upserted };
+  } catch (e) {
+    if (e instanceof HltvThrottledError) {
+      return { source: "hltv", status: "throttled", fetched: 0, upserted: 0 };
+    }
+    // Source outage / Cloudflare gate — degrade to seed-only, report, don't throw.
+    return {
+      source: "hltv",
+      status: "error",
+      fetched: 0,
+      upserted: 0,
+      detail: e instanceof Error ? e.message : String(e),
+    };
+  }
+}
+
+/**
+ * Upsert the committed curated seed, then attempt the automated HLTV pull.
+ * Idempotent by externalId; the automated pull is rate-limited and degrades
+ * gracefully (see ingestAutomated).
+ */
+export async function ingestNews(): Promise<IngestNewsSummary> {
+  const seedUpserted = await upsertWireItems(seedWireItems());
+  const automated = await ingestAutomated();
+  return {
+    upserted: seedUpserted + automated.upserted,
+    seedUpserted,
+    automated,
+  };
 }

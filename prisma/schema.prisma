@@ -81,7 +81,7 @@ model LayoutCache {
 // source call; the gate consults it before any new request.
 model SourceState {
   id           String   @id @default(cuid())
-  source       String   @unique // "liquipedia" | "valve"
+  source       String   @unique // "liquipedia" | "valve" | "hltv"
   lastCallAt   DateTime
   updatedAt    DateTime @updatedAt
 }

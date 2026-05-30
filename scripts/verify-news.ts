@@ -19,6 +19,7 @@ import {
   type NewsSeedItem,
   type WireItem,
 } from "../src/lib/news-core.ts";
+import { parseHltvRss, HLTV_MAX_ITEMS } from "../src/lib/hltv-core.ts";
 
 let pass = 0;
 let fail = 0;
@@ -104,6 +105,93 @@ check("minutes", timeAgo(NOW - 5 * 60_000, NOW) === "5m ago");
 check("hours", timeAgo(NOW - 3 * 3_600_000, NOW) === "3h ago");
 check("days", timeAgo(NOW - 2 * 86_400_000, NOW) === "2d ago");
 check("weeks", timeAgo(NOW - 14 * 86_400_000, NOW) === "2w ago");
+
+// ---------------------------------------------------------------------------
+// PHA-859 — HLTV RSS parse (hltv-core). Fixture mirrors the live HLTV feed shape
+// (title/description/link/guid/pubDate/media:content) confirmed before building.
+// ---------------------------------------------------------------------------
+
+console.log("\nhltv-core - RSS parse → WireItem (map, image, dedup)");
+
+const RSS = `<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+<channel>
+  <title>HLTV.org</title>
+  <item>
+    <title>FaZe &amp; magic reach grand final </title>
+    <description>Twistzz's troops advance.</description>
+    <link>https://www.hltv.org/news/44730/faze-grand-final</link>
+    <guid isPermaLink="false">hltvnews44730</guid>
+    <pubDate>Fri, 29 May 2026 20:30:00 GMT</pubDate>
+    <media:content url="https://img-cdn.hltv.org/x.jpg?w=800&amp;q=75"></media:content>
+  </item>
+  <item>
+    <title>NIP qualify for playoffs</title>
+    <description><![CDATA[Big <b>upset</b> in group B.]]></description>
+    <link>https://www.hltv.org/news/44731/nip-playoffs</link>
+    <guid isPermaLink="false">hltvnews44731</guid>
+    <pubDate>Fri, 29 May 2026 18:00:00 GMT</pubDate>
+  </item>
+</channel>
+</rss>`;
+
+const wire = parseHltvRss(RSS);
+check("parses both well-formed items", wire.length === 2);
+
+const first = wire[0];
+check("headline decoded + trimmed", first.headline === "FaZe & magic reach grand final");
+check("summary mapped", first.summary === "Twistzz's troops advance.");
+check("source tagged hltv", first.source === "hltv");
+check("externalId namespaced from guid", first.externalId === "hltv:hltvnews44730");
+check("sourceUrl from link", first.sourceUrl === "https://www.hltv.org/news/44730/faze-grand-final");
+check(
+  "image from media:content, entities decoded",
+  first.imageUrl === "https://img-cdn.hltv.org/x.jpg?w=800&q=75",
+);
+check("publishedAt parsed to epoch ms", first.publishedAt === Date.parse("Fri, 29 May 2026 20:30:00 GMT"));
+check("automated items never pinned", first.pinned === false);
+
+const second = wire[1];
+check("CDATA description unwrapped", second.summary === "Big <b>upset</b> in group B.");
+check("missing media:content → imageUrl null (framed placeholder)", second.imageUrl === null);
+
+// Idempotent dedup: parsing the same feed twice yields identical stable keys,
+// so the downstream upsert (where: externalId) overwrites rather than duplicates.
+const again = parseHltvRss(RSS);
+check(
+  "re-parse yields identical externalIds (idempotent dedup)",
+  again.map((w) => w.externalId).join(",") === wire.map((w) => w.externalId).join(","),
+);
+
+console.log("\nhltv-core - never fabricate (drop unusable rows)");
+const BAD = `<rss><channel>
+  <item><title>  </title><pubDate>Fri, 29 May 2026 20:30:00 GMT</pubDate><guid>g1</guid></item>
+  <item><title>No date</title><pubDate>not-a-date</pubDate><guid>g2</guid></item>
+  <item><title>No key</title><pubDate>Fri, 29 May 2026 20:30:00 GMT</pubDate></item>
+  <item><title>Good one</title><pubDate>Fri, 29 May 2026 20:30:00 GMT</pubDate><guid>g4</guid></item>
+</channel></rss>`;
+const cleaned = parseHltvRss(BAD);
+check("blank title / bad date / no-key items dropped", cleaned.length === 1);
+check("only the usable item survives", cleaned[0]?.externalId === "hltv:g4");
+
+console.log("\nhltv-core - resilience");
+check("empty string → [] (no throw)", parseHltvRss("").length === 0);
+check("garbage → [] (no throw)", parseHltvRss("<html>not rss</html>").length === 0);
+
+// Feed flood guard: more than HLTV_MAX_ITEMS entries are capped.
+const many = Array.from({ length: HLTV_MAX_ITEMS + 10 }, (_v, i) =>
+  `<item><title>n${i}</title><pubDate>Fri, 29 May 2026 20:30:00 GMT</pubDate><guid>g${i}</guid></item>`,
+).join("");
+check("caps at HLTV_MAX_ITEMS", parseHltvRss(`<rss><channel>${many}</channel></rss>`).length === HLTV_MAX_ITEMS);
+
+// Merge: an automated HLTV row coexists with curated seed, deduped by externalId.
+const hltvAsDb = parseHltvRss(RSS);
+const curated: WireItem[] = [
+  { externalId: "phatt:pin", source: "phatt", sourceUrl: null, headline: "pinned", summary: null, imageUrl: null, publishedAt: Date.parse("2026-05-29T19:00:00Z"), pinned: true },
+];
+const mix = mergeWire(hltvAsDb, curated);
+check("curated pinned leads merged wire", mix[0].externalId === "phatt:pin");
+check("hltv rows merge in alongside seed", mix.length === 3);
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);
