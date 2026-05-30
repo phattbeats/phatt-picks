@@ -1,7 +1,9 @@
 import { MobileNav } from "@/components/ui/MobileNav";
 import { PushToggle } from "@/components/PushToggle";
 import { InviteLink } from "@/components/InviteLink";
+import { AdminLocalPlayers } from "@/components/AdminLocalPlayers";
 import { getSession } from "@/lib/session";
+import { isOwner } from "@/lib/owner";
 
 const cardStyle: React.CSSProperties = {
   background: "var(--bg1)",
@@ -30,6 +32,7 @@ export default async function ProfilePage() {
 
   const connected = Boolean(session.steamId);
   const initials = session.displayName.slice(0, 2).toUpperCase();
+  const owner = isOwner(session);
 
   return (
     <>
@@ -122,6 +125,8 @@ export default async function ProfilePage() {
             &ldquo;Install app&rdquo; / &ldquo;Add to Home screen&rdquo; option.
           </p>
         </div>
+
+        {owner && <AdminLocalPlayers />}
 
         {/* Account */}
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>

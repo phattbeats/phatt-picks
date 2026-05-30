@@ -16,6 +16,7 @@ not on a schedule. **Required** = the app errors or skips features when missing.
 | `STEAM_API_KEY` | yes for live read/write | `src/lib/valve.ts` | Your Steam Web API key from <https://steamcommunity.com/dev/apikey>. Server-side only — never reaches the client. Without it the read pipeline can't pull predictions / items and the write path 401s. |
 | `AUTH_CODE_ENCRYPTION_KEY` | yes for Steam users | `src/lib/crypto.ts` | 32-byte hex (64 hex chars). Encrypts each user's Steam Pick'Em auth code at rest with AES-256-GCM. Rotating it invalidates every stored auth code — users have to repaste at `/help/auth-code`. |
 | `WRITE_ENABLED` | optional, default `false` | `src/lib/picks-write.ts:42` | **DESTRUCTIVE if `true`.** Gates the Steam upload path. When `false`, every `Lock In to Steam` click skips with `Steam sync disabled by owner`; local picks still save. Set to `true` once you're ready to lock real picks on Valve's servers. |
+| `OWNER_STEAM_ID` | optional | `src/lib/owner.ts` | SteamID64 (string, e.g. `7656119xxxxxxxxxx`) of the single owner. Unlocks the `/profile` "Admin · Local players" section and the `/api/players/local*` cleanup endpoints. When unset, the gate fails closed (nobody is owner). |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | optional | `src/lib/notify.ts` | Web Push keys. Pre-generated and paired in the template. Generate a fresh pair with `npx web-push generate-vapid-keys` — rotating invalidates every push subscription (users have to re-opt-in). When either is missing, `/api/push/public-key` returns `{ key: null }` and the UI hides the opt-in. |
 | `VAPID_SUBJECT` | optional | `src/lib/notify.ts` | Contact URI sent with every push (`mailto:brandon@phatt.tech`). Required by the Web Push spec; web-push will throw without it. |
 | `NODE_ENV` | optional, default `production` in image | `src/app/api/auth/steam/callback/route.ts:86` | Leave as `production` in the deployed container. (Used only to enable a dev-only debug branch in the Steam callback.) |
@@ -65,6 +66,8 @@ not on a schedule. **Required** = the app errors or skips features when missing.
 | `POST` | `/api/push/subscribe` | session | Store a browser `PushSubscription`. Idempotent on endpoint. |
 | `POST` | `/api/push/unsubscribe` | session | Remove a subscription by endpoint. No-op if not ours. |
 | `POST` | `/api/push/test` | session | Send a sample pre-lock reminder to the caller's own devices. |
+| `GET` | `/api/players/local` | session + owner | Owner-only list of local-only Players (`isLocal && steamId IS NULL`) with `pickCount` and `lastActivity`. 403 for any other session. |
+| `DELETE` | `/api/players/local/:id` | session + owner | Owner-only hard delete of one local Player; Prisma cascade wipes their `Pick` + `PushSubscription` rows. Refuses Steam-linked players (400 `not_local`) and self-delete (400 `self_delete`). |
 
 ## One-time setup
 
