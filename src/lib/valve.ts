@@ -14,6 +14,7 @@
 import { parseSafeJson } from "./bigint";
 import type { PredictionsEnvelope } from "./predictions";
 import type { ItemsEnvelope } from "./items";
+import type { LayoutEnvelope } from "./layout";
 import { buildUploadBody, type UploadPick } from "./write-core";
 
 const BASE = "https://api.steampowered.com/ICSGOTournaments_730";
@@ -83,6 +84,30 @@ export async function fetchTournamentPredictions(
   if (!res.ok) throw new ValveApiError(res.status, "GetTournamentPredictions");
   // bigint-safe: itemids are 17+ digits and JSON.parse would corrupt them (rule #2).
   return parseSafeJson(text) as PredictionsEnvelope;
+}
+
+/**
+ * Read the live tournament layout — the section/group/team/pick structure and,
+ * once a stage resolves, the official answer key carried in each pick slot's
+ * `pickids` (empty pre-event; see cologne-layout.json). This is the preferred
+ * outcome source (PHA-869): the oracle reads results straight from the same
+ * layout players picked into, so the answer is slot-correct by construction.
+ *
+ * Event-global: needs only the app `key` + `event`, no per-user auth code
+ * (distinct from predictions/items, which are per-Steam-user). Parsed
+ * bigint-safe (rule #2) for consistency — a layout payload can embed itemids.
+ */
+export async function fetchTournamentLayout(event: number): Promise<LayoutEnvelope> {
+  const qs = new URLSearchParams({
+    key: requireKey(),
+    event: String(event),
+  });
+  const res = await fetch(`${BASE}/GetTournamentLayout/v1/?${qs.toString()}`, {
+    cache: "no-store", // always read live during the event
+  });
+  const text = await res.text();
+  if (!res.ok) throw new ValveApiError(res.status, "GetTournamentLayout");
+  return parseSafeJson(text) as LayoutEnvelope;
 }
 
 /**
