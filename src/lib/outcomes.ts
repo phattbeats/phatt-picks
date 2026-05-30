@@ -22,10 +22,12 @@ import { getCommittedLayout } from "./layout";
 import {
   normalizeOutcomes,
   pickLockedUnresolvedSlots,
+  resolveOutcomesFromLayout,
   type NormalizedOutcome,
   type RawResolvedSlot,
 } from "./outcomes-core";
 import { fetchLiquipediaResults, LiquipediaThrottledError } from "./liquipedia";
+import { fetchTournamentLayout } from "./valve";
 import { writeRankSnapshots } from "./rank-snapshot";
 
 export interface IngestSummary {
@@ -41,15 +43,48 @@ export interface IngestSummary {
 }
 
 /**
- * Probe the Valve oracle for resolved results. Returns null when Valve does not
- * expose finished-stage results for this event (the documented default — the
- * pick'em layout API surfaces predictions, not an authoritative results feed).
- * Wired as a hook so a future Valve results endpoint can slot in here without
- * touching the ingestion flow.
+ * Probe the Valve oracle for resolved results (PHA-869 — Brandon-approved source).
+ *
+ * Valve's GetTournamentLayout carries the official answer key in each pick slot's
+ * `pickids` once a stage resolves (empty pre-event). This is the preferred,
+ * slot-correct source: we read results from the very layout players picked into,
+ * so no external slot-ordering guess is needed (the reason Liquipedia can't
+ * resolve the set-valued Swiss buckets). resolveOutcomesFromLayout applies the
+ * per-slot policy (single pickid → resolved; multi → ambiguous, left for live
+ * confirmation; locked groups only).
+ *
+ * Graceful by contract (rules #7/#8): any failure — STEAM_API_KEY unset, a
+ * non-200, an unparseable body — logs and returns null so ingest falls through
+ * to the Liquipedia fallback and never throws into the read/request path.
+ * Returns null (not []) when nothing is resolved so the caller treats "Valve had
+ * nothing" the same as "Valve unavailable" and still consults the fallback.
+ *
+ * NOTE: the resolved `pickids` shape can only be confirmed against real data at
+ * the stage-1 opener (Jun 2) — pre-event every slot is empty, so this path is a
+ * structural no-op until then (proven offline by verify-outcomes-oracle).
  */
 async function tryValveOracle(eventId: number): Promise<RawResolvedSlot[] | null> {
-  void eventId; // reserved: a future Valve results endpoint keys off the event
-  return null;
+  try {
+    const envelope = await fetchTournamentLayout(eventId);
+    const live = envelope?.result;
+    if (!live?.sections) return null;
+    const { resolved, ambiguous } = resolveOutcomesFromLayout(live);
+    if (ambiguous.length > 0) {
+      console.warn(
+        `[outcomes] Valve layout reported ${ambiguous.length} slot(s) with multiple ` +
+          `correct pickids (bucket/set semantics) — left unresolved pending live ` +
+          `confirmation at the stage-1 opener:`,
+        ambiguous,
+      );
+    }
+    return resolved.length > 0 ? resolved : null;
+  } catch (e) {
+    console.error(
+      "[outcomes] Valve oracle (GetTournamentLayout) failed (non-fatal):",
+      e instanceof Error ? e.message : e,
+    );
+    return null;
+  }
 }
 
 /**
