@@ -8,6 +8,7 @@ import { visibleCoinTier } from "@/lib/coin-core";
 import { getSession } from "@/lib/session";
 import { rankMapForSection, snapshotSectionIds } from "@/lib/rank-snapshot";
 import { baselineSectionId, latestSectionId, rankDelta, type RankDelta } from "@/lib/rank-snapshot-core";
+import { refreshOutcomesOnRead } from "@/lib/outcomes";
 
 const EVENT_ID = 26;
 
@@ -16,6 +17,11 @@ export const revalidate = 60;
 export default async function LeaderboardPage() {
   const layout = getCommittedLayout();
   const session = await getSession();
+
+  // Live driver (PHA-866): atomic 30s claim → deferred background ingest, so the
+  // board never sits frozen mid-event. No cron, no added latency (the slow ingest
+  // runs past the response via `after`).
+  await refreshOutcomesOnRead(EVENT_ID);
 
   const allPicks = await prisma.pick.findMany({
     where: { eventId: EVENT_ID },

@@ -1,0 +1,101 @@
+/**
+ * verify-outcomes-driver - offline proof for PHA-866 (live outcomes/scoring driver).
+ *
+ * The leaderboard/reveal would sit frozen mid-event because nothing triggered the
+ * owner-gated ingest route on a cadence. The fix mirrors the news wire's read-path
+ * refresh (PHA-863, refreshWireOnRead): the live read surfaces call
+ * refreshOutcomesOnRead, which atomically claims a 30s refresh slot and DEFERS the
+ * slow ingest past the response via Next's `after`, so results land as matches
+ * finish with no external cron and no added render latency. This is a
+ * static-source check (no DB needed): it asserts the helper exists, uses the
+ * atomic claim + deferred pattern, bounds the source fetch, and is wired into every
+ * surface that reads resolved outcomes. Gating/idempotency is proven separately by
+ * verify-outcomes-gate.
+ *
+ * Run: node scripts/verify-outcomes-driver.ts
+ */
+
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const read = (p: string) => readFileSync(join(ROOT, p), "utf8");
+
+let pass = 0;
+let fail = 0;
+function check(name: string, cond: boolean) {
+  if (cond) {
+    pass++;
+    console.log("  PASS  " + name);
+  } else {
+    fail++;
+    console.error("  FAIL  " + name);
+  }
+}
+
+console.log("\noutcomes-driver - canonical claim + deferred pattern (mirrors PHA-863)");
+
+const outcomes = read("src/lib/outcomes.ts");
+check(
+  "outcomes.ts exports refreshOutcomesOnRead",
+  /export async function refreshOutcomesOnRead\(/.test(outcomes),
+);
+check(
+  "refresh is gated by an ATOMIC claim (updateMany guarded by the floor)",
+  /claimOutcomesRefreshSlot/.test(outcomes) &&
+    /sourceState\.updateMany\(\s*\{\s*where:\s*\{\s*source:\s*OUTCOMES_REFRESH_SOURCE,\s*lastCallAt:\s*\{\s*lt:\s*floor/.test(
+      outcomes,
+    ),
+);
+check(
+  "losing the claim is a no-op (no double-fire across renders/processes)",
+  /if \(!\(await claimOutcomesRefreshSlot\(\)\)\) return/.test(outcomes),
+);
+check(
+  "slow ingest is DEFERRED past the response via Next `after`",
+  /import \{ after \} from "next\/server"/.test(outcomes) &&
+    /runDeferred\(\(\) => ingestOutcomes\(eventId\)\)/.test(outcomes) &&
+    /after\(run\)/.test(outcomes),
+);
+check(
+  "deferred task swallows errors (never throws into a read/render path)",
+  /runDeferred[\s\S]*?\.catch\(/.test(outcomes),
+);
+check(
+  "claim is best-effort (a DB hiccup never permanently blocks the driver)",
+  /claimOutcomesRefreshSlot[\s\S]*?catch \{[\s\S]*?return true;/.test(outcomes),
+);
+
+console.log("\noutcomes-driver - source fetch is bounded (can't hang the deferred run)");
+
+const liquipedia = read("src/lib/liquipedia.ts");
+check(
+  "liquipedia parse fetch carries an AbortSignal.timeout",
+  /AbortSignal\.timeout\(PARSE_FETCH_TIMEOUT_MS\)/.test(liquipedia) &&
+    /const PARSE_FETCH_TIMEOUT_MS = /.test(liquipedia),
+);
+
+console.log("\noutcomes-driver - wired into every outcome-reading surface");
+
+for (const [label, path] of [
+  ["dashboard", "src/app/(app)/page.tsx"],
+  ["leaderboard", "src/app/(app)/leaderboard/page.tsx"],
+  ["reveal", "src/app/(app)/reveal/[section]/page.tsx"],
+  ["players", "src/app/(app)/players/page.tsx"],
+  ["player-detail", "src/app/(app)/players/[id]/page.tsx"],
+  ["compare", "src/app/(app)/leaderboard/compare/page.tsx"],
+] as const) {
+  const src = read(path);
+  check(
+    `${label} imports refreshOutcomesOnRead`,
+    /import\s*\{[^}]*\brefreshOutcomesOnRead\b[^}]*\}\s*from\s*["']@\/lib\/outcomes["']/.test(src),
+  );
+  check(
+    `${label} awaits refreshOutcomesOnRead(EVENT_ID)`,
+    /await refreshOutcomesOnRead\(EVENT_ID\)/.test(src),
+  );
+}
+
+console.log("\n" + pass + "/" + (pass + fail) + " checks passed");
+process.exit(fail === 0 ? 0 : 1);

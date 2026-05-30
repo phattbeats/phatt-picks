@@ -9,6 +9,7 @@ import { LockCountdown } from "@/components/heat/LockCountdown";
 import { lockTimeForSection } from "@/lib/lock-schedule-core";
 import { WireFeed } from "@/components/heat/WireFeed";
 import { getWireItems } from "@/lib/news";
+import { refreshOutcomesOnRead } from "@/lib/outcomes";
 
 const EVENT_ID = 26;
 
@@ -17,6 +18,11 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const layout = getCommittedLayout();
   const session = await getSession();
+
+  // Live driver (PHA-866): one atomic 30s claim gates a deferred background ingest
+  // (via `after`), so "Live now" standings track each finished match with no cron
+  // and no added render latency. Mirrors the news wire's refreshWireOnRead.
+  await refreshOutcomesOnRead(EVENT_ID);
 
   const [resolvedRows, outcomeRows, allPicks, allPlayers, wireItemsAll] = await Promise.all([
     prisma.stageOutcome.findMany({

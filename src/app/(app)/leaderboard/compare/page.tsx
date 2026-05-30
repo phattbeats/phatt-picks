@@ -16,6 +16,7 @@ import { getCommittedLayout, buildTeamMap } from "@/lib/layout";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
 import { arePicksRevealed, groupOutcomeKey } from "@/lib/reveal-core";
 import { getSession } from "@/lib/session";
+import { refreshOutcomesOnRead } from "@/lib/outcomes";
 
 const EVENT_ID = 26;
 
@@ -40,6 +41,7 @@ export default async function ComparePage({
   const layout = getCommittedLayout();
   const teamMap = buildTeamMap(layout);
   const session = await getSession();
+  await refreshOutcomesOnRead(EVENT_ID); // live driver (PHA-866) — shared 30s claim
 
   const players = await prisma.player.findMany({ orderBy: { displayName: "asc" } });
 

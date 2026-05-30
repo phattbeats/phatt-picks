@@ -26,6 +26,7 @@ import { resolveLogoTiers } from "@/lib/logos";
 import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
 import { rankMapForSection, snapshotSectionIds } from "@/lib/rank-snapshot";
 import { previousResolvedSection, rankDelta } from "@/lib/rank-snapshot-core";
+import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import type { Section } from "@/lib/layout";
 
 const EVENT_ID = 26;
@@ -67,6 +68,10 @@ export default async function StageRevealPage({
   if (!sectionDef) notFound();
 
   const session = await getSession();
+  // Live driver (PHA-866): the issue names Stage Reveal explicitly — keep it fresh
+  // for a direct first-viewer (deep link / push). Atomic claim shared with the
+  // other surfaces, so this is a no-op within the 30s window.
+  await refreshOutcomesOnRead(EVENT_ID);
   const stageLabel = sectionDef.name.split(" | ")[0];
   const stageIdx = layout.sections.findIndex((s) => s.sectionid === sectionId);
 

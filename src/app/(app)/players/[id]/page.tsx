@@ -19,6 +19,7 @@ import { getSession } from "@/lib/session";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
 import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
+import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import type { Section } from "@/lib/layout";
 
 const EVENT_ID = 26;
@@ -59,6 +60,7 @@ export default async function PlayerProfilePage({
   const layout = getCommittedLayout();
   const teamMap = buildTeamMap(layout);
   const session = await getSession();
+  await refreshOutcomesOnRead(EVENT_ID); // live driver (PHA-866) — shared 30s claim
 
   const player = await prisma.player.findUnique({ where: { id } });
   if (!player) notFound();
