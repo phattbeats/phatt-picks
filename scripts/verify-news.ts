@@ -178,6 +178,20 @@ console.log("\nhltv-core - resilience");
 check("empty string → [] (no throw)", parseHltvRss("").length === 0);
 check("garbage → [] (no throw)", parseHltvRss("<html>not rss</html>").length === 0);
 
+// A single out-of-range numeric entity must not throw (would discard the whole
+// pull). The bad entity is left verbatim; the item still parses.
+const OOR = `<rss><channel><item><title>boom &#1114112; ok</title><pubDate>Fri, 29 May 2026 20:30:00 GMT</pubDate><guid>g1</guid></item></channel></rss>`;
+let oorThrew = false;
+let oorItems: WireItem[] = [];
+try { oorItems = parseHltvRss(OOR); } catch { oorThrew = true; }
+check("out-of-range numeric entity does not throw", !oorThrew);
+check("item survives a bad entity (left verbatim)", oorItems.length === 1 && oorItems[0].headline.includes("&#1114112;"));
+
+// Radix is driven by the `x` prefix, not the digits: &#x41; is hex 0x41 = 'A',
+// &#65; is decimal 65 = 'A'. The old all-digits heuristic misread &#x41; as 41.
+const ENT = `<rss><channel><item><title>&#x41;&#65;&#x2014;</title><pubDate>Fri, 29 May 2026 20:30:00 GMT</pubDate><guid>g2</guid></item></channel></rss>`;
+check("hex (&#x41;) + decimal (&#65;) + em-dash decode correctly", parseHltvRss(ENT)[0]?.headline === "AA—");
+
 // Feed flood guard: more than HLTV_MAX_ITEMS entries are capped.
 const many = Array.from({ length: HLTV_MAX_ITEMS + 10 }, (_v, i) =>
   `<item><title>n${i}</title><pubDate>Fri, 29 May 2026 20:30:00 GMT</pubDate><guid>g${i}</guid></item>`,

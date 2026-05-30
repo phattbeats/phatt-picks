@@ -36,9 +36,16 @@ function decodeEntities(s: string): string {
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#0*39;|&apos;/g, "'")
-    .replace(/&#x?0*([0-9a-fA-F]+);/g, (_m, code: string) =>
-      String.fromCodePoint(parseInt(code, /[a-fA-F]/.test(code) ? 16 : 10)),
-    )
+    .replace(/&#(x?)0*([0-9a-fA-F]+);/gi, (whole: string, hex: string, code: string) => {
+      // Radix comes from the `x` prefix, never from whether the digits contain
+      // a-f — otherwise a hex ref like &#x41; (all-decimal digits) is misread as
+      // decimal. Out-of-range / invalid codepoints are left verbatim so a single
+      // bad entity can't throw and discard the whole feed (parser stays total).
+      const cp = parseInt(code, hex ? 16 : 10);
+      return Number.isFinite(cp) && cp >= 0 && cp <= 0x10ffff
+        ? String.fromCodePoint(cp)
+        : whole;
+    })
     .replace(/&amp;/g, "&") // last: so "&amp;lt;" → "&lt;" → "<" is avoided
     .trim();
 }
