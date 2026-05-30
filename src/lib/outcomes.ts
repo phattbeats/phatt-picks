@@ -16,6 +16,7 @@
  * already have; it never throws into the request path or wipes stored results.
  */
 
+import { after } from "next/server";
 import { prisma } from "./db";
 import { getCommittedLayout } from "./layout";
 import {
@@ -151,6 +152,83 @@ export async function ingestOutcomes(eventId: number): Promise<IngestSummary> {
     rejected: rejected.length,
     error,
   };
+}
+
+// Dedicated refresh slot for the on-read driver (PHA-866), kept separate from the
+// "liquipedia" parse throttle so this gates how often a refresh is *attempted*
+// across the whole cluster — not just the API call deep inside ingestOutcomes.
+const OUTCOMES_REFRESH_SOURCE = "outcomes-refresh";
+const OUTCOMES_REFRESH_MIN_INTERVAL_MS = 30_000;
+
+/**
+ * Atomically claim the outcomes refresh slot — mirrors hltv.claimRefreshSlot
+ * (PHA-863). Returns true iff the 30s floor has elapsed (or no row exists) AND
+ * this caller won the race; under concurrency exactly one caller wins. A single
+ * `updateMany` guarded by `lastCallAt < floor` is serialized by SQLite, so only
+ * one flips the stamp; a count of 0 is disambiguated by a `create` that succeeds
+ * only on the first-ever call. Best-effort: any DB error resolves to "allowed"
+ * so a storage hiccup never permanently blocks the driver.
+ */
+async function claimOutcomesRefreshSlot(): Promise<boolean> {
+  const now = new Date();
+  const floor = new Date(now.getTime() - OUTCOMES_REFRESH_MIN_INTERVAL_MS);
+  try {
+    const res = await prisma.sourceState.updateMany({
+      where: { source: OUTCOMES_REFRESH_SOURCE, lastCallAt: { lt: floor } },
+      data: { lastCallAt: now },
+    });
+    if (res.count > 0) return true; // won the slot: floor had elapsed
+    try {
+      await prisma.sourceState.create({
+        data: { source: OUTCOMES_REFRESH_SOURCE, lastCallAt: now },
+      });
+      return true; // first-ever refresh (no row existed)
+    } catch {
+      return false; // row exists & within floor, or lost the create race
+    }
+  } catch {
+    return true; // DB hiccup — don't let storage permanently block the driver
+  }
+}
+
+/**
+ * On-read self-refresh of outcomes (PHA-866). The live read surfaces call this so
+ * the leaderboard / rank snapshots / Stage Reveal track official results as
+ * matches finish, with NO external cron — the ingest route is owner/session-gated
+ * (PHA-861), so a headless scheduler can't drive it anyway.
+ *
+ * Mirrors the news wire's read-path refresh (PHA-863, refreshWireOnRead): one
+ * ATOMIC `claimOutcomesRefreshSlot` gates the whole refresh against the 30s floor
+ * — lose the claim → no-op (warm window or a concurrent render already holds it),
+ * win it → DEFER the slow ingest past the response via `after` so it never adds to
+ * page latency. The slot is already stamped by the claim, so concurrent and
+ * subsequent renders (across processes — the claim is DB-backed, not in-memory)
+ * back off regardless of when the deferred ingest finishes. Never throws.
+ *
+ * ingestOutcomes is idempotent, event-gated (zero source calls pre-event / when
+ * fully resolved — PHA-844), cache-hard, and bounded by the Liquipedia fetch
+ * timeout; rank snapshots + Stage Reveal refresh transitively inside it.
+ */
+export async function refreshOutcomesOnRead(eventId: number): Promise<void> {
+  if (!(await claimOutcomesRefreshSlot())) return; // within floor or lost the race — no-op
+  runDeferred(() => ingestOutcomes(eventId)); // slow ingest — off the render path
+}
+
+/**
+ * Run a best-effort background task without blocking (or coupling latency to) the
+ * current render. Prefers Next's `after` so the work runs past the response and
+ * isn't cut off; falls back to a floating promise when called outside a request
+ * scope (e.g. tests). Errors are swallowed — the driver is best-effort.
+ */
+function runDeferred(task: () => Promise<unknown>): void {
+  const run = () => {
+    void task().catch((e) => console.error("[outcomes] deferred refresh failed (non-fatal):", e));
+  };
+  try {
+    after(run);
+  } catch {
+    run();
+  }
 }
 
 /** Upsert validated outcomes. Resolved rows are immutable — create-or-leave. */

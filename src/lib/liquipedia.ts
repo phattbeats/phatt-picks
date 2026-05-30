@@ -30,6 +30,13 @@ const USER_AGENT = "phaTT-Picks/1.0 (Cologne pickem companion; contact: brandon@
 // Min interval between parse calls (their stricter bucket).
 const PARSE_MIN_INTERVAL_MS = 30_000;
 
+// Hard ceiling on a single parse fetch. Without it a stalled/black-holed
+// connection (accepted SYN, no bytes) hangs for minutes; the on-read driver
+// (PHA-866) defers this past the response, but an unbounded hang still leaks a
+// connection and delays the next refresh. The throttle guarantees ≤1 call/30s, so
+// a 10s cap is comfortably safe. Aborts as a TimeoutError → graceful source outage.
+const PARSE_FETCH_TIMEOUT_MS = 10_000;
+
 const SOURCE = "liquipedia";
 
 export class LiquipediaApiError extends Error {
@@ -110,6 +117,9 @@ export async function liquipediaParse(page: string): Promise<string> {
     },
     // Never cache at the fetch layer — caching policy is owned by ingestOutcomes.
     cache: "no-store",
+    // Bound the call so a hung connection can't stall the request. Aborts as a
+    // TimeoutError, which ingestOutcomes treats as a graceful source outage.
+    signal: AbortSignal.timeout(PARSE_FETCH_TIMEOUT_MS),
   });
 
   if (!res.ok) {

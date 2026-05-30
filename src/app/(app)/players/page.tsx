@@ -4,16 +4,17 @@ import { getCommittedLayout } from "@/lib/layout";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
 import { visibleCoinTier } from "@/lib/coin-core";
 import { getSession } from "@/lib/session";
+import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { UserDirectory, type DirRow } from "@/components/heat/UserDirectory";
 
 const EVENT_ID = 26;
 
-export const revalidate = 60;
 export const metadata = { title: "Directory · HOTLINE" };
 
 export default async function DirectoryPage() {
   const layout = getCommittedLayout();
   const session = await getSession();
+  await refreshOutcomesOnRead(EVENT_ID); // live driver (PHA-866) — shared 30s claim
 
   const [players, allPicks, outcomes] = await Promise.all([
     prisma.player.findMany(),
