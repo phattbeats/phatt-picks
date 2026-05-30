@@ -86,6 +86,27 @@ model SourceState {
   updatedAt    DateTime @updatedAt
 }
 
+// Wire / news headlines (PHA-857). Source-agnostic: rows arrive either from a
+// committed curated seed (the Beta default) or, later, an automated pull (RSS /
+// HLTV) through the same ingestion path. `externalId` is the per-source dedup
+// key so re-running ingestion is idempotent. Empty table + empty seed renders
+// the honest "No signal yet" empty state — we never fabricate a headline.
+model NewsItem {
+  id          String   @id @default(cuid())
+  externalId  String   @unique // stable per-source key (url hash / guid / seed slug)
+  source      String   // "phatt" (curated) | "hltv" | "liquipedia" | ...
+  sourceUrl   String?  // canonical link out to the story
+  headline    String
+  summary     String?
+  imageUrl    String?  // mockup-17 image slot; null renders the framed placeholder
+  publishedAt DateTime // story timestamp (drives "time-ago" + sort)
+  pinned      Boolean  @default(false) // curated items that should lead the wire
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([publishedAt])
+}
+
 // PWA push subscriptions
 model PushSubscription {
   id       String   @id @default(cuid())

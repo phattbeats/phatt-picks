@@ -7,6 +7,8 @@ import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring"
 import { HeatMark } from "@/components/heat/HeatMark";
 import { LockCountdown } from "@/components/heat/LockCountdown";
 import { lockTimeForSection } from "@/lib/lock-schedule-core";
+import { WireFeed } from "@/components/heat/WireFeed";
+import { getWireItems } from "@/lib/news";
 
 const EVENT_ID = 26;
 
@@ -16,7 +18,7 @@ export default async function DashboardPage() {
   const layout = getCommittedLayout();
   const session = await getSession();
 
-  const [resolvedRows, outcomeRows, allPicks, allPlayers] = await Promise.all([
+  const [resolvedRows, outcomeRows, allPicks, allPlayers, wireItemsAll] = await Promise.all([
     prisma.stageOutcome.findMany({
       where: { eventId: EVENT_ID },
       select: { sectionId: true, groupId: true, slotIndex: true },
@@ -29,7 +31,11 @@ export default async function DashboardPage() {
     prisma.player.findMany({
       select: { id: true, displayName: true, avatarUrl: true },
     }),
+    getWireItems(3),
   ]);
+
+  const wireItems = wireItemsAll;
+  const now = Date.now();
 
   const resolvedKeys = buildResolvedKeys(resolvedRows);
 
@@ -277,7 +283,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* News stub */}
+      {/* Wire panel */}
       <section className="panel brk">
         <span className="br-tr" />
         <span className="br-bl" />
@@ -285,10 +291,14 @@ export default async function DashboardPage() {
           [ Wire ]
           <Link href="/news" className="link">All news →</Link>
         </div>
-        <div style={{ color: "var(--ink-mid)", fontSize: 13 }}>
-          The wire is quiet. Headlines drop on{" "}
-          <Link href="/news" style={{ color: "var(--heat)" }}>News</Link>.
-        </div>
+        {wireItems.length > 0 ? (
+          <WireFeed items={wireItems} now={now} variant="compact" />
+        ) : (
+          <div style={{ color: "var(--ink-mid)", fontSize: 13 }}>
+            The wire is quiet. Headlines drop on{" "}
+            <Link href="/news" style={{ color: "var(--heat)" }}>News</Link>.
+          </div>
+        )}
       </section>
 
       <style>{`
