@@ -125,6 +125,15 @@ export default async function ProfilePage() {
         <Link href="/help/auth-code" style={accountLink}>
           › How Steam sync &amp; the auth code work
         </Link>
+        <Link href="/faq" style={accountLink}>
+          › FAQ — scoring, Swiss, Viewer Pass
+        </Link>
+        <Link href="/pwa" style={accountLink}>
+          › Install HOTLINE to your home screen
+        </Link>
+        <Link href="/players" style={accountLink}>
+          › Player directory
+        </Link>
         <a href="/api/auth/logout" style={{ ...accountLink, color: "var(--ink-low)" }}>
           › Sign out
         </a>
@@ -177,6 +186,12 @@ function SignedOutProfile() {
       <section style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 8 }}>
         <Link href="/help/auth-code" style={accountLink}>
           › How Steam sync &amp; the auth code work
+        </Link>
+        <Link href="/faq" style={accountLink}>
+          › FAQ — scoring, Swiss, Viewer Pass
+        </Link>
+        <Link href="/pwa" style={accountLink}>
+          › Install HOTLINE to your home screen
         </Link>
       </section>
     </>

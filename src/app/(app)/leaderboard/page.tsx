@@ -133,7 +133,10 @@ export default async function LeaderboardPage() {
           fontSize: 13,
           margin: 0,
         }}>
-          {rows.length} participant{rows.length !== 1 ? "s" : ""} · IEM Cologne 2026
+          {rows.length} participant{rows.length !== 1 ? "s" : ""} · IEM Cologne 2026 ·{" "}
+          <Link href="/players" style={{ color: "var(--heat)", textDecoration: "none" }}>
+            directory →
+          </Link>
         </p>
       </div>
 

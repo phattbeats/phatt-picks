@@ -23,6 +23,22 @@ import type { Section } from "@/lib/layout";
 
 const EVENT_ID = 26;
 
+function ordSuffix(n: number): string {
+  const v = n % 100;
+  if (v >= 11 && v <= 13) return "th";
+  switch (n % 10) {
+    case 1: return "st";
+    case 2: return "nd";
+    case 3: return "rd";
+    default: return "th";
+  }
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+function formatJoin(d: Date): string {
+  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
 /** Short pick-type tag for a slot (3:0 / 3:1·3:2 / 0:3 for Swiss; — otherwise). */
 function bucketLabelFor(sectionId: number, group: Section["groups"][number], slotIndex: number): string | null {
   if (!isSwissSection(sectionId)) return null;
@@ -75,6 +91,55 @@ export default async function PlayerProfilePage({
   const score = scorePlayer(layout, pickMap, outcomeMap).total;
   const coinTier = visibleCoinTier(player);
 
+  // Rank — score this player against the whole field (mockup-06 stat hero).
+  const allPlayers = await prisma.player.findMany({ select: { id: true, displayName: true } });
+  const allPicks = await prisma.pick.findMany({
+    where: { eventId: EVENT_ID },
+    select: { playerId: true, sectionId: true, groupId: true, slotIndex: true, pickId: true },
+  });
+  const everyPickMap: PlayerPickMap = {};
+  for (const p of allPicks) {
+    everyPickMap[p.playerId] ??= {};
+    everyPickMap[p.playerId][p.sectionId] ??= {};
+    everyPickMap[p.playerId][p.sectionId][p.groupId] ??= {};
+    everyPickMap[p.playerId][p.sectionId][p.groupId][p.slotIndex] = p.pickId;
+  }
+  const standings = allPlayers
+    .map((p) => ({
+      id: p.id,
+      displayName: p.displayName,
+      score: scorePlayer(layout, everyPickMap[p.id] ?? {}, outcomeMap).total,
+    }))
+    .sort((a, b) => b.score - a.score || a.displayName.localeCompare(b.displayName));
+  const rank = standings.findIndex((r) => r.id === player.id) + 1;
+  const leaderScore = standings[0]?.score ?? 0;
+  const fieldSize = standings.length;
+
+  // Accuracy — correct picks over resolved picks (only counts decided slots).
+  let resolved = 0;
+  let correct = 0;
+  for (const section of layout.sections) {
+    for (const group of section.groups) {
+      const gOut = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
+      const gPick = pickMap[section.sectionid]?.[group.groupid] ?? {};
+      for (const slot of group.picks) {
+        const winner = gOut[slot.index];
+        if (winner === undefined) continue;
+        resolved += 1;
+        if (gPick[slot.index] === winner) correct += 1;
+      }
+    }
+  }
+  const accuracy = resolved > 0 ? Math.round((correct / resolved) * 100) : null;
+
+  const maxPoints = layout.sections.reduce(
+    (acc, s) => acc + s.groups.reduce((g, grp) => g + grp.picks.length * grp.points_per_pick, 0),
+    0,
+  );
+
+  const joinLabel = formatJoin(player.createdAt);
+  const provenance = player.isLocal ? "Local" : player.synced ? "Steam-synced" : "Steam";
+
   return (
     <>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -91,112 +156,73 @@ export default async function PlayerProfilePage({
         <span className="eyebrow-mono">[ PLAYER_PROFILE ]</span>
       </div>
 
-      {/* Identity + score */}
-      <section className="panel brk" style={{
+      {/* Hero (mockup 06) */}
+      <section className="profile-hero brk" style={{
         background: isSelf ? "rgba(240,163,0,0.06)" : "var(--surf-1)",
         borderColor: isSelf ? "var(--hair-3)" : "var(--hair-2)",
       }}>
         <span className="br-tr" />
         <span className="br-bl" />
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "56px 1fr auto",
-          gap: 14,
-          alignItems: "center",
-        }}>
-          <div style={{
-            width: 56,
-            height: 56,
-            border: "1px solid var(--hair-3)",
-            overflow: "hidden",
-            background: "linear-gradient(135deg, var(--surf-3), var(--surf-2))",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}>
-            {player.avatarUrl ? (
-              <Image
-                src={player.avatarUrl}
-                alt=""
-                width={56}
-                height={56}
-                unoptimized
-                style={{ objectFit: "cover", width: "100%", height: "100%" }}
-              />
-            ) : (
-              <span style={{
-                fontFamily: "var(--font-display)",
-                fontWeight: 800,
-                fontSize: 18,
-                color: "var(--ink-hi)",
-              }}>
-                {player.displayName.slice(0, 2).toUpperCase()}
-              </span>
+        <div className="profile-av">
+          {player.avatarUrl ? (
+            <Image src={player.avatarUrl} alt="" width={60} height={60} unoptimized style={{ objectFit: "cover", width: "100%", height: "100%" }} />
+          ) : (
+            player.displayName.slice(0, 2).toUpperCase()
+          )}
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <h1 className="profile-name">
+            {player.displayName}
+            {isSelf && (
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", color: "var(--heat)", marginLeft: 8 }}>· YOU</span>
             )}
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <h1 className="font-display" style={{
-              fontWeight: 800,
-              fontSize: "clamp(22px, 4vw, 30px)",
-              textTransform: "uppercase",
-              lineHeight: 0.95,
-              color: "var(--ink-hi)",
-              margin: 0,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}>
-              {player.displayName}
-              {isSelf && (
-                <span style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 10,
-                  letterSpacing: "0.12em",
-                  color: "var(--heat)",
-                  marginLeft: 8,
-                }}>
-                  · YOU
-                </span>
-              )}
-            </h1>
-            <p style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: 10,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-              color: "var(--ink-mid)",
-              margin: "6px 0 0",
-            }}>
-              {player.isLocal ? "Local" : player.synced ? "Steam-synced" : "Steam"}
-              {coinTier && <> · {coinTier} coin</>}
-            </p>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div className="font-display foil" style={{
-              fontWeight: 800,
-              fontSize: 36,
-              lineHeight: 1,
-              background: "var(--foil)",
-              backgroundSize: "200% 200%",
-              WebkitBackgroundClip: "text",
-              backgroundClip: "text",
-              color: "transparent",
-            }}>
-              {score}
-            </div>
-            <div style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: 9,
-              letterSpacing: "0.16em",
-              textTransform: "uppercase",
-              color: "var(--ink-low)",
-              marginTop: 4,
-            }}>
-              Score
-            </div>
-          </div>
+          </h1>
+          <div className="profile-meta">IEM Cologne 2026{joinLabel ? ` · Joined ${joinLabel}` : ""}</div>
+          <span className="synced-pill">{provenance}</span>
         </div>
       </section>
+
+      {/* Stat cards (mockup 06) */}
+      <div className="statcards">
+        <div className="statcard">
+          <div className="statcard-lbl">Rank</div>
+          <div className="statcard-val">
+            {rank > 0 ? <>{rank}<small>{ordSuffix(rank)}</small></> : "—"}
+          </div>
+          <div className="statcard-sub">
+            {rank > 0
+              ? rank === 1
+                ? fieldSize > 1 ? "Leading the board" : "Only player"
+                : `${leaderScore - score} from leader`
+              : "Unranked"}
+          </div>
+        </div>
+        <div className="statcard">
+          <div className="statcard-lbl">Points</div>
+          <div className="statcard-val foil">{score}</div>
+          <div className="statcard-sub">of {maxPoints} max</div>
+        </div>
+        <div className="statcard">
+          <div className="statcard-lbl">Accuracy</div>
+          <div className="statcard-val">
+            {accuracy === null ? "—" : <>{accuracy}<small>%</small></>}
+          </div>
+          <div className="statcard-sub">
+            {accuracy === null ? "No results yet" : `${correct} of ${resolved} correct`}
+          </div>
+        </div>
+      </div>
+
+      {/* Coin panel — only when a real Valve coin tier is visible (mockup 06) */}
+      {coinTier && (
+        <div className="coin-panel">
+          <span className={`coin-sticker ${coinTier} coin-big`} />
+          <div style={{ flex: 1 }}>
+            <div className={`coin-tier-name ${coinTier}`}>{coinTier} Viewer Pass</div>
+            <div className="coin-desc">{score} pts · mirrored from your Valve coin</div>
+          </div>
+        </div>
+      )}
 
       {/* Compare CTA — only if there's somebody to compare against */}
       {session && session.playerId !== player.id && (
