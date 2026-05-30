@@ -19,7 +19,7 @@ interface WriteResult {
   degraded?: boolean;
   escalate?: boolean;
   status?: number;
-  error?: string;
+  error?: string; // PHA-853: Valve response body for non-200, surfaced into the pill
 }
 
 type Phase = "idle" | "syncing" | "result";
@@ -51,10 +51,18 @@ function describe(r: WriteResult | null, unsaved: boolean): UIState {
     return { pill: "Steam account not linked", pillTone: "warn" };
   }
   if (r.degraded) {
-    return { pill: "Steam unavailable — saved locally", pillTone: "warn" };
+    const detail = r.error ? ` (${r.error.slice(0, 80)})` : "";
+    return {
+      pill: `Steam unavailable — saved locally${detail}`,
+      pillTone: "warn",
+    };
   }
   if (r.escalate) {
-    return { pill: `Sync error${r.status ? ` (${r.status})` : ""} — saved locally`, pillTone: "error" };
+    const detail = r.error ? ` — ${r.error}` : "";
+    return {
+      pill: `Sync error${r.status ? ` (${r.status})` : ""}${detail}`,
+      pillTone: "error",
+    };
   }
   return { pill: "Saved locally", pillTone: "info" };
 }

@@ -37,10 +37,22 @@ export class ValveApiError extends Error {
   constructor(
     public readonly status: number,
     public readonly method: string,
+    public readonly responseBody?: string,
   ) {
     super(`${method} failed: ${status}${explain(status) ? ` — ${explain(status)}` : ""}`);
     this.name = "ValveApiError";
   }
+}
+
+/**
+ * Redact a URLSearchParams or body string for log output — strips the values of
+ * `key` (STEAM_API_KEY) and `steamidkey` (per-user auth code) so we can dump
+ * the rest of the request shape without leaking secrets.
+ */
+function redactSecrets(body: string): string {
+  return body
+    .replace(/(^|&)key=[^&]*/g, "$1key=REDACTED")
+    .replace(/(^|&)steamidkey=[^&]*/g, "$1steamidkey=REDACTED");
 }
 
 function requireKey(): string {
@@ -116,13 +128,30 @@ export async function uploadTournamentPredictions(
     { key: requireKey(), event, steamid: steamId, steamidkey },
     picks,
   );
+  const bodyStr = body.toString();
   const res = await fetch(`${BASE}/UploadTournamentPredictions/v1/`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
+    body: bodyStr,
     cache: "no-store",
   });
   const text = await res.text();
-  if (!res.ok) throw new ValveApiError(res.status, "UploadTournamentPredictions");
+  if (!res.ok) {
+    // PHA-853: surface the actual Valve response on non-200 so a live 400 in
+    // docker logs has something to chase. Secrets are redacted; everything else
+    // (sectionid/pickid/itemid/index shape) is exactly what Valve saw.
+    console.error(
+      "[valve] UploadTournamentPredictions failed",
+      JSON.stringify({
+        status: res.status,
+        statusText: res.statusText,
+        event,
+        pickCount: picks.length,
+        requestBody: redactSecrets(bodyStr),
+        responseBody: text.slice(0, 2000),
+      }),
+    );
+    throw new ValveApiError(res.status, "UploadTournamentPredictions", text);
+  }
   return parseSafeJson(text) as PredictionsEnvelope;
 }

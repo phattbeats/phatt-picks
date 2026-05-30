@@ -123,11 +123,14 @@ async function uploadAndReconcile(
       const disposition = classifyWriteFailure(e.status);
       // Documented failure → keep local picks, fall back to read/mirror (rule #7).
       // Unexpected status → surface & block (rule #8). Either way: no retry here.
+      // PHA-853: include the truncated Valve response body so a live 400 surfaces
+      // its actual reason to the UI (the docker logs carry the full body).
+      const bodySnippet = e.responseBody?.slice(0, 200);
       return {
         ok: false,
         synced: 0,
         status: e.status,
-        error: e.message,
+        error: bodySnippet ? `${e.message} — ${bodySnippet}` : e.message,
         ...(disposition === "degrade" ? { degraded: true } : { escalate: true }),
       };
     }
