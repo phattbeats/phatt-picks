@@ -7,8 +7,9 @@
  * themselves (no lock gate against yourself), matching the /picks page.
  */
 
+import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
-import { MobileNav } from "@/components/ui/MobileNav";
 import { prisma } from "@/lib/db";
 import { getCommittedLayout, buildTeamMap } from "@/lib/layout";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
@@ -68,132 +69,148 @@ export default async function PlayerProfilePage({
 
   return (
     <>
-      <div style={{ padding: "var(--space-4)", position: "relative", zIndex: 1 }}>
-        <header style={{ marginBottom: "var(--space-4)" }}>
-          <a href="/leaderboard" style={{ color: "var(--text-mid)", fontSize: "0.8125rem", textDecoration: "none" }}>
-            ← Leaderboard
-          </a>
-        </header>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <Link href="/leaderboard" style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: 11,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          color: "var(--ink-mid)",
+          textDecoration: "none",
+        }}>
+          ← Leaderboard
+        </Link>
+        <span className="eyebrow-mono">[ PLAYER_PROFILE ]</span>
+      </div>
 
-        {/* Identity + score */}
-        <div
-          style={{
+      {/* Identity + score */}
+      <section className="panel brk" style={{
+        background: isSelf ? "rgba(240,163,0,0.06)" : "var(--surf-1)",
+        borderColor: isSelf ? "var(--hair-3)" : "var(--hair-2)",
+      }}>
+        <span className="br-tr" />
+        <span className="br-bl" />
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "56px 1fr auto",
+          gap: 14,
+          alignItems: "center",
+        }}>
+          <div style={{
+            width: 56,
+            height: 56,
+            border: "1px solid var(--hair-3)",
+            overflow: "hidden",
+            background: "linear-gradient(135deg, var(--surf-3), var(--surf-2))",
             display: "flex",
             alignItems: "center",
-            gap: "var(--space-3)",
-            padding: "var(--space-4)",
-            background: isSelf ? "rgba(239,68,68,0.08)" : "var(--bg1)",
-            border: isSelf ? "1px solid rgba(239,68,68,0.3)" : "1px solid var(--bg3)",
-            borderRadius: "var(--radius-lg)",
-            marginBottom: "var(--space-4)",
-          }}
-        >
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: "50%",
-              background: "var(--bg3)",
-              flexShrink: 0,
-              overflow: "hidden",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
+            justifyContent: "center",
+          }}>
             {player.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={player.avatarUrl} alt={player.displayName} width={56} height={56} style={{ objectFit: "cover" }} />
+              <Image
+                src={player.avatarUrl}
+                alt=""
+                width={56}
+                height={56}
+                unoptimized
+                style={{ objectFit: "cover", width: "100%", height: "100%" }}
+              />
             ) : (
-              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: "1.125rem", color: "var(--text-mid)" }}>
+              <span style={{
+                fontFamily: "var(--font-display)",
+                fontWeight: 800,
+                fontSize: 18,
+                color: "var(--ink-hi)",
+              }}>
                 {player.displayName.slice(0, 2).toUpperCase()}
               </span>
             )}
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-              <h1
-                style={{
-                  fontFamily: "'Rajdhani', sans-serif",
-                  fontSize: "1.25rem",
-                  fontWeight: 700,
-                  color: "var(--text-hi)",
-                  margin: 0,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {player.displayName}
-                {isSelf && " (you)"}
-              </h1>
-            </div>
-            <p style={{ fontSize: "0.75rem", color: "var(--text-low)", margin: "2px 0 0", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          <div style={{ minWidth: 0 }}>
+            <h1 className="font-display" style={{
+              fontWeight: 800,
+              fontSize: "clamp(22px, 4vw, 30px)",
+              textTransform: "uppercase",
+              lineHeight: 0.95,
+              color: "var(--ink-hi)",
+              margin: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}>
+              {player.displayName}
+              {isSelf && (
+                <span style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 10,
+                  letterSpacing: "0.12em",
+                  color: "var(--heat)",
+                  marginLeft: 8,
+                }}>
+                  · YOU
+                </span>
+              )}
+            </h1>
+            <p style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 10,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "var(--ink-mid)",
+              margin: "6px 0 0",
+            }}>
               {player.isLocal ? "Local" : player.synced ? "Steam-synced" : "Steam"}
               {coinTier && <> · {coinTier} coin</>}
             </p>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div
-              style={{
-                fontFamily: "'Rajdhani', sans-serif",
-                fontWeight: 700,
-                fontSize: "1.75rem",
-                color: score > 0 ? "var(--correct)" : "var(--text-low)",
-                lineHeight: 1,
-              }}
-            >
+            <div className="font-display foil" style={{
+              fontWeight: 800,
+              fontSize: 36,
+              lineHeight: 1,
+              background: "var(--foil)",
+              backgroundSize: "200% 200%",
+              WebkitBackgroundClip: "text",
+              backgroundClip: "text",
+              color: "transparent",
+            }}>
               {score}
             </div>
-            <div style={{ fontSize: "0.6875rem", color: "var(--text-low)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "2px" }}>
+            <div style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 9,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              color: "var(--ink-low)",
+              marginTop: 4,
+            }}>
               Score
             </div>
           </div>
         </div>
+      </section>
 
-        {/* Compare CTA — only if there's somebody to compare against */}
-        {session && session.playerId !== player.id && (
-          <a
-            href={`/leaderboard/compare?b=${encodeURIComponent(player.id)}`}
-            style={{
-              display: "block",
-              textAlign: "center",
-              padding: "var(--space-3)",
-              background: "var(--accent)",
-              color: "#fff",
-              textDecoration: "none",
-              fontFamily: "'Rajdhani', sans-serif",
-              fontWeight: 700,
-              fontSize: "0.875rem",
-              letterSpacing: "0.05em",
-              textTransform: "uppercase",
-              borderRadius: "var(--radius-md)",
-              marginBottom: "var(--space-4)",
-              minHeight: 44,
-              boxSizing: "border-box",
-            }}
-          >
-            Compare with mine →
-          </a>
-        )}
+      {/* Compare CTA — only if there's somebody to compare against */}
+      {session && session.playerId !== player.id && (
+        <Link
+          href={`/leaderboard/compare?b=${encodeURIComponent(player.id)}`}
+          className="btn-heat"
+          style={{ alignSelf: "flex-start" }}
+        >
+          Compare with mine
+          <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </Link>
+      )}
 
-        {/* Per-stage picks (reveal-gated against non-self viewers) */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-          {layout.sections.map((section) => (
-            <div key={section.sectionid}>
-              <h2
-                style={{
-                  fontFamily: "'Rajdhani', sans-serif",
-                  fontSize: "0.875rem",
-                  fontWeight: 700,
-                  letterSpacing: "0.05em",
-                  textTransform: "uppercase",
-                  color: "var(--text-mid)",
-                  margin: "0 0 var(--space-2)",
-                }}
-              >
-                {section.name.split(" | ")[0]}
-              </h2>
+      {/* Per-stage picks (reveal-gated against non-self viewers) */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {layout.sections.map((section) => (
+          <div key={section.sectionid}>
+            <h2 className="eyebrow-mono" style={{ marginBottom: 8, display: "block" }}>
+              [ {section.name.split(" | ")[0].toUpperCase()} ]
+            </h2>
 
               {section.groups.map((group) => {
                 // Self always sees own picks; others wait for stage lock.
@@ -268,11 +285,9 @@ export default async function PlayerProfilePage({
                   </div>
                 );
               })}
-            </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
-      <MobileNav />
     </>
   );
 }

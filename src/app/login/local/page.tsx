@@ -1,14 +1,9 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { randomName, DISPLAY_NAME_MAX } from "@/lib/local-auth-core";
+import { HeatMark, HeatWordmark } from "@/components/heat/HeatMark";
 
-/**
- * Name-prompt step for local sign-in. Server-rendered so the suggested name
- * never reveals via client JS (and the page degrades gracefully without JS).
- * The form POSTs to /api/auth/local, which performs the create + cookie set;
- * GET there now redirects back here when no session exists, which is the
- * dedup guard from PHA-839.
- */
 export default async function LocalSignInPage() {
   const session = await getSession();
   if (session?.steamId) redirect("/");
@@ -17,115 +12,103 @@ export default async function LocalSignInPage() {
   const suggested = randomName();
 
   return (
-    <div
+    <main
       style={{
+        position: "relative",
+        zIndex: 3,
         minHeight: "100dvh",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: "var(--space-6)",
-        gap: "var(--space-6)",
+        padding: "48px 24px",
+        gap: 28,
       }}
     >
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-3)" }}>
-        <span
-          style={{
-            fontFamily: "'Rajdhani', sans-serif",
-            fontSize: "1.5rem",
-            fontWeight: 700,
-            letterSpacing: "0.05em",
-            textTransform: "uppercase",
-            color: "var(--text-hi)",
-          }}
-        >
-          Pick a display name
-        </span>
-        <p style={{ color: "var(--text-mid)", fontSize: "0.875rem", textAlign: "center", maxWidth: 280, margin: 0 }}>
-          This is what shows on the leaderboard. You can change it later.
-        </p>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
+        <HeatMark size={52} />
+        <HeatWordmark size={28} />
       </div>
 
-      <form
-        action="/api/auth/local"
-        method="POST"
-        style={{
-          width: "100%",
-          maxWidth: 320,
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-3)",
-        }}
-      >
-        <label
-          htmlFor="displayName"
-          style={{
-            fontFamily: "'Rajdhani', sans-serif",
-            fontSize: "0.6875rem",
-            fontWeight: 600,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            color: "var(--text-low)",
-          }}
+      <div className="panel brk" style={{ maxWidth: 360, width: "100%", padding: "22px 24px" }}>
+        <span className="br-tr" />
+        <span className="br-bl" />
+        <p className="eyebrow-mono" style={{ marginBottom: 10 }}>[ CALLSIGN ]</p>
+        <h1 className="font-display" style={{
+          fontWeight: 800,
+          fontSize: 26,
+          textTransform: "uppercase",
+          color: "var(--ink-hi)",
+          margin: "0 0 8px",
+        }}>
+          Pick a display name
+        </h1>
+        <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "0 0 16px", lineHeight: 1.55 }}>
+          This is what shows on the leaderboard. You can change it later.
+        </p>
+
+        <form
+          action="/api/auth/local"
+          method="POST"
+          style={{ display: "flex", flexDirection: "column", gap: 12 }}
         >
-          Display name
-        </label>
-        <input
-          id="displayName"
-          name="displayName"
-          type="text"
-          defaultValue={suggested}
-          maxLength={DISPLAY_NAME_MAX}
-          required
-          autoComplete="off"
-          autoCapitalize="off"
-          spellCheck={false}
-          style={{
-            background: "var(--bg2)",
-            border: "1px solid var(--bg3)",
-            borderRadius: "var(--radius-md)",
-            padding: "12px var(--space-4)",
-            color: "var(--text-hi)",
-            fontSize: "1rem",
-            fontFamily: "inherit",
-            minHeight: 44,
-          }}
-        />
-        <button
-          type="submit"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "var(--accent)",
-            color: "#fff",
-            border: "none",
-            borderRadius: "var(--radius-md)",
-            padding: "14px var(--space-6)",
-            cursor: "pointer",
-            fontFamily: "'Rajdhani', sans-serif",
-            fontWeight: 700,
-            fontSize: "1rem",
-            letterSpacing: "0.05em",
-            textTransform: "uppercase",
-            minHeight: 44,
-          }}
-        >
-          Start playing
-        </button>
-        <a
-          href="/login"
-          style={{
-            textAlign: "center",
-            fontSize: "0.8125rem",
-            color: "var(--text-low)",
-            textDecoration: "none",
-            marginTop: "var(--space-1)",
-          }}
-        >
-          ← Back
-        </a>
-      </form>
-    </div>
+          <label
+            htmlFor="displayName"
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 9,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              color: "var(--ink-low)",
+            }}
+          >
+            Display name
+          </label>
+          <input
+            id="displayName"
+            name="displayName"
+            type="text"
+            defaultValue={suggested}
+            maxLength={DISPLAY_NAME_MAX}
+            required
+            autoComplete="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            style={{
+              background: "var(--surf-2)",
+              border: "1px solid var(--hair-2)",
+              padding: "12px 14px",
+              color: "var(--ink-hi)",
+              fontSize: 15,
+              fontFamily: "var(--font-body)",
+              minHeight: 44,
+              outline: "none",
+              borderRadius: "var(--r-sm)",
+            }}
+          />
+          <button type="submit" className="btn-heat" style={{ width: "100%" }}>
+            Start playing
+            <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+          <Link
+            href="/login"
+            style={{
+              textAlign: "center",
+              fontFamily: "var(--font-mono)",
+              fontSize: 10,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "var(--ink-low)",
+              textDecoration: "none",
+              marginTop: 4,
+            }}
+          >
+            ← Back
+          </Link>
+        </form>
+      </div>
+    </main>
   );
 }

@@ -1,13 +1,30 @@
-import { MobileNav } from "@/components/ui/MobileNav";
+import { HeatHeader, type TopbarYouProps } from "@/components/heat/HeatHeader";
+import { HeatBottomNav } from "@/components/heat/HeatBottomNav";
+import { getSession } from "@/lib/session";
+import { prisma } from "@/lib/db";
+import { resolveTopbarYou } from "@/lib/topbar-you-core";
 
-/** Shell layout for authenticated / main-app pages (show mobile nav). */
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export const dynamic = "force-dynamic";
+
+/** Shell layout for main app pages: HOTLINE header + mobile bottom nav. */
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const session = await getSession();
+  const playerRow = session
+    ? await prisma.player.findUnique({
+        where: { id: session.playerId },
+        select: { avatarUrl: true },
+      })
+    : null;
+  const topbar: TopbarYouProps = resolveTopbarYou({
+    session,
+    avatarUrl: playerRow?.avatarUrl,
+  });
+
   return (
     <>
-      <main className="with-nav" style={{ position: "relative", zIndex: 1 }}>
-        {children}
-      </main>
-      <MobileNav />
+      <HeatHeader topbar={topbar} />
+      <main className="shell with-nav">{children}</main>
+      <HeatBottomNav />
     </>
   );
 }

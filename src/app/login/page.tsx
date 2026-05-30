@@ -1,102 +1,83 @@
-import { Logo } from "@/components/ui/Logo";
+import Link from "next/link";
+import { HeatMark, HeatWordmark } from "@/components/heat/HeatMark";
 
-/** Sign-in page — no nav, as per design spec. */
+/** Sign-in page — full-bleed HEAT brand moment, no nav. */
 export default function LoginPage() {
   return (
-    <div
+    <main
       style={{
+        position: "relative",
+        zIndex: 3,
         minHeight: "100dvh",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: "var(--space-6)",
-        gap: "var(--space-8)",
+        padding: "48px 24px",
+        gap: 28,
       }}
     >
-      {/* Hero logo */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-4)" }}>
-        <svg width="64" height="64" viewBox="0 0 40 40" fill="none">
-          <line x1="6" y1="10" x2="12" y2="10" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
-          <line x1="6" y1="16" x2="12" y2="16" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
-          <line x1="6" y1="24" x2="12" y2="24" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
-          <line x1="6" y1="30" x2="12" y2="30" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
-          <line x1="12" y1="13" x2="18" y2="13" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
-          <line x1="12" y1="27" x2="18" y2="27" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
-          <line x1="18" y1="20" x2="24" y2="20" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" />
-          <circle cx="26" cy="20" r="3" fill="#ef4444" />
-          <line x1="28" y1="20" x2="34" y2="20" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" />
-        </svg>
-        <span
-          style={{
-            fontFamily: "'Rajdhani', sans-serif",
-            fontSize: "2rem",
-            fontWeight: 700,
-            letterSpacing: "0.05em",
+      {/* Hero crest */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
+        <HeatMark size={72} />
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+          <HeatWordmark size={48} />
+          <span style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 10,
+            letterSpacing: "0.22em",
             textTransform: "uppercase",
-            color: "var(--text-hi)",
-          }}
-        >
-          phaTT Picks
-        </span>
-        <p style={{ color: "var(--text-mid)", fontSize: "0.875rem", textAlign: "center", maxWidth: 280 }}>
-          CS2 Major Pick&apos;Em companion for IEM Cologne 2026
+            color: "var(--ink-mid)",
+          }}>
+            IEM Cologne 2026 · Pick&apos;Em Companion
+          </span>
+        </div>
+      </div>
+
+      {/* Bracketed brief */}
+      <div className="panel brk" style={{
+        maxWidth: 360,
+        width: "100%",
+        padding: "20px 22px",
+      }}>
+        <span className="br-tr" />
+        <span className="br-bl" />
+        <p className="eyebrow-mono" style={{ marginBottom: 8 }}>
+          [ AUTH ]
         </p>
+        <p style={{
+          color: "var(--ink-mid)",
+          fontSize: 13,
+          margin: "0 0 16px",
+          lineHeight: 1.55,
+        }}>
+          Two ways in. Steam syncs your official Valve picks. Local plays the same game without a Viewer Pass.
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <a href="/api/auth/steam" className="btn-heat" style={{ width: "100%" }}>
+            Sign in with Steam
+            <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </a>
+          <Link href="/login/local" className="btn-ghost" style={{ width: "100%", justifyContent: "center" }}>
+            Play locally
+          </Link>
+        </div>
       </div>
 
-      {/* Auth options */}
-      <div style={{ width: "100%", maxWidth: 320, display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-        <a
-          href="/api/auth/steam"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "var(--space-3)",
-            background: "var(--accent)",
-            color: "#fff",
-            borderRadius: "var(--radius-md)",
-            padding: "14px var(--space-6)",
-            textDecoration: "none",
-            fontFamily: "'Rajdhani', sans-serif",
-            fontWeight: 700,
-            fontSize: "1rem",
-            letterSpacing: "0.05em",
-            textTransform: "uppercase",
-            minHeight: 44,
-            transition: `opacity var(--duration-fast) var(--ease-sharp)`,
-          }}
-        >
-          Sign in with Steam
-        </a>
-
-        <a
-          href="/login/local"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "var(--bg2)",
-            border: "1px solid var(--bg3)",
-            color: "var(--text-mid)",
-            borderRadius: "var(--radius-md)",
-            padding: "14px var(--space-6)",
-            textDecoration: "none",
-            fontFamily: "'Rajdhani', sans-serif",
-            fontWeight: 600,
-            fontSize: "1rem",
-            letterSpacing: "0.05em",
-            textTransform: "uppercase",
-            minHeight: 44,
-          }}
-        >
-          Play locally (no Steam)
-        </a>
-      </div>
-
-      <p style={{ color: "var(--text-low)", fontSize: "0.75rem", textAlign: "center", maxWidth: 280 }}>
-        Local mode is fully featured. Steam sync requires a CS2 Viewer Pass.
+      <p style={{
+        fontFamily: "var(--font-mono)",
+        fontSize: 10,
+        letterSpacing: "0.12em",
+        textTransform: "uppercase",
+        color: "var(--ink-low)",
+        textAlign: "center",
+        maxWidth: 320,
+        margin: 0,
+      }}>
+        Local mode is fully featured. Steam sync needs a CS2 Viewer Pass.
       </p>
-    </div>
+    </main>
   );
 }

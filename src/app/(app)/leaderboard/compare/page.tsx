@@ -10,7 +10,7 @@
  * gated. Works for local and connected players alike (rule #6).
  */
 
-import { MobileNav } from "@/components/ui/MobileNav";
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getCommittedLayout, buildTeamMap } from "@/lib/layout";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
@@ -48,18 +48,24 @@ export default async function ComparePage({
   // Need at least two players to compare.
   if (players.length < 2) {
     return (
-      <>
-        <div style={{ padding: "var(--space-4)" }}>
-          <h1 style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: "1.5rem", fontWeight: 700, color: "var(--text-hi)" }}>
-            Compare
-          </h1>
-          <p style={{ color: "var(--text-mid)", fontSize: "0.875rem" }}>
-            Need at least two players to compare picks.
-          </p>
-          <a href="/leaderboard" style={{ color: "var(--accent)" }}>← Back to leaderboard</a>
-        </div>
-        <MobileNav />
-      </>
+      <div className="panel brk" style={{ padding: 32, textAlign: "center" }}>
+        <span className="br-tr" />
+        <span className="br-bl" />
+        <span className="eyebrow-mono">[ COMPARE ]</span>
+        <h1 className="font-display" style={{
+          fontWeight: 800,
+          fontSize: 28,
+          textTransform: "uppercase",
+          color: "var(--ink-hi)",
+          margin: "8px 0",
+        }}>
+          Two players minimum
+        </h1>
+        <p style={{ color: "var(--ink-mid)", fontSize: 14, margin: "0 0 16px" }}>
+          You need at least two players on the board before you can compare picks.
+        </p>
+        <Link href="/leaderboard" className="btn-ghost">← Leaderboard</Link>
+      </div>
     );
   }
 
@@ -120,23 +126,27 @@ export default async function ComparePage({
 
   return (
     <>
-      <div style={{ padding: "var(--space-4)", position: "relative", zIndex: 1 }}>
-        <header style={{ marginBottom: "var(--space-4)" }}>
-          <a href="/leaderboard" style={{ color: "var(--text-mid)", fontSize: "0.8125rem", textDecoration: "none" }}>
-            ← Leaderboard
-          </a>
-          <h1
-            style={{
-              fontFamily: "'Rajdhani', sans-serif",
-              fontSize: "1.5rem",
-              fontWeight: 700,
-              color: "var(--text-hi)",
-              margin: "var(--space-1) 0 0",
-            }}
-          >
-            Compare
-          </h1>
-        </header>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <Link href="/leaderboard" style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: 11,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          color: "var(--ink-mid)",
+          textDecoration: "none",
+        }}>
+          ← Leaderboard
+        </Link>
+        <span className="eyebrow-mono">[ HEAD_TO_HEAD ]</span>
+        <h1 className="font-display" style={{
+          fontWeight: 800,
+          fontSize: "clamp(28px, 5vw, 40px)",
+          textTransform: "uppercase",
+          lineHeight: 0.95,
+        }}>
+          Compare
+        </h1>
+      </div>
 
         {/* Player heads + scores */}
         <div
@@ -319,8 +329,6 @@ export default async function ComparePage({
             </div>
           ))}
         </div>
-      </div>
-      <MobileNav />
     </>
   );
 }
