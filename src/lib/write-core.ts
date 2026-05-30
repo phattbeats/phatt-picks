@@ -180,9 +180,16 @@ export type FailureDisposition = "degrade" | "escalate";
  * the user-facing flow degrades through (rule #7): keep the local pick, fall
  * back to read/mirror, never retry-storm.
  *   403 bad/expired auth code · 404 stage not open · 410 matchup locked ·
- *   412 bracket conflict · 429/503 rate-limited (back off) · 504 backend timeout.
+ *   412 bracket conflict · 429 rate-limited (back off) ·
+ *   500/502/503/504 transient Valve server errors (back off, retry, keep local).
+ *
+ * PHA-853 live finding: Valve's tournament endpoint emits bare-body 500s under
+ * write load — indistinguishable in practice from the 429 rate-limit wave. A
+ * 5xx is Valve's server hiccuping, not our request being wrong, so it degrades
+ * (keep the local pick, the in-call retry already had a go) rather than
+ * escalating as if it were a code bug.
  */
-const DEGRADABLE_STATUSES = new Set([403, 404, 410, 412, 429, 503, 504]);
+const DEGRADABLE_STATUSES = new Set([403, 404, 410, 412, 429, 500, 502, 503, 504]);
 
 /**
  * Classify a Valve HTTP status: an expected/documented failure degrades

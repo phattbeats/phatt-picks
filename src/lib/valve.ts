@@ -185,11 +185,23 @@ async function uploadSinglePick(
 const PICK_UPLOAD_DELAY_MS = 1500;
 
 /**
- * Extra wait before retrying a single 429. The token bucket needs more headroom
- * than the normal cadence when it just refused us, and Steam's `Retry-After`
- * is rarely populated for this endpoint.
+ * Extra wait before retrying a transient failure. The token bucket needs more
+ * headroom than the normal cadence when it just refused us, and Steam's
+ * `Retry-After` is rarely populated for this endpoint.
  */
-const RETRY_429_DELAY_MS = 3500;
+const RETRY_DELAY_MS = 3500;
+
+/**
+ * Statuses that are worth retrying within the same Lock In — Valve's tournament
+ * endpoint returns these transiently under load (PHA-853 live: 429 first, then
+ * a wave of bare-body 500s on a partial edit). All are server-side / rate
+ * conditions, not a problem with our request, so a backoff-and-retry is the
+ * right move rather than failing the pick outright.
+ */
+const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
+
+/** How many times to re-attempt a single transient-failed pick. */
+const MAX_RETRIES = 2;
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -197,9 +209,10 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
  * Upload a batch of picks (a whole Swiss stage, or the whole playoff bracket)
  * as N sequential single-pick calls (PHA-853 — Valve only accepts the
  * unsuffixed single-pick shape; indexed batch returns 400). Throttled with a
- * {@link PICK_UPLOAD_DELAY_MS} pause between picks; on 429 we wait
- * {@link RETRY_429_DELAY_MS} and retry that pick once. Anything still failing
- * is surfaced per-pick so a partial-success doesn't lose data.
+ * {@link PICK_UPLOAD_DELAY_MS} pause between picks; a transient failure
+ * ({@link RETRYABLE_STATUSES}) backs off {@link RETRY_DELAY_MS} and retries up
+ * to {@link MAX_RETRIES} times. Anything still failing is surfaced per-pick so a
+ * partial-success doesn't lose data.
  */
 export async function uploadTournamentPredictions(
   event: number,
@@ -211,8 +224,12 @@ export async function uploadTournamentPredictions(
   for (let i = 0; i < picks.length; i++) {
     if (i > 0) await sleep(PICK_UPLOAD_DELAY_MS);
     let result = await uploadSinglePick(event, steamId, steamidkey, picks[i]);
-    if (!result.ok && result.status === 429) {
-      await sleep(RETRY_429_DELAY_MS);
+    for (
+      let attempt = 0;
+      attempt < MAX_RETRIES && !result.ok && RETRYABLE_STATUSES.has(result.status);
+      attempt++
+    ) {
+      await sleep(RETRY_DELAY_MS);
       result = await uploadSinglePick(event, steamId, steamidkey, picks[i]);
     }
     out.push(result);

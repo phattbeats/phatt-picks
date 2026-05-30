@@ -129,10 +129,12 @@ function provePlayoffOrder(): void {
 // [4] graceful degrade vs escalate (rules #7/#8).
 function proveFailureClassification(): void {
   console.log("\n[4] FAILURE HANDLING — documented = degrade (#7); unexpected = escalate (#8)");
-  for (const s of [403, 404, 410, 412, 429, 503, 504]) {
+  // 5xx joined the degradable set in PHA-853: Valve emits bare-body 500s under
+  // write load, indistinguishable from rate-limiting — keep the local pick.
+  for (const s of [403, 404, 410, 412, 429, 500, 502, 503, 504]) {
     check(`status ${s} → degrade (keep local)`, classifyWriteFailure(s) === "degrade");
   }
-  for (const s of [401, 418, 500]) {
+  for (const s of [401, 418]) {
     check(`status ${s} → escalate (surface & block)`, classifyWriteFailure(s) === "escalate");
   }
 
