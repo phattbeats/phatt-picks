@@ -13,7 +13,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCommittedLayout, buildTeamMap } from "@/lib/layout";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
-import { arePicksRevealed } from "@/lib/reveal-core";
+import { arePicksRevealed, groupOutcomeKey } from "@/lib/reveal-core";
 import { visibleCoinTier } from "@/lib/coin-core";
 import { getSession } from "@/lib/session";
 import { TeamLogo } from "@/components/ui/TeamLogo";
@@ -73,12 +73,12 @@ export default async function PlayerProfilePage({
   });
 
   const outcomeMap: OutcomeMap = {};
-  const groupHasOutcome = new Set<number>();
+  const groupHasOutcome = new Set<string>(); // `${sectionId}:${groupId}` with ≥1 resolved slot
   for (const o of outcomes) {
     outcomeMap[o.sectionId] ??= {};
     outcomeMap[o.sectionId][o.groupId] ??= {};
     outcomeMap[o.sectionId][o.groupId][o.slotIndex] = o.winnerPickId;
-    groupHasOutcome.add(o.groupId);
+    groupHasOutcome.add(groupOutcomeKey(o.sectionId, o.groupId));
   }
 
   const pickMap: PlayerPickMap[string] = {};
@@ -248,7 +248,12 @@ export default async function PlayerProfilePage({
 
               {section.groups.map((group) => {
                 // Self always sees own picks; others wait for stage lock.
-                const revealed = isSelf || arePicksRevealed(group, groupHasOutcome.has(group.groupid));
+                const revealed =
+                  isSelf ||
+                  arePicksRevealed(
+                    group,
+                    groupHasOutcome.has(groupOutcomeKey(section.sectionid, group.groupid)),
+                  );
                 const groupPicks = pickMap[section.sectionid]?.[group.groupid] ?? {};
                 const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
 

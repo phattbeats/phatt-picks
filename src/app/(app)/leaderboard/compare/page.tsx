@@ -14,14 +14,12 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getCommittedLayout, buildTeamMap } from "@/lib/layout";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
-import { arePicksRevealed } from "@/lib/reveal-core";
+import { arePicksRevealed, groupOutcomeKey } from "@/lib/reveal-core";
 import { getSession } from "@/lib/session";
 
 const EVENT_ID = 26;
 
 export const revalidate = 60;
-
-type Picks = Record<number, Record<number, number>>; // groupId -> slotIndex -> pickId
 
 function toPlayerPickMap(picks: { sectionId: number; groupId: number; slotIndex: number; pickId: number }[]): PlayerPickMap[string] {
   const m: PlayerPickMap[string] = {};
@@ -74,12 +72,12 @@ export default async function ComparePage({
   const outcomes = await prisma.stageOutcome.findMany({ where: { eventId: EVENT_ID } });
 
   const outcomeMap: OutcomeMap = {};
-  const groupHasOutcome = new Set<number>(); // groupId with ≥1 resolved slot
+  const groupHasOutcome = new Set<string>(); // `${sectionId}:${groupId}` with ≥1 resolved slot
   for (const o of outcomes) {
     outcomeMap[o.sectionId] ??= {};
     outcomeMap[o.sectionId][o.groupId] ??= {};
     outcomeMap[o.sectionId][o.groupId][o.slotIndex] = o.winnerPickId;
-    groupHasOutcome.add(o.groupId);
+    groupHasOutcome.add(groupOutcomeKey(o.sectionId, o.groupId));
   }
 
   const picksByPlayer = new Map<string, typeof allPicks>();
@@ -105,19 +103,16 @@ export default async function ComparePage({
   const a = players.find((p) => p.id === aId)!;
   const b = players.find((p) => p.id === bId)!;
 
-  const aPicksMap: Picks = {};
-  for (const p of picksByPlayer.get(aId) ?? []) {
-    aPicksMap[p.groupId] ??= {};
-    aPicksMap[p.groupId][p.slotIndex] = p.pickId;
-  }
-  const bPicksMap: Picks = {};
-  for (const p of picksByPlayer.get(bId) ?? []) {
-    bPicksMap[p.groupId] ??= {};
-    bPicksMap[p.groupId][p.slotIndex] = p.pickId;
-  }
+  // Section-qualified pick maps (sectionId → groupId → slotIndex → pickId).
+  // Must NOT be keyed by groupId alone: if Valve ever reuses a groupid across
+  // sections, a groupId-only map collides and a revealed (locked) section could
+  // surface another still-open section's secret pick — same hazard as the
+  // reveal gate above (PHA-862). Reuse toPlayerPickMap, which scoring also uses.
+  const aPicksMap = toPlayerPickMap(picksByPlayer.get(aId) ?? []);
+  const bPicksMap = toPlayerPickMap(picksByPlayer.get(bId) ?? []);
 
-  const aScore = scorePlayer(layout, toPlayerPickMap(picksByPlayer.get(aId) ?? []), outcomeMap).total;
-  const bScore = scorePlayer(layout, toPlayerPickMap(picksByPlayer.get(bId) ?? []), outcomeMap).total;
+  const aScore = scorePlayer(layout, aPicksMap, outcomeMap).total;
+  const bScore = scorePlayer(layout, bPicksMap, outcomeMap).total;
 
   const teamName = (pickId: number | undefined): string => {
     if (!pickId) return "—";
@@ -248,9 +243,12 @@ export default async function ComparePage({
               </h2>
 
               {section.groups.map((group) => {
-                const revealed = arePicksRevealed(group, groupHasOutcome.has(group.groupid));
-                const aGroup = aPicksMap[group.groupid] ?? {};
-                const bGroup = bPicksMap[group.groupid] ?? {};
+                const revealed = arePicksRevealed(
+                  group,
+                  groupHasOutcome.has(groupOutcomeKey(section.sectionid, group.groupid)),
+                );
+                const aGroup = aPicksMap[section.sectionid]?.[group.groupid] ?? {};
+                const bGroup = bPicksMap[section.sectionid]?.[group.groupid] ?? {};
                 const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
 
                 return (
