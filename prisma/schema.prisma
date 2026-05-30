@@ -25,6 +25,7 @@ model Player {
 
   picks             Pick[]
   pushSubscriptions PushSubscription[]
+  rankSnapshots     RankSnapshot[]
 }
 
 // Individual slot picks — one row per (player, event, section, group, slotIndex)
@@ -63,6 +64,31 @@ model StageOutcome {
 
   @@unique([eventId, sectionId, groupId, slotIndex])
   @@index([eventId])
+}
+
+// Frozen standings at each stage resolution (PHA-858). One row per
+// (player, event, section): the player's CUMULATIVE rank + points over every
+// resolved outcome through that section, captured when the section resolved.
+// Drives the leaderboard rank-delta arrows (mockup-04) and the Stage Reveal
+// screen (mockup-08). Written by writeRankSnapshots() in the outcomes ingest
+// path; only sections that already have resolved outcomes are snapshotted, so a
+// snapshot can never disagree with the live leaderboard. Idempotent upsert —
+// re-running ingest recomputes the same standings and self-heals if an outcome
+// is corrected later.
+model RankSnapshot {
+  id         String   @id @default(cuid())
+  playerId   String
+  player     Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  eventId    Int
+  sectionId  Int
+  rank       Int
+  score      Int      // cumulative points through this section (ranking metric)
+  resolvedAt DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([playerId, eventId, sectionId])
+  @@index([eventId, sectionId])
 }
 
 // Cached layout/predictions from Valve API — refreshed periodically during event

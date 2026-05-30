@@ -6,6 +6,8 @@ import { getCommittedLayout } from "@/lib/layout";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
 import { visibleCoinTier } from "@/lib/coin-core";
 import { getSession } from "@/lib/session";
+import { rankMapForSection, snapshotSectionIds } from "@/lib/rank-snapshot";
+import { baselineSectionId, latestSectionId, rankDelta, type RankDelta } from "@/lib/rank-snapshot-core";
 
 const EVENT_ID = 26;
 
@@ -106,6 +108,20 @@ export default async function LeaderboardPage() {
     })
     .sort((a, b) => b.score - a.score || a.displayName.localeCompare(b.displayName));
 
+  // Rank-delta arrows (mockup-04). Movement is measured across the most recently
+  // resolved stage: current live rank vs. the snapshot frozen at the previous
+  // resolved stage. Before two stages have resolved there's nothing to diff, so
+  // no arrows render (honest — we never invent movement).
+  const resolvedSections = await snapshotSectionIds(EVENT_ID);
+  const baseSection = baselineSectionId(resolvedSections);
+  const baselineRanks = await rankMapForSection(EVENT_ID, baseSection);
+  const latestSection = latestSectionId(resolvedSections);
+  const deltaByPlayer = new Map<string, RankDelta>();
+  rows.forEach((row, idx) => {
+    deltaByPlayer.set(row.playerId, rankDelta(idx + 1, baselineRanks.get(row.playerId)));
+  });
+  const showDeltas = baseSection !== null;
+
   return (
     <>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -138,6 +154,18 @@ export default async function LeaderboardPage() {
             directory →
           </Link>
         </p>
+        {latestSection !== null && (
+          <Link
+            href={`/reveal/${latestSection}`}
+            className="btn-ghost"
+            style={{ padding: "10px 16px", fontSize: 12, alignSelf: "flex-start", marginTop: 2 }}
+          >
+            Latest Stage Reveal
+            <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12, stroke: "currentColor", fill: "none", strokeWidth: 2.5 }}>
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </Link>
+        )}
       </div>
 
       {rows.length === 0 ? (
@@ -212,7 +240,13 @@ export default async function LeaderboardPage() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {rows.map((row, idx) => (
-              <LeaderRow key={row.playerId} row={row} rank={idx + 1} />
+              <LeaderRow
+                key={row.playerId}
+                row={row}
+                rank={idx + 1}
+                delta={deltaByPlayer.get(row.playerId)}
+                showDelta={showDeltas}
+              />
             ))}
           </div>
         </>
@@ -261,9 +295,39 @@ export default async function LeaderboardPage() {
   );
 }
 
+/** Rank movement chip for mockup-04: ↑N climbed, ↓N dropped, — held, NEW. */
+function RankArrow({ delta }: { delta?: RankDelta }) {
+  if (!delta) return null;
+  const base = {
+    fontFamily: "var(--font-mono)",
+    fontSize: 11,
+    fontWeight: 600,
+    textAlign: "right" as const,
+    minWidth: 24,
+  };
+  if (delta.direction === "new") {
+    return <span style={{ ...base, fontSize: 8, letterSpacing: "0.1em", color: "var(--ink-low)", textTransform: "uppercase" }} title="New this stage">NEW</span>;
+  }
+  const moved = Math.abs(delta.delta ?? 0);
+  if (delta.direction === "flat") {
+    return <span style={{ ...base, color: "var(--ink-low)" }} title="No change">—</span>;
+  }
+  const up = delta.direction === "up";
+  return (
+    <span
+      style={{ ...base, color: up ? "var(--tac-green, #9bd23c)" : "var(--ember, #d8351c)" }}
+      title={`${up ? "Up" : "Down"} ${moved} since last stage`}
+    >
+      {up ? "↑" : "↓"}{moved}
+    </span>
+  );
+}
+
 function LeaderRow({
   row,
   rank,
+  delta,
+  showDelta,
 }: {
   row: {
     playerId: string;
@@ -276,6 +340,8 @@ function LeaderRow({
     isSelf: boolean;
   };
   rank: number;
+  delta?: RankDelta;
+  showDelta: boolean;
 }) {
   const isPodium = rank <= 3;
   return (
@@ -283,7 +349,7 @@ function LeaderRow({
       href={`/players/${encodeURIComponent(row.playerId)}`}
       style={{
         display: "grid",
-        gridTemplateColumns: "32px 40px 1fr auto",
+        gridTemplateColumns: showDelta ? "32px 40px 1fr auto auto" : "32px 40px 1fr auto",
         gap: 12,
         alignItems: "center",
         padding: "12px 16px",
@@ -393,6 +459,8 @@ function LeaderRow({
           </span>
         )}
       </div>
+
+      {showDelta && <RankArrow delta={delta} />}
 
       <span style={{
         fontFamily: "var(--font-mono)",

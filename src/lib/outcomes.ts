@@ -25,6 +25,7 @@ import {
   type RawResolvedSlot,
 } from "./outcomes-core";
 import { fetchLiquipediaResults, LiquipediaThrottledError } from "./liquipedia";
+import { writeRankSnapshots } from "./rank-snapshot";
 
 export interface IngestSummary {
   eventId: number;
@@ -128,6 +129,18 @@ export async function ingestOutcomes(eventId: number): Promise<IngestSummary> {
   const { outcomes, rejected } = normalizeOutcomes(layout, fresh, source === "valve" ? "valve" : "liquipedia");
 
   await persistOutcomes(eventId, outcomes);
+
+  // Freeze cumulative standings at this resolution for delta arrows + Stage
+  // Reveal (PHA-858), but only when new outcomes actually landed. Graceful by
+  // contract (rules #7/#8): a snapshot failure must never break the ingest
+  // response — the leaderboard still scores live, arrows simply degrade.
+  if (outcomes.length > 0) {
+    try {
+      await writeRankSnapshots(eventId);
+    } catch (e) {
+      console.error("[outcomes] rank-snapshot write failed (non-fatal):", e);
+    }
+  }
 
   return {
     eventId,
