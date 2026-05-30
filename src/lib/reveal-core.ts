@@ -35,6 +35,19 @@ export function arePicksRevealed(group: LockableGroup, hasResolvedOutcome = fals
 }
 
 /**
+ * Composite key for the "this group has ≥1 resolved outcome" reveal set.
+ *
+ * The reveal gate must be qualified by BOTH section and group. Keying on
+ * groupId alone leaks secrecy if Valve ever reuses a groupid across sections:
+ * resolving one section's group would prematurely reveal another section's
+ * still-open picks. Cologne groupids (271–280) are globally unique so this is
+ * not live today, but the gate is defensive by design (see PHA-845/PHA-862).
+ */
+export function groupOutcomeKey(sectionId: number, groupId: number): string {
+  return `${sectionId}:${groupId}`;
+}
+
+/**
  * Inverse of isStageLocked: can a player still edit picks in this group?
  * The write path uses this to reject POST /api/picks once the stage closes —
  * "saving a pick == locking it" only makes sense while writes are accepted.
