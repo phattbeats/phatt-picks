@@ -109,24 +109,31 @@ export async function fetchTournamentItems(
   return parseSafeJson(text) as ItemsEnvelope;
 }
 
+/** Outcome of a single pick upload — used by the per-pick loop. */
+export interface SinglePickResult {
+  pick: UploadPick;
+  ok: boolean;
+  status: number;
+  /** Parsed body when ok===true; raw text snippet otherwise. */
+  envelope?: PredictionsEnvelope;
+  errorBody?: string;
+}
+
 /**
- * Write a batch of picks (a whole stage, or the whole playoff bracket) in one
- * indexed call (handoff §0.1/§8). Picks are sent as the documented 1-based
- * indexed params built by write-core; itemids go out as exact digit strings
- * (rule #2). On 200, returns the parsed envelope so the caller can adopt any
- * itemids Valve assigned. A non-200 throws ValveApiError carrying the status so
- * the caller can degrade (rule #7) — failures are surfaced, never silently
- * retried (rule #8).
+ * Upload ONE pick (PHA-853 live finding: Valve rejects the batched/indexed shape
+ * with 400 "Required parameter 'sectionid' is missing"; only single-pick calls
+ * work). Returns a SinglePickResult — never throws on a non-200, so the caller
+ * can keep going and aggregate.
  */
-export async function uploadTournamentPredictions(
+async function uploadSinglePick(
   event: number,
   steamId: string,
   steamidkey: string,
-  picks: UploadPick[],
-): Promise<PredictionsEnvelope> {
+  pick: UploadPick,
+): Promise<SinglePickResult> {
   const body = buildUploadBody(
     { key: requireKey(), event, steamid: steamId, steamidkey },
-    picks,
+    pick,
   );
   const bodyStr = body.toString();
   const res = await fetch(`${BASE}/UploadTournamentPredictions/v1/`, {
@@ -137,21 +144,58 @@ export async function uploadTournamentPredictions(
   });
   const text = await res.text();
   if (!res.ok) {
-    // PHA-853: surface the actual Valve response on non-200 so a live 400 in
-    // docker logs has something to chase. Secrets are redacted; everything else
-    // (sectionid/pickid/itemid/index shape) is exactly what Valve saw.
     console.error(
       "[valve] UploadTournamentPredictions failed",
       JSON.stringify({
         status: res.status,
         statusText: res.statusText,
         event,
-        pickCount: picks.length,
+        pick: {
+          sectionId: pick.sectionId,
+          groupId: pick.groupId,
+          slotIndex: pick.slotIndex,
+          pickId: pick.pickId,
+        },
         requestBody: redactSecrets(bodyStr),
         responseBody: text.slice(0, 2000),
       }),
     );
-    throw new ValveApiError(res.status, "UploadTournamentPredictions", text);
+    return { pick, ok: false, status: res.status, errorBody: text.slice(0, 500) };
   }
-  return parseSafeJson(text) as PredictionsEnvelope;
+  let envelope: PredictionsEnvelope;
+  try {
+    envelope = parseSafeJson(text) as PredictionsEnvelope;
+  } catch (e) {
+    console.error(
+      "[valve] UploadTournamentPredictions 200 but unparseable body",
+      JSON.stringify({ event, pick, error: e instanceof Error ? e.message : String(e) }),
+    );
+    return { pick, ok: false, status: res.status, errorBody: text.slice(0, 500) };
+  }
+  return { pick, ok: true, status: res.status, envelope };
+}
+
+/**
+ * Upload a batch of picks (a whole Swiss stage, or the whole playoff bracket)
+ * as N sequential single-pick calls (PHA-853 — Valve only accepts the
+ * unsuffixed single-pick shape; indexed batch returns 400). Serial, not
+ * parallel, to stay polite to the API (and match what the live CS2 client does
+ * on each user click). Returns one SinglePickResult per pick, in input order.
+ *
+ * The shape change vs the prior batched API: callers used to get a single
+ * PredictionsEnvelope on success; now they iterate and reconcile each pick
+ * individually. Picks that 200 keep going; picks that fail are surfaced
+ * per-pick so a partial-success doesn't lose data.
+ */
+export async function uploadTournamentPredictions(
+  event: number,
+  steamId: string,
+  steamidkey: string,
+  picks: UploadPick[],
+): Promise<SinglePickResult[]> {
+  const out: SinglePickResult[] = [];
+  for (const p of picks) {
+    out.push(await uploadSinglePick(event, steamId, steamidkey, p));
+  }
+  return out;
 }

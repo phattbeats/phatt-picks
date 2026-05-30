@@ -107,39 +107,32 @@ export function orderPicks(picks: UploadPick[]): UploadPick[] {
 }
 
 /**
- * Build the indexed form body for UploadTournamentPredictions (handoff §0.1).
- * Each pick contributes `sectionid{i} groupid{i} index{i} pickid{i} itemid{i}`
- * with a 1-based suffix `i`, matching the wiki's `sectionid1…itemid1 …
- * sectionidN…itemidN` batch shape. The whole stage (or whole playoff bracket)
- * goes in ONE call.
+ * Build the form body for a SINGLE pick upload (PHA-853 live finding).
  *
- * itemids are written as the exact digit string (rule #2) — never Number()'d,
- * so a 17+ digit id reaches Valve intact.
+ * PHA-826 §0.3 had two unconfirmed shapes: an indexed batch (`sectionid1…
+ * sectionidN…`) and an unsuffixed single-pick call. The live Valve smoke
+ * proved this endpoint only accepts the **unsuffixed single-pick** shape —
+ * batching with indexed params returns 400 "Required parameter 'sectionid'
+ * is missing". So Lock In is N sequential single-pick calls, matching what
+ * the CS2 client does on each user click.
  *
- * NOTE: the exact suffix convention (1-based, and whether a single-pick call may
- * drop the suffix) is the one item §0.3 flags for live confirmation; we build the
- * documented 1-based batch shape for every call and confirm it at the deploy smoke.
+ * itemid is written as the exact digit string (rule #2) — never Number()'d.
  */
 export function buildUploadBody(
   auth: { key: string; event: number; steamid: string; steamidkey: string },
-  picks: UploadPick[],
+  pick: UploadPick,
 ): URLSearchParams {
-  const ordered = orderPicks(picks);
-  const params = new URLSearchParams({
+  return new URLSearchParams({
     key: auth.key,
     event: String(auth.event),
     steamid: auth.steamid,
     steamidkey: auth.steamidkey,
+    sectionid: String(pick.sectionId),
+    groupid: String(pick.groupId),
+    index: String(pick.slotIndex),
+    pickid: String(pick.pickId),
+    itemid: pick.itemId, // string straight through — rule #2
   });
-  ordered.forEach((p, idx) => {
-    const i = idx + 1; // 1-based
-    params.set(`sectionid${i}`, String(p.sectionId));
-    params.set(`groupid${i}`, String(p.groupId));
-    params.set(`index${i}`, String(p.slotIndex));
-    params.set(`pickid${i}`, String(p.pickId));
-    params.set(`itemid${i}`, p.itemId); // string straight through — rule #2
-  });
-  return params;
 }
 
 /**

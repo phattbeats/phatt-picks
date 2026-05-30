@@ -78,9 +78,13 @@ async function loadWriteAuth(
 }
 
 /**
- * Attempt the upload for an already-resolved batch and reconcile the result back
- * into the Pick table. Never throws on a Valve/network failure — returns the
- * structured WriteResult instead (degrade vs escalate per rules #7/#8).
+ * Attempt the upload for an already-resolved batch and reconcile the result
+ * back into the Pick table. PHA-853: Valve only accepts single-pick calls
+ * (the indexed batch shape returns 400), so we issue N sequential uploads and
+ * reconcile each pick independently. A partial failure (some 200, some 4xx)
+ * keeps the successes synced and surfaces the first failure's status/body in
+ * the WriteResult — picks that didn't 200 stay local for retry. Never throws
+ * into the UI (rules #7/#8).
  */
 async function uploadAndReconcile(
   playerId: string,
@@ -89,57 +93,14 @@ async function uploadAndReconcile(
   authCode: string,
   picks: UploadPick[],
 ): Promise<WriteResult> {
+  let results;
   try {
-    const envelope = await uploadTournamentPredictions(eventId, steamId, authCode, picks);
-
-    // 200, but the body must be the shape we expect, or we escalate (rule #8).
-    const assigned = parseAssignedItemIds(envelope);
-
-    await prisma.$transaction(
-      picks.map((p) => {
-        const adopted = assigned.get(`${p.sectionId}:${p.groupId}:${p.slotIndex}`);
-        return prisma.pick.update({
-          where: {
-            playerId_eventId_sectionId_groupId_slotIndex: {
-              playerId,
-              eventId,
-              sectionId: p.sectionId,
-              groupId: p.groupId,
-              slotIndex: p.slotIndex,
-            },
-          },
-          // Adopt any itemid Valve assigned; mark the row Valve-confirmed.
-          data: { itemId: adopted ?? p.itemId, isLocal: false },
-        });
-      }),
-    );
-
-    // A successful write means this player's picks are synced (gates the coin, rule #4).
-    await prisma.player.update({ where: { id: playerId }, data: { synced: true } });
-
-    return { ok: true, synced: picks.length };
+    results = await uploadTournamentPredictions(eventId, steamId, authCode, picks);
   } catch (e) {
-    if (e instanceof ValveApiError) {
-      const disposition = classifyWriteFailure(e.status);
-      // Documented failure → keep local picks, fall back to read/mirror (rule #7).
-      // Unexpected status → surface & block (rule #8). Either way: no retry here.
-      // PHA-853: include the truncated Valve response body so a live 400 surfaces
-      // its actual reason to the UI (the docker logs carry the full body).
-      const bodySnippet = e.responseBody?.slice(0, 200);
-      return {
-        ok: false,
-        synced: 0,
-        status: e.status,
-        error: bodySnippet ? `${e.message} — ${bodySnippet}` : e.message,
-        ...(disposition === "degrade" ? { degraded: true } : { escalate: true }),
-      };
-    }
-    if (e instanceof WriteShapeError) {
-      // 200 with an unparseable body — unexpected shape, escalate (rule #8).
-      return { ok: false, synced: 0, escalate: true, error: e.message };
-    }
-    // Network / timeout (no status): the op may have completed — degrade and
-    // let the read/mirror reconcile it later (§5: "re-query later, don't assume failure").
+    // The per-pick loop catches Valve HTTP failures; reaching here means
+    // something below the loop blew up (most likely network/fetch error before
+    // any request even left). Degrade and keep all picks local (rule #7 — §5
+    // "re-query later, don't assume failure").
     return {
       ok: false,
       synced: 0,
@@ -147,6 +108,71 @@ async function uploadAndReconcile(
       error: e instanceof Error ? e.message : String(e),
     };
   }
+
+  // Reconcile each pick: 200s flip to isLocal:false (and adopt any reassigned
+  // itemid); non-200s stay local with the existing itemid.
+  let synced = 0;
+  let firstFailure: { status: number; error: string } | null = null;
+  let shapeError: string | null = null;
+
+  for (const r of results) {
+    if (r.ok && r.envelope) {
+      let assigned: Map<string, string>;
+      try {
+        assigned = parseAssignedItemIds(r.envelope);
+      } catch (e) {
+        // 200 with an unparseable body — log, mark shapeError, but don't yet
+        // claim this pick is synced. Will be returned as escalate below.
+        shapeError = e instanceof WriteShapeError ? e.message : String(e);
+        continue;
+      }
+      const adopted = assigned.get(
+        `${r.pick.sectionId}:${r.pick.groupId}:${r.pick.slotIndex}`,
+      );
+      await prisma.pick.update({
+        where: {
+          playerId_eventId_sectionId_groupId_slotIndex: {
+            playerId,
+            eventId,
+            sectionId: r.pick.sectionId,
+            groupId: r.pick.groupId,
+            slotIndex: r.pick.slotIndex,
+          },
+        },
+        data: { itemId: adopted ?? r.pick.itemId, isLocal: false },
+      });
+      synced++;
+    } else if (!r.ok && firstFailure === null) {
+      firstFailure = {
+        status: r.status,
+        error: r.errorBody ? r.errorBody.slice(0, 200) : `HTTP ${r.status}`,
+      };
+    }
+  }
+
+  // All picks landed → flip the player.synced flag (rule #4 — gates the coin).
+  if (synced === picks.length && !firstFailure && !shapeError) {
+    await prisma.player.update({ where: { id: playerId }, data: { synced: true } });
+    return { ok: true, synced };
+  }
+
+  if (shapeError) {
+    return { ok: false, synced, escalate: true, error: shapeError };
+  }
+
+  if (firstFailure) {
+    const disposition = classifyWriteFailure(firstFailure.status);
+    return {
+      ok: false,
+      synced,
+      status: firstFailure.status,
+      error: firstFailure.error,
+      ...(disposition === "degrade" ? { degraded: true } : { escalate: true }),
+    };
+  }
+
+  // Should be unreachable — guard so we never silently report ok:true for 0 picks.
+  return { ok: false, synced: 0, escalate: true, error: "no picks attempted" };
 }
 
 /**

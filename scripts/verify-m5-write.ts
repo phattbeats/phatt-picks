@@ -9,10 +9,13 @@
  *   1. itemids carried as exact digit strings read→write (rule #2): the live
  *      items fixture maps teamid→itemid losslessly, and the upload body emits
  *      that string verbatim — where a JSON.parse would silently corrupt it.
- *   2. stage-batched upload (§0.1): a whole Swiss stage goes in ONE indexed call
- *      (sectionid1…itemid1 … sectionidN…itemidN, slot in indexN).
- *   3. playoff bracket = its own single ORDERED call: QF(108) → SF(109) → GF(110),
- *      regardless of input order.
+ *   2. single-pick upload body (PHA-853): each call carries unsuffixed
+ *      sectionid/groupid/index/pickid/itemid — the indexed batch shape Valve
+ *      rejects with "Required parameter 'sectionid' is missing". A whole
+ *      Swiss stage is N sequential single-pick calls, not one indexed call.
+ *   3. playoff bracket order (§0.1): the resolved picks list orders QF(108) →
+ *      SF(109) → GF(110), regardless of input order, so the per-pick loop
+ *      submits in bracket-correct sequence.
  *   4. graceful degrade vs escalate (rules #7/#8): documented Valve failures
  *      classify as "degrade" (keep local); unexpected status/shape "escalate".
  *
@@ -59,10 +62,10 @@ function proveItemidCarry(): void {
   check("teamid 89 → exact itemid string", itemsMap.get(89) === "17293822569790899385", String(itemsMap.get(89)));
   check("map values are strings, never numbers", teamIds.every((t) => typeof itemsMap.get(t) === "string"));
 
-  // The same itemid survives resolve → ordered batch → URL param verbatim.
+  // The same itemid survives resolve → single-pick body → URL param verbatim.
   const pick: LocalPick = { sectionId: 105, groupId: 271, slotIndex: 0, pickId: 89, itemId: "" };
-  const body = buildUploadBody(AUTH, [resolveUploadPick(pick, itemsMap)]);
-  check("upload body itemid1 == exact string", body.get("itemid1") === "17293822569790899385", String(body.get("itemid1")));
+  const body = buildUploadBody(AUTH, resolveUploadPick(pick, itemsMap));
+  check("upload body itemid == exact string", body.get("itemid") === "17293822569790899385", String(body.get("itemid")));
 
   // What rule #2 prevents: a naive parse corrupts that id.
   const naive = (JSON.parse(fixture("cologne-items.json")) as { result: { items: { teamid: number; itemid: number }[] } })
@@ -70,27 +73,30 @@ function proveItemidCarry(): void {
   check("JSON.parse WOULD corrupt it (why rule #2 exists)", String(naive) !== "17293822569790899385", `JSON.parse→${naive}`);
 }
 
-// [2] stage-batched upload — one indexed call for a whole Swiss stage (§0.1).
-function proveStageBatch(): void {
-  console.log("\n[2] STAGE BATCH (§0.1) — Stage I's 10 picks in ONE indexed call");
-  // Build a full Stage I (section 105, group 271, slots 0-9) from real teams.
-  const stagePicks: LocalPick[] = teamIds.slice(0, 10).map((teamId, slot) => ({
+// [2] single-pick upload body (PHA-853 — Valve rejects the indexed batch).
+function proveSinglePickShape(): void {
+  console.log("\n[2] SINGLE-PICK BODY (PHA-853) — unsuffixed params per upload");
+  // A representative pick from Stage I (section 105, group 271, slot 0).
+  const pick: LocalPick = {
     sectionId: 105,
     groupId: 271,
-    slotIndex: slot,
-    pickId: teamId,
+    slotIndex: 0,
+    pickId: teamIds[0],
     itemId: "",
-  }));
-  const resolved = stagePicks.map((p) => resolveUploadPick(p, itemsMap));
-  const body = buildUploadBody(AUTH, resolved);
+  };
+  const body = buildUploadBody(AUTH, resolveUploadPick(pick, itemsMap));
 
   check("auth params present (key/event/steamid/steamidkey)",
     body.get("key") === "K" && body.get("event") === "26" &&
     body.get("steamid") === AUTH.steamid && body.get("steamidkey") === AUTH.steamidkey);
-  check("10 picks → indexed 1..10 (1-based)", body.get("sectionid1") === "105" && body.get("sectionid10") === "105" && body.get("sectionid11") === null);
-  check("slot goes in indexN (not the suffix)", body.get("index1") === "0" && body.get("index10") === "9");
-  check("pickid/itemid paired per index", body.get("pickid3") === String(teamIds[2]) && body.get("itemid3") === itemsMap.get(teamIds[2]));
-  check("single call carries the whole stage", [...body.keys()].filter((k) => k.startsWith("sectionid")).length === 10);
+  check("pick params are unsuffixed (sectionid, not sectionid1)",
+    body.get("sectionid") === "105" && body.get("sectionid1") === null);
+  check("slot goes in `index` (not `slot` / not `index1`)",
+    body.get("index") === "0" && body.get("index1") === null);
+  check("pickid + itemid present once each",
+    body.get("pickid") === String(teamIds[0]) && body.get("itemid") === itemsMap.get(teamIds[0]));
+  check("body carries exactly one pick worth of params (no indexed leftovers)",
+    [...body.keys()].filter((k) => /\d$/.test(k)).length === 0);
 }
 
 // [3] playoff bracket — one ordered call QF→SF→GF regardless of input order (§0.1).
@@ -111,8 +117,12 @@ function provePlayoffOrder(): void {
   check("sections emitted QF→SF→GF", JSON.stringify(seq) ===
     JSON.stringify(["108/274", "108/275", "108/276", "108/277", "109/278", "109/279", "110/280"]), seq.join(" "));
 
-  const body = buildUploadBody(AUTH, ordered);
-  check("body index1 is a QF (108), last is the GF (110)", body.get("sectionid1") === "108" && body.get("sectionid7") === "110");
+  // PHA-853: each ordered pick becomes its own single-pick body — first is a
+  // QF, last is the GF, so the per-pick upload loop submits in bracket order.
+  const first = buildUploadBody(AUTH, ordered[0]);
+  const last = buildUploadBody(AUTH, ordered[ordered.length - 1]);
+  check("first ordered pick body targets QF section 108", first.get("sectionid") === "108");
+  check("last ordered pick body targets GF section 110", last.get("sectionid") === "110");
   check("playoff sections constant matches layout", JSON.stringify([...PLAYOFF_SECTION_IDS]) === "[108,109,110]");
 }
 
@@ -165,7 +175,7 @@ function proveResolveGuards(): void {
 
 console.log("=== phaTT Picks M5 write-path verification ===");
 proveItemidCarry();
-proveStageBatch();
+proveSinglePickShape();
 provePlayoffOrder();
 proveFailureClassification();
 proveResolveGuards();
