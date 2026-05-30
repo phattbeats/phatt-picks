@@ -8,7 +8,7 @@
  * - Perfect tournament = 135 pts (60 Swiss + 75 Playoffs) — for verification only.
  */
 
-import type { Layout, Group } from "./layout";
+import type { Layout } from "./layout";
 
 export interface PlayerPickMap {
   // playerId → sectionId → groupId → slotIndex → pickId

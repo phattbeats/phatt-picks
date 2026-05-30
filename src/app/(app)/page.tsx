@@ -35,6 +35,9 @@ export default async function DashboardPage() {
   ]);
 
   const wireItems = wireItemsAll;
+  // Per-request server timestamp for relative "x ago" stamps — this is a
+  // force-dynamic RSC that renders once per request, so Date.now is intentional.
+  // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
 
   const resolvedKeys = buildResolvedKeys(resolvedRows);

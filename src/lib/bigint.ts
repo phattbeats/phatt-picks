@@ -30,13 +30,6 @@ export function parseSafeJson(raw: string): unknown {
   return JSON.parse(patched);
 }
 
-/** Serialize a value to JSON, emitting BigInt as plain unquoted integers. */
-export function stringifySafeJson(value: unknown): string {
-  return JSON.stringify(value, (_, v) =>
-    typeof v === "bigint" ? v.toString() : v
-  );
-}
-
 /** Assert a value is a non-empty string suitable for use as a bigint id. */
 export function assertBigIntString(v: unknown, field: string): string {
   if (typeof v !== "string" || !/^\d+$/.test(v)) {
