@@ -5,6 +5,8 @@ import { buildResolvedKeys, isStagePickable } from "@/lib/stage-gate-core";
 import { getSession } from "@/lib/session";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
 import { HeatMark } from "@/components/heat/HeatMark";
+import { LockCountdown } from "@/components/heat/LockCountdown";
+import { lockTimeForSection } from "@/lib/lock-schedule-core";
 
 const EVENT_ID = 26;
 
@@ -148,6 +150,11 @@ export default async function DashboardPage() {
             sectionName={activeLabel}
             signedIn={!!session}
           />
+          {active.pick.pickable && (
+            <div style={{ marginTop: 16 }}>
+              <LockCountdown lockAt={lockTimeForSection(active.section.sectionid)} />
+            </div>
+          )}
           <div style={{
             display: "flex",
             gap: 12,

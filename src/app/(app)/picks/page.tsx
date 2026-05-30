@@ -9,6 +9,8 @@ import {
   isStagePickable,
   type StagePickability,
 } from "@/lib/stage-gate-core";
+import { LockCountdown } from "@/components/heat/LockCountdown";
+import { lockTimeForSection } from "@/lib/lock-schedule-core";
 
 const EVENT_ID = 26;
 
@@ -75,6 +77,9 @@ export default async function PicksPage({
         }}>
           {activeLabel}
         </h1>
+        {activePickability.pickable && (
+          <LockCountdown lockAt={lockTimeForSection(activeSectionId)} />
+        )}
       </div>
 
       {/* Stage tabs */}
