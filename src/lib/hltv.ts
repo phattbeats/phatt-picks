@@ -81,17 +81,15 @@ export async function claimRefreshSlot(): Promise<boolean> {
       data: { lastCallAt: now },
     });
     if (res.count > 0) return true; // won the slot: floor had elapsed
-    // No matching row: first-ever call (no row) vs. within the floor. Only the
-    // first case can create the row; a unique violation means it already exists
-    // and is within the floor → someone else holds the slot.
-    try {
-      await prisma.sourceState.create({
-        data: { source: SOURCE, lastCallAt: now },
-      });
-      return true; // first-ever pull
-    } catch {
-      return false; // row exists & within floor, or lost the create race
-    }
+    // No matching row: first-ever call (no row) vs. within the floor.
+    // INSERT OR IGNORE is atomic — succeeds only when no row exists, silently
+    // skips otherwise. Avoids the P2002 that `create` throws (and Prisma logs)
+    // when multiple workers race at startup before the row exists.
+    const inserted = await prisma.$executeRaw`
+      INSERT OR IGNORE INTO "SourceState" ("source", "lastCallAt")
+      VALUES (${SOURCE}, ${now})
+    `;
+    return inserted > 0; // 1 = first-ever pull; 0 = within floor or lost the race
   } catch {
     return true; // DB hiccup — don't let storage block the wire
   }

@@ -178,14 +178,14 @@ async function claimOutcomesRefreshSlot(): Promise<boolean> {
       data: { lastCallAt: now },
     });
     if (res.count > 0) return true; // won the slot: floor had elapsed
-    try {
-      await prisma.sourceState.create({
-        data: { source: OUTCOMES_REFRESH_SOURCE, lastCallAt: now },
-      });
-      return true; // first-ever refresh (no row existed)
-    } catch {
-      return false; // row exists & within floor, or lost the create race
-    }
+    // INSERT OR IGNORE is atomic — succeeds only when no row exists, silently
+    // skips otherwise (same fix as hltv.claimRefreshSlot). Avoids the P2002 that
+    // `create` throws (and Prisma logs) when workers race at startup.
+    const inserted = await prisma.$executeRaw`
+      INSERT OR IGNORE INTO "SourceState" ("source", "lastCallAt")
+      VALUES (${OUTCOMES_REFRESH_SOURCE}, ${now})
+    `;
+    return inserted > 0; // 1 = first-ever refresh; 0 = within floor or lost the race
   } catch {
     return true; // DB hiccup — don't let storage permanently block the driver
   }

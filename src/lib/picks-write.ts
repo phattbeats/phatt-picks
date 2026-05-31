@@ -264,12 +264,32 @@ async function resolveAndUpload(
   }
 
   // Resolve every pick's itemid; an unresolvable one is unexpected → escalate (#8).
-  let upload: UploadPick[];
+  let resolved: UploadPick[];
   try {
-    upload = orderPicks(rows.map((r) => resolveUploadPick(r, itemIdByTeam)));
+    resolved = orderPicks(rows.map((r) => resolveUploadPick(r, itemIdByTeam)));
   } catch (e) {
     return { ok: false, synced: 0, escalate: true, error: e instanceof Error ? e.message : String(e) };
   }
+
+  // Dedup: Valve returns 500 when the same team appears in multiple slots of the
+  // same group within one upload batch (PHA-875 live finding: 5/10 Swiss picks
+  // 500d persistently; the upload path accepted them as separate DB rows even
+  // though the UI dedup fires client-side). Keep the first occurrence per
+  // (sectionId, groupId, pickId); drop the rest and log so the data issue is
+  // visible without blocking the valid picks.
+  const seenTeams = new Map<string, number>(); // key: sectionId:groupId:pickId → first slotIndex
+  const upload = resolved.filter((p) => {
+    const key = `${p.sectionId}:${p.groupId}:${p.pickId}`;
+    if (seenTeams.has(key)) {
+      console.warn(
+        `[write] duplicate team ${p.pickId} at slot ${p.slotIndex} in section ${p.sectionId} group ${p.groupId} ` +
+          `— already uploading at slot ${seenTeams.get(key)}; skipping duplicate to avoid Valve 500`,
+      );
+      return false;
+    }
+    seenTeams.set(key, p.slotIndex);
+    return true;
+  });
 
   return uploadAndReconcile(playerId, eventId, steamId, authCode, upload);
 }
