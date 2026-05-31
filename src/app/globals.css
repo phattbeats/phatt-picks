@@ -711,15 +711,17 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .coin-sticker.bronze { background: linear-gradient(135deg, #e8955a 0%, #9d5e28 45%, #c97a30 100%); box-shadow: 0 0 0 1px rgba(200,130,70,0.4); }
 .coin-sticker.diamond { background: linear-gradient(135deg, #e8f8ff 0%, #7dd3fc 38%, #3b9fd4 65%, #b9f2ff 100%); box-shadow: 0 0 0 1px rgba(180,230,255,0.5); }
 
+/* Swiss bucket slots — tile grid at all viewport sizes (portrait, matches pool) */
+.bucket-cols.swiss .bucket {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+}
+.bucket-cols.swiss .bucket-label { grid-column: 1 / -1; }
+
 @media (min-width: 768px) {
+  /* 3-column ADVANCE|SURVIVE|ELIMINATE layout on tablet+ */
   .bucket-cols.swiss { grid-template-columns: repeat(3, 1fr); align-items: start; }
-  /* Swiss slots rendered as a tile grid matching the pool — same size, same look */
-  .bucket-cols.swiss .bucket {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 8px;
-  }
-  .bucket-cols.swiss .bucket-label { grid-column: 1 / -1; }
 }
 
 /* ── PROFILE STATS (mockup 06) ─────────────────────────────────────────── */
