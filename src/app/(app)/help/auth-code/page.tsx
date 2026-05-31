@@ -97,7 +97,7 @@ export default async function AuthCodeHelpPage() {
           Connect your Steam picks
         </h1>
         <p style={{ color: "var(--ink-mid)", fontSize: 14, margin: "4px 0 0", lineHeight: 1.55 }}>
-          Optional. It mirrors your <em>official</em> Valve Pick&apos;Em into HOTLINE and lets the app set picks back in-game. Don&apos;t want to? Just play locally — same board, same scoring, no Steam needed.
+          Optional. It mirrors your <em style={{ marginRight: "0.15em" }}>official</em> Valve Pick&apos;Em into HOTLINE and lets the app set picks back in-game. Don&apos;t want to? Just play locally — same board, same scoring, no Steam needed.
         </p>
         <p style={{
           fontFamily: "var(--font-mono)",
@@ -202,7 +202,7 @@ export default async function AuthCodeHelpPage() {
           </div>
         }
       >
-        Steam shows a code shaped <strong style={{ color: "var(--ink-hi)" }}>AAAA-AAAAA-AAAA</strong>. Copy it. It&apos;s a read/write key for <em>your</em> picks only — we encrypt it at rest and never show it again.
+        Steam shows a code shaped <strong style={{ color: "var(--ink-hi)" }}>AAAA-AAAAA-AAAA</strong>. Copy it. It&apos;s a read/write key for <em style={{ marginRight: "0.15em" }}>your</em> picks only — we encrypt it at rest and never show it again.
       </Step>
 
       <Step
