@@ -26,10 +26,10 @@ interface Props {
 const SAVED_FLASH_MS = 1200;
 const DND_MIME = "application/x-phatt-picks-team";
 
-// Logo sizes — deliberately large so the crest is the dominant element of a
-// pick (Brandon's PHA-855 feedback: logos must be a lot bigger, tiles square).
-const SLOT_LOGO = 40;
-const TILE_LOGO = 52;
+// Logo sizes — portrait slots need crests to dominate; Cologne mosaic outline
+// shrinks effective crest area so we compensate by going large (PHA-877).
+const SLOT_LOGO = 80;
+const TILE_LOGO = 72;
 
 export function PicksBoard({
   section,
