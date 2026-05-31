@@ -22,6 +22,7 @@ import { prisma } from "@/lib/db";
 import { getDecryptedAuthCode } from "@/lib/authcode";
 import {
   fetchTournamentItems,
+  fetchTournamentPredictions,
   uploadTournamentPredictions,
   ValveApiError,
 } from "@/lib/valve";
@@ -263,27 +264,66 @@ async function resolveAndUpload(
     };
   }
 
-  // Diagnostic: log which picks resolve from live items vs DB fallback.
-  // Remove once PHA-875 root cause is confirmed.
-  console.info(
-    "[write] GetTournamentItems map:",
-    JSON.stringify(Object.fromEntries(
-      [...itemIdByTeam.entries()].map(([tid, iid]) => [String(tid), iid])
-    )),
-  );
+  // Read current Steam picks — skip any that are already correctly set so we
+  // only send changed picks. This avoids conflicts where re-uploading an
+  // already-locked pick interferes with subsequent uploads (PHA-875 root cause).
+  let steamBySlot: Map<number, number> = new Map();
+  try {
+    const pred = await fetchTournamentPredictions(eventId, steamId, authCode);
+    const rawPicks = pred?.result?.picks ?? [];
+    for (const p of rawPicks) {
+      const slotIndex = Number(p.index);
+      const pickId = Number(p.pickid);
+      const sectionId = Number(p.sectionid);
+      // Log ALL raw entries including partial ones (PHA-875 diagnostics).
+      console.info(`[write] steam entry: sectionid=${p.sectionid} groupid=${p.groupid} index=${p.index} pickid=${p.pickid} itemid=${p.itemid}`);
+      if (Number.isFinite(sectionId) && Number.isFinite(pickId) && Number.isFinite(slotIndex) && pickId !== 0) {
+        steamBySlot.set(slotIndex, pickId);
+      }
+    }
+    console.info(`[write] current Steam picks: ${JSON.stringify(Object.fromEntries([...steamBySlot.entries()]))}`);
+  } catch (e) {
+    console.warn("[write] could not read current Steam state, uploading all picks:", e instanceof Error ? e.message : String(e));
+  }
 
   // Resolve every pick's itemid; an unresolvable one is unexpected → escalate (#8).
   let resolved: UploadPick[];
   try {
-    resolved = orderPicks(rows.map((r) => {
-      const fromMap = itemIdByTeam.get(r.pickId);
-      const source = fromMap ? "live" : "db";
-      console.info(`[write] resolve slot=${r.slotIndex} pickId=${r.pickId} source=${source} itemId=${fromMap ?? r.itemId}`);
-      return resolveUploadPick(r, itemIdByTeam);
-    }));
+    resolved = orderPicks(rows.map((r) => resolveUploadPick(r, itemIdByTeam)));
   } catch (e) {
     return { ok: false, synced: 0, escalate: true, error: e instanceof Error ? e.message : String(e) };
   }
 
-  return uploadAndReconcile(playerId, eventId, steamId, authCode, resolved);
+  // Only upload picks that differ from what's currently on Steam.
+  // Sending an unchanged pick (same team at same slot) can conflict with partial
+  // sticker-lock state left by previous failed uploads (PHA-875).
+  const toUpload = resolved.filter(p => steamBySlot.get(p.slotIndex) !== p.pickId);
+  const skipped = resolved.length - toUpload.length;
+  if (skipped > 0) {
+    console.info(`[write] skipping ${skipped} pick(s) already correctly set on Steam`);
+  }
+  console.info(`[write] uploading ${toUpload.length} pick(s)`);
+
+  // Mark skipped picks as synced in the DB (they already match Steam state).
+  const alreadySynced = resolved.filter(p => steamBySlot.get(p.slotIndex) === p.pickId);
+  for (const p of alreadySynced) {
+    await prisma.pick.update({
+      where: {
+        playerId_eventId_sectionId_groupId_slotIndex: {
+          playerId, eventId, sectionId: p.sectionId, groupId: p.groupId, slotIndex: p.slotIndex,
+        },
+      },
+      data: { isLocal: false },
+    });
+  }
+
+  if (toUpload.length === 0) {
+    // All picks already match Steam — mark player synced and return ok.
+    await prisma.player.update({ where: { id: playerId }, data: { synced: true } });
+    return { ok: true, synced: skipped };
+  }
+
+  const result = await uploadAndReconcile(playerId, eventId, steamId, authCode, toUpload);
+  // Count skipped picks as already-synced in the reported total.
+  return { ...result, synced: result.synced + skipped };
 }
