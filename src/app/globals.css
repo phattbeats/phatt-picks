@@ -480,10 +480,6 @@ body {
   box-shadow: 0 0 8px var(--heat);
 }
 
-/* Layout shell padding helpers used by app pages */
-.with-nav { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
-.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bottom)); }
-
 main.shell {
   position: relative;
   z-index: 3;
@@ -494,14 +490,18 @@ main.shell {
   flex-direction: column;
   gap: 14px;
 }
+/* Layout shell padding helpers — scoped to main.shell so specificity (0,2,1)
+   beats the shorthand padding in the base main.shell rule (0,1,1). */
+main.shell.with-nav { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bottom)); }
 
 @media (min-width: 1024px) {
   .topnav { display: block; }
   .apphead { display: none; }
   .botnav { display: none; }
   body.has-botnav { padding-bottom: 0; }
-  .with-nav, .with-nav-action { padding-bottom: 0; }
   main.shell { padding: 28px 32px 60px; gap: 18px; }
+  main.shell.with-nav, main.shell.with-nav-action { padding-bottom: 60px; }
 }
 
 /* ── PICK BOARD (mockup 03) ────────────────────────────────────────────── */
