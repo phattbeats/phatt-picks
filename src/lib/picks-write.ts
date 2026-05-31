@@ -264,12 +264,12 @@ async function resolveAndUpload(
   }
 
   // Resolve every pick's itemid; an unresolvable one is unexpected → escalate (#8).
-  let upload: UploadPick[];
+  let resolved: UploadPick[];
   try {
-    upload = orderPicks(rows.map((r) => resolveUploadPick(r, itemIdByTeam)));
+    resolved = orderPicks(rows.map((r) => resolveUploadPick(r, itemIdByTeam)));
   } catch (e) {
     return { ok: false, synced: 0, escalate: true, error: e instanceof Error ? e.message : String(e) };
   }
 
-  return uploadAndReconcile(playerId, eventId, steamId, authCode, upload);
+  return uploadAndReconcile(playerId, eventId, steamId, authCode, resolved);
 }
