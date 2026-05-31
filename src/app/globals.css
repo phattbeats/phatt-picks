@@ -540,10 +540,10 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 }
 .bucket-label .count { color: var(--ink-mid); }
 
-/* Pick slot — portrait, logo-forward; compact so slots+pool fit on screen (PHA-877) */
+/* Pick slot — same tile geometry as pool tiles (PHA-877) */
 .pslot {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-  padding: 10px 10px 8px; min-height: 96px; width: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 8px 10px; min-height: 96px; width: 100%;
   background: var(--surf-1);
   border: 1px dashed var(--hair-2);
   text-align: center; color: inherit; font: inherit;
@@ -560,7 +560,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .pslot.error { border-color: var(--ember); }
 .pslot-name {
   width: 100%;
-  font-size: 12px; font-weight: 500; color: var(--ink-hi);
+  font-size: 11px; font-weight: 500; color: var(--ink-hi); line-height: 1.2;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   text-align: center;
 }
@@ -713,6 +713,13 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 
 @media (min-width: 768px) {
   .bucket-cols.swiss { grid-template-columns: repeat(3, 1fr); align-items: start; }
+  /* Swiss slots rendered as a tile grid matching the pool — same size, same look */
+  .bucket-cols.swiss .bucket {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 8px;
+  }
+  .bucket-cols.swiss .bucket-label { grid-column: 1 / -1; }
 }
 
 /* ── PROFILE STATS (mockup 06) ─────────────────────────────────────────── */

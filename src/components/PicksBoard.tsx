@@ -26,9 +26,9 @@ interface Props {
 const SAVED_FLASH_MS = 1200;
 const DND_MIME = "application/x-phatt-picks-team";
 
-// Logo sizes — portrait slots, compact enough that slots+pool fit on-screen
-// together for drag-and-drop (PHA-877 iteration 2).
-const SLOT_LOGO = 52;
+// Slots and pool tiles are the same size — drag-and-drop targets are visually
+// identical to pool sources (PHA-877 iteration 3).
+const SLOT_LOGO = 60;
 const TILE_LOGO = 60;
 
 export function PicksBoard({
