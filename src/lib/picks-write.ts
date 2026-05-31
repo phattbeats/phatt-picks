@@ -263,10 +263,24 @@ async function resolveAndUpload(
     };
   }
 
+  // Diagnostic: log which picks resolve from live items vs DB fallback.
+  // Remove once PHA-875 root cause is confirmed.
+  console.info(
+    "[write] GetTournamentItems map:",
+    JSON.stringify(Object.fromEntries(
+      [...itemIdByTeam.entries()].map(([tid, iid]) => [String(tid), iid])
+    )),
+  );
+
   // Resolve every pick's itemid; an unresolvable one is unexpected → escalate (#8).
   let resolved: UploadPick[];
   try {
-    resolved = orderPicks(rows.map((r) => resolveUploadPick(r, itemIdByTeam)));
+    resolved = orderPicks(rows.map((r) => {
+      const fromMap = itemIdByTeam.get(r.pickId);
+      const source = fromMap ? "live" : "db";
+      console.info(`[write] resolve slot=${r.slotIndex} pickId=${r.pickId} source=${source} itemId=${fromMap ?? r.itemId}`);
+      return resolveUploadPick(r, itemIdByTeam);
+    }));
   } catch (e) {
     return { ok: false, synced: 0, escalate: true, error: e instanceof Error ? e.message : String(e) };
   }
