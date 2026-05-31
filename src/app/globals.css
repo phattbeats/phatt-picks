@@ -540,10 +540,10 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 }
 .bucket-label .count { color: var(--ink-mid); }
 
-/* Pick slot — portrait, logo-forward (PHA-877) */
+/* Pick slot — portrait, logo-forward; compact so slots+pool fit on screen (PHA-877) */
 .pslot {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-  padding: 18px 10px 14px; min-height: 148px; width: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 10px 8px; min-height: 96px; width: 100%;
   background: var(--surf-1);
   border: 1px dashed var(--hair-2);
   text-align: center; color: inherit; font: inherit;
@@ -599,10 +599,10 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   font-family: var(--font-mono);
   font-size: 9px; letter-spacing: 0.08em; color: var(--ink-low);
 }
-.pool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.pool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
 .ptile {
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
-  padding: 16px 8px 14px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 12px 8px 10px;
   background: var(--surf-2);
   border: 1px solid var(--hair);
   cursor: grab; user-select: none;

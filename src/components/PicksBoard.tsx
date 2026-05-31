@@ -26,10 +26,10 @@ interface Props {
 const SAVED_FLASH_MS = 1200;
 const DND_MIME = "application/x-phatt-picks-team";
 
-// Logo sizes — portrait slots need crests to dominate; Cologne mosaic outline
-// shrinks effective crest area so we compensate by going large (PHA-877).
-const SLOT_LOGO = 80;
-const TILE_LOGO = 72;
+// Logo sizes — portrait slots, compact enough that slots+pool fit on-screen
+// together for drag-and-drop (PHA-877 iteration 2).
+const SLOT_LOGO = 52;
+const TILE_LOGO = 60;
 
 export function PicksBoard({
   section,
