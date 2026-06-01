@@ -12,6 +12,11 @@
  *          • Otherwise → redirect to /login/local for the name prompt.
  *   POST — handles the name-prompt form. Same session checks; on the create
  *          path, sanitize the submitted name and mint a Player row.
+ *          Spam guards (PHA-881):
+ *            1. CAPTCHA — Cloudflare Turnstile token verified server-side.
+ *               Skipped when TURNSTILE_SECRET_KEY is unset (local dev).
+ *            2. IP limit — no more than 5 local accounts per client IP.
+ *               Skipped when the IP cannot be determined.
  *
  * Pure decision lives in src/lib/local-auth-core.ts so the verify harness can
  * exercise the dedup rules without next/prisma.
@@ -22,6 +27,7 @@ import { SignJWT } from "jose";
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
+import { verifyTurnstile } from "@/lib/captcha";
 import {
   decideLocalAuthAction,
   randomName,
@@ -32,11 +38,21 @@ import {
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
 const SESSION_TTL = "30d";
+const IP_ACCOUNT_LIMIT = 5;
 
 function getSessionSecret(): Uint8Array {
   const secret = process.env.NEXTAUTH_SECRET;
   if (!secret) throw new Error("NEXTAUTH_SECRET not set");
   return new TextEncoder().encode(secret);
+}
+
+function getClientIp(req: NextRequest): string | null {
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const ip = forwarded.split(",")[0].trim();
+    if (ip) return ip;
+  }
+  return req.headers.get("x-real-ip");
 }
 
 async function currentSessionView(): Promise<LocalSessionView> {
@@ -75,10 +91,18 @@ async function reuseLocalSession(playerId: string): Promise<NextResponse | null>
   return response;
 }
 
-async function createLocalPlayer(displayName: string): Promise<NextResponse> {
+async function createLocalPlayer(
+  displayName: string,
+  ip: string | null,
+): Promise<NextResponse> {
   const inviteCode = randomBytes(6).toString("hex");
   const player = await prisma.player.create({
-    data: { displayName, isLocal: true, inviteCode },
+    data: {
+      displayName,
+      isLocal: true,
+      inviteCode,
+      createdFromIp: ip ?? null,
+    },
   });
 
   const token = await new SignJWT({
@@ -131,19 +155,52 @@ export async function POST(req: NextRequest) {
       if (reused) return reused;
     }
 
+    const ip = getClientIp(req);
+
+    // IP account limit: reject if this IP already has >= IP_ACCOUNT_LIMIT local players.
+    if (ip) {
+      const count = await prisma.player.count({
+        where: { createdFromIp: ip, isLocal: true },
+      });
+      if (count >= IP_ACCOUNT_LIMIT) {
+        return NextResponse.redirect(
+          new URL("/login/local?error=ip_limit", BASE_URL),
+        );
+      }
+    }
+
     let rawName: string | null = null;
+    let captchaToken: string | null = null;
     const contentType = req.headers.get("content-type") ?? "";
-    if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
+    if (
+      contentType.includes("application/x-www-form-urlencoded") ||
+      contentType.includes("multipart/form-data")
+    ) {
       const form = await req.formData();
       const v = form.get("displayName");
       if (typeof v === "string") rawName = v;
+      const t = form.get("cf-turnstile-response");
+      if (typeof t === "string") captchaToken = t;
     } else if (contentType.includes("application/json")) {
-      const body = (await req.json().catch(() => null)) as { displayName?: unknown } | null;
+      const body = (await req.json().catch(() => null)) as {
+        displayName?: unknown;
+        captchaToken?: unknown;
+      } | null;
       if (body && typeof body.displayName === "string") rawName = body.displayName;
+      if (body && typeof body.captchaToken === "string")
+        captchaToken = body.captchaToken;
+    }
+
+    // Turnstile CAPTCHA — skipped when TURNSTILE_SECRET_KEY is unset.
+    const captchaOk = await verifyTurnstile(captchaToken, ip);
+    if (!captchaOk) {
+      return NextResponse.redirect(
+        new URL("/login/local?error=captcha", BASE_URL),
+      );
     }
 
     const displayName = sanitizeDisplayName(rawName, randomName());
-    return await createLocalPlayer(displayName);
+    return await createLocalPlayer(displayName, ip);
   } catch (err) {
     console.error("Local auth POST error:", err);
     return NextResponse.redirect(new URL("/login?error=local_create_failed", BASE_URL));

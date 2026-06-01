@@ -20,6 +20,7 @@ model Player {
   coinTier      String?           // "bronze" | "silver" | "gold" | "diamond" — null unless hasValveCoin
   synced        Boolean  @default(false) // true when picks confirmed synced from Valve
   inviteCode    String?  @unique
+  createdFromIp String?           // captured at local-account creation for IP rate-limit enforcement
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
