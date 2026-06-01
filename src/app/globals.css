@@ -366,7 +366,12 @@ body {
   white-space: nowrap;
   line-height: 1;
 }
-.wordmark .lj { display: inline-block; margin-left: -0.045em; }
+/* Keep .lj inline (NOT inline-block): an inline-block descendant breaks out of
+   the parent .foil's `background-clip: text` paint, so the L inherits
+   `color: transparent` with no gradient behind it and goes invisible on iOS
+   WebKit (renders as "HOT INE"). Inline keeps the L in the clipped text flow;
+   negative margin still kerns it tight to "HOT". */
+.wordmark .lj { margin-left: -0.045em; }
 
 /* Reticle mark */
 .mark svg { width: 100%; height: 100%; overflow: visible; display: block; }
