@@ -271,17 +271,18 @@ async function resolveAndUpload(
   try {
     const pred = await fetchTournamentPredictions(eventId, steamId, authCode);
     const rawPicks = pred?.result?.picks ?? [];
+    // Valve's live API uses `pick` (not `pickid`) and omits `sectionid`.
+    // Filter to our target groupId since sectionid isn't available.
+    const targetGroupId = rows.length > 0 ? rows[0].groupId : null;
     for (const p of rawPicks) {
       const slotIndex = Number(p.index);
-      const pickId = Number(p.pickid);
-      const sectionId = Number(p.sectionid);
-      // Log ALL raw entries including partial ones (PHA-875 diagnostics).
-      console.info(`[write] steam entry: sectionid=${p.sectionid} groupid=${p.groupid} index=${p.index} pickid=${p.pickid} itemid=${p.itemid}`);
-      if (Number.isFinite(sectionId) && Number.isFinite(pickId) && Number.isFinite(slotIndex) && pickId !== 0) {
-        steamBySlot.set(slotIndex, pickId);
-      }
+      const groupId = Number(p.groupid);
+      const pickId = Number(p.pick ?? p.pickid);
+      if (!Number.isFinite(pickId) || !Number.isFinite(slotIndex) || pickId === 0) continue;
+      if (targetGroupId !== null && groupId !== targetGroupId) continue;
+      steamBySlot.set(slotIndex, pickId);
     }
-    console.info(`[write] current Steam picks: ${JSON.stringify(Object.fromEntries([...steamBySlot.entries()]))}`);
+    console.info(`[write] Steam picks read: ${steamBySlot.size} for groupId=${targetGroupId}`);
   } catch (e) {
     console.warn("[write] could not read current Steam state, uploading all picks:", e instanceof Error ? e.message : String(e));
   }

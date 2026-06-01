@@ -16,6 +16,7 @@ import { prisma } from "@/lib/db";
 import { getDecryptedAuthCode } from "@/lib/authcode";
 import { fetchTournamentPredictions, ValveApiError } from "@/lib/valve";
 import { parsePredictions } from "@/lib/predictions";
+import { getCommittedLayout, buildSectionByGroup } from "@/lib/layout";
 
 export type MirrorSkip = "no-steam-id" | "no-auth-code";
 
@@ -47,7 +48,13 @@ export async function mirrorPlayerPredictions(
   let mirrored;
   try {
     const envelope = await fetchTournamentPredictions(eventId, player.steamId, authCode);
-    const preds = parsePredictions(envelope);
+    // Build groupid→sectionid map so parsePredictions can infer sectionId
+    // when Valve's response omits the sectionid field (PHA-875).
+    const layoutSectionByGroup = buildSectionByGroup(getCommittedLayout());
+    const sectionByGroup = new Map<number, number>(
+      [...layoutSectionByGroup.entries()].map(([gid, s]) => [gid, s.sectionid]),
+    );
+    const preds = parsePredictions(envelope, sectionByGroup);
 
     // Mirror as non-local rows; itemId string straight through (rule #2).
     await prisma.$transaction(

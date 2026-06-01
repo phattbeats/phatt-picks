@@ -19,12 +19,22 @@ function assertDigitString(v: unknown, field: string): string {
   return v;
 }
 
-/** One prediction as returned by GetTournamentPredictions / sent to upload. */
+/**
+ * One prediction as returned by GetTournamentPredictions.
+ *
+ * PHA-875 finding: Valve's live API uses `pick` (not `pickid`) and omits
+ * `sectionid` entirely. We accept both field names so old fixtures/tests keep
+ * working, and callers supply a groupid→sectionid map to fill in the missing
+ * sectionid from context.
+ */
 export interface RawPrediction {
-  sectionid: number;
+  sectionid?: number | null;
   groupid: number;
   index: number;
-  pickid: number;
+  /** Live Valve API field — the team pickid. Takes precedence over `pickid`. */
+  pick?: number | null;
+  /** Legacy / upload-response field name kept for backwards compat. */
+  pickid?: number | null;
   itemid?: string | number | null; // bigint — a string once safe-parsed
 }
 
@@ -64,28 +74,37 @@ export function toItemIdString(itemid: RawPrediction["itemid"]): string | null {
 /**
  * Normalize a predictions envelope into a flat, validated Prediction[].
  *
- * Valve's GetTournamentPredictions response includes placeholder entries for
- * stages a user has touched but slots they haven't filled: those carry
- * `groupid` + `index` but no `sectionid` / `pickid`, which would coerce to
- * NaN and blow up downstream upserts (live PHA-853 finding — prisma errors
- * "Argument `sectionId` is missing" for slots Brandon's earlier 429-failed
- * uploads left as half-state). We drop them here and log the count once per
- * call so future divergence surfaces in logs.
+ * PHA-875: Valve's GetTournamentPredictions uses `pick` (not `pickid`) and
+ * omits `sectionid`. Pass `sectionByGroup` (groupid → sectionid) so the parser
+ * can reconstruct the sectionId from the groupId in the response.
+ *
+ * Entries missing both the pickId field AND a sectionByGroup lookup for their
+ * groupid are still dropped and counted — those are genuinely unresolvable
+ * placeholder slots.
  */
-export function parsePredictions(envelope: PredictionsEnvelope): Prediction[] {
+export function parsePredictions(
+  envelope: PredictionsEnvelope,
+  sectionByGroup?: Map<number, number>,
+): Prediction[] {
   const picks = envelope?.result?.picks ?? [];
   const out: Prediction[] = [];
   let dropped = 0;
   for (const p of picks) {
-    const sectionId = Number(p.sectionid);
-    const pickId = Number(p.pickid);
     const groupId = Number(p.groupid);
     const slotIndex = Number(p.index);
+    // Accept both `pick` (live Valve API) and `pickid` (legacy/upload-response).
+    const pickId = Number(p.pick ?? p.pickid);
+    // sectionid is absent in the live API — infer from groupid via caller-supplied map.
+    const sectionId = Number.isFinite(Number(p.sectionid))
+      ? Number(p.sectionid)
+      : sectionByGroup?.get(groupId) ?? NaN;
+
     if (
       !Number.isFinite(sectionId) ||
       !Number.isFinite(groupId) ||
       !Number.isFinite(slotIndex) ||
-      !Number.isFinite(pickId)
+      !Number.isFinite(pickId) ||
+      pickId === 0
     ) {
       dropped++;
       continue;
