@@ -81,6 +81,8 @@ export async function fetchTournamentPredictions(
   });
   const text = await res.text();
   if (!res.ok) throw new ValveApiError(res.status, "GetTournamentPredictions");
+  // PHA-875 diagnostic: log raw response to see full structure (remove once confirmed).
+  console.info("[valve] GetTournamentPredictions raw:", text.slice(0, 3000));
   // bigint-safe: itemids are 17+ digits and JSON.parse would corrupt them (rule #2).
   return parseSafeJson(text) as PredictionsEnvelope;
 }
