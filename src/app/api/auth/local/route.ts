@@ -140,7 +140,7 @@ export async function GET() {
     return NextResponse.redirect(new URL("/login/local", BASE_URL));
   } catch (err) {
     console.error("Local auth GET error:", err);
-    return NextResponse.redirect(new URL("/login?error=local_create_failed", BASE_URL));
+    return NextResponse.redirect(new URL("/login/auth?error=local_create_failed", BASE_URL));
   }
 }
 
@@ -203,6 +203,6 @@ export async function POST(req: NextRequest) {
     return await createLocalPlayer(displayName, ip);
   } catch (err) {
     console.error("Local auth POST error:", err);
-    return NextResponse.redirect(new URL("/login?error=local_create_failed", BASE_URL));
+    return NextResponse.redirect(new URL("/login/auth?error=local_create_failed", BASE_URL));
   }
 }

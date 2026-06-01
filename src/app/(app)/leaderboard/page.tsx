@@ -188,7 +188,7 @@ export default async function LeaderboardPage() {
           </p>
           <p style={{ color: "var(--ink-mid)", fontSize: 14, margin: 0 }}>
             Be the first —{" "}
-            <Link href="/login" style={{ color: "var(--heat)" }}>sign in</Link>{" "}
+            <Link href="/login/auth" style={{ color: "var(--heat)" }}>sign in</Link>{" "}
             or{" "}
             <Link href="/login/local" style={{ color: "var(--ink-mid)" }}>play locally</Link>.
           </p>

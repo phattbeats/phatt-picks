@@ -111,7 +111,7 @@ export function UserDirectory({ rows, signedIn }: { rows: DirRow[]; signedIn: bo
 
       {!signedIn && (
         <p style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-low)", textAlign: "center", margin: "6px 0 0" }}>
-          <Link href="/login" style={{ color: "var(--heat)" }}>Sign in</Link> to compare picks
+          <Link href="/login/auth" style={{ color: "var(--heat)" }}>Sign in</Link> to compare picks
         </p>
       )}
     </>

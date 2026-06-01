@@ -243,7 +243,7 @@ export default async function DashboardPage() {
             </div>
           </div>
         ) : (
-          <Link href="/login" className="panel brk" style={{
+          <Link href="/login/auth" className="panel brk" style={{
             display: "block",
             textDecoration: "none",
             color: "inherit",

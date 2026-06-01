@@ -85,7 +85,7 @@ export default async function DirectoryPage() {
           <span className="br-tr" />
           <span className="br-bl" />
           <p style={{ color: "var(--ink-mid)", fontSize: 14, margin: 0 }}>
-            No players yet. <Link href="/login" style={{ color: "var(--heat)" }}>Be the first.</Link>
+            No players yet. <Link href="/login/auth" style={{ color: "var(--heat)" }}>Be the first.</Link>
           </p>
         </div>
       ) : (

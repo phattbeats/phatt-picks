@@ -133,7 +133,7 @@ export default async function LocalSignInPage({
             </svg>
           </button>
           <Link
-            href="/login"
+            href="/login/auth"
             style={{
               textAlign: "center",
               fontFamily: "var(--font-mono)",

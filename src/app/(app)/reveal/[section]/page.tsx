@@ -172,7 +172,7 @@ export default async function StageRevealPage({
           <span className="br-tr" />
           <span className="br-bl" />
           <p style={{ color: "var(--ink-mid)", fontSize: 14, margin: 0 }}>
-            <Link href="/login" style={{ color: "var(--heat)" }}>Sign in</Link> to see your personal Stage Reveal — your score, rank move, and how every pick landed.
+            <Link href="/login/auth" style={{ color: "var(--heat)" }}>Sign in</Link> to see your personal Stage Reveal — your score, rank move, and how every pick landed.
           </p>
         </div>
       </>

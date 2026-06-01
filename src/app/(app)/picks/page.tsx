@@ -174,7 +174,7 @@ export default async function PicksPage({
 
       {!session && (
         <Link
-          href="/login"
+          href="/login/auth"
           className="btn-heat"
           style={{
             position: "fixed",

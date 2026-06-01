@@ -31,14 +31,14 @@ export async function GET(req: NextRequest) {
     party.verifyAssertion(url, async (err, result) => {
       if (err || !result?.authenticated || !result.claimedIdentifier) {
         resolve(
-          NextResponse.redirect(new URL("/login?error=steam_auth_failed", BASE_URL))
+          NextResponse.redirect(new URL("/login/auth?error=steam_auth_failed", BASE_URL))
         );
         return;
       }
 
       const match = STEAM_ID_RE.exec(result.claimedIdentifier);
       if (!match) {
-        resolve(NextResponse.redirect(new URL("/login?error=invalid_steam_id", BASE_URL)));
+        resolve(NextResponse.redirect(new URL("/login/auth?error=invalid_steam_id", BASE_URL)));
         return;
       }
 
@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
         resolve(response);
       } catch (dbErr) {
         console.error("Steam callback DB error:", dbErr);
-        resolve(NextResponse.redirect(new URL("/login?error=db_error", BASE_URL)));
+        resolve(NextResponse.redirect(new URL("/login/auth?error=db_error", BASE_URL)));
       }
     });
   });
