@@ -72,6 +72,27 @@ export default async function DashboardPage() {
   const activeLabel = active.section.name.split(" | ")[0];
   const activeNumber = activeIdx >= 0 ? activeIdx + 1 : layout.sections.length;
 
+  // How many of the active section's slots the signed-in player has already
+  // locked. Without this the briefing always reads "you haven't called your
+  // picks yet" even after a full lock-in (PHA-883). Count distinct filled
+  // slots so a re-saved pick can't inflate the tally past the slot count.
+  const activeSlotCount = active.section.groups.reduce(
+    (acc, g) => acc + g.picks.length,
+    0,
+  );
+  const selfFilledSlots = session
+    ? new Set(
+        allPicks
+          .filter(
+            (p) =>
+              p.playerId === session.playerId &&
+              p.sectionId === active.section.sectionid,
+          )
+          .map((p) => `${p.groupId}:${p.slotIndex}`),
+      ).size
+    : 0;
+  const selfPickComplete = activeSlotCount > 0 && selfFilledSlots >= activeSlotCount;
+
   // Leaderboard top 4 + self rank.
   const outcomeMap: OutcomeMap = {};
   for (const o of outcomeRows) {
@@ -164,6 +185,8 @@ export default async function DashboardPage() {
             pickability={active.pick}
             sectionName={activeLabel}
             signedIn={!!session}
+            filledSlots={selfFilledSlots}
+            totalSlots={activeSlotCount}
           />
           {active.pick.pickable && (
             <div style={{ marginTop: 16 }}>
@@ -182,7 +205,13 @@ export default async function DashboardPage() {
                 href={`/picks?section=${active.section.sectionid}`}
                 className="btn-heat"
               >
-                Make Picks
+                {session
+                  ? selfPickComplete
+                    ? "Edit Picks"
+                    : selfFilledSlots > 0
+                      ? "Finish Picks"
+                      : "Make Picks"
+                  : "Make Picks"}
                 <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="9 18 15 12 9 6" />
                 </svg>
@@ -350,14 +379,23 @@ function StageBody({
   pickability,
   sectionName,
   signedIn,
+  filledSlots,
+  totalSlots,
 }: {
   pickability: ReturnType<typeof isStagePickable>;
   sectionName: string;
   signedIn: boolean;
+  filledSlots: number;
+  totalSlots: number;
 }) {
+  const complete = totalSlots > 0 && filledSlots >= totalSlots;
   const text = pickability.pickable
     ? signedIn
-      ? `You haven't called your ${sectionName} picks yet. Lock who goes 3‑0, who crashes 0‑3, and your advancing eight before the window shuts.`
+      ? complete
+        ? `Your ${sectionName} picks are locked in — all ${totalSlots} slots set. Tweak them anytime before the window shuts.`
+        : filledSlots > 0
+          ? `${filledSlots} of ${totalSlots} ${sectionName} slots locked. Finish the rest — who goes 3‑0, who crashes 0‑3, your advancing eight — before the window shuts.`
+          : `You haven't called your ${sectionName} picks yet. Lock who goes 3‑0, who crashes 0‑3, and your advancing eight before the window shuts.`
       : `Pick window is open. Sign in to lock your ${sectionName} picks before the window shuts.`
     : pickability.reason === "previous-stage-unresolved"
       ? `Opens after ${pickability.previousSectionName} resolves. Results flow in as matches complete.`
