@@ -922,8 +922,11 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 /* Pool tile gets a wrapper so the [i] affordance can be a sibling of the tile
    button — that keeps it live when the tile is `used` (pointer-events:none) or
    the stage is locked (button disabled). */
-.ptile-wrap { position: relative; display: flex; }
-.ptile-wrap .ptile { flex: 1; }
+/* min-width:0 on both the grid item (wrap) and the flex child (tile) lets them
+   shrink to the track so .ptile-name's ellipsis engages — without it a long
+   no-wrap name (e.g. "THUNDER dOWNUNDER") overflows into the next tile. */
+.ptile-wrap { position: relative; display: flex; min-width: 0; }
+.ptile-wrap .ptile { flex: 1; min-width: 0; }
 .ptile-info {
   position: absolute; top: 5px; right: 5px;
   width: 19px; height: 19px;
