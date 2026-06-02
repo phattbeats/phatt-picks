@@ -34,7 +34,49 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* Auth panel — note from phatt */}
+      {/* Welcome explainer — "Call your shots." (HEAT welcome mockup) */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, maxWidth: 380, width: "100%", textAlign: "center" }}>
+        <h1 className="font-display" style={{
+          fontWeight: 800,
+          fontSize: "clamp(28px, 7vw, 40px)",
+          lineHeight: 0.98,
+          textTransform: "uppercase",
+          color: "var(--ink-hi)",
+          margin: 0,
+          textWrap: "balance",
+        }}>
+          Call your shots<span style={{ color: "var(--heat)" }}>.</span>
+        </h1>
+        <p style={{ fontSize: 15, lineHeight: 1.62, color: "var(--ink-mid)", margin: 0, textWrap: "pretty" }}>
+          <strong style={{ color: "var(--ink-hi)", fontWeight: 600 }}>HOTLINE</strong> is the Pick&apos;Em arena for{" "}
+          <strong style={{ color: "var(--ink-hi)", fontWeight: 600 }}>IEM Cologne 2026</strong>. Call who runs the table at{" "}
+          <strong style={{ color: "var(--ink-hi)", fontWeight: 600 }}>3{"‑"}0</strong>, who crashes out{" "}
+          <strong style={{ color: "var(--ink-hi)", fontWeight: 600 }}>0{"‑"}3</strong>, and who lifts the trophy.
+        </p>
+      </div>
+
+      {/* Note from phaTT — [ Notice ] (HEAT welcome mockup) */}
+      <div style={{
+        position: "relative",
+        width: "100%",
+        maxWidth: 360,
+        textAlign: "left",
+        background: "rgba(240,163,0,0.04)",
+        border: "1px solid var(--hair-2)",
+        borderLeft: "3px solid var(--heat)",
+        padding: "16px 18px",
+      }}>
+        <span className="eyebrow-mono" style={{ display: "block", marginBottom: 8, letterSpacing: "0.18em" }}>
+          [ NOTICE ]
+        </span>
+        <p style={{ fontSize: 14, lineHeight: 1.62, color: "var(--ink-mid)", margin: 0 }}>
+          This is an early test build, and you&apos;re one of the first inside. Things will most likely
+          break, and I am grateful for your time. But rest assured, pick&apos;ems will be made.{" "}
+          <strong style={{ color: "var(--ink-hi)" }}>{"—"}phaTT</strong>
+        </p>
+      </div>
+
+      {/* Auth panel */}
       <div className="panel brk" style={{
         maxWidth: 360,
         width: "100%",
