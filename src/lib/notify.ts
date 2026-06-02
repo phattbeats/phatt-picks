@@ -14,11 +14,34 @@ import { buildPreLockPayload, type PreLockPayload } from "@/lib/notify-core";
 
 const PLACEHOLDERS = new Set(["", "dev", "REPLACE_ME"]);
 
+/**
+ * Strip surrounding whitespace and a single layer of matched quotes. Unraid's
+ * Docker template passes env values literally, so a value typed with quotes
+ * (e.g. "BLdx...") arrives WITH the quote characters. An unstripped public key
+ * then reaches the browser, where atob() chokes on the quotes and
+ * pushManager.subscribe() throws — the opt-in just "doesn't turn on". Strip
+ * here so a quoted key is treated identically to a bare one.
+ */
+function clean(raw: string | undefined): string {
+  const v = (raw ?? "").trim();
+  if (v.length >= 2 && ((v[0] === '"' && v.at(-1) === '"') || (v[0] === "'" && v.at(-1) === "'"))) {
+    return v.slice(1, -1).trim();
+  }
+  return v;
+}
+
+/** A VAPID public key is a base64url-encoded 65-byte P-256 point (~87 chars). */
+const VAPID_PUBLIC_KEY_RE = /^[A-Za-z0-9_-]{80,90}$/;
+
 function configured(): { subject: string; publicKey: string; privateKey: string } | null {
-  const publicKey = process.env.VAPID_PUBLIC_KEY ?? "";
-  const privateKey = process.env.VAPID_PRIVATE_KEY ?? "";
-  const subject = process.env.VAPID_SUBJECT ?? "mailto:admin@phatt.tech";
+  const publicKey = clean(process.env.VAPID_PUBLIC_KEY);
+  const privateKey = clean(process.env.VAPID_PRIVATE_KEY);
+  const subject = clean(process.env.VAPID_SUBJECT) || "mailto:admin@phatt.tech";
   if (PLACEHOLDERS.has(publicKey) || PLACEHOLDERS.has(privateKey)) return null;
+  // A malformed public key can't produce a working subscription; surface it as
+  // "not configured" (UI hides the opt-in) instead of handing the client a key
+  // that makes subscribe() throw with a generic error.
+  if (!VAPID_PUBLIC_KEY_RE.test(publicKey)) return null;
   return { subject, publicKey, privateKey };
 }
 
