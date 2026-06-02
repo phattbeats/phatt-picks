@@ -3,10 +3,16 @@
 import { useEffect, useState } from "react";
 
 /**
- * Fetches the current user's invite link (/api/invite) and offers copy / native
- * share. Client-side so /profile stays read-only on render (the code is minted
- * lazily by the API on first call).
+ * The signed-in user's shareable invite link, styled to the HEAT system.
+ *
+ * Share is the primary action — the native share sheet is the word-of-mouth
+ * engine on mobile; copy is the desktop/manual fallback. Client-side so
+ * /profile stays read-only on render (the code is minted lazily by the API on
+ * first call).
  */
+const SHARE_TEXT =
+  "I'm calling the CS2 Major on HOTLINE — pick who goes 3-0, who busts, who lifts at IEM Cologne 2026. Get in:";
+
 export function InviteLink() {
   const [url, setUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -40,29 +46,47 @@ export function InviteLink() {
 
   async function share() {
     if (!url) return;
-    const nav = navigator as Navigator & { share?: (d: { title: string; text: string; url: string }) => Promise<void> };
+    const nav = navigator as Navigator & {
+      share?: (d: { title: string; text: string; url: string }) => Promise<void>;
+    };
     if (nav.share) {
-      await nav.share({ title: "phaTT Picks", text: "Join my phaTT Picks group for IEM Cologne 2026", url }).catch(() => {});
+      await nav.share({ title: "HOTLINE", text: SHARE_TEXT, url }).catch(() => {});
     } else {
       copy();
     }
   }
 
   if (error) {
-    return <p style={{ color: "var(--text-low)", fontSize: "0.8125rem", margin: 0 }}>Couldn&apos;t load your invite link. Reload to retry.</p>;
+    return (
+      <p style={{ color: "var(--ink-low)", fontSize: 12, margin: 0, fontFamily: "var(--font-mono)" }}>
+        Couldn&apos;t load your invite link. Reload to retry.
+      </p>
+    );
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {/* Primary: native share — the word-of-mouth driver */}
+      <button onClick={share} disabled={!url} className="btn-heat" style={{ width: "100%" }}>
+        Share invite
+        <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" fill="none">
+          <circle cx="18" cy="5" r="3" />
+          <circle cx="6" cy="12" r="3" />
+          <circle cx="18" cy="19" r="3" />
+          <line x1="8.6" y1="13.5" x2="15.4" y2="17.5" />
+          <line x1="15.4" y1="6.5" x2="8.6" y2="10.5" />
+        </svg>
+      </button>
+
+      {/* Secondary: the raw link + copy (desktop / manual) */}
       <div
         style={{
           display: "flex",
-          gap: "var(--space-2)",
+          gap: 8,
           alignItems: "center",
-          background: "var(--bg2)",
-          border: "1px solid var(--bg3)",
-          borderRadius: "var(--radius-md)",
-          padding: "var(--space-2) var(--space-3)",
+          background: "var(--surf-1)",
+          border: "1px solid var(--hair-2)",
+          padding: "8px 8px 8px 12px",
         }}
       >
         <input
@@ -74,9 +98,10 @@ export function InviteLink() {
             minWidth: 0,
             background: "transparent",
             border: "none",
-            color: "var(--text-mid)",
-            fontSize: "0.8125rem",
-            fontFamily: "monospace",
+            color: "var(--ink-mid)",
+            fontSize: 12,
+            letterSpacing: "0.02em",
+            fontFamily: "var(--font-mono)",
             outline: "none",
           }}
         />
@@ -85,43 +110,23 @@ export function InviteLink() {
           disabled={!url}
           style={{
             flexShrink: 0,
-            background: "var(--accent)",
-            color: "#fff",
-            border: "none",
-            borderRadius: "var(--radius-sm)",
-            padding: "6px var(--space-3)",
-            fontFamily: "'Rajdhani', sans-serif",
-            fontWeight: 700,
-            fontSize: "0.75rem",
-            letterSpacing: "0.05em",
+            background: copied ? "var(--tac-green)" : "transparent",
+            color: copied ? "var(--void)" : "var(--ink-hi)",
+            border: `1px solid ${copied ? "var(--tac-green)" : "var(--hair-3)"}`,
+            padding: "7px 14px",
+            fontFamily: "var(--font-mono)",
+            fontSize: 10,
+            fontWeight: 600,
+            letterSpacing: "0.12em",
             textTransform: "uppercase",
             cursor: url ? "pointer" : "default",
+            transition: "all 150ms var(--ease)",
             minHeight: 32,
           }}
         >
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
-      <button
-        onClick={share}
-        disabled={!url}
-        style={{
-          background: "transparent",
-          border: "1px solid var(--bg3)",
-          color: "var(--text-mid)",
-          borderRadius: "var(--radius-md)",
-          padding: "10px",
-          fontFamily: "'Rajdhani', sans-serif",
-          fontWeight: 600,
-          fontSize: "0.875rem",
-          letterSpacing: "0.05em",
-          textTransform: "uppercase",
-          cursor: url ? "pointer" : "default",
-          minHeight: 44,
-        }}
-      >
-        Share invite
-      </button>
     </div>
   );
 }
