@@ -624,6 +624,20 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;
 }
 
+/* Region chip (PHA-892) — NA / EU / SA / ASIA / OCE, tinted per region */
+.region-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 8px; font-weight: 700; letter-spacing: 0.1em;
+  line-height: 1; padding: 3px 5px;
+  color: var(--region-color, var(--ink-mid));
+  background: color-mix(in srgb, var(--region-color, var(--ink-mid)) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--region-color, var(--ink-mid)) 40%, transparent);
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.ptile-region, .pslot-region { margin-top: -2px; }
+
 .pool-armed-hint {
   display: flex; align-items: center; gap: 8px;
   font-family: var(--font-mono);
