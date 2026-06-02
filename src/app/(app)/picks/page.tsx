@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCommittedLayout } from "@/lib/layout";
 import { getSession } from "@/lib/session";
+import { hasAuthCode } from "@/lib/authcode";
 import { prisma } from "@/lib/db";
 import { mirrorPlayerPredictionsThrottled } from "@/lib/predictions-sync";
 import { PicksBoard } from "@/components/PicksBoard";
@@ -26,6 +27,13 @@ export default async function PicksPage({
   if (session?.steamId) {
     await mirrorPlayerPredictionsThrottled(session.playerId, EVENT_ID);
   }
+
+  // Signed in via Steam but no auth code yet: picks save in HOTLINE, but we
+  // can't push them to the official in-game CS2 Pick'Em until they connect a
+  // Game Authentication Code. Surface that gap up front with a link (PHA-891).
+  const needsSteamLink = session?.steamId
+    ? !(await hasAuthCode(session.playerId))
+    : false;
 
   const activeSectionId = params.section
     ? parseInt(params.section, 10)
@@ -81,6 +89,10 @@ export default async function PicksPage({
           <LockCountdown lockAt={lockTimeForSection(activeSectionId)} />
         )}
       </div>
+
+      {/* Steam-connected but no auth code: picks live in HOTLINE, not yet
+          pushed to the official in-game Pick'Em. Point them at the page. */}
+      {needsSteamLink && <SteamLinkNotice />}
 
       {/* Stage tabs */}
       <div
@@ -190,6 +202,85 @@ export default async function PicksPage({
         </Link>
       )}
     </>
+  );
+}
+
+function SteamLinkNotice() {
+  return (
+    <Link
+      href="/help/auth-code"
+      className="panel brk"
+      style={{
+        display: "block",
+        textDecoration: "none",
+        borderColor: "var(--hair-3)",
+        background: "rgba(240,163,0,0.06)",
+      }}
+    >
+      <span className="br-tr" />
+      <span className="br-bl" />
+      <span
+        className="eyebrow-mono"
+        style={{ color: "var(--heat)", display: "block" }}
+      >
+        [ SAVED HERE — NOT ON STEAM YET ]
+      </span>
+      <p
+        className="font-display"
+        style={{
+          fontWeight: 800,
+          fontSize: 17,
+          textTransform: "uppercase",
+          letterSpacing: "0.01em",
+          color: "var(--ink-hi)",
+          margin: "8px 0 0",
+          lineHeight: 1.1,
+        }}
+      >
+        Your picks are locked into HOTLINE
+      </p>
+      <p
+        style={{
+          color: "var(--ink-mid)",
+          fontSize: 13,
+          lineHeight: 1.55,
+          margin: "6px 0 0",
+        }}
+      >
+        To push them to your <em style={{ marginRight: "0.15em" }}>official</em>{" "}
+        in-game CS2 Pick&apos;Em, connect your Steam Game Authentication Code.
+        Takes a minute.
+      </p>
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          marginTop: 12,
+          fontFamily: "var(--font-mono)",
+          fontSize: 11,
+          fontWeight: 600,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: "var(--heat)",
+        }}
+      >
+        Connect Steam to sync
+        <svg
+          viewBox="0 0 24 24"
+          width={14}
+          height={14}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </span>
+    </Link>
   );
 }
 

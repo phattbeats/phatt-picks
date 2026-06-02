@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { TeamStatsDrawer } from "@/components/ui/TeamStatsDrawer";
+import { RegionBadge } from "@/components/ui/RegionBadge";
 import { resolveLogoTiers } from "@/lib/logos";
 import type { Section, TeamDef } from "@/lib/layout";
 import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
@@ -278,6 +279,7 @@ export function PicksBoard({
                                 size={SLOT_LOGO}
                               />
                               <span className="pslot-name">{team.name}</span>
+                              <RegionBadge pickid={team.pickid} className="pslot-region" />
                             </>
                           ) : (
                             <span className="pslot-ph">
@@ -359,6 +361,7 @@ export function PicksBoard({
                         >
                           <TeamLogo tiers={resolveLogoTiers(t)} teamName={t.name} size={TILE_LOGO} />
                           <span className="ptile-name">{t.name}</span>
+                          <RegionBadge pickid={t.pickid} className="ptile-region" />
                         </button>
                         {/* Sibling, not a child — stays clickable when the tile
                             is `used` (pointer-events:none) or the stage is locked. */}

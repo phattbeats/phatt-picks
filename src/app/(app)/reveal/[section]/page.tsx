@@ -27,6 +27,8 @@ import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
 import { rankMapForSection, snapshotSectionIds } from "@/lib/rank-snapshot";
 import { previousResolvedSection, rankDelta } from "@/lib/rank-snapshot-core";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
+import { buildConsensus, consensusKey } from "@/lib/consensus-core";
+import { ConsensusBar } from "@/components/heat/ConsensusBar";
 import type { Section } from "@/lib/layout";
 
 const EVENT_ID = 26;
@@ -78,9 +80,14 @@ export default async function StageRevealPage({
     prisma.stageOutcome.findMany({ where: { eventId: EVENT_ID } }),
     prisma.pick.findMany({
       where: { eventId: EVENT_ID, sectionId },
-      select: { playerId: true, groupId: true, slotIndex: true, pickId: true },
+      select: { playerId: true, sectionId: true, groupId: true, slotIndex: true, pickId: true },
     }),
   ]);
+
+  // Field-wide pick distribution per slot (PHA-889). The reveal page only ever
+  // renders picks for a RESOLVED section, so showing the split here is post-lock
+  // by construction — no herd-following while picks are open.
+  const slotConsensus = buildConsensus(allPicks);
 
   const outcomeMap: OutcomeMap = {};
   for (const o of outcomes) {
@@ -240,30 +247,38 @@ export default async function StageRevealPage({
             const resolved = winner !== undefined;
             const isCorrect = resolved && pickId != null && pickId === winner;
             return (
-              <div
-                key={`${group.groupid}:${slot.index}`}
-                className="pickcard brk"
-                style={{
-                  borderColor: resolved ? (isCorrect ? "var(--hair-3)" : "var(--hair-2)") : "var(--hair)",
-                  background: resolved && isCorrect ? "rgba(240,163,0,0.06)" : "var(--surf-1)",
-                }}
-              >
-                {team && team.pickid !== 0 ? (
-                  <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={40} />
-                ) : (
-                  <div style={{ width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-low)", fontFamily: "var(--font-mono)" }}>?</div>
-                )}
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink-hi)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {team?.name ?? "No pick"}
+              <div key={`${group.groupid}:${slot.index}`} style={{ display: "flex", flexDirection: "column" }}>
+                <div
+                  className="pickcard brk"
+                  style={{
+                    borderColor: resolved ? (isCorrect ? "var(--hair-3)" : "var(--hair-2)") : "var(--hair)",
+                    background: resolved && isCorrect ? "rgba(240,163,0,0.06)" : "var(--surf-1)",
+                  }}
+                >
+                  {team && team.pickid !== 0 ? (
+                    <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={40} />
+                  ) : (
+                    <div style={{ width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-low)", fontFamily: "var(--font-mono)" }}>?</div>
+                  )}
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink-hi)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {team?.name ?? "No pick"}
+                    </div>
+                    {tag && <div style={tagStyle}>{tag}</div>}
                   </div>
-                  {tag && <div style={tagStyle}>{tag}</div>}
+                  {resolved && (
+                    <span style={{ fontSize: 16, fontWeight: 700, color: isCorrect ? "var(--tac-green, #9bd23c)" : "var(--ember, #d8351c)" }}>
+                      {isCorrect ? "✓" : "✗"}
+                    </span>
+                  )}
                 </div>
-                {resolved && (
-                  <span style={{ fontSize: 16, fontWeight: 700, color: isCorrect ? "var(--tac-green, #9bd23c)" : "var(--ember, #d8351c)" }}>
-                    {isCorrect ? "✓" : "✗"}
-                  </span>
-                )}
+                <ConsensusBar
+                  consensus={slotConsensus.get(consensusKey(sectionId, group.groupid, slot.index))}
+                  teamMap={teamMap}
+                  highlightPickId={pickId ?? undefined}
+                  winnerPickId={winner}
+                  max={3}
+                />
               </div>
             );
           }),
