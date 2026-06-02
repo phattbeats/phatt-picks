@@ -6,7 +6,6 @@ import { prisma } from "@/lib/db";
 import { mirrorPlayerPredictionsThrottled } from "@/lib/predictions-sync";
 import { PicksBoard } from "@/components/PicksBoard";
 import {
-  buildResolvedKeys,
   isStagePickable,
   type StagePickability,
 } from "@/lib/stage-gate-core";
@@ -41,16 +40,10 @@ export default async function PicksPage({
 
   const section = layout.sections.find((s) => s.sectionid === activeSectionId);
 
-  const resolvedRows = await prisma.stageOutcome.findMany({
-    where: { eventId: EVENT_ID },
-    select: { sectionId: true, groupId: true, slotIndex: true },
-  });
-  const resolvedKeys = buildResolvedKeys(resolvedRows);
-
   const sectionPickability: Map<number, StagePickability> = new Map(
     layout.sections.map((s) => [
       s.sectionid,
-      isStagePickable(layout, resolvedKeys, s.sectionid),
+      isStagePickable(layout, s.sectionid),
     ]),
   );
   const activePickability =
@@ -113,8 +106,8 @@ export default async function PicksPage({
           const lockTitle =
             pick.pickable
               ? undefined
-              : pick.reason === "previous-stage-unresolved"
-                ? `Locked — opens after ${pick.previousSectionName}`
+              : pick.reason === "teams-not-set"
+                ? "Locked — teams not set yet"
                 : pick.reason === "locked-by-valve"
                   ? "Locked by Valve"
                   : "Locked";
@@ -288,16 +281,16 @@ function LockedStageCard({ pickability }: { pickability: StagePickability }) {
   const heading =
     pickability.pickable
       ? "Locked"
-      : pickability.reason === "previous-stage-unresolved"
-        ? `Opens after ${pickability.previousSectionName}`
+      : pickability.reason === "teams-not-set"
+        ? "Teams not set yet"
         : pickability.reason === "locked-by-valve"
           ? "Locked by Valve"
           : "Locked";
   const subline =
     pickability.pickable
       ? undefined
-      : pickability.reason === "previous-stage-unresolved"
-        ? "Teams for this stage aren't set yet. Picks open automatically once the previous stage's results are in."
+      : pickability.reason === "teams-not-set"
+        ? "Teams for this stage aren't seeded yet. Picks open automatically once Valve sets the bracket."
         : pickability.reason === "locked-by-valve"
           ? "Valve closed the pick window for this stage. Results will appear here as matches complete."
           : "This stage isn't available.";

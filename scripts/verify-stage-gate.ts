@@ -1,11 +1,14 @@
 /**
- * verify-stage-gate - offline proof for PHA-841 (M8.2 stage lock).
+ * verify-stage-gate - offline proof for the stage-pickability gate (PHA-895).
  *
- * Loads the committed cologne-layout fixture and exercises isStagePickable
- * across the pre-event, mid-stage-1, mid-stage-2, and locked-by-valve cases.
- * Pre-event: only section 105 (the first) is pickable; everything downstream
- * is gated on "previous-stage-unresolved". Once we synthesize a fully
- * resolved StageOutcome set for the previous stage, the next one unlocks.
+ * Valve opens every Swiss stage's Pick'Em window at once, so the gate is driven
+ * by `picks_allowed` + whether the stage is seeded (has real, non-TBD teams) —
+ * NOT by a sequential "wait for the prior stage to resolve" chain. This script
+ * loads the committed cologne-layout fixture and proves:
+ *   - Stages I/II/III all open together pre-event (they're seeded + allowed).
+ *   - The playoff sections (QF/SF/GF) stay locked while their teams are TBD.
+ *   - locked-by-valve takes precedence once a stage's groups close.
+ *   - Unknown section ids are denied.
  *
  * Run: node --env-file=.env scripts/verify-stage-gate.ts
  */
@@ -42,154 +45,74 @@ function check(name: string, cond: boolean) {
 
 console.log("\nstage-gate - committed all-open fixture (pre-event)");
 
-// Sanity: confirm the fixture is structured as expected so the assertions
-// below stay meaningful if the fixture is ever swapped.
 check("fixture has >=4 sections", layout.sections.length >= 4);
 check(
   "every group in committed fixture has picks_allowed:true (pre-event)",
   layout.sections.flatMap((s) => s.groups).every((g) => g.picks_allowed === true),
 );
 
-const NO_OUTCOMES = new Set<string>();
-
-// Pre-event: stage 1 is pickable, stage 2 / 3 / playoffs are not.
-const stage1 = isStagePickable(layout, NO_OUTCOMES, 105);
+// Stages I, II and III are seeded + allowed -> all open together (Brandon's
+// 2026-06-02 report: "Stage 1, 2, and 3 are all active … its open").
+const stage1 = isStagePickable(layout, 105);
 check("section 105 (Stage I) pickable pre-event", stage1.pickable === true);
 
-const stage2 = isStagePickable(layout, NO_OUTCOMES, 106);
+const stage2 = isStagePickable(layout, 106);
+check("section 106 (Stage II) pickable pre-event (opens with Stage I)", stage2.pickable === true);
+
+const stage3 = isStagePickable(layout, 107);
 check(
-  "section 106 (Stage II) gated by previous-stage-unresolved pre-event",
-  stage2.pickable === false && stage2.reason === "previous-stage-unresolved",
+  "section 107 (Stage III) pickable pre-event (8 seeded teams)",
+  stage3.pickable === true,
 );
+
+console.log("\nstage-gate - playoff bracket stays locked while teams are TBD");
+
+const qfs = isStagePickable(layout, 108);
 check(
-  "stage 2 lock points at Stage I",
-  stage2.pickable === false &&
-    stage2.reason === "previous-stage-unresolved" &&
-    stage2.previousSectionId === 105 &&
-    stage2.previousSectionName === "Stage I",
+  "section 108 (Quarterfinals) locked — teams-not-set (all TBD)",
+  qfs.pickable === false && qfs.reason === "teams-not-set",
 );
 
-const stage3 = isStagePickable(layout, NO_OUTCOMES, 107);
+const sfs = isStagePickable(layout, 109);
 check(
-  "section 107 (Stage III) gated by previous-stage-unresolved pre-event",
-  stage3.pickable === false && stage3.reason === "previous-stage-unresolved",
+  "section 109 (Semifinals) locked — teams-not-set (all TBD)",
+  sfs.pickable === false && sfs.reason === "teams-not-set",
 );
 
-const qfs = isStagePickable(layout, NO_OUTCOMES, 108);
+const final = isStagePickable(layout, 110);
 check(
-  "section 108 (Quarterfinals) gated by previous-stage-unresolved pre-event",
-  qfs.pickable === false && qfs.reason === "previous-stage-unresolved",
+  "section 110 (Grand Final) locked — teams-not-set (all TBD)",
+  final.pickable === false && final.reason === "teams-not-set",
 );
 
-const sfs = isStagePickable(layout, NO_OUTCOMES, 109);
-check(
-  "section 109 (Semifinals) gated pre-event",
-  sfs.pickable === false && sfs.reason === "previous-stage-unresolved",
-);
+console.log("\nstage-gate - a seeded playoff section opens");
 
-const final = isStagePickable(layout, NO_OUTCOMES, 110);
-check(
-  "section 110 (Grand Final) gated pre-event",
-  final.pickable === false && final.reason === "previous-stage-unresolved",
-);
-
-console.log("\nstage-gate - synthetic Stage I fully resolved -> Stage II unlocks");
-
-const stage1Section = layout.sections.find((s) => s.sectionid === 105)!;
-const stage1ResolvedRows = stage1Section.groups.flatMap((g) =>
-  g.picks.map((p) => ({
-    sectionId: stage1Section.sectionid,
-    groupId: g.groupid,
-    slotIndex: p.index,
-  })),
-);
-const stage1Resolved = buildResolvedKeys(stage1ResolvedRows);
-
-const stage2After = isStagePickable(layout, stage1Resolved, 106);
-check("Stage II unlocks once Stage I fully resolved", stage2After.pickable === true);
-
-const stage3StillGated = isStagePickable(layout, stage1Resolved, 107);
-check(
-  "Stage III still gated (waiting on Stage II)",
-  stage3StillGated.pickable === false &&
-    stage3StillGated.reason === "previous-stage-unresolved",
-);
-
-console.log("\nstage-gate - synthetic Stage I + II resolved -> Stage III unlocks");
-
-const stage2Section = layout.sections.find((s) => s.sectionid === 106)!;
-const stage12ResolvedRows = [
-  ...stage1ResolvedRows,
-  ...stage2Section.groups.flatMap((g) =>
-    g.picks.map((p) => ({
-      sectionId: stage2Section.sectionid,
-      groupId: g.groupid,
-      slotIndex: p.index,
-    })),
+// Seed one team into the Quarterfinals: it should flip to open.
+const seededQf: Layout = {
+  ...layout,
+  sections: layout.sections.map((s) =>
+    s.sectionid !== 108
+      ? s
+      : {
+          ...s,
+          groups: s.groups.map((g, gi) =>
+            gi !== 0
+              ? g
+              : {
+                  ...g,
+                  teams: g.teams.map((t, ti) => (ti === 0 ? { ...t, pickid: 89 } : t)),
+                },
+          ),
+        },
   ),
-];
-const stage12Resolved = buildResolvedKeys(stage12ResolvedRows);
+};
+const qfSeeded = isStagePickable(seededQf, 108);
+check("Quarterfinals open once at least one team is seeded", qfSeeded.pickable === true);
 
-const stage3After = isStagePickable(layout, stage12Resolved, 107);
-check("Stage III unlocks once Stage II fully resolved", stage3After.pickable === true);
+console.log("\nstage-gate - locked-by-valve takes precedence over seeding");
 
-const qfsStillGated = isStagePickable(layout, stage12Resolved, 108);
-check(
-  "Quarterfinals still gated (waiting on Stage III)",
-  qfsStillGated.pickable === false && qfsStillGated.reason === "previous-stage-unresolved",
-);
-
-console.log("\nstage-gate - partial previous-stage resolution does NOT unlock");
-
-// Drop one slot from Stage I — Stage II must stay locked. Off-by-one safety.
-const stage1Partial = new Set(stage1Resolved);
-const aSlot = stage1ResolvedRows[0];
-stage1Partial.delete(`${aSlot.sectionId}:${aSlot.groupId}:${aSlot.slotIndex}`);
-const stage2Partial = isStagePickable(layout, stage1Partial, 106);
-check(
-  "Stage II stays locked when even one Stage I slot is unresolved",
-  stage2Partial.pickable === false &&
-    stage2Partial.reason === "previous-stage-unresolved",
-);
-
-console.log("\nstage-gate - QF -> SF -> Final bracket chain");
-
-// Fully resolve through QFs. SFs (109) should unlock, Final (110) still gated.
-const qfSection = layout.sections.find((s) => s.sectionid === 108)!;
-const stage3SectionDef = layout.sections.find((s) => s.sectionid === 107)!;
-const throughQfRows = [
-  ...stage12ResolvedRows,
-  ...stage3SectionDef.groups.flatMap((g) =>
-    g.picks.map((p) => ({
-      sectionId: stage3SectionDef.sectionid,
-      groupId: g.groupid,
-      slotIndex: p.index,
-    })),
-  ),
-  ...qfSection.groups.flatMap((g) =>
-    g.picks.map((p) => ({
-      sectionId: qfSection.sectionid,
-      groupId: g.groupid,
-      slotIndex: p.index,
-    })),
-  ),
-];
-const throughQfResolved = buildResolvedKeys(throughQfRows);
-
-const sfsAfter = isStagePickable(layout, throughQfResolved, 109);
-check("Semifinals unlock once QFs resolve", sfsAfter.pickable === true);
-
-const finalAfterQfs = isStagePickable(layout, throughQfResolved, 110);
-check(
-  "Final still gated (waiting on Semifinals)",
-  finalAfterQfs.pickable === false &&
-    finalAfterQfs.reason === "previous-stage-unresolved",
-);
-
-console.log("\nstage-gate - locked-by-valve takes precedence over upstream resolution");
-
-// Flip Stage II's groups to picks_allowed:false. Even with no upstream resolved,
-// the result must be `locked-by-valve` (not `previous-stage-unresolved`).
+// Flip Stage II's groups to picks_allowed:false -> locked-by-valve even though
+// the stage is fully seeded.
 const valveLocked: Layout = {
   ...layout,
   sections: layout.sections.map((s) =>
@@ -198,7 +121,7 @@ const valveLocked: Layout = {
       : { ...s, groups: s.groups.map((g) => ({ ...g, picks_allowed: false })) },
   ),
 };
-const stage2ValveLocked = isStagePickable(valveLocked, NO_OUTCOMES, 106);
+const stage2ValveLocked = isStagePickable(valveLocked, 106);
 check(
   "Stage II reports locked-by-valve when its groups close",
   stage2ValveLocked.pickable === false && stage2ValveLocked.reason === "locked-by-valve",
@@ -206,7 +129,7 @@ check(
 
 console.log("\nstage-gate - unknown section id is denied");
 
-const unknown = isStagePickable(layout, NO_OUTCOMES, 999);
+const unknown = isStagePickable(layout, 999);
 check(
   "unknown section id reports unknown-section (defensive deny)",
   unknown.pickable === false && unknown.reason === "unknown-section",
