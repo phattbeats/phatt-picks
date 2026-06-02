@@ -3,60 +3,41 @@ import { NextRequest, NextResponse } from "next/server";
 /**
  * Splash gate (PHA-882).
  *
- * The first time a browser hits the site it must pass through the `/login`
- * splash — the "click to enter" moment. We mark that a visitor has entered
- * with a lightweight `hotline_entered` cookie (set when they advance to the
- * sign-in surface), and a real `phatt_session` also counts as entered. Once
- * either is present the gate is transparent and the rest of the app behaves
- * exactly as before.
+ * The splash at `/login` is what every visitor sees UNLESS they already have a
+ * signed-in session (Steam or local) — i.e. a `phatt_session` cookie. No
+ * session → you're sent to the splash to click ENTER and sign in. There is no
+ * "browse as guest" path: a session is the only thing that opens the app.
  *
- * Exemptions (`/api`, `/_next`, files with extensions) are handled by the
- * matcher below, so this only ever runs for real page navigations.
+ * Paths reachable without a session are the splash itself, the sign-in
+ * surfaces it leads to (`/login/auth`, `/login/local`), and invite links
+ * (`/join/<code>`) — an invite is a brand-new user's front door, so it must
+ * never bounce to the splash and eat the code.
+ *
+ * `/api`, `/_next`, and any file-with-extension are excluded by the matcher,
+ * so this only runs for real page navigations.
  */
-const ENTERED_COOKIE = "hotline_entered";
 const SESSION_COOKIE = "phatt_session";
-
-// Paths that ARE the gate (or the step just past it) — never redirect these,
-// and treat reaching the sign-in surface as "entered".
-//
-// `/join/<code>` is its own front door: an invite link is how a brand-new
-// visitor arrives, so it must never be bounced to the splash (that would eat
-// the invite). Reaching it counts as entering.
 const SPLASH_PATH = "/login";
-const PASS_THROUGH = ["/login/auth", "/login/local", "/join"];
+
+// Prefixes that do NOT require a session. `/login` covers the splash and both
+// sign-in surfaces; `/join` covers invite landings.
+const PUBLIC_PREFIXES = ["/login", "/join"];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // The splash itself is always reachable.
-  if (pathname === SPLASH_PATH) return NextResponse.next();
+  const isPublic = PUBLIC_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p + "/"),
+  );
+  if (isPublic) return NextResponse.next();
 
-  // Advancing to sign-in counts as passing the gate — stamp the cookie.
-  if (PASS_THROUGH.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
-    const res = NextResponse.next();
-    stampEntered(res);
-    return res;
-  }
+  // A signed-in session is the only key past the splash.
+  if (req.cookies.has(SESSION_COOKIE)) return NextResponse.next();
 
-  // Already entered (clicked through) or signed in → no gate.
-  const entered =
-    req.cookies.has(ENTERED_COOKIE) || req.cookies.has(SESSION_COOKIE);
-  if (entered) return NextResponse.next();
-
-  // Fresh visitor → send them to the splash to click ENTER.
   const url = req.nextUrl.clone();
   url.pathname = SPLASH_PATH;
   url.search = "";
   return NextResponse.redirect(url);
-}
-
-function stampEntered(res: NextResponse) {
-  res.cookies.set(ENTERED_COOKIE, "1", {
-    path: "/",
-    maxAge: 60 * 60 * 24 * 365,
-    sameSite: "lax",
-    httpOnly: false,
-  });
 }
 
 export const config = {
