@@ -6,7 +6,7 @@ import { getSession } from "@/lib/session";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
 import { HeatMark } from "@/components/heat/HeatMark";
 import { LockCountdown } from "@/components/heat/LockCountdown";
-import { lockTimeForSection } from "@/lib/lock-schedule-core";
+import { lockTimeForSection, isLockTimePassed } from "@/lib/lock-schedule-core";
 import { WireFeed } from "@/components/heat/WireFeed";
 import { getWireItems } from "@/lib/news";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
@@ -61,7 +61,9 @@ export default async function DashboardPage() {
   // fall back to the most recent section.
   const stageStatuses = layout.sections.map((s) => ({
     section: s,
-    pick: isStagePickable(layout, s.sectionid),
+    pick: isStagePickable(layout, s.sectionid, {
+      lockedByTime: isLockTimePassed(s.sectionid, now),
+    }),
   }));
   const activeIdx = stageStatuses.findIndex((s) => s.pick.pickable);
   const active =
@@ -356,6 +358,13 @@ function StageStatusTag({
   if (pickability.pickable) {
     return <span className="live-tag">Picks Open</span>;
   }
+  if (pickability.reason === "locked-time-passed") {
+    return (
+      <span className="live-tag" style={{ color: "var(--ink-mid)", borderColor: "var(--hair-2)", background: "var(--surf-2)" }}>
+        Underway · Locked
+      </span>
+    );
+  }
   if (pickability.reason === "locked-by-valve") {
     return (
       <span className="live-tag" style={{ color: "var(--ink-mid)", borderColor: "var(--hair-2)", background: "var(--surf-2)" }}>
@@ -397,9 +406,11 @@ function StageBody({
       : `Pick window is open. Sign in to lock your ${sectionName} picks before the window shuts.`
     : pickability.reason === "teams-not-set"
       ? `Teams for ${sectionName} aren't seeded yet. Picks open automatically once Valve sets the bracket.`
-      : pickability.reason === "locked-by-valve"
-        ? `Valve has closed the pick window for ${sectionName}. Watch the wire for results.`
-        : "This stage isn't available.";
+      : pickability.reason === "locked-time-passed"
+        ? `${sectionName} is underway — picks are locked. Open the stage to watch the live lineup and see how your teams are doing.`
+        : pickability.reason === "locked-by-valve"
+          ? `Valve has closed the pick window for ${sectionName}. Watch the wire for results.`
+          : "This stage isn't available.";
 
   return (
     <p style={{

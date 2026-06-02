@@ -67,3 +67,30 @@ export function lockTimeForSection(
   if (Number.isNaN(Date.parse(iso))) return null;
   return iso;
 }
+
+/**
+ * Has a section's published lock instant already passed (PHA-898)?
+ *
+ * "A stage's picks lock when its first match begins" — the same instant Valve
+ * flips `picks_allowed` off (see the schedule doc above). Our committed layout
+ * fixture is frozen all-open, so it never carries that flip; until a live Valve
+ * fetch lands on the render path, the published schedule is the truthful signal
+ * that Stage I (Jun 2) has begun and its picks are closed. The stage-gate
+ * (`isStagePickable`) and the picks write-guard both consult this so a stage
+ * that has started shows Locked and refuses new writes, even against the stale
+ * all-open fixture.
+ *
+ * `nowMs` is injected (not read) to keep this pure and the verify harness
+ * deterministic. Returns false when no lock time is published (e.g. the playoff
+ * sections) — those stay governed by seeding / `picks_allowed` as before, never
+ * by a fabricated time.
+ */
+export function isLockTimePassed(
+  sectionId: number,
+  nowMs: number,
+  schedule: LockSchedule = COLOGNE_LOCK_SCHEDULE,
+): boolean {
+  const iso = lockTimeForSection(sectionId, schedule);
+  if (iso === null) return false;
+  return Date.parse(iso) <= nowMs;
+}

@@ -24,7 +24,7 @@ import { assertBigIntString } from "@/lib/bigint";
 import { validatePickAgainstLayout } from "@/lib/layout";
 import { getEffectiveLayout } from "@/lib/layout-state";
 import { isStageWritable } from "@/lib/reveal-core";
-import { lockTimeForSection } from "@/lib/lock-schedule-core";
+import { isLockTimePassed } from "@/lib/lock-schedule-core";
 
 const EVENT_ID = 26;
 
@@ -67,18 +67,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `unknown section ${secId}` }, { status: 400 });
   }
 
-  // Scheduled hard lock (PHA-886): a Swiss stage's pick window closes at its
-  // first match — the committed schedule, validated to Valve's start time. The
-  // committed layout never flips `picks_allowed`, and an outcome row only lands
-  // once a result resolves (~1h+ after first match), so without this a player
-  // could keep editing picks after matches start and game the leaderboard.
-  // lockTimeForSection returns null for playoffs (no published time) — those
-  // still lock via the resolved-outcome check below.
-  const lockAt = lockTimeForSection(secId);
-  if (lockAt && Date.now() >= Date.parse(lockAt)) {
-    return NextResponse.json({ error: "stage_locked" }, { status: 409 });
-  }
-
   // A resolved outcome for any slot in this section proves the stage closed,
   // even if the layout snapshot we hold still says picks_allowed:true.
   const resolvedCount = await prisma.stageOutcome.count({
@@ -86,7 +74,12 @@ export async function POST(req: NextRequest) {
   });
   const hasOutcome = resolvedCount > 0;
 
-  if (section.groups.some((g) => !isStageWritable(g, hasOutcome))) {
+  // The committed fixture is frozen all-open, so `picks_allowed` never flips for
+  // it. Once a stage's published lock instant passes it has begun — reject the
+  // write so a crafted POST can't slip a pick past the (now Locked) UI (PHA-898).
+  const lockedByTime = isLockTimePassed(secId, Date.now());
+
+  if (lockedByTime || section.groups.some((g) => !isStageWritable(g, hasOutcome))) {
     return NextResponse.json({ error: "stage_locked" }, { status: 409 });
   }
 

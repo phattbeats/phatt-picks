@@ -127,6 +127,34 @@ check(
   stage2ValveLocked.pickable === false && stage2ValveLocked.reason === "locked-by-valve",
 );
 
+console.log("\nstage-gate - schedule lock (PHA-898): a stage that has begun is locked");
+
+// Stage I is seeded + all-open in the fixture, so it's pickable by default;
+// once its published lock time has passed the caller flags lockedByTime and the
+// gate reports locked-time-passed against the very same fixture.
+const stage1Open = isStagePickable(layout, 105, { lockedByTime: false });
+check(
+  "Stage I still pickable when its lock time has NOT passed",
+  stage1Open.pickable === true,
+);
+const stage1Begun = isStagePickable(layout, 105, { lockedByTime: true });
+check(
+  "Stage I reports locked-time-passed once its lock time passes (all-open fixture)",
+  stage1Begun.pickable === false && stage1Begun.reason === "locked-time-passed",
+);
+// Time-lock takes precedence over the live picks_allowed flag.
+const stage2BothLocked = isStagePickable(valveLocked, 106, { lockedByTime: true });
+check(
+  "locked-time-passed takes precedence over locked-by-valve",
+  stage2BothLocked.pickable === false && stage2BothLocked.reason === "locked-time-passed",
+);
+// A future-locked sibling stage stays open while Stage I is locked.
+const stage2StillOpen = isStagePickable(layout, 106, { lockedByTime: false });
+check(
+  "Stage II stays open while Stage I is locked (per-stage, not a chain)",
+  stage2StillOpen.pickable === true,
+);
+
 console.log("\nstage-gate - unknown section id is denied");
 
 const unknown = isStagePickable(layout, 999);

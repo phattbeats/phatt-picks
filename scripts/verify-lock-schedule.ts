@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   lockTimeForSection,
+  isLockTimePassed,
   COLOGNE_LOCK_SCHEDULE,
   type LockSchedule,
 } from "../src/lib/lock-schedule-core.ts";
@@ -101,6 +102,30 @@ const bad: LockSchedule = {
 check("empty string -> null", lockTimeForSection(1, bad) === null);
 check("non-date string -> null", lockTimeForSection(2, bad) === null);
 check("garbage string -> null", lockTimeForSection(3, bad) === null);
+
+console.log("\nlock-schedule - isLockTimePassed gates on a published instant (PHA-898)");
+
+const lockMs = Date.parse("2026-06-02T10:30:00Z");
+check(
+  "before the instant -> not passed",
+  isLockTimePassed(105, lockMs - 60_000) === false,
+);
+check(
+  "exactly at the instant -> passed (lock is inclusive)",
+  isLockTimePassed(105, lockMs) === true,
+);
+check(
+  "after the instant -> passed",
+  isLockTimePassed(105, lockMs + 60_000) === true,
+);
+check(
+  "Stage III (Jun 11) not yet passed at Stage I's lock time",
+  isLockTimePassed(107, lockMs) === false,
+);
+check(
+  "a dark playoff section never reports passed (no published time)",
+  isLockTimePassed(108, lockMs + 9_000_000_000) === false,
+);
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);
