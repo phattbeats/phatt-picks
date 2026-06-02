@@ -23,6 +23,7 @@ import { getSession } from "@/lib/session";
 import { assertBigIntString } from "@/lib/bigint";
 import { getCommittedLayout, validatePickAgainstLayout } from "@/lib/layout";
 import { isStageWritable } from "@/lib/reveal-core";
+import { isLockTimePassed } from "@/lib/lock-schedule-core";
 
 const EVENT_ID = 26;
 
@@ -72,7 +73,12 @@ export async function POST(req: NextRequest) {
   });
   const hasOutcome = resolvedCount > 0;
 
-  if (section.groups.some((g) => !isStageWritable(g, hasOutcome))) {
+  // The committed fixture is frozen all-open, so `picks_allowed` never flips for
+  // it. Once a stage's published lock instant passes it has begun — reject the
+  // write so a crafted POST can't slip a pick past the (now Locked) UI (PHA-898).
+  const lockedByTime = isLockTimePassed(secId, Date.now());
+
+  if (lockedByTime || section.groups.some((g) => !isStageWritable(g, hasOutcome))) {
     return NextResponse.json({ error: "stage_locked" }, { status: 409 });
   }
 

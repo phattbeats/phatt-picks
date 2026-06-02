@@ -33,6 +33,8 @@ import type { Layout } from "./layout";
 export type StagePickability =
   /** Open for picks — render the picker. */
   | { pickable: true; reason: "open" }
+  /** The stage's published lock time has passed — it has begun, picks closed. */
+  | { pickable: false; reason: "locked-time-passed" }
   /** Valve closed the window — render the Locked card; picks are revealed elsewhere. */
   | { pickable: false; reason: "locked-by-valve" }
   /** Teams aren't seeded yet (every slot TBD) — render Locked card. */
@@ -57,12 +59,33 @@ function isSectionSeeded(section: Layout["sections"][number]): boolean {
   return false;
 }
 
+export interface StageGateOpts {
+  /**
+   * The section's published lock instant has passed (PHA-898). The caller
+   * computes this from the lock schedule vs. the current time
+   * (`isLockTimePassed`) and passes it in, keeping this module pure. When true
+   * the stage is locked regardless of the (stale, all-open) committed
+   * `picks_allowed` flag — "Stage 1 has begun" is the truth the fixture can't
+   * carry until a live Valve fetch lands.
+   */
+  lockedByTime?: boolean;
+}
+
 export function isStagePickable(
   layout: Layout,
   sectionId: number,
+  opts: StageGateOpts = {},
 ): StagePickability {
   const section = layout.sections.find((s) => s.sectionid === sectionId);
   if (!section) return { pickable: false, reason: "unknown-section" };
+
+  // The stage's published lock time has passed — its first match has begun, so
+  // the Pick'Em window is closed even though the frozen fixture still says
+  // `picks_allowed:true`. Takes precedence over the live flag below: a stage
+  // that has demonstrably started is never "open" again.
+  if (opts.lockedByTime) {
+    return { pickable: false, reason: "locked-time-passed" };
+  }
 
   // Valve has closed the pick window on every group in this stage -> locked.
   // (The committed fixture is all-open, so this branch only fires once the

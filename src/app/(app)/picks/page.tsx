@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getCommittedLayout } from "@/lib/layout";
+import { getCommittedLayout, buildTeamMap } from "@/lib/layout";
 import { getSession } from "@/lib/session";
 import { hasAuthCode } from "@/lib/authcode";
 import { prisma } from "@/lib/db";
@@ -10,9 +10,16 @@ import {
   type StagePickability,
 } from "@/lib/stage-gate-core";
 import { LockCountdown } from "@/components/heat/LockCountdown";
-import { lockTimeForSection } from "@/lib/lock-schedule-core";
+import { lockTimeForSection, isLockTimePassed } from "@/lib/lock-schedule-core";
+import { refreshOutcomesOnRead } from "@/lib/outcomes";
+import { isSwissSection, bucketSwissSlots } from "@/lib/swiss-bucket-core";
+import { buildSwissStandings, type SlotPickMap } from "@/lib/swiss-standings-core";
+import { LiveSwissBracket } from "@/components/heat/LiveSwissBracket";
+import { AutoRefresh } from "@/components/AutoRefresh";
 
 const EVENT_ID = 26;
+
+export const dynamic = "force-dynamic";
 
 export default async function PicksPage({
   searchParams,
@@ -26,6 +33,16 @@ export default async function PicksPage({
   if (session?.steamId) {
     await mirrorPlayerPredictionsThrottled(session.playerId, EVENT_ID);
   }
+
+  // Live driver (PHA-866/898): keep the answer key fresh so a locked stage's
+  // lineup tracks results as teams clinch. Atomic 30s claim, deferred ingest.
+  await refreshOutcomesOnRead(EVENT_ID);
+
+  // Per-request server clock — this is a force-dynamic RSC rendered once per
+  // request, so reading the time to evaluate the published lock schedule is
+  // intentional (mirrors the dashboard).
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now();
 
   // Signed in via Steam but no auth code yet: picks save in HOTLINE, but we
   // can't push them to the official in-game CS2 Pick'Em until they connect a
@@ -43,7 +60,9 @@ export default async function PicksPage({
   const sectionPickability: Map<number, StagePickability> = new Map(
     layout.sections.map((s) => [
       s.sectionid,
-      isStagePickable(layout, s.sectionid),
+      isStagePickable(layout, s.sectionid, {
+        lockedByTime: isLockTimePassed(s.sectionid, nowMs),
+      }),
     ]),
   );
   const activePickability =
@@ -59,6 +78,34 @@ export default async function PicksPage({
       myPicks[pick.groupId] ??= {};
       myPicks[pick.groupId][pick.slotIndex] = pick.pickId;
     }
+  }
+
+  // Live Swiss lineup (PHA-898): once a Swiss stage locks we show the standings
+  // in place of the picker. Build it from the resolved answer key + the viewer's
+  // picks. Only fetch when we'd actually render it (locked Swiss section).
+  const showLineup =
+    !!section && !activePickability.pickable && isSwissSection(activeSectionId);
+  let swissStandings: ReturnType<typeof buildSwissStandings> | null = null;
+  let outcomeResolvedAtIso: string | null = null;
+  if (showLineup && section) {
+    const outcomeRows = await prisma.stageOutcome.findMany({
+      where: { eventId: EVENT_ID, sectionId: activeSectionId },
+    });
+    const outcomesForSection: Record<number, Record<number, number>> = {};
+    let latest = 0;
+    for (const o of outcomeRows) {
+      outcomesForSection[o.groupId] ??= {};
+      outcomesForSection[o.groupId][o.slotIndex] = o.winnerPickId;
+      const t = o.resolvedAt.getTime();
+      if (t > latest) latest = t;
+    }
+    outcomeResolvedAtIso = latest > 0 ? new Date(latest).toISOString() : null;
+    swissStandings = buildSwissStandings(
+      section,
+      outcomesForSection as SlotPickMap,
+      bucketSwissSlots,
+      myPicks as SlotPickMap,
+    );
   }
 
   const activeIdx = layout.sections.findIndex((s) => s.sectionid === activeSectionId);
@@ -173,6 +220,19 @@ export default async function PicksPage({
           eventId={EVENT_ID}
           steamLinked={!!session?.steamId}
         />
+      ) : swissStandings ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <LockedStageCard pickability={activePickability} compact />
+          <LiveSwissBracket
+            standings={swissStandings}
+            teamMap={buildTeamMap(layout)}
+            signedIn={!!session}
+            resolvedAtIso={outcomeResolvedAtIso}
+          />
+          {/* Poll the answer key while the stage is live so the lineup updates
+              without a manual reload (PHA-898). */}
+          <AutoRefresh intervalMs={60_000} />
+        </div>
       ) : (
         <LockedStageCard pickability={activePickability} />
       )}
@@ -277,38 +337,52 @@ function SteamLinkNotice() {
   );
 }
 
-function LockedStageCard({ pickability }: { pickability: StagePickability }) {
+function LockedStageCard({
+  pickability,
+  compact = false,
+}: {
+  pickability: StagePickability;
+  /** Tighter card used as a banner above the live lineup. */
+  compact?: boolean;
+}) {
   const heading =
     pickability.pickable
       ? "Locked"
       : pickability.reason === "teams-not-set"
         ? "Teams not set yet"
-        : pickability.reason === "locked-by-valve"
-          ? "Locked by Valve"
-          : "Locked";
+        : pickability.reason === "locked-time-passed"
+          ? "Stage locked — it's underway"
+          : pickability.reason === "locked-by-valve"
+            ? "Locked by Valve"
+            : "Locked";
   const subline =
     pickability.pickable
       ? undefined
       : pickability.reason === "teams-not-set"
         ? "Teams for this stage aren't seeded yet. Picks open automatically once Valve sets the bracket."
-        : pickability.reason === "locked-by-valve"
-          ? "Valve closed the pick window for this stage. Results will appear here as matches complete."
-          : "This stage isn't available.";
+        : pickability.reason === "locked-time-passed"
+          ? "This stage has begun, so picks are locked. Track how the teams you called are doing in the live lineup below."
+          : pickability.reason === "locked-by-valve"
+            ? "Valve closed the pick window for this stage. Results will appear here as matches complete."
+            : "This stage isn't available.";
 
   return (
-    <div className="panel brk" style={{ textAlign: "center", padding: "40px 24px" }}>
+    <div
+      className="panel brk"
+      style={{ textAlign: "center", padding: compact ? "20px 22px" : "40px 24px" }}
+    >
       <span className="br-tr" />
       <span className="br-bl" />
       <div aria-hidden="true" style={{
-        fontSize: "1.75rem",
-        marginBottom: 12,
+        fontSize: compact ? "1.25rem" : "1.75rem",
+        marginBottom: compact ? 8 : 12,
         color: "var(--heat)",
       }}>
         🔒
       </div>
       <h2 className="font-display" style={{
         fontWeight: 800,
-        fontSize: 22,
+        fontSize: compact ? 18 : 22,
         textTransform: "uppercase",
         letterSpacing: 0,
         color: "var(--ink-hi)",
@@ -319,9 +393,9 @@ function LockedStageCard({ pickability }: { pickability: StagePickability }) {
       {subline && (
         <p style={{
           color: "var(--ink-mid)",
-          fontSize: 14,
+          fontSize: compact ? 13 : 14,
           margin: 0,
-          maxWidth: 360,
+          maxWidth: 420,
           marginInline: "auto",
           lineHeight: 1.5,
         }}>

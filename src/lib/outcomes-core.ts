@@ -45,18 +45,32 @@ export interface SlotRef {
  * set against the all-open layout, so the caller can short-circuit before any
  * source request.
  *
+ * A stage can also be locked by its published schedule (PHA-898): our committed
+ * fixture is frozen all-open, so `picks_allowed` never flips for it. Once Stage
+ * I's lock time passes, its first match has begun and Valve's live layout
+ * carries the answer key — but this gate would still skip it on the committed
+ * `picks_allowed:true`, short-circuiting before `tryValveOracle` ever runs (the
+ * PHA-886 latent bug). The optional `isSectionLocked` predicate lets the caller
+ * mark schedule-locked sections as candidates so the Valve oracle is actually
+ * consulted; it defaults to "never" so existing callers/verify harnesses keep
+ * the pure `picks_allowed`-only behavior.
+ *
  * Pure: takes the layout and an already-fetched set of resolved-slot keys
  * (`"sectionId:groupId:slotIndex"`), returns the filtered list. The caller is
  * responsible for DB I/O.
  */
 export function pickLockedUnresolvedSlots(
   layout: Layout,
-  resolvedKey: ReadonlySet<string>
+  resolvedKey: ReadonlySet<string>,
+  isSectionLocked: (sectionId: number) => boolean = () => false
 ): SlotRef[] {
   const out: SlotRef[] = [];
   for (const section of layout.sections) {
+    const sectionLocked = isSectionLocked(section.sectionid);
     for (const group of section.groups) {
-      if (group.picks_allowed) continue; // stage still open — no results possible
+      // Stage still open (live flag allows picks AND schedule hasn't locked it)
+      // — no results possible yet.
+      if (group.picks_allowed && !sectionLocked) continue;
       for (const p of group.picks) {
         const key = `${section.sectionid}:${group.groupid}:${p.index}`;
         if (resolvedKey.has(key)) continue; // terminal — already in StageOutcome

@@ -29,6 +29,7 @@ import {
 import { fetchLiquipediaResults, LiquipediaThrottledError } from "./liquipedia";
 import { fetchTournamentLayout } from "./valve";
 import { writeRankSnapshots } from "./rank-snapshot";
+import { isLockTimePassed } from "./lock-schedule-core";
 
 export interface IngestSummary {
   eventId: number;
@@ -105,7 +106,18 @@ export async function ingestOutcomes(eventId: number): Promise<IngestSummary> {
   // has CLOSED can have results — pre-event every stage is open, so this is []
   // and we never touch the source (PHA-844: the old `unresolved` set was the
   // entire layout pre-event, hammering Liquipedia on every tick).
-  const lockedUnresolved = pickLockedUnresolvedSlots(layout, resolvedKey);
+  //
+  // The committed fixture is frozen all-open, so `picks_allowed` never flips for
+  // it — without this, a Swiss stage that has begun would never become an ingest
+  // candidate and the Valve oracle would never run (PHA-886/PHA-898). Mark a
+  // section locked once its published lock instant has passed so the answer key
+  // gets fetched the moment the stage starts. resolveOutcomesFromLayout still
+  // reads the LIVE layout's own `picks_allowed`, so we never persist a result
+  // for a stage Valve still reports as open — this only opens the candidate set.
+  const now = Date.now();
+  const lockedUnresolved = pickLockedUnresolvedSlots(layout, resolvedKey, (sectionId) =>
+    isLockTimePassed(sectionId, now),
+  );
   if (lockedUnresolved.length === 0) {
     return {
       eventId,
