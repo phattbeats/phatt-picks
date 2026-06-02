@@ -93,8 +93,11 @@ async function tryValveOracle(eventId: number): Promise<RawResolvedSlot[] | null
 }
 
 /**
- * Ingest outcomes for an event. Only fetches when unresolved slots remain.
- * Idempotent: re-running after full resolution is a no-op (no network call).
+ * Ingest outcomes for an event. Probes the live Valve layout each tick (the
+ * only authoritative lock/result source — the committed fixture never flips
+ * `picks_allowed`); resolveOutcomesFromLayout self-gates on the live state so
+ * open stages are a no-op. Idempotent: already-resolved slots are filtered out
+ * before persist, so re-running after full resolution writes nothing.
  */
 export async function ingestOutcomes(eventId: number): Promise<IngestSummary> {
   const layout = getCommittedLayout();
@@ -106,33 +109,41 @@ export async function ingestOutcomes(eventId: number): Promise<IngestSummary> {
   const resolvedKey = new Set(existing.map((o) => `${o.sectionId}:${o.groupId}:${o.slotIndex}`));
   const resolvedBefore = resolvedKey.size;
 
-  // Gate on stage state, not just resolved rows. Only stages whose pick window
-  // has CLOSED can have results — pre-event every stage is open, so this is []
-  // and we never touch the source (PHA-844: the old `unresolved` set was the
-  // entire layout pre-event, hammering Liquipedia on every tick).
-  const lockedUnresolved = pickLockedUnresolvedSlots(layout, resolvedKey);
-  if (lockedUnresolved.length === 0) {
-    return {
-      eventId,
-      source: "none",
-      resolvedBefore,
-      resolvedAfter: resolvedBefore,
-      written: 0,
-      rejected: 0,
-      reason: resolvedBefore > 0 ? "fully-resolved" : "no-locked-unresolved",
-    };
-  }
-
   let raw: RawResolvedSlot[] = [];
   let source: "valve" | "liquipedia" | "none" = "none";
   let error: string | undefined;
 
   try {
+    // ALWAYS probe the Valve oracle first. The lock state can only come from the
+    // LIVE layout (GetTournamentLayout): our committed fixture is permanently
+    // `picks_allowed:true`, so gating on it (the old behavior) meant the oracle
+    // was NEVER reached and outcomes/scoring stayed frozen at 0 all event —
+    // PHA-886. resolveOutcomesFromLayout self-gates on the live `picks_allowed`,
+    // so this is a no-op while a stage is open and resolves only genuinely-locked
+    // slots. Rate-limited upstream by refreshOutcomesOnRead's 30s cluster claim.
     const valve = await tryValveOracle(eventId);
     if (valve && valve.length > 0) {
       raw = valve;
       source = "valve";
     } else {
+      // Liquipedia fallback stays gated on locked-unresolved slots so it never
+      // hammers the source pre-event (PHA-844). Against the all-open committed
+      // fixture this is always [] — and Liquipedia can't resolve this event's
+      // Swiss buckets anyway (PHA-869) — so it stays dormant; Valve is the live
+      // source of truth. We short-circuit here only when Valve had nothing AND
+      // no committed-locked slot exists to justify a fallback request.
+      const lockedUnresolved = pickLockedUnresolvedSlots(layout, resolvedKey);
+      if (lockedUnresolved.length === 0) {
+        return {
+          eventId,
+          source: "none",
+          resolvedBefore,
+          resolvedAfter: resolvedBefore,
+          written: 0,
+          rejected: 0,
+          reason: resolvedBefore > 0 ? "fully-resolved" : "no-locked-unresolved",
+        };
+      }
       // Fallback: Liquipedia. The bracket page + slot mapper are event-specific;
       // pre-tournament this yields [] (no completed matches yet).
       raw = await fetchLiquipediaResults("IEM_Cologne_2026", () => null);
