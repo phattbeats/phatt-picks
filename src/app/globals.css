@@ -957,10 +957,14 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   max-height: 86vh; overflow-y: auto;
   background: var(--surf-2);
   border: 1px solid var(--hair-3);
-  padding: 22px 20px 18px;
+  /* As a bottom sheet the panel now reaches the viewport edge (PHA-897 portal
+     lifts it over the botnav), so pad the foot past the home indicator. */
+  padding: 22px 20px calc(18px + env(safe-area-inset-bottom));
 }
 @media (min-width: 560px) {
   .tsd-backdrop { align-items: center; padding: 24px; }
+  /* Centered dialog clears the safe area via backdrop padding — drop the extra. */
+  .tsd-panel { padding-bottom: 18px; }
 }
 .tsd-close {
   position: absolute; top: 12px; right: 12px;
