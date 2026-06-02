@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { TeamLogo } from "@/components/ui/TeamLogo";
+import { TeamStatsDrawer } from "@/components/ui/TeamStatsDrawer";
 import { resolveLogoTiers } from "@/lib/logos";
 import type { Section, TeamDef } from "@/lib/layout";
 import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
@@ -46,6 +47,10 @@ export function PicksBoard({
   const [saveStates, setSaveStates] = useState<Record<string, SaveState>>({});
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
   const [unsavedSinceSync, setUnsavedSinceSync] = useState(false);
+  // Off-board team dossier (PHA-893): roster/standing/recent matches. Closed by
+  // default — opened by the [i] affordance on a pool tile, viewable regardless
+  // of whether the stage is pickable or the team is already placed.
+  const [statsTeam, setStatsTeam] = useState<TeamDef | null>(null);
   const lastSavedRef = useRef<PicksMap>(initialPicks);
 
   const slotKey = (groupId: GroupId, slotIndex: SlotIndex) => `${groupId}:${slotIndex}`;
@@ -337,24 +342,45 @@ export function PicksBoard({
                       .join(" ");
 
                     return (
-                      <button
-                        key={teamSlot.pickid}
-                        type="button"
-                        className={cls}
-                        onClick={() => handleTeamTap(t.pickid)}
-                        disabled={!enabled}
-                        draggable={enabled}
-                        onDragStart={(e) => {
-                          e.dataTransfer.setData(DND_MIME, String(t.pickid));
-                          e.dataTransfer.setData("text/plain", String(t.pickid));
-                          e.dataTransfer.effectAllowed = "move";
-                        }}
-                        aria-pressed={isSelected}
-                        aria-label={`${t.name}${isUsed ? " (already picked)" : ""}${isSelected ? " — selected" : ""}`}
-                      >
-                        <TeamLogo tiers={resolveLogoTiers(t)} teamName={t.name} size={TILE_LOGO} />
-                        <span className="ptile-name">{t.name}</span>
-                      </button>
+                      <div key={teamSlot.pickid} className="ptile-wrap">
+                        <button
+                          type="button"
+                          className={cls}
+                          onClick={() => handleTeamTap(t.pickid)}
+                          disabled={!enabled}
+                          draggable={enabled}
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData(DND_MIME, String(t.pickid));
+                            e.dataTransfer.setData("text/plain", String(t.pickid));
+                            e.dataTransfer.effectAllowed = "move";
+                          }}
+                          aria-pressed={isSelected}
+                          aria-label={`${t.name}${isUsed ? " (already picked)" : ""}${isSelected ? " — selected" : ""}`}
+                        >
+                          <TeamLogo tiers={resolveLogoTiers(t)} teamName={t.name} size={TILE_LOGO} />
+                          <span className="ptile-name">{t.name}</span>
+                        </button>
+                        {/* Sibling, not a child — stays clickable when the tile
+                            is `used` (pointer-events:none) or the stage is locked. */}
+                        <span
+                          className="ptile-info"
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`${t.name} stats and standings`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStatsTeam(t);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setStatsTeam(t);
+                            }
+                          }}
+                        >
+                          i
+                        </span>
+                      </div>
                     );
                   })}
                 </div>
@@ -371,6 +397,8 @@ export function PicksBoard({
           onSynced={() => setUnsavedSinceSync(false)}
         />
       )}
+
+      {statsTeam && <TeamStatsDrawer team={statsTeam} onClose={() => setStatsTeam(null)} />}
     </div>
   );
 }

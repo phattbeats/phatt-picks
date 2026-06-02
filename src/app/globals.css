@@ -859,3 +859,100 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; }
 }
+
+/* ── Team dossier (PHA-893): stats & standings, off-board by default ─────── */
+/* Pool tile gets a wrapper so the [i] affordance can be a sibling of the tile
+   button — that keeps it live when the tile is `used` (pointer-events:none) or
+   the stage is locked (button disabled). */
+.ptile-wrap { position: relative; display: flex; }
+.ptile-wrap .ptile { flex: 1; }
+.ptile-info {
+  position: absolute; top: 5px; right: 5px;
+  width: 19px; height: 19px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-weight: 700; font-size: 11px; font-style: italic;
+  line-height: 1;
+  color: var(--ink-mid);
+  background: var(--surf-3);
+  border: 1px solid var(--hair-2);
+  border-radius: 50%;
+  cursor: pointer; user-select: none; z-index: 2;
+  transition: all 150ms var(--ease);
+}
+.ptile-info:hover, .ptile-info:focus-visible {
+  color: var(--heat); border-color: var(--heat);
+  background: rgba(240,163,0,0.1); outline: none;
+}
+
+.tsd-backdrop {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(8,6,3,0.72);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  padding: 0;
+}
+.tsd-panel {
+  width: 100%; max-width: 460px;
+  max-height: 86vh; overflow-y: auto;
+  background: var(--surf-2);
+  border: 1px solid var(--hair-3);
+  padding: 22px 20px 18px;
+}
+@media (min-width: 560px) {
+  .tsd-backdrop { align-items: center; padding: 24px; }
+}
+.tsd-close {
+  position: absolute; top: 12px; right: 12px;
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid var(--hair-2);
+  color: var(--ink-mid); cursor: pointer; z-index: 3;
+  transition: all 150ms var(--ease);
+}
+.tsd-close:hover { color: var(--heat); border-color: var(--heat); }
+.tsd-close svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2.4; }
+
+.tsd-head { display: flex; align-items: center; gap: 13px; padding-right: 30px; }
+.tsd-head-text { flex: 1; min-width: 0; }
+.tsd-name {
+  margin: 2px 0 0; font-weight: 800; font-size: 24px;
+  text-transform: uppercase; letter-spacing: 0.01em;
+  color: var(--ink-hi); line-height: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tsd-rank {
+  display: flex; flex-direction: column; align-items: center; flex-shrink: 0;
+  padding: 5px 10px; border: 1px solid var(--hair-3); background: rgba(240,163,0,0.06);
+}
+.tsd-rank-num { font-family: var(--font-display); font-weight: 800; font-size: 22px; color: var(--heat); line-height: 1; }
+.tsd-rank-lbl { font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.14em; color: var(--ink-mid); margin-top: 2px; }
+
+.tsd-sec { margin-top: 20px; }
+.tsd-sec-title {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--heat); margin: 0 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--hair-2);
+}
+.tsd-roster { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 7px; }
+.tsd-roster li {
+  font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--ink-hi);
+  padding: 5px 11px; background: var(--surf-3); border: 1px solid var(--hair-2);
+}
+.tsd-matches { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.tsd-match {
+  display: grid; grid-template-columns: 22px 1fr auto auto; align-items: center; gap: 10px;
+  padding: 8px 11px; background: var(--surf-3); border: 1px solid var(--hair); border-left-width: 3px;
+}
+.tsd-match.win { border-left-color: var(--tac-green); }
+.tsd-match.loss { border-left-color: var(--ember); }
+.tsd-match.tie { border-left-color: var(--ink-low); }
+.tsd-res { font-family: var(--font-display); font-weight: 800; font-size: 16px; text-align: center; }
+.tsd-match.win .tsd-res { color: var(--tac-green); }
+.tsd-match.loss .tsd-res { color: var(--ember); }
+.tsd-match.tie .tsd-res { color: var(--ink-mid); }
+.tsd-opp { font-size: 13px; color: var(--ink-hi); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tsd-score { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--ink-hi); }
+.tsd-date { font-family: var(--font-mono); font-size: 10px; color: var(--ink-low); }
+.tsd-empty { font-size: 13px; color: var(--ink-mid); margin: 14px 0 0; }
+.tsd-foot {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.06em; color: var(--ink-low);
+  margin: 18px 0 0; padding-top: 12px; border-top: 1px solid var(--hair);
+}
