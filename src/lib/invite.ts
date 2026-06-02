@@ -50,3 +50,44 @@ export async function resolveInvite(code: string): Promise<InviteInfo | null> {
   });
   return player ?? null;
 }
+
+/**
+ * Record that `newPlayerId` was onboarded via `refCode` (the inviter's invite
+ * code). No-op when the code is missing/invalid/unknown or self-referential.
+ * Best-effort: attribution must never break account creation, so callers wrap
+ * this and swallow errors.
+ */
+export async function attributeReferral(
+  newPlayerId: string,
+  refCode: string | null | undefined,
+): Promise<void> {
+  if (!refCode || !isValidInviteCode(refCode)) return;
+  const inviter = await prisma.player.findUnique({
+    where: { inviteCode: normalizeInviteCode(refCode) },
+    select: { id: true },
+  });
+  if (!inviter || inviter.id === newPlayerId) return;
+  await prisma.player.update({
+    where: { id: newPlayerId },
+    data: { invitedById: inviter.id },
+  });
+}
+
+export interface ReferralStats {
+  /** How many players this one has onboarded. */
+  count: number;
+  /** Display name of whoever invited this player, if any. */
+  invitedByName: string | null;
+}
+
+/** Referral summary for a player — count brought in + who invited them. */
+export async function getReferralStats(playerId: string): Promise<ReferralStats> {
+  const [count, self] = await Promise.all([
+    prisma.player.count({ where: { invitedById: playerId } }),
+    prisma.player.findUnique({
+      where: { id: playerId },
+      select: { invitedBy: { select: { displayName: true } } },
+    }),
+  ]);
+  return { count, invitedByName: self?.invitedBy?.displayName ?? null };
+}

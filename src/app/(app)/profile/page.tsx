@@ -5,6 +5,7 @@ import { AvatarUpload } from "@/components/AvatarUpload";
 import { AdminLocalPlayers } from "@/components/AdminLocalPlayers";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
+import { getReferralStats } from "@/lib/invite";
 import { isOwner } from "@/lib/owner";
 
 /** Profile / settings hub — identity, push opt-in, invite, install, account. */
@@ -15,6 +16,8 @@ export default async function ProfilePage() {
   const connected = Boolean(session.steamId);
   const initials = session.displayName.slice(0, 2).toUpperCase();
   const owner = isOwner(session);
+
+  const referrals = await getReferralStats(session.playerId);
 
   // Local players can set a photo; Steam players show their Steam avatar.
   const playerRow = await prisma.player.findUnique({
@@ -101,6 +104,35 @@ export default async function ProfilePage() {
           Send this link. They land on a one-tap join page — no account hunting.
         </p>
         <InviteLink />
+
+        {(referrals.count > 0 || referrals.invitedByName) && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              justifyContent: "space-between",
+              gap: 12,
+              marginTop: 14,
+              paddingTop: 12,
+              borderTop: "1px solid var(--hair)",
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <span className="foil font-display" style={{ fontWeight: 800, fontSize: 22, lineHeight: 1 }}>
+                {referrals.count}
+              </span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--ink-low)" }}>
+                {referrals.count === 1 ? "player joined" : "players joined"} through you
+              </span>
+            </span>
+            {referrals.invitedByName && (
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-low)", textAlign: "right", minWidth: 0 }}>
+                Invited by{" "}
+                <span style={{ color: "var(--ink-mid)" }}>{referrals.invitedByName}</span>
+              </span>
+            )}
+          </div>
+        )}
       </section>
 
       {/* Install */}

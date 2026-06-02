@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Openid from "openid";
 import { SignJWT } from "jose";
 import { prisma } from "@/lib/db";
+import { attributeReferral } from "@/lib/invite";
 
 const { RelyingParty } = Openid;
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
@@ -64,11 +65,27 @@ export async function GET(req: NextRequest) {
           }
         }
 
+        // Distinguish a brand-new Steam player from a returning one so we only
+        // attribute a referral once, at first sign-in.
+        const existing = await prisma.player.findUnique({
+          where: { steamId },
+          select: { id: true },
+        });
+
         const player = await prisma.player.upsert({
           where: { steamId },
           update: { displayName, avatarUrl, isLocal: false },
           create: { steamId, displayName, avatarUrl, isLocal: false },
         });
+
+        // Referral attribution for first-time Steam players — best-effort.
+        if (!existing) {
+          try {
+            await attributeReferral(player.id, req.cookies.get("hotline_ref")?.value);
+          } catch (refErr) {
+            console.error("Referral attribution error (steam):", refErr);
+          }
+        }
 
         // Issue a session JWT (short-lived, HttpOnly, SameSite=Lax)
         const token = await new SignJWT({ sub: player.id, steamId, displayName })
@@ -85,6 +102,8 @@ export async function GET(req: NextRequest) {
           maxAge: 60 * 60 * 24 * 7,
           secure: process.env.NODE_ENV === "production",
         });
+        // Referral consumed (or no-op) — clear the capture cookie.
+        response.cookies.set("hotline_ref", "", { path: "/", maxAge: 0 });
 
         resolve(response);
       } catch (dbErr) {

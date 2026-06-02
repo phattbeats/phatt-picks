@@ -26,6 +26,22 @@ const PUBLIC_PREFIXES = ["/login", "/join"];
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Opening an invite link captures the referral: stamp the inviter's code so
+  // it can be attributed when this visitor creates an account (local or Steam).
+  if (pathname.startsWith("/join/")) {
+    const code = pathname.slice("/join/".length).split("/")[0];
+    const res = NextResponse.next();
+    if (code) {
+      res.cookies.set("hotline_ref", code, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 14,
+        sameSite: "lax",
+        httpOnly: true,
+      });
+    }
+    return res;
+  }
+
   const isPublic = PUBLIC_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(p + "/"),
   );

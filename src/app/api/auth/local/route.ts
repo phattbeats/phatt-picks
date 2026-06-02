@@ -28,6 +28,7 @@ import { randomBytes } from "crypto";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { verifyTurnstile } from "@/lib/captcha";
+import { attributeReferral } from "@/lib/invite";
 import {
   decideLocalAuthAction,
   randomName,
@@ -94,6 +95,7 @@ async function reuseLocalSession(playerId: string): Promise<NextResponse | null>
 async function createLocalPlayer(
   displayName: string,
   ip: string | null,
+  refCode: string | null,
 ): Promise<NextResponse> {
   const inviteCode = randomBytes(6).toString("hex");
   const player = await prisma.player.create({
@@ -104,6 +106,13 @@ async function createLocalPlayer(
       createdFromIp: ip ?? null,
     },
   });
+
+  // Referral attribution — best-effort, never blocks signup.
+  try {
+    await attributeReferral(player.id, refCode);
+  } catch (err) {
+    console.error("Referral attribution error (local):", err);
+  }
 
   const token = await new SignJWT({
     sub: player.id,
@@ -123,6 +132,8 @@ async function createLocalPlayer(
     maxAge: SESSION_TTL_SECONDS,
     secure: process.env.NODE_ENV === "production",
   });
+  // Referral consumed (or no-op) — clear the capture cookie.
+  response.cookies.set("hotline_ref", "", { path: "/", maxAge: 0 });
   return response;
 }
 
@@ -200,7 +211,8 @@ export async function POST(req: NextRequest) {
     }
 
     const displayName = sanitizeDisplayName(rawName, randomName());
-    return await createLocalPlayer(displayName, ip);
+    const refCode = req.cookies.get("hotline_ref")?.value ?? null;
+    return await createLocalPlayer(displayName, ip, refCode);
   } catch (err) {
     console.error("Local auth POST error:", err);
     return NextResponse.redirect(new URL("/login/auth?error=local_create_failed", BASE_URL));
