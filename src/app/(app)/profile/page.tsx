@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { PushToggle } from "@/components/PushToggle";
 import { InviteLink } from "@/components/InviteLink";
+import { AvatarUpload } from "@/components/AvatarUpload";
 import { AdminLocalPlayers } from "@/components/AdminLocalPlayers";
 import { getSession } from "@/lib/session";
+import { prisma } from "@/lib/db";
 import { isOwner } from "@/lib/owner";
 
 /** Profile / settings hub — identity, push opt-in, invite, install, account. */
@@ -13,6 +15,12 @@ export default async function ProfilePage() {
   const connected = Boolean(session.steamId);
   const initials = session.displayName.slice(0, 2).toUpperCase();
   const owner = isOwner(session);
+
+  // Local players can set a photo; Steam players show their Steam avatar.
+  const playerRow = await prisma.player.findUnique({
+    where: { id: session.playerId },
+    select: { avatarUrl: true },
+  });
 
   return (
     <>
@@ -34,22 +42,11 @@ export default async function ProfilePage() {
         <span className="br-tr" />
         <span className="br-bl" />
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{
-            width: 56,
-            height: 56,
-            border: "1px solid var(--hair-3)",
-            background: "linear-gradient(135deg, var(--surf-3), var(--surf-2))",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontFamily: "var(--font-display)",
-            fontWeight: 800,
-            fontSize: 22,
-            color: "var(--ink-hi)",
-            flexShrink: 0,
-          }}>
-            {initials}
-          </div>
+          <AvatarUpload
+            initials={initials}
+            initialAvatarUrl={playerRow?.avatarUrl ?? null}
+            editable={!connected}
+          />
           <div style={{ minWidth: 0 }}>
             <p className="font-display" style={{
               fontWeight: 800,
