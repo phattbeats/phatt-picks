@@ -24,6 +24,7 @@ import { assertBigIntString } from "@/lib/bigint";
 import { validatePickAgainstLayout } from "@/lib/layout";
 import { getEffectiveLayout } from "@/lib/layout-state";
 import { isStageWritable } from "@/lib/reveal-core";
+import { lockTimeForSection } from "@/lib/lock-schedule-core";
 
 const EVENT_ID = 26;
 
@@ -64,6 +65,18 @@ export async function POST(req: NextRequest) {
   const section = layout.sections.find((s) => s.sectionid === secId);
   if (!section) {
     return NextResponse.json({ error: `unknown section ${secId}` }, { status: 400 });
+  }
+
+  // Scheduled hard lock (PHA-886): a Swiss stage's pick window closes at its
+  // first match — the committed schedule, validated to Valve's start time. The
+  // committed layout never flips `picks_allowed`, and an outcome row only lands
+  // once a result resolves (~1h+ after first match), so without this a player
+  // could keep editing picks after matches start and game the leaderboard.
+  // lockTimeForSection returns null for playoffs (no published time) — those
+  // still lock via the resolved-outcome check below.
+  const lockAt = lockTimeForSection(secId);
+  if (lockAt && Date.now() >= Date.parse(lockAt)) {
+    return NextResponse.json({ error: "stage_locked" }, { status: 409 });
   }
 
   // A resolved outcome for any slot in this section proves the stage closed,
