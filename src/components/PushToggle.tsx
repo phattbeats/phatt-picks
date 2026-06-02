@@ -18,6 +18,57 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return out;
 }
 
+/**
+ * Get an active service-worker registration without hanging. `serviceWorker.ready`
+ * never resolves if registration failed or hasn't happened yet (PwaRegister swallows
+ * its errors; some browsers/private modes block SWs entirely), which would leave the
+ * UI stuck on "Checking…"/"Enabling…". We (re)register defensively — register() is
+ * idempotent and returns any existing registration — then race readiness against a
+ * timeout so a stuck SW surfaces as a clear, retryable error instead of a spinner.
+ */
+async function getReadyRegistration(timeoutMs = 10_000): Promise<ServiceWorkerRegistration> {
+  try {
+    await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+  } catch {
+    // Non-fatal here: if a registration already exists, `ready` still resolves below.
+  }
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error("the notification service worker didn't start")),
+      timeoutMs,
+    );
+  });
+  try {
+    return await Promise.race([navigator.serviceWorker.ready, timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+/**
+ * Notification.requestPermission has two forms: a Promise (modern) and a legacy
+ * callback (older macOS Safari) that returns undefined. Support both so Safari
+ * users aren't silently treated as "not granted".
+ */
+function requestPermissionCompat(): Promise<NotificationPermission> {
+  try {
+    const maybe = Notification.requestPermission();
+    if (maybe && typeof (maybe as Promise<NotificationPermission>).then === "function") {
+      return maybe as Promise<NotificationPermission>;
+    }
+  } catch {
+    // fall through to the callback form
+  }
+  return new Promise((resolve) => {
+    try {
+      Notification.requestPermission((p) => resolve(p));
+    } catch {
+      resolve(Notification.permission);
+    }
+  });
+}
+
 type State =
   | "loading"
   | "unsupported"
@@ -51,7 +102,10 @@ export function PushToggle() {
   const [note, setNote] = useState<string | null>(null);
 
   const isIos =
-    typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent);
+    typeof navigator !== "undefined" &&
+    (/iphone|ipad|ipod/i.test(navigator.userAgent) ||
+      // iPadOS 13+ reports a desktop "Macintosh" UA; detect it via touch support.
+      (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1));
   const isStandalone =
     typeof window !== "undefined" &&
     (window.matchMedia?.("(display-mode: standalone)").matches ||
@@ -70,25 +124,50 @@ export function PushToggle() {
         if (!cancelled) setState("unsupported");
         return;
       }
+      // Step 1: fetch the VAPID key. A failure here (network/server) is transient,
+      // not "unsupported" — show a retryable message instead of a dead end.
+      let key: string | null;
       try {
         const res = await fetch("/api/push/public-key");
-        const { key } = (await res.json()) as { key: string | null };
-        if (cancelled) return;
-        if (!key) {
-          setState("unconfigured");
-          return;
+        ({ key } = (await res.json()) as { key: string | null });
+      } catch {
+        if (!cancelled) {
+          setNote("Couldn't reach the reminders service. Reload to try again.");
+          setState("idle");
         }
-        setVapidKey(key);
-        if (Notification.permission === "denied") {
-          setState("blocked");
-          return;
-        }
-        const reg = await navigator.serviceWorker.ready;
+        return;
+      }
+      if (cancelled) return;
+      if (!key) {
+        setState("unconfigured");
+        return;
+      }
+      setVapidKey(key);
+      if (Notification.permission === "denied") {
+        setState("blocked");
+        return;
+      }
+
+      // Step 2: read any existing subscription. If the service worker can't be
+      // brought up, push is still supported — let the user tap Enable (which
+      // reports the concrete reason) rather than spinning on "Checking…".
+      try {
+        const reg = await getReadyRegistration();
         const existing = await reg.pushManager.getSubscription();
         if (cancelled) return;
+        if (existing) {
+          // Re-assert the subscription with the server: if the DB was reset or the
+          // record was pruned, the browser still "has" a subscription but no reminder
+          // would ever send. The upsert is idempotent, so this is a safe self-heal.
+          fetch("/api/push/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(existing),
+          }).catch(() => {});
+        }
         setState(existing ? "subscribed" : "idle");
       } catch {
-        if (!cancelled) setState("unsupported");
+        if (!cancelled) setState("idle");
       }
     })();
     return () => {
@@ -101,7 +180,7 @@ export function PushToggle() {
     setBusy(true);
     setNote(null);
     try {
-      const permission = await Notification.requestPermission();
+      const permission = await requestPermissionCompat();
       if (permission !== "granted") {
         setState(permission === "denied" ? "blocked" : "idle");
         if (permission === "default") setNote("Allow notifications when prompted to turn reminders on.");
@@ -119,7 +198,7 @@ export function PushToggle() {
         return;
       }
 
-      const reg = await navigator.serviceWorker.ready;
+      const reg = await getReadyRegistration();
 
       // Subscribe. If a stale subscription with a different key already exists
       // (e.g. the server's VAPID key was rotated), the browser throws
@@ -172,7 +251,7 @@ export function PushToggle() {
     setBusy(true);
     setNote(null);
     try {
-      const reg = await navigator.serviceWorker.ready;
+      const reg = await getReadyRegistration();
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
         await fetch("/api/push/unsubscribe", {
@@ -184,6 +263,8 @@ export function PushToggle() {
       }
       setState("idle");
       setNote("Reminders off.");
+    } catch {
+      setNote("Couldn't turn reminders off just now. Try again.");
     } finally {
       setBusy(false);
     }
@@ -212,7 +293,7 @@ export function PushToggle() {
     return (
       <p style={{ color: "var(--text-low)", fontSize: "0.8125rem" }}>
         This browser can&apos;t do push reminders.
-        {isIos && !isStandalone && " On iPhone, add phaTT Picks to your Home Screen first."}
+        {isIos && !isStandalone && " On iPhone/iPad, add phaTT Picks to your Home Screen first, then open it from that icon."}
       </p>
     );
   }
@@ -235,7 +316,7 @@ export function PushToggle() {
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
       {isIos && !isStandalone && (
         <p style={{ color: "var(--closing-soon)", fontSize: "0.8125rem", margin: 0 }}>
-          iPhone: add to Home Screen and open from that icon first, or reminders won&apos;t arrive.
+          iPhone/iPad: add to Home Screen and open from that icon first, or reminders won&apos;t arrive.
         </p>
       )}
       {state === "idle" ? (
