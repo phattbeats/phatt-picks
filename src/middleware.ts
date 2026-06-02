@@ -18,8 +18,12 @@ const SESSION_COOKIE = "phatt_session";
 
 // Paths that ARE the gate (or the step just past it) — never redirect these,
 // and treat reaching the sign-in surface as "entered".
+//
+// `/join/<code>` is its own front door: an invite link is how a brand-new
+// visitor arrives, so it must never be bounced to the splash (that would eat
+// the invite). Reaching it counts as entering.
 const SPLASH_PATH = "/login";
-const PASS_THROUGH = ["/login/auth", "/login/local"];
+const PASS_THROUGH = ["/login/auth", "/login/local", "/join"];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
