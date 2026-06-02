@@ -104,25 +104,65 @@ export function PushToggle() {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
         setState(permission === "denied" ? "blocked" : "idle");
+        if (permission === "default") setNote("Allow notifications when prompted to turn reminders on.");
         return;
       }
+
+      // Decode the server's VAPID key up front. A quote-wrapped/truncated key
+      // (a known Unraid env gotcha) fails here — call it out clearly rather than
+      // letting it surface as a generic "subscribe failed" later.
+      let appServerKey: Uint8Array;
+      try {
+        appServerKey = urlBase64ToUint8Array(vapidKey);
+      } catch {
+        setNote("Reminders are misconfigured on the server (bad notification key). We're on it.");
+        return;
+      }
+
       const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        // Uint8Array is a valid BufferSource at runtime; the cast sidesteps the
-        // SharedArrayBuffer-vs-ArrayBuffer strictness in lib.dom.
-        applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource,
-      });
+
+      // Subscribe. If a stale subscription with a different key already exists
+      // (e.g. the server's VAPID key was rotated), the browser throws
+      // InvalidStateError — drop the old one and try once more.
+      let sub: PushSubscription;
+      try {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          // Uint8Array is a valid BufferSource at runtime; the cast sidesteps the
+          // SharedArrayBuffer-vs-ArrayBuffer strictness in lib.dom.
+          applicationServerKey: appServerKey as BufferSource,
+        });
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "InvalidStateError") {
+          const stale = await reg.pushManager.getSubscription();
+          await stale?.unsubscribe().catch(() => {});
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: appServerKey as BufferSource,
+          });
+        } else {
+          throw err;
+        }
+      }
+
       const res = await fetch("/api/push/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(sub),
       });
-      if (!res.ok) throw new Error("subscribe failed");
+      if (!res.ok) {
+        // Saving the subscription failed — surface why so it's diagnosable. 401
+        // means the session lapsed (sign in again); anything else is a server error.
+        throw new Error(res.status === 401 ? "your session expired — sign in again" : `server error ${res.status}`);
+      }
       setState("subscribed");
       setNote("Reminders on. You'll get a 24-hour and 1-hour warning before each stage locks.");
-    } catch {
-      setNote("Couldn't enable reminders. Try again, or check notification settings.");
+    } catch (err) {
+      // Include the concrete reason: the generic message hid real failures
+      // (blocked push service, bad key, lapsed session) and made this unfixable.
+      const reason =
+        err instanceof DOMException ? err.name : err instanceof Error ? err.message : "unknown error";
+      setNote(`Couldn't enable reminders (${reason}). Try again, or check notification settings.`);
     } finally {
       setBusy(false);
     }
