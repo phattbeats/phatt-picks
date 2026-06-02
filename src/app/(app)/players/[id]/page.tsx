@@ -20,6 +20,7 @@ import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
 import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
+import { buildConsensus, consensusKey, shareFor } from "@/lib/consensus-core";
 import type { Section } from "@/lib/layout";
 
 const EVENT_ID = 26;
@@ -98,6 +99,10 @@ export default async function PlayerProfilePage({
     where: { eventId: EVENT_ID },
     select: { playerId: true, sectionId: true, groupId: true, slotIndex: true, pickId: true },
   });
+  // Field-wide pick distribution per slot (PHA-889). Only surfaced on revealed
+  // (post-lock) groups below, so it never leaks live picks or invites herding.
+  const consensus = buildConsensus(allPicks);
+
   const everyPickMap: PlayerPickMap = {};
   for (const p of allPicks) {
     everyPickMap[p.playerId] ??= {};
@@ -249,12 +254,11 @@ export default async function PlayerProfilePage({
 
               {section.groups.map((group) => {
                 // Self always sees own picks; others wait for stage lock.
-                const revealed =
-                  isSelf ||
-                  arePicksRevealed(
-                    group,
-                    groupHasOutcome.has(groupOutcomeKey(section.sectionid, group.groupid)),
-                  );
+                const lockRevealed = arePicksRevealed(
+                  group,
+                  groupHasOutcome.has(groupOutcomeKey(section.sectionid, group.groupid)),
+                );
+                const revealed = isSelf || lockRevealed;
                 const groupPicks = pickMap[section.sectionid]?.[group.groupid] ?? {};
                 const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
 
@@ -287,6 +291,13 @@ export default async function PlayerProfilePage({
                             const hit = winner !== undefined && pick === winner;
                             const wrong = winner !== undefined && pick !== undefined && pick !== winner;
                             const typeLabel = bucketLabelFor(section.sectionid, group, slot.index);
+                            // Consensus % stays gated on the LOCK (not isSelf): showing the
+                            // field split while a stage is still open invites herd-following
+                            // even on your own profile (PHA-889). Your pick still shows; only
+                            // the % waits for lock — same discipline as the reveal gate.
+                            const share = pick && lockRevealed
+                              ? shareFor(consensus, section.sectionid, group.groupid, slot.index, pick)
+                              : null;
                             return (
                               <div
                                 key={slot.index}
@@ -306,6 +317,11 @@ export default async function PlayerProfilePage({
                                     </span>
                                   )}
                                 </span>
+                                {share && (
+                                  <span className="pickcard-share" title={`${share.count} of ${consensus.get(consensusKey(section.sectionid, group.groupid, slot.index))?.total ?? share.count} players`}>
+                                    <b>{share.pct}%</b> of field
+                                  </span>
+                                )}
                               </div>
                             );
                           })}

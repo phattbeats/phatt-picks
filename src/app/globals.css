@@ -662,6 +662,12 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .pickcard-icon { font-size: 11px; font-weight: 700; }
 .pickcard-icon.correct { color: var(--tac-green); }
 .pickcard-icon.wrong { color: var(--ink-low); }
+/* Field-share line (PHA-889) — "% of the field made this same pick". */
+.pickcard-share {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink-low); text-align: center;
+}
+.pickcard-share b { color: var(--heat); font-weight: 600; }
 
 /* ── LEADERBOARD PODIUM (mockup 04) ────────────────────────────────────── */
 .podium { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; align-items: end; }
@@ -855,6 +861,44 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .dir-rk { font-family: var(--font-mono); font-size: 12px; color: var(--heat); text-align: center; }
 .dir-av { width: 34px; height: 34px; border-radius: var(--r-sm); border: 1px solid var(--hair-2); overflow: hidden; background: linear-gradient(135deg, var(--surf-3), var(--surf-2)); display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: 12px; color: var(--ink-mid); }
 .dir-sc { font-family: var(--font-mono); font-weight: 600; font-size: 16px; color: var(--ink-hi); }
+
+/* Pick consensus (PHA-889) — field-wide "X% picked this team" split. */
+.consensus { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+.consensus-head { display: flex; align-items: baseline; justify-content: space-between; }
+.consensus-lbl {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--ink-low);
+}
+.consensus-n {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-low);
+}
+.consensus-row {
+  position: relative; display: flex; align-items: center; gap: 8px;
+  padding: 5px 8px; border: 1px solid var(--hair); background: var(--surf-1);
+  overflow: hidden;
+}
+.consensus-fill {
+  position: absolute; inset: 0 auto 0 0; height: 100%;
+  background: rgba(240,163,0,0.10); border-right: 1px solid rgba(240,163,0,0.22);
+  z-index: 0;
+}
+.consensus-row.you { border-color: var(--hair-3); }
+.consensus-row.you .consensus-fill { background: rgba(240,163,0,0.18); border-right-color: var(--heat); }
+.consensus-row.win .consensus-fill { background: rgba(155,210,60,0.12); border-right-color: rgba(155,210,60,0.4); }
+.consensus-row > :not(.consensus-fill) { position: relative; z-index: 1; }
+.consensus-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--surf-3); flex-shrink: 0; }
+.consensus-name {
+  flex: 1; min-width: 0; font-size: 12px; color: var(--ink-hi);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.consensus-check { color: var(--tac-green); font-weight: 700; }
+.consensus-you { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; color: var(--heat); }
+.consensus-pct { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--ink-hi); flex-shrink: 0; }
+.consensus-more {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--ink-low); padding: 2px 8px;
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; }
