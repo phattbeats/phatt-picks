@@ -14,6 +14,7 @@ import { prisma } from "@/lib/db";
 import { getCommittedLayout, buildTeamMap } from "@/lib/layout";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
 import { arePicksRevealed, groupOutcomeKey } from "@/lib/reveal-core";
+import { isLockTimePassed } from "@/lib/lock-schedule-core";
 import { visibleCoinTier } from "@/lib/coin-core";
 import { getSession } from "@/lib/session";
 import { TeamLogo } from "@/components/ui/TeamLogo";
@@ -61,6 +62,11 @@ export default async function PlayerProfilePage({
   const teamMap = buildTeamMap(layout);
   const session = await getSession();
   await refreshOutcomesOnRead(EVENT_ID); // live driver (PHA-866) — shared 30s claim
+
+  // Published lock schedule (PHA-898): reveal a started stage's picks even before
+  // Valve flips picks_allowed or a result lands. Dynamic RSC — time read intended.
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now();
 
   const player = await prisma.player.findUnique({ where: { id } });
   if (!player) notFound();
@@ -257,6 +263,7 @@ export default async function PlayerProfilePage({
                 const lockRevealed = arePicksRevealed(
                   group,
                   groupHasOutcome.has(groupOutcomeKey(section.sectionid, group.groupid)),
+                  isLockTimePassed(section.sectionid, nowMs),
                 );
                 const revealed = isSelf || lockRevealed;
                 const groupPicks = pickMap[section.sectionid]?.[group.groupid] ?? {};

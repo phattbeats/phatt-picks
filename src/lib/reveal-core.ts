@@ -5,10 +5,20 @@
  * editing. They become public only once the stage is LOCKED. Scores are
  * always public — only the underlying team choices are masked pre-lock.
  *
- * "Lock" maps to the layout's `picks_allowed` flag: while picks are allowed
- * the stage is open (hide); once Valve flips it off the stage is locked
- * (reveal). A resolved outcome is treated as proof of lock too — you cannot
- * have a result for a stage whose picks are still editable.
+ * "Lock" maps to three signals, any of which closes the editing window:
+ *   - the layout's `picks_allowed` flag flips off (Valve closes the window), or
+ *   - a resolved outcome exists (you can't have a result for an editable stage), or
+ *   - the published lock instant has passed — the stage has begun (PHA-898).
+ * The third matters because our committed fixture is frozen all-open and an
+ * outcome row lands ~1h+ after the first match, so without it a stage that has
+ * STARTED would stay "open" to the reveal gate: picks neither editable (the
+ * write guard / picks UI already lock on time) NOR comparable (hidden here) —
+ * the dead zone Brandon hit on the Compare page the moment Stage I began.
+ *
+ * INVARIANT (the design rule, verified in verify-reveal-gate): a stage is
+ * revealed iff it is NOT writable. The three functions below are exact De
+ * Morgan inverses of each other on the same inputs, so adding `lockedByTime` to
+ * one without the others can never open a leak or a dead zone.
  *
  * Pure module (no `@/` alias, no prisma, no fetch) so the verify script can
  * import it directly under `node` without the Next path-alias resolver.
@@ -21,17 +31,26 @@ export interface LockableGroup {
 /**
  * Is this group's stage locked (picks editable window closed)?
  * `hasResolvedOutcome` = at least one slot in the group already has a result.
+ * `lockedByTime` = the section's published lock instant has passed (PHA-898).
  */
-export function isStageLocked(group: LockableGroup, hasResolvedOutcome = false): boolean {
-  return group.picks_allowed === false || hasResolvedOutcome === true;
+export function isStageLocked(
+  group: LockableGroup,
+  hasResolvedOutcome = false,
+  lockedByTime = false,
+): boolean {
+  return group.picks_allowed === false || hasResolvedOutcome === true || lockedByTime === true;
 }
 
 /**
  * Should a player's pick for this group be revealed to others?
  * Identical to lock state — the default is to hide; revealing is the exception.
  */
-export function arePicksRevealed(group: LockableGroup, hasResolvedOutcome = false): boolean {
-  return isStageLocked(group, hasResolvedOutcome);
+export function arePicksRevealed(
+  group: LockableGroup,
+  hasResolvedOutcome = false,
+  lockedByTime = false,
+): boolean {
+  return isStageLocked(group, hasResolvedOutcome, lockedByTime);
 }
 
 /**
@@ -52,6 +71,10 @@ export function groupOutcomeKey(sectionId: number, groupId: number): string {
  * The write path uses this to reject POST /api/picks once the stage closes —
  * "saving a pick == locking it" only makes sense while writes are accepted.
  */
-export function isStageWritable(group: LockableGroup, hasResolvedOutcome = false): boolean {
-  return group.picks_allowed === true && hasResolvedOutcome !== true;
+export function isStageWritable(
+  group: LockableGroup,
+  hasResolvedOutcome = false,
+  lockedByTime = false,
+): boolean {
+  return group.picks_allowed === true && hasResolvedOutcome !== true && lockedByTime !== true;
 }

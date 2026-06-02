@@ -17,8 +17,11 @@ import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring"
 import { arePicksRevealed, groupOutcomeKey } from "@/lib/reveal-core";
 import { getSession } from "@/lib/session";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
+import { isLockTimePassed } from "@/lib/lock-schedule-core";
 
 const EVENT_ID = 26;
+
+export const dynamic = "force-dynamic";
 
 
 function toPlayerPickMap(picks: { sectionId: number; groupId: number; slotIndex: number; pickId: number }[]): PlayerPickMap[string] {
@@ -41,6 +44,12 @@ export default async function ComparePage({
   const teamMap = buildTeamMap(layout);
   const session = await getSession();
   await refreshOutcomesOnRead(EVENT_ID); // live driver (PHA-866) — shared 30s claim
+
+  // Per-request server clock for the published lock schedule (PHA-898): a stage
+  // that has begun reveals its picks for comparison even before Valve flips
+  // picks_allowed or a result lands. Dynamic RSC, so reading the time is intended.
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now();
 
   const players = await prisma.player.findMany({ orderBy: { displayName: "asc" } });
 
@@ -247,6 +256,7 @@ export default async function ComparePage({
                 const revealed = arePicksRevealed(
                   group,
                   groupHasOutcome.has(groupOutcomeKey(section.sectionid, group.groupid)),
+                  isLockTimePassed(section.sectionid, nowMs),
                 );
                 const aGroup = aPicksMap[section.sectionid]?.[group.groupid] ?? {};
                 const bGroup = bPicksMap[section.sectionid]?.[group.groupid] ?? {};

@@ -17,7 +17,7 @@
  * Run: node scripts/verify-reveal-gate.ts
  */
 
-import { arePicksRevealed, groupOutcomeKey } from "../src/lib/reveal-core.ts";
+import { arePicksRevealed, groupOutcomeKey, isStageLocked, isStageWritable } from "../src/lib/reveal-core.ts";
 
 let pass = 0;
 let fail = 0;
@@ -115,6 +115,49 @@ check(
   "section-qualified pick map keeps section 2's pick separate",
   sectionPickMap[2][REUSED_GROUPID][0] === 2002,
 );
+
+console.log("\nreveal-gate - schedule lock reveals a started stage (PHA-898)");
+
+// The Compare/players pages showed "Picks hidden until this stage locks" for a
+// stage that had BEGUN (Brandon's report): the committed fixture is all-open
+// (picks_allowed:true) and no outcome row had landed yet, so the old 2-arg gate
+// kept it hidden. With the lockedByTime signal, a started stage reveals.
+const openGroup = { groupid: 271, picks_allowed: true };
+check(
+  "open + no outcome + not-yet-locked-by-time -> hidden",
+  arePicksRevealed(openGroup, false, false) === false,
+);
+check(
+  "open + no outcome + lock time PASSED -> revealed (the Compare fix)",
+  arePicksRevealed(openGroup, false, true) === true,
+);
+check(
+  "isStageLocked agrees: lockedByTime closes the window",
+  isStageLocked(openGroup, false, true) === true,
+);
+
+console.log("\nreveal-gate - INVARIANT: revealed === !writable across all input combos");
+
+// The three gate fns must be exact inverses so adding lockedByTime can never
+// create a leak (revealed while writable) or a dead zone (hidden AND not
+// writable — exactly what Brandon hit). Exhaustively check the truth table.
+let invariantHolds = true;
+const dead: string[] = [];
+for (const picks_allowed of [true, false]) {
+  for (const outcome of [false, true]) {
+    for (const byTime of [false, true]) {
+      const g = { groupid: 271, picks_allowed };
+      const revealed = arePicksRevealed(g, outcome, byTime);
+      const writable = isStageWritable(g, outcome, byTime);
+      if (revealed === writable) {
+        invariantHolds = false;
+        dead.push(`picks_allowed=${picks_allowed} outcome=${outcome} byTime=${byTime}: revealed=${revealed} writable=${writable}`);
+      }
+    }
+  }
+}
+check("revealed === !writable for all 8 input combinations (no leak, no dead zone)", invariantHolds);
+if (!invariantHolds) for (const d of dead) console.error("    VIOLATION: " + d);
 
 console.log("\n" + pass + "/" + (pass + fail) + " checks passed");
 process.exit(fail === 0 ? 0 : 1);

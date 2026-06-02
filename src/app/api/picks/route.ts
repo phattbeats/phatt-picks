@@ -77,9 +77,11 @@ export async function POST(req: NextRequest) {
   // The committed fixture is frozen all-open, so `picks_allowed` never flips for
   // it. Once a stage's published lock instant passes it has begun — reject the
   // write so a crafted POST can't slip a pick past the (now Locked) UI (PHA-898).
+  // Same lockedByTime signal the reveal gate uses, so writable and revealed stay
+  // exact inverses (no edit-but-can't-compare dead zone).
   const lockedByTime = isLockTimePassed(secId, Date.now());
 
-  if (lockedByTime || section.groups.some((g) => !isStageWritable(g, hasOutcome))) {
+  if (section.groups.some((g) => !isStageWritable(g, hasOutcome, lockedByTime))) {
     return NextResponse.json({ error: "stage_locked" }, { status: 409 });
   }
 
