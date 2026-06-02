@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { getCommittedLayout, buildTeamMap } from "@/lib/layout";
+import { buildTeamMap } from "@/lib/layout";
+import { getEffectiveLayout, refreshLayoutOnRead } from "@/lib/layout-state";
 import { getSession } from "@/lib/session";
 import { hasAuthCode } from "@/lib/authcode";
 import { prisma } from "@/lib/db";
@@ -27,7 +28,8 @@ export default async function PicksPage({
   searchParams: Promise<{ section?: string }>;
 }) {
   const params = await searchParams;
-  const layout = getCommittedLayout();
+  await refreshLayoutOnRead(EVENT_ID); // live driver — throttled, deferred past render
+  const layout = await getEffectiveLayout(EVENT_ID);
   const session = await getSession();
 
   if (session?.steamId) {

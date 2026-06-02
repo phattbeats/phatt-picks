@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
 import type { TeamDef } from "@/lib/layout";
@@ -16,6 +17,12 @@ interface Props {
  * matches. Deliberately off-board: nothing here renders on the pickems stage by
  * default; it surfaces only when a scout taps the [i] on a team. Pure-data
  * backed (team-stats-core), so it degrades to "no stats yet" for TBD slots.
+ *
+ * PHA-897: rendered through a body portal. PicksBoard lives inside `main.shell`,
+ * which is a `z-index: 3` stacking context — so an in-tree backdrop's `z-index`
+ * is trapped below it and the root-level `.botnav` (z-index 50) painted over the
+ * bottom of the panel on mobile, clipping the last match + footer. Portaling to
+ * <body> lifts the modal out of that context so the backdrop covers everything.
  */
 export function TeamStatsDrawer({ team, onClose }: Props) {
   // Esc closes — modal convention; backdrop click also closes.
@@ -29,7 +36,11 @@ export function TeamStatsDrawer({ team, onClose }: Props) {
 
   const stats = statsForPickid(team.pickid);
 
-  return (
+  // Only ever rendered client-side (opened by a tap, so absent from SSR output);
+  // bail if document is somehow unavailable rather than crash createPortal.
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div
       className="tsd-backdrop"
       role="dialog"
@@ -100,6 +111,7 @@ export function TeamStatsDrawer({ team, onClose }: Props) {
 
         <p className="tsd-foot">World ranking &amp; results via HLTV · snapshot {TEAM_STATS_AS_OF}</p>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

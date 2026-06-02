@@ -28,6 +28,7 @@ import {
 } from "./outcomes-core";
 import { fetchLiquipediaResults, LiquipediaThrottledError } from "./liquipedia";
 import { fetchTournamentLayout } from "./valve";
+import { cacheLiveLayout } from "./layout-state";
 import { writeRankSnapshots } from "./rank-snapshot";
 import { isLockTimePassed } from "./lock-schedule-core";
 
@@ -69,6 +70,10 @@ async function tryValveOracle(eventId: number): Promise<RawResolvedSlot[] | null
     const envelope = await fetchTournamentLayout(eventId);
     const live = envelope?.result;
     if (!live?.sections) return null;
+    // Free overlay refresh (PHA-896): this same payload carries the live seeded
+    // teams + picks_allowed the picks UI overlays. Cache it while we have it so
+    // an outcomes tick also advances the layout state. Non-fatal.
+    await cacheLiveLayout(eventId, envelope).catch(() => {});
     const { resolved, ambiguous } = resolveOutcomesFromLayout(live);
     if (ambiguous.length > 0) {
       console.warn(
