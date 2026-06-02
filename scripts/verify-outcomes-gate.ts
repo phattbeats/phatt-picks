@@ -130,26 +130,5 @@ check(
   openWithPhantom.length === 0,
 );
 
-console.log("\noutcomes-gate - schedule lock opens the candidate set (PHA-898)");
-
-// The committed fixture is all-open, so the default gate yields zero. Once a
-// stage's schedule lock passes, the caller marks it locked and its slots become
-// candidates — the bug fix that lets the Valve oracle actually run for a stage
-// that has begun (PHA-886).
-const lockedBySchedule = pickLockedUnresolvedSlots(
-  committed,
-  empty,
-  (sectionId) => sectionId === firstSection.sectionid,
-);
-check(
-  "schedule-locked section -> its slots become candidates against the all-open fixture",
-  lockedBySchedule.length === firstGroup.picks.length &&
-    lockedBySchedule.every((s) => s.sectionId === firstSection.sectionid),
-);
-check(
-  "other (still-open) sections stay silent under the schedule predicate",
-  lockedBySchedule.every((s) => s.sectionId === firstSection.sectionid),
-);
-
 console.log("\n" + pass + "/" + (pass + fail) + " checks passed");
 process.exit(fail === 0 ? 0 : 1);

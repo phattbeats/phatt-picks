@@ -59,6 +59,12 @@ export default async function PicksPage({
 
   const section = layout.sections.find((s) => s.sectionid === activeSectionId);
 
+  // Scheduled hard lock (PHA-886/898): once a stage's first match starts, its
+  // pick window is closed — even though the committed layout still says
+  // picks_allowed and an outcome row hasn't landed yet. The published schedule
+  // is the truthful signal; the gate surfaces `locked-time-passed` (friendlier
+  // copy that introduces the live lineup below) and POST /api/picks mirrors the
+  // same lock. Playoffs have no published time (null) → unaffected.
   const sectionPickability: Map<number, StagePickability> = new Map(
     layout.sections.map((s) => [
       s.sectionid,
