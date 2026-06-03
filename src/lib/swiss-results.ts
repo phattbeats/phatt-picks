@@ -36,6 +36,7 @@ import {
   type RawSwissRound,
   type SwissRound,
 } from "./swiss-bracket-core";
+import { isWithinMatchWindow } from "./lock-schedule-core";
 
 // crawl4ai on the phattvip network. Same hostname resolves in the workspace and
 // in the deployed container; CRAWL4AI_URL overrides for other topologies.
@@ -218,9 +219,20 @@ async function ingestStandings(eventId: number, sectionId: number): Promise<numb
  * so it never adds page latency. The <AutoRefresh> sibling re-renders the route,
  * so a cold first paint that shows nothing fills in within a minute. Never
  * throws. No cron needed — and the ingest route is owner-gated anyway.
+ *
+ * Gated to the stage's committed competition window (PHA-902): the live data only
+ * changes while games are being played, so off-days (before the stage, after it's
+ * decided, between stages) serve the last cache and never crawl. Brandon: "hourly
+ * refresh is also only needed on dates where games are being played." `nowMs` is
+ * injected from the render so the gate shares the page's request clock.
  */
-export async function refreshStandingsOnRead(eventId: number, sectionId: number): Promise<void> {
+export async function refreshStandingsOnRead(
+  eventId: number,
+  sectionId: number,
+  nowMs: number = Date.now(),
+): Promise<void> {
   if (!hasStandingsSource(sectionId)) return; // nothing to refresh
+  if (!isWithinMatchWindow(sectionId, nowMs)) return; // off-day — serve cache, don't crawl
   if (!(await claimStandingsRefreshSlot())) return; // within floor or lost the race
   runDeferred(() => ingestStandings(eventId, sectionId));
 }

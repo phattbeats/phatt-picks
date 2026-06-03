@@ -103,7 +103,7 @@ export default async function PicksPage({
   let liveStandings: Awaited<ReturnType<typeof getSwissStandings>> = null;
   let liveBracket: Awaited<ReturnType<typeof getSwissBracket>> = null;
   if (showLineup && section) {
-    await refreshStandingsOnRead(EVENT_ID, activeSectionId); // ~1h claim, deferred crawl
+    await refreshStandingsOnRead(EVENT_ID, activeSectionId, nowMs); // ~1h claim on match days, deferred crawl
     const matchTeams = layout.teams.map((t) => ({ pickid: t.pickid, name: t.name }));
     liveBracket = await getSwissBracket(EVENT_ID, activeSectionId, matchTeams);
     liveStandings = await getSwissStandings(EVENT_ID, activeSectionId, matchTeams);
