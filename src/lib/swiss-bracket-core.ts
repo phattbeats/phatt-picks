@@ -42,13 +42,15 @@ function normalizeTeamName(raw: string): string {
 }
 
 /**
- * What's at stake in a round column, the way HLTV/cs.money label it:
- *   advancing  — winning here clinches a spot (a Bo3 whose winner reaches 3 wins)
- *   eliminated — losing here ends the run (a Bo3 whose loser reaches 3 losses)
- *   both       — both at once (the 2:2 decider: winner advances, loser is out)
- *   contention — an early progression match, neither outcome is terminal
+ * A column's standing, by the RECORD it represents — the same 3:0 / 0:3 buckets
+ * the rest of the app uses (PHA-898's "3:0 ADVANCED" / "0:3 ELIMINATED", the W-L
+ * table's status):
+ *   advancing  — a 3-win record (3:0 / 3:1 / 3:2): these teams are THROUGH
+ *   eliminated — a 3-loss record (0:3 / 1:3 / 2:3): these teams are OUT
+ *   contention — still playing (0:0 … 2:2): NOT yet advanced or eliminated
+ * Brandon: advancing/eliminated is 3-0 and 0-3, NOT the 2-0 / 0-2 deciding match.
  */
-export type BracketRoundKind = "advancing" | "eliminated" | "both" | "contention";
+export type BracketRoundKind = "advancing" | "eliminated" | "contention";
 
 /** One side of a match before layout matching (straight from HLTV). */
 export interface RawBracketSide {
@@ -71,34 +73,45 @@ export interface RawBracketMatch {
   startTimeMs: number | null;
 }
 
+/** A team sitting in a terminal column (advanced / eliminated), pre layout match. */
+export interface RawBracketTeam {
+  name: string;
+  hltvId: number | null;
+}
+
 export interface RawSwissRound {
-  /** HLTV round label, e.g. "0:0", "2:0", "0:2". */
+  /** HLTV round label, e.g. "0:0", "2:0", "0:2", "3:0", "0:3". */
   label: string;
   kind: BracketRoundKind;
+  /** Match cells — present on contention columns (the rounds still being played). */
   matches: RawBracketMatch[];
+  /** Settled teams — present on terminal columns (3:0 advanced / 0:3 eliminated). */
+  teams: RawBracketTeam[];
 }
 
 /** A side after matching to the committed layout (adds the pickid for logos). */
 export interface BracketSide extends RawBracketSide {
   pickid: number | null;
 }
+export interface BracketTeam extends RawBracketTeam {
+  pickid: number | null;
+}
 export interface BracketMatch extends Omit<RawBracketMatch, "team1" | "team2"> {
   team1: BracketSide;
   team2: BracketSide;
 }
-export interface SwissRound extends Omit<RawSwissRound, "matches"> {
+export interface SwissRound extends Omit<RawSwissRound, "matches" | "teams"> {
   matches: BracketMatch[];
+  teams: BracketTeam[];
 }
 
 /**
- * Classify a round column ("W:L") by what its matches DECIDE — matching how
- * HLTV/cs.money head the columns. A match in column W:L sends its winner to W+1
- * and its loser to L+1, so it's an ADVANCING match when the winner reaches the
- * advance threshold (W+1 ≥ advanceAt → e.g. 2:0, 2:1) and an ELIMINATED match
- * when the loser reaches the elimination threshold (L+1 ≥ eliminateAt → e.g.
- * 0:2, 1:2); the 2:2 decider is BOTH. Early progression matches (0:0, 1:0, 1:1)
- * are contention. Thresholds are parameterized for non-3-win Swiss formats. A
- * label we can't parse is contention (never falsely tells someone they're out).
+ * Classify a round column ("W:L") by its RECORD: a 3-win record advances (3:0 /
+ * 3:1 / 3:2), a 3-loss record is eliminated (0:3 / 1:3 / 2:3), everything else
+ * (0:0 … 2:2) is still in contention. This matches the rest of the app — a team
+ * is "advanced" only once it actually has 3 wins, not while it's a 2-0 still
+ * playing its deciding Bo3. Thresholds are parameterized for non-3-win Swiss
+ * formats. A label we can't parse is contention (never falsely says "out").
  */
 export function bracketRoundKind(
   label: string,
@@ -109,11 +122,8 @@ export function bracketRoundKind(
   if (!m) return "contention";
   const wins = Number(m[1]);
   const losses = Number(m[2]);
-  const decidesAdvance = wins + 1 >= advanceAt;
-  const decidesElim = losses + 1 >= eliminateAt;
-  if (decidesAdvance && decidesElim) return "both";
-  if (decidesAdvance) return "advancing";
-  if (decidesElim) return "eliminated";
+  if (wins >= advanceAt) return "advancing";
+  if (losses >= eliminateAt) return "eliminated";
   return "contention";
 }
 
@@ -167,20 +177,39 @@ function decodeEntities(s: string): string {
 
 const TITLE_RE = /swiss-visual-matchups-title">\s*([^<]+?)\s*</g;
 const POPUP_RE = /data-match-details-popup-json="([\s\S]*?)"/g;
+// Terminal columns (3:0 advanced / 0:3 eliminated) list settled teams in a
+// `swiss-matchups-team-wrapper`; each team is an <img class="swiss-visual-team-
+// logo" ... title="TeamName">. Unfilled slots are `title="?"` placeholders.
+// Match-cell logos use the same class but live in a `swiss-visual-matchups-
+// wrapper`, so we scope each team-wrapper to [start, next wrapper marker) and
+// only read titles inside it — never double-counting the still-playing teams.
+const TEAM_WRAPPER_RE = /swiss-matchups-team-wrapper"/g;
+const WRAPPER_BOUNDARY_RE = /swiss-(?:matchups-team-wrapper|visual-matchups-wrapper)"/g;
+const TEAM_TITLE_RE = /swiss-visual-team-logo"[^>]*\btitle="([^"]*)"/g;
+
+/** Nearest preceding round label for a document position. */
+function labelAt(pos: number, titles: { pos: number; label: string }[]): string {
+  let label = titles[0].label;
+  for (const t of titles) {
+    if (t.pos <= pos) label = t.label;
+    else break;
+  }
+  return label;
+}
 
 /**
  * Parse HLTV's Swiss bracket out of the rendered event-page HTML. Walks the
- * round-title markers and the match-popup JSON blobs in document order, grouping
- * each match under the most recent round label. Returns rounds with at least one
- * parseable match, in source order (which is already the natural 0:0 → … flow).
+ * round-title markers and, per round, the match-popup JSON blobs (contention
+ * columns still being played) AND the settled teams in terminal columns (3:0
+ * advanced / 0:3 eliminated). Each cell is grouped under its nearest preceding
+ * round label, in source order (the natural 0:0 → … 3:0 / 0:3 flow). Returns
+ * only rounds that have at least one match or one real (non-placeholder) team.
  * Never throws: malformed JSON for a cell is skipped; no bracket at all → [].
  */
 export function parseSwissBracket(
   html: string,
   opts: { advanceAt?: number; eliminateAt?: number } = {},
 ): RawSwissRound[] {
-  // Collect (position, label) for titles and (position, json) for matches, then
-  // assign each match to the nearest preceding title.
   const titles: { pos: number; label: string }[] = [];
   for (const m of html.matchAll(TITLE_RE)) {
     const label = m[1].trim();
@@ -188,16 +217,19 @@ export function parseSwissBracket(
   }
   if (titles.length === 0) return [];
 
-  const byLabel = new Map<string, RawBracketMatch[]>();
+  const matchesByLabel = new Map<string, RawBracketMatch[]>();
+  const teamsByLabel = new Map<string, RawBracketTeam[]>();
   const order: string[] = [];
-  for (const m of html.matchAll(POPUP_RE)) {
-    const pos = m.index ?? 0;
-    // nearest preceding title
-    let label = titles[0].label;
-    for (const t of titles) {
-      if (t.pos <= pos) label = t.label;
-      else break;
+  const see = (label: string) => {
+    if (!matchesByLabel.has(label)) {
+      matchesByLabel.set(label, []);
+      teamsByLabel.set(label, []);
+      order.push(label);
     }
+  };
+
+  // 1. Match cells (contention columns).
+  for (const m of html.matchAll(POPUP_RE)) {
     let parsed: RawBracketMatch | null = null;
     try {
       parsed = matchFromPopup(JSON.parse(decodeEntities(m[1])) as PopupJson);
@@ -205,17 +237,31 @@ export function parseSwissBracket(
       parsed = null;
     }
     if (!parsed) continue;
-    if (!byLabel.has(label)) {
-      byLabel.set(label, []);
-      order.push(label);
+    const label = labelAt(m.index ?? 0, titles);
+    see(label);
+    matchesByLabel.get(label)!.push(parsed);
+  }
+
+  // 2. Settled teams in terminal columns (advanced / eliminated). Each wrapper
+  // owns the team titles from its start up to the next wrapper marker.
+  const boundaries = [...html.matchAll(WRAPPER_BOUNDARY_RE)].map((m) => m.index ?? 0);
+  for (const w of html.matchAll(TEAM_WRAPPER_RE)) {
+    const start = w.index ?? 0;
+    const end = boundaries.find((b) => b > start) ?? html.length;
+    const label = labelAt(start, titles);
+    for (const t of html.slice(start, end).matchAll(TEAM_TITLE_RE)) {
+      const name = decodeEntities(t[1]).trim();
+      if (!name || name === "?") continue; // unfilled placeholder slot
+      see(label);
+      teamsByLabel.get(label)!.push({ name, hltvId: null });
     }
-    byLabel.get(label)!.push(parsed);
   }
 
   return order.map((label) => ({
     label,
     kind: bracketRoundKind(label, opts.advanceAt, opts.eliminateAt),
-    matches: byLabel.get(label)!,
+    matches: matchesByLabel.get(label)!,
+    teams: teamsByLabel.get(label)!,
   }));
 }
 
@@ -247,22 +293,32 @@ export function matchBracketToLayout(
       team1: matchSide(mt.team1, byNorm),
       team2: matchSide(mt.team2, byNorm),
     })),
+    teams: r.teams.map((t) => ({
+      ...t,
+      pickid: byNorm.get(normalizeTeamName(t.name)) ?? null,
+    })),
   }));
 }
 
-/** Count played vs scheduled across the whole bracket (for header copy / hiding). */
+/** Count played/scheduled matches + settled teams across the bracket. */
 export function bracketSummary(rounds: readonly SwissRound[]): {
   rounds: number;
   matches: number;
   played: number;
+  advanced: number;
+  eliminated: number;
 } {
   let matches = 0;
   let played = 0;
+  let advanced = 0;
+  let eliminated = 0;
   for (const r of rounds) {
     for (const mt of r.matches) {
       matches++;
       if (mt.played) played++;
     }
+    if (r.kind === "advancing") advanced += r.teams.length;
+    if (r.kind === "eliminated") eliminated += r.teams.length;
   }
-  return { rounds: rounds.length, matches, played };
+  return { rounds: rounds.length, matches, played, advanced, eliminated };
 }
