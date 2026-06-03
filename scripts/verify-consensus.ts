@@ -19,7 +19,10 @@ import {
   buildConsensus,
   consensusKey,
   shareFor,
+  buildBucketConsensus,
+  bucketShareFor,
   type ConsensusPickRow,
+  type BucketPickRow,
 } from "../src/lib/consensus-core.ts";
 
 let pass = 0;
@@ -93,6 +96,56 @@ check(
   "a slot where everyone is TBD produces no entry (no 0/0 division)",
   buildConsensus([{ sectionId: 2, groupId: 2, slotIndex: 0, pickId: 0 }]).size === 0,
 );
+
+console.log("\nbucket consensus - Swiss slots are interchangeable within a bucket (PHA-900)");
+
+// The 0:3 bucket is slots 8 & 9 (sec 105). Five players each name two 0:3 teams.
+// Thunder Down Under (pickId 50) is on EVERY player's 0:3 — but four of them put
+// it in slot 8 and one in slot 9. Per-slot consensus would call the slot-9 entry
+// a "lone call"; the bucket must see all five as the same call.
+const tdu: BucketPickRow[] = [
+  { playerId: "p1", sectionId: 105, groupId: 271, slotIndex: 8, pickId: 50 },
+  { playerId: "p2", sectionId: 105, groupId: 271, slotIndex: 8, pickId: 50 },
+  { playerId: "p3", sectionId: 105, groupId: 271, slotIndex: 8, pickId: 50 },
+  { playerId: "p4", sectionId: 105, groupId: 271, slotIndex: 8, pickId: 50 },
+  { playerId: "p5", sectionId: 105, groupId: 271, slotIndex: 9, pickId: 50 }, // different 0:3 slot
+  // each player's SECOND 0:3 pick — all different teams
+  { playerId: "p1", sectionId: 105, groupId: 271, slotIndex: 9, pickId: 61 },
+  { playerId: "p2", sectionId: 105, groupId: 271, slotIndex: 9, pickId: 62 },
+  { playerId: "p3", sectionId: 105, groupId: 271, slotIndex: 9, pickId: 63 },
+  { playerId: "p4", sectionId: 105, groupId: 271, slotIndex: 9, pickId: 64 },
+  { playerId: "p5", sectionId: 105, groupId: 271, slotIndex: 8, pickId: 65 },
+];
+const bc = buildBucketConsensus(tdu);
+const tduSlot8 = bucketShareFor(bc, 105, 271, 8, 50)!;
+const tduSlot9 = bucketShareFor(bc, 105, 271, 9, 50)!;
+check("TDU counts all 5 players regardless of which 0:3 slot (via slot 8)", tduSlot8.count === 5 && tduSlot8.total === 5);
+check("same bucket share whether you look it up via slot 8 or slot 9", tduSlot9.count === 5 && tduSlot9.total === 5);
+check("TDU reads as 'Whole board', not a lone call (count === total)", tduSlot8.count === tduSlot8.total);
+check("a one-off second 0:3 pick (team 61) is the lone call", bucketShareFor(bc, 105, 271, 9, 61)?.count === 1);
+check("denominator is DISTINCT players (5), not the 10 pick rows", tduSlot8.total === 5);
+
+// Bucket boundaries: the 3:0 bucket (slots 0,1) must NOT merge with 0:3.
+const cross: BucketPickRow[] = [
+  { playerId: "p1", sectionId: 105, groupId: 271, slotIndex: 0, pickId: 50 }, // TDU to go 3:0
+  { playerId: "p1", sectionId: 105, groupId: 271, slotIndex: 8, pickId: 50 }, // (illegal in practice, but proves keys don't merge)
+];
+const crossBc = buildBucketConsensus(cross);
+check("3:0 and 0:3 buckets stay separate", bucketShareFor(crossBc, 105, 271, 0, 50)!.count === 1 && bucketShareFor(crossBc, 105, 271, 8, 50)!.count === 1);
+check("advancing bucket (slot 2-7) is its own grain", buildBucketConsensus([{ playerId: "p1", sectionId: 105, groupId: 271, slotIndex: 4, pickId: 70 }]).size === 1);
+
+// Non-Swiss (playoff) sections stay per-slot — each match is a distinct call.
+const po: BucketPickRow[] = [
+  { playerId: "p1", sectionId: 200, groupId: 9, slotIndex: 0, pickId: 12 },
+  { playerId: "p2", sectionId: 200, groupId: 9, slotIndex: 0, pickId: 12 },
+  { playerId: "p1", sectionId: 200, groupId: 10, slotIndex: 0, pickId: 12 },
+];
+const poBc = buildBucketConsensus(po);
+check("playoff match stays per-slot (2 agree on group 9)", bucketShareFor(poBc, 200, 9, 0, 12)!.count === 2);
+check("a different playoff match (group 10) is separate", bucketShareFor(poBc, 200, 10, 0, 12)!.count === 1);
+
+check("bucketShareFor with pickId 0 → null", bucketShareFor(bc, 105, 271, 8, 0) === null);
+check("bucketShareFor on a team nobody picked → null", bucketShareFor(bc, 105, 271, 8, 999) === null);
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);

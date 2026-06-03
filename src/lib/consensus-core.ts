@@ -14,8 +14,11 @@
  * locked stages (see reveal/[section]/page.tsx and players/[id]/page.tsx).
  *
  * Pure module (no `@/` alias, no prisma, no fetch) so the verify script can
- * import it directly under `node` without the Next path-alias resolver.
+ * import it directly under `node` without the Next path-alias resolver. The one
+ * relative import below (swiss-bucket-core) is itself such a pure module.
  */
+
+import { bucketSwissSlots, isSwissSection } from "./swiss-bucket-core";
 
 export interface ConsensusPickRow {
   sectionId: number;
@@ -90,4 +93,92 @@ export function shareFor(
   const slot = consensus.get(consensusKey(sectionId, groupId, slotIndex));
   if (!slot) return null;
   return slot.shares.find((s) => s.pickId === pickId) ?? null;
+}
+
+/* ── Bucket-level consensus (PHA-900 follow-up) ───────────────────────────────
+ *
+ * Per-slot consensus (above) asks "who else put this team in THIS exact slot".
+ * Inside a Swiss stage that's the wrong grain: the 3:0 slots are equivalent to
+ * each other, the advancing slots are equivalent, and the 0:3 slots are
+ * equivalent. Thunder Down Under was nearly everyone's 0:3 pick, but because
+ * people placed them in different 0:3 slots, per-slot consensus called it a
+ * "lone call". So the profile's consensus line measures agreement per BUCKET:
+ * "who else called this team to go 0:3", regardless of which 0:3 slot they used.
+ *
+ * Two differences from the per-slot map:
+ *   1. Swiss slots collapse to their bucket (3:0 / advancing / 0:3); non-Swiss
+ *      (playoff) matches stay per-slot — each match is its own distinct call.
+ *   2. The denominator is DISTINCT PLAYERS, not pick rows: a player fills 2
+ *      slots in the 0:3 bucket, so counting rows would double everything and
+ *      "whole board" could never trigger. A team is unique per group, so a
+ *      player contributes at most one row per (bucket, team) — distinct-player
+ *      counts are exact.
+ */
+
+export interface BucketPickRow extends ConsensusPickRow {
+  playerId: string;
+}
+
+export interface BucketShare {
+  /** Distinct players who put this team anywhere in this bucket. */
+  count: number;
+  /** Distinct players who made any real pick in this bucket — the denominator. */
+  total: number;
+}
+
+export interface BucketConsensus {
+  total: Set<string>;
+  byTeam: Map<number, Set<string>>;
+}
+
+// Swiss is always the 10-slot 2/6/2 format; bucketSwissSlots(10) is the split.
+const SWISS_BUCKETS = bucketSwissSlots(10);
+
+/** The consensus grain for a slot: a Swiss bucket id, else the slot itself. */
+function bucketGrain(sectionId: number, slotIndex: number): string {
+  if (!isSwissSection(sectionId)) return `s${slotIndex}`;
+  const i = SWISS_BUCKETS.findIndex((b) => b.slotIndexes.includes(slotIndex));
+  return i >= 0 ? `b${i}` : `s${slotIndex}`;
+}
+
+/** Composite key at bucket grain — section + group + (bucket | slot). */
+export function bucketConsensusKey(sectionId: number, groupId: number, slotIndex: number): string {
+  return `${sectionId}:${groupId}:${bucketGrain(sectionId, slotIndex)}`;
+}
+
+/** Aggregate Pick rows into a per-bucket, distinct-player consensus map. */
+export function buildBucketConsensus(
+  picks: ReadonlyArray<BucketPickRow>,
+): Map<string, BucketConsensus> {
+  const out = new Map<string, BucketConsensus>();
+  for (const p of picks) {
+    if (p.pickId === 0) continue;
+    const key = bucketConsensusKey(p.sectionId, p.groupId, p.slotIndex);
+    let e = out.get(key);
+    if (!e) out.set(key, (e = { total: new Set(), byTeam: new Map() }));
+    e.total.add(p.playerId);
+    let team = e.byTeam.get(p.pickId);
+    if (!team) e.byTeam.set(p.pickId, (team = new Set()));
+    team.add(p.playerId);
+  }
+  return out;
+}
+
+/**
+ * How many players made the SAME bucket call (team → bucket) as this pick, over
+ * how many filled the bucket. null for an unset team or an untouched bucket.
+ */
+export function bucketShareFor(
+  consensus: ReadonlyMap<string, BucketConsensus>,
+  sectionId: number,
+  groupId: number,
+  slotIndex: number,
+  pickId: number,
+): BucketShare | null {
+  if (pickId === 0) return null;
+  const e = consensus.get(bucketConsensusKey(sectionId, groupId, slotIndex));
+  if (!e) return null;
+  const team = e.byTeam.get(pickId);
+  if (!team) return null;
+  return { count: team.size, total: e.total.size };
 }

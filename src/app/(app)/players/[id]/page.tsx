@@ -21,7 +21,7 @@ import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
 import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
-import { buildConsensus, consensusKey, shareFor } from "@/lib/consensus-core";
+import { buildBucketConsensus, bucketShareFor } from "@/lib/consensus-core";
 import type { Section } from "@/lib/layout";
 
 const EVENT_ID = 26;
@@ -105,9 +105,11 @@ export default async function PlayerProfilePage({
     where: { eventId: EVENT_ID },
     select: { playerId: true, sectionId: true, groupId: true, slotIndex: true, pickId: true },
   });
-  // Field-wide pick distribution per slot (PHA-889). Only surfaced on revealed
-  // (post-lock) groups below, so it never leaks live picks or invites herding.
-  const consensus = buildConsensus(allPicks);
+  // Field-wide pick distribution (PHA-889), measured per Swiss bucket so all
+  // 0:3 calls for a team count together regardless of slot (PHA-900 follow-up).
+  // Only surfaced on revealed (post-lock) groups below, so it never leaks live
+  // picks or invites herding.
+  const consensus = buildBucketConsensus(allPicks);
 
   const everyPickMap: PlayerPickMap = {};
   for (const p of allPicks) {
@@ -303,7 +305,7 @@ export default async function PlayerProfilePage({
                             // even on your own profile (PHA-889). Your pick still shows; only
                             // the % waits for lock — same discipline as the reveal gate.
                             const share = pick && lockRevealed
-                              ? shareFor(consensus, section.sectionid, group.groupid, slot.index, pick)
+                              ? bucketShareFor(consensus, section.sectionid, group.groupid, slot.index, pick)
                               : null;
                             return (
                               <div
@@ -329,7 +331,9 @@ export default async function PlayerProfilePage({
                                   // read like a bug at a 5-player table (every value rounds to a
                                   // multiple of 20) and "of field" is jargon. Raw counts are honest
                                   // at any size; the lone call is the contrarian flex PHA-900 is after.
-                                  const total = consensus.get(consensusKey(section.sectionid, group.groupid, slot.index))?.total ?? share.count;
+                                  // share is bucket-level: how many called this team to go 3:0 /
+                                  // advance / 0:3, not how many used this exact slot.
+                                  const total = share.total;
                                   if (total < 2) return null; // no consensus to speak of with a field of one
                                   const lone = share.count === 1;
                                   const label = lone
@@ -340,7 +344,7 @@ export default async function PlayerProfilePage({
                                   return (
                                     <span
                                       className={`pickcard-share${lone ? " lone" : ""}`}
-                                      title={`${share.count} of ${total} players made this same pick`}
+                                      title={`${share.count} of ${total} players made this same call`}
                                     >
                                       {label}
                                     </span>
