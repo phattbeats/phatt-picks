@@ -24,6 +24,7 @@ import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { isLockTimePassed } from "@/lib/lock-schedule-core";
 import { resolveLogoTiers } from "@/lib/logos";
 import { TeamLogo } from "@/components/ui/TeamLogo";
+import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
 
 const EVENT_ID = 26;
 
@@ -286,6 +287,16 @@ export default async function ComparePage({
       const bGroup = bPicksMap[section.sectionid]?.[group.groupid] ?? {};
       const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
 
+      // Tag a steal with its Swiss bucket (3:0 / advance / 0:3) so the reel
+      // says "Stage I · 3:0" — the bucket is the story, not slot N of 10.
+      const swissBuckets = isSwissSection(section.sectionid)
+        ? bucketSwissSlots(group.picks.length)
+        : null;
+      const slotLabel = (idx: number): string => {
+        const bkt = swissBuckets?.find((bk) => bk.slotIndexes.includes(idx));
+        return bkt ? `${stageLabel} · ${bkt.label.split(" ")[0]}` : stageLabel;
+      };
+
       for (const slot of group.picks) {
         const winner = groupOutcomes[slot.index];
         if (winner === undefined || winner === 0) continue; // not resolved
@@ -294,8 +305,8 @@ export default async function ComparePage({
         const winTeam = team(winner);
         if (!winTeam) continue;
         if (aRight && bRight) bothRight++;
-        else if (aRight && !bRight) aSteals.push({ team: winTeam, label: stageLabel });
-        else if (bRight && !aRight) bSteals.push({ team: winTeam, label: stageLabel });
+        else if (aRight && !bRight) aSteals.push({ team: winTeam, label: slotLabel(slot.index) });
+        else if (bRight && !aRight) bSteals.push({ team: winTeam, label: slotLabel(slot.index) });
       }
     }
   }
@@ -464,6 +475,7 @@ export default async function ComparePage({
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
         {layout.sections.map((section) => {
           const stageLabel = section.name.split(" | ")[0];
+          const isSwiss = isSwissSection(section.sectionid);
           return (
             <div key={section.sectionid}>
               <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--text-mid)", margin: "0 0 var(--space-2)" }}>
@@ -509,28 +521,48 @@ export default async function ComparePage({
                         🔒 Both players&apos; picks unlock when this stage starts
                       </div>
                     ) : (
-                      <div style={{ padding: "var(--space-2) var(--space-3)", display: "flex", flexDirection: "column", gap: 6 }}>
-                        {group.picks.map((slot) => {
-                          const aPick = aGroup[slot.index];
-                          const bPick = bGroup[slot.index];
-                          const winner = groupOutcomes[slot.index];
-                          const aState = tileState(aPick, winner);
-                          const bState = tileState(bPick, winner);
-                          const aSteal = aState === "hit" && bState !== "hit";
-                          const bSteal = bState === "hit" && aState !== "hit";
-                          return (
-                            <div
-                              key={slot.index}
-                              style={{ display: "grid", gridTemplateColumns: "1fr 26px 1fr", alignItems: "center", gap: "var(--space-2)" }}
-                            >
-                              <PickTile team={team(aPick)} state={aState} align="left" steal={aSteal} />
-                              <span style={{ textAlign: "center", color: "var(--text-low)", fontFamily: "var(--font-mono)", fontSize: 10 }}>
-                                {group.picks.length > 1 ? slot.index + 1 : "·"}
-                              </span>
-                              <PickTile team={team(bPick)} state={bState} align="right" steal={bSteal} />
+                      <div style={{ padding: "var(--space-2) var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+                        {/* Swiss stages split into the 2 / 6 / 2 buckets (3:0 advance,
+                            advancing, 0:3 out) — the real structure, not a flat 1-10.
+                            Reuses the same convention as the picks board (PHA-853). */}
+                        {(isSwiss
+                          ? bucketSwissSlots(group.picks.length)
+                          : [{ label: group.name.split(" | ").slice(-1)[0], slotIndexes: group.picks.map((p) => p.index) }]
+                        ).map((bucket) => (
+                          <div key={bucket.label}>
+                            {isSwiss && (
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                                <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-mid)", fontWeight: 700 }}>
+                                  {bucket.label}
+                                </span>
+                                <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-low)" }}>
+                                  {bucket.slotIndexes.length} PICK{bucket.slotIndexes.length !== 1 ? "S" : ""}
+                                </span>
+                              </div>
+                            )}
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                              {bucket.slotIndexes.map((slotIndex) => {
+                                const aPick = aGroup[slotIndex];
+                                const bPick = bGroup[slotIndex];
+                                const winner = groupOutcomes[slotIndex];
+                                const aState = tileState(aPick, winner);
+                                const bState = tileState(bPick, winner);
+                                const aSteal = aState === "hit" && bState !== "hit";
+                                const bSteal = bState === "hit" && aState !== "hit";
+                                return (
+                                  <div
+                                    key={slotIndex}
+                                    style={{ display: "grid", gridTemplateColumns: "1fr 22px 1fr", alignItems: "center", gap: "var(--space-2)" }}
+                                  >
+                                    <PickTile team={team(aPick)} state={aState} align="left" steal={aSteal} />
+                                    <span style={{ textAlign: "center", color: "var(--text-low)", fontFamily: "var(--font-mono)", fontSize: 10 }}>·</span>
+                                    <PickTile team={team(bPick)} state={bState} align="right" steal={bSteal} />
+                                  </div>
+                                );
+                              })}
                             </div>
-                          );
-                        })}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
