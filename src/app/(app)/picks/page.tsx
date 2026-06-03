@@ -206,21 +206,25 @@ export default async function PicksPage({
               : locked
                 ? "1px dashed var(--hair)"
                 : "1px solid var(--hair)",
-            cursor: locked && !active ? "not-allowed" : "pointer",
+            cursor: "pointer",
             boxShadow: active ? "0 0 0 0px var(--heat)" : "none",
           };
 
-          if (locked && !active) {
-            return (
-              <span key={s.sectionid} role="link" aria-disabled="true" title={lockTitle} style={baseStyle}>
-                <span aria-hidden="true">🔒</span>
-                {label}
-              </span>
-            );
-          }
-
+          // Every tab is navigable — a locked stage is "can't pick", not "can't
+          // look": clicking it shows that stage's content (its live lineup /
+          // your build, or a "teams not set" card). Previously a locked,
+          // non-active tab rendered as a disabled span, so once you left Stage I
+          // you couldn't click back to view it (Brandon, 2026-06-03). The 🔒
+          // still flags that picks are closed.
           return (
-            <Link key={s.sectionid} href={`/picks?section=${s.sectionid}`} style={baseStyle}>
+            <Link
+              key={s.sectionid}
+              href={`/picks?section=${s.sectionid}`}
+              title={lockTitle}
+              aria-current={active ? "page" : undefined}
+              style={baseStyle}
+            >
+              {locked && <span aria-hidden="true">🔒</span>}
               {label}
             </Link>
           );
