@@ -109,18 +109,39 @@ export function LiveSwissBracketBoard({
       </p>
 
       <style>{`
-        .brkt-scroll { overflow-x: auto; overflow-y: hidden; margin: 0 -4px; padding: 0 4px 6px; -webkit-overflow-scrolling: touch; }
+        .brkt-scroll { overflow-x: auto; overflow-y: hidden; margin: 0 -4px; padding: 0 4px 8px; -webkit-overflow-scrolling: touch; }
         .brkt-cols { display: inline-flex; gap: 0; align-items: center; min-width: min-content; }
-        .brkt-col { flex: 0 0 auto; width: 156px; display: flex; flex-direction: column; justify-content: center; gap: 12px; }
+        /* Logos as large as possible — they ARE the cell (Brandon). The TeamLogo
+           renders at LOGO_SIZE; CSS scales the displayed size responsively and
+           overrides next/image's width/height + the monogram's inline size. */
+        .brkt-logo, .brkt-logo > * { width: var(--brkt-logo); height: var(--brkt-logo); }
+        .brkt-logo img, .brkt-logo > div, .brkt-logo > span {
+          width: var(--brkt-logo) !important; height: var(--brkt-logo) !important;
+        }
+        .brkt-col {
+          --brkt-logo: 40px;
+          flex: 0 0 auto; width: 184px; display: flex; flex-direction: column; justify-content: center; gap: 14px;
+        }
         .brkt-box-head {
           display: flex; align-items: center; justify-content: space-between; gap: 6px;
-          font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
-          padding: 0 2px 5px; white-space: nowrap;
+          font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+          padding: 0 2px 6px; white-space: nowrap;
         }
         .brkt-box { border: 1px solid var(--hair); background: var(--surf-1); }
-        .brkt-row { display: flex; align-items: center; gap: 5px; padding: 5px 6px; }
+        .brkt-row { display: flex; align-items: center; gap: 8px; padding: 8px 9px; }
         .brkt-row + .brkt-row { border-top: 1px solid var(--hair); }
-        .brkt-flow { flex: 0 0 auto; width: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+        .brkt-score { flex: 1; min-width: 0; text-align: center; font-family: var(--font-mono); font-weight: 700; white-space: nowrap; font-size: 15px; }
+        .brkt-teamname { flex: 1; min-width: 0; font-weight: 500; color: var(--ink-hi); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+        .brkt-flow { flex: 0 0 auto; width: 26px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; font-size: 15px; }
+        /* Desktop: 2–3× the mobile size (Brandon). */
+        @media (min-width: 760px) {
+          .brkt-col { --brkt-logo: 64px; width: 300px; gap: 22px; }
+          .brkt-box-head { font-size: 13px; padding-bottom: 9px; }
+          .brkt-row { gap: 12px; padding: 12px 14px; }
+          .brkt-score { font-size: 24px; }
+          .brkt-teamname { font-size: 19px; }
+          .brkt-flow { width: 40px; gap: 44px; font-size: 24px; }
+        }
       `}</style>
     </div>
   );
@@ -177,15 +198,15 @@ function MatchRow({
   return (
     <div className="brkt-row">
       <SideLogo side={team1} teamMap={teamMap} dim={played && !team1.winner} />
-      <span style={{ flex: 1, minWidth: 0, textAlign: "center", fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>
+      <span className="brkt-score">
         {played ? (
           <>
             <span style={{ color: team1.winner ? "var(--tac-green, #9bd23c)" : "var(--ink-low)" }}>{team1.score}</span>
-            <span style={{ color: "var(--ink-low)", margin: "0 2px" }}>–</span>
+            <span style={{ color: "var(--ink-low)", margin: "0 3px" }}>–</span>
             <span style={{ color: team2.winner ? "var(--tac-green, #9bd23c)" : "var(--ink-low)" }}>{team2.score}</span>
           </>
         ) : (
-          <span style={{ color: "var(--ink-low)", fontSize: 9, letterSpacing: "0.1em" }}>VS</span>
+          <span style={{ color: "var(--ink-low)", letterSpacing: "0.1em", opacity: 0.7 }}>VS</span>
         )}
       </span>
       <SideLogo side={team2} teamMap={teamMap} dim={played && !team2.winner} />
@@ -205,9 +226,9 @@ function SideLogo({
   const team = side.pickid != null ? teamMap.get(side.pickid) : undefined;
   const label = team?.name ?? side.name ?? "TBD";
   return (
-    <span title={label} style={{ flexShrink: 0, opacity: dim ? 0.4 : 1, display: "inline-flex" }}>
+    <span className="brkt-logo" title={label} style={{ flexShrink: 0, opacity: dim ? 0.4 : 1, display: "inline-flex" }}>
       {team ? (
-        <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={22} />
+        <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={LOGO_SIZE} />
       ) : (
         <span aria-hidden="true" style={monogramStyle}>{(side.name ?? "?").slice(0, 2).toUpperCase()}</span>
       )}
@@ -228,14 +249,14 @@ function TeamRow({
   const def = team.pickid != null ? teamMap.get(team.pickid) : undefined;
   return (
     <div className="brkt-row" style={{ borderLeft: `2px solid ${accent}` }}>
-      {def ? (
-        <TeamLogo tiers={resolveLogoTiers(def)} teamName={def.name} size={22} />
-      ) : (
-        <span aria-hidden="true" style={monogramStyle}>{team.name.slice(0, 2).toUpperCase()}</span>
-      )}
-      <span style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 500, color: "var(--ink-hi)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {def?.name ?? team.name}
+      <span className="brkt-logo" style={{ flexShrink: 0, display: "inline-flex" }}>
+        {def ? (
+          <TeamLogo tiers={resolveLogoTiers(def)} teamName={def.name} size={LOGO_SIZE} />
+        ) : (
+          <span aria-hidden="true" style={monogramStyle}>{team.name.slice(0, 2).toUpperCase()}</span>
+        )}
       </span>
+      <span className="brkt-teamname">{def?.name ?? team.name}</span>
     </div>
   );
 }
@@ -244,21 +265,24 @@ function TeamRow({
 function FlowArrows() {
   return (
     <div className="brkt-flow" aria-hidden="true">
-      <span style={{ color: "var(--tac-green, #9bd23c)", fontSize: 13, fontWeight: 800, lineHeight: 1 }}>↗</span>
-      <span style={{ color: "var(--ember, #d8351c)", fontSize: 13, fontWeight: 800, lineHeight: 1 }}>↘</span>
+      <span style={{ color: "var(--tac-green, #9bd23c)", fontWeight: 800, lineHeight: 1 }}>↗</span>
+      <span style={{ color: "var(--ember, #d8351c)", fontWeight: 800, lineHeight: 1 }}>↘</span>
     </div>
   );
 }
+
+// Render logos at the desktop target size; CSS scales the DISPLAYED size down on
+// mobile, so they're crisp at every breakpoint.
+const LOGO_SIZE = 64;
 
 const monogramStyle = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  width: 22,
-  height: 22,
   flexShrink: 0,
+  borderRadius: 4,
   fontFamily: "var(--font-mono)",
-  fontSize: 8,
+  fontSize: 13,
   fontWeight: 700,
   color: "var(--ink-mid)",
   background: "var(--surf-2, rgba(255,255,255,0.04))",
