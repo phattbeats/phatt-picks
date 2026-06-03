@@ -30,6 +30,12 @@ import {
   type StandingRow,
   type MatchableTeam,
 } from "./swiss-results-core";
+import {
+  parseSwissBracket,
+  matchBracketToLayout,
+  type RawSwissRound,
+  type SwissRound,
+} from "./swiss-bracket-core";
 
 // crawl4ai on the phattvip network. Same hostname resolves in the workspace and
 // in the deployed container; CRAWL4AI_URL overrides for other topologies.
@@ -67,6 +73,8 @@ const SECTION_SOURCES: Readonly<Record<number, { url: string; label: string }>> 
 /** The persisted blob shape (data column of SwissStandingsCache). */
 interface StandingsBlob {
   rows: RawStandingRow[];
+  /** The full Swiss bracket (rounds of matches) parsed from the same crawl. */
+  bracket?: RawSwissRound[];
   source: string;
   sourceUrl: string;
   fetchedAt: number;
@@ -75,6 +83,14 @@ interface StandingsBlob {
 /** The read-path result: rows matched to the current layout + provenance. */
 export interface LiveStandings {
   rows: StandingRow[];
+  source: string;
+  sourceUrl: string;
+  fetchedAtIso: string;
+}
+
+/** The read-path result for the bracket view. */
+export interface LiveBracket {
+  rounds: SwissRound[];
   source: string;
   sourceUrl: string;
   fetchedAtIso: string;
@@ -125,12 +141,14 @@ async function stampStandingsRefreshSlot(): Promise<void> {
 }
 
 /**
- * Render a page to markdown through crawl4ai (bypasses the Cloudflare gate that
- * 403s a direct fetch). Best-effort: throws on a network / non-2xx / empty-body
- * failure so the caller degrades to the last cache. Never used on the render
- * path directly — the driver defers it.
+ * Render a page through crawl4ai (bypasses the Cloudflare gate that 403s a direct
+ * fetch), returning both its markdown (cleanest for the standings table) and its
+ * HTML (the Swiss bracket embeds each match's data in a `data-...-popup-json`
+ * attribute, which markdown flattens away). Best-effort: throws on a network /
+ * non-2xx / empty-body failure so the caller degrades to the last cache. Never
+ * used on the render path directly — the driver defers it.
  */
-async function crawlMarkdown(url: string): Promise<string> {
+async function crawlPage(url: string): Promise<{ markdown: string; html: string }> {
   const res = await fetch(`${CRAWL4AI_URL}/crawl`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -141,12 +159,14 @@ async function crawlMarkdown(url: string): Promise<string> {
   if (!res.ok) throw new Error(`crawl4ai returned ${res.status}`);
   const json = (await res.json()) as {
     success?: boolean;
-    results?: Array<{ markdown?: string | { raw_markdown?: string } }>;
+    results?: Array<{ markdown?: string | { raw_markdown?: string }; html?: string }>;
   };
-  const md = json.results?.[0]?.markdown;
-  const text = typeof md === "string" ? md : (md?.raw_markdown ?? "");
-  if (!text) throw new Error("crawl4ai returned no markdown");
-  return text;
+  const r = json.results?.[0];
+  const md = r?.markdown;
+  const markdown = typeof md === "string" ? md : (md?.raw_markdown ?? "");
+  const html = r?.html ?? "";
+  if (!markdown && !html) throw new Error("crawl4ai returned no content");
+  return { markdown, html };
 }
 
 /**
@@ -160,15 +180,17 @@ async function ingestStandings(eventId: number, sectionId: number): Promise<numb
   const src = SECTION_SOURCES[sectionId];
   if (!src) return 0; // no known source for this section — nothing to do
   try {
-    const md = await crawlMarkdown(src.url);
-    const rows = parseHltvSwissStandings(md);
-    if (rows.length === 0) {
-      // Parsed nothing — keep whatever we already have rather than blanking it.
-      console.warn(`[standings] parsed 0 rows for section ${sectionId} — keeping prior cache`);
+    const { markdown, html } = await crawlPage(src.url);
+    const rows = parseHltvSwissStandings(markdown);
+    const bracket = parseSwissBracket(html);
+    if (rows.length === 0 && bracket.length === 0) {
+      // Parsed nothing from either view — keep whatever we have, don't blank it.
+      console.warn(`[standings] parsed 0 rows + 0 bracket rounds for section ${sectionId} — keeping prior cache`);
       return 0;
     }
     const blob: StandingsBlob = {
       rows,
+      bracket,
       source: src.label,
       sourceUrl: src.url,
       fetchedAt: Date.now(),
@@ -179,7 +201,7 @@ async function ingestStandings(eventId: number, sectionId: number): Promise<numb
       update: { data, fetchedAt: new Date() },
       create: { eventId, sectionId, data, fetchedAt: new Date() },
     });
-    return rows.length;
+    return Math.max(rows.length, bracket.reduce((n, r) => n + r.matches.length, 0));
   } catch (e) {
     console.error(
       "[standings] ingest failed (non-fatal, keeping prior cache):",
@@ -245,6 +267,42 @@ export async function getSwissStandings(
   if (!Array.isArray(blob.rows) || blob.rows.length === 0) return null;
   return {
     rows: matchStandingsToLayout(blob.rows, teams),
+    source: blob.source,
+    sourceUrl: blob.sourceUrl,
+    fetchedAtIso: new Date(blob.fetchedAt ?? row.fetchedAt.getTime()).toISOString(),
+  };
+}
+
+/**
+ * Read the live Swiss BRACKET for a section, mapped to the current layout teams.
+ * Same cache row as the standings table (one crawl populates both); returns null
+ * when no bracket is cached yet (cold start / unmapped section / a snapshot taken
+ * before the bracket parser shipped). Never throws.
+ */
+export async function getSwissBracket(
+  eventId: number,
+  sectionId: number,
+  teams: readonly MatchableTeam[],
+): Promise<LiveBracket | null> {
+  if (!hasStandingsSource(sectionId)) return null;
+  let row;
+  try {
+    row = await prisma.swissStandingsCache.findUnique({
+      where: { eventId_sectionId: { eventId, sectionId } },
+    });
+  } catch {
+    return null;
+  }
+  if (!row) return null;
+  let blob: StandingsBlob;
+  try {
+    blob = JSON.parse(row.data) as StandingsBlob;
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(blob.bracket) || blob.bracket.length === 0) return null;
+  return {
+    rounds: matchBracketToLayout(blob.bracket, teams),
     source: blob.source,
     sourceUrl: blob.sourceUrl,
     fetchedAtIso: new Date(blob.fetchedAt ?? row.fetchedAt.getTime()).toISOString(),
