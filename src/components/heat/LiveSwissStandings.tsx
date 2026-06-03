@@ -10,8 +10,9 @@
  *
  * Server component: the data is fetched + cached upstream (getSwissStandings);
  * the <AutoRefresh> already on the picks page re-renders the route so the table
- * tracks results without a reload. Teams the viewer picked are ringed + tagged.
- * Honest: every number is the source's; we render nothing we didn't read.
+ * tracks results without a reload. This is the neutral league table — it does NOT
+ * highlight the viewer's picks (Brandon: the table is good, drop the "your pick"
+ * part; that belongs to the build above). Honest: every number is the source's.
  */
 
 import type { CSSProperties } from "react";
@@ -34,14 +35,12 @@ const STATUS_META: Record<SwissResultStatus, { label: string; color: string }> =
 export function LiveSwissStandings({
   rows,
   teamMap,
-  userPickedPickids,
   source,
   sourceUrl,
   fetchedAtIso,
 }: {
   rows: StandingRow[];
   teamMap: Map<number, TeamDef>;
-  userPickedPickids: ReadonlySet<number>;
   source: string;
   sourceUrl: string;
   fetchedAtIso: string;
@@ -93,7 +92,6 @@ export function LiveSwissStandings({
       <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
         {rows.map((row, i) => {
           const team = row.pickid != null ? teamMap.get(row.pickid) : undefined;
-          const mine = row.pickid != null && userPickedPickids.has(row.pickid);
           const meta = STATUS_META[row.status];
           return (
             <div
@@ -102,8 +100,8 @@ export function LiveSwissStandings({
               style={{
                 alignItems: "center",
                 padding: "8px 10px",
-                background: mine ? "rgba(240,163,0,0.07)" : "var(--surf-1)",
-                border: mine ? "1px solid var(--hair-3)" : "1px solid var(--hair)",
+                background: "var(--surf-1)",
+                border: "1px solid var(--hair)",
               }}
             >
               {/* seed / position */}
@@ -120,7 +118,6 @@ export function LiveSwissStandings({
                 )}
                 <span style={{ minWidth: 0 }}>
                   <span style={teamNameStyle}>{team?.name ?? row.name}</span>
-                  {mine && <span style={yourPickTagStyle}>Your call</span>}
                 </span>
               </span>
 
@@ -206,15 +203,6 @@ const teamNameStyle: CSSProperties = {
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
-};
-
-const yourPickTagStyle: CSSProperties = {
-  display: "block",
-  fontFamily: "var(--font-mono)",
-  fontSize: 8,
-  letterSpacing: "0.1em",
-  textTransform: "uppercase",
-  color: "var(--heat)",
 };
 
 const monogramStyle: CSSProperties = {

@@ -294,39 +294,28 @@ export default async function PicksPage({
             signedIn={!!session}
             resolvedAtIso={outcomeResolvedAtIso}
           />
-          {/* Live HLTV/BLAST-style Swiss BRACKET for the whole field, under the
-              build (PHA-902). Round columns with match scores + advance/elim
-              branches — what Brandon asked it to resemble. Then the compact W-L
-              table below. Both hidden until the first hourly crawl lands. */}
-          {(() => {
-            const userPickedPickids = new Set(
-              Object.values(myPicks).flatMap((g) => Object.values(g).filter((id) => id !== 0)),
-            );
-            return (
-              <>
-                {liveBracket && (
-                  <LiveSwissBracketBoard
-                    rounds={liveBracket.rounds}
-                    teamMap={buildTeamMap(layout)}
-                    userPickedPickids={userPickedPickids}
-                    source={liveBracket.source}
-                    sourceUrl={liveBracket.sourceUrl}
-                    fetchedAtIso={liveBracket.fetchedAtIso}
-                  />
-                )}
-                {liveStandings && (
-                  <LiveSwissStandings
-                    rows={liveStandings.rows}
-                    teamMap={buildTeamMap(layout)}
-                    userPickedPickids={userPickedPickids}
-                    source={liveStandings.source}
-                    sourceUrl={liveStandings.sourceUrl}
-                    fetchedAtIso={liveStandings.fetchedAtIso}
-                  />
-                )}
-              </>
-            );
-          })()}
+          {/* Live HLTV/BLAST-style Swiss BRACKET (the fan) for the whole field,
+              under the build (PHA-902), then the neutral W-L table below. Neither
+              highlights the viewer's picks — that's the build's job. Both hidden
+              until the first hourly crawl lands. */}
+          {liveBracket && (
+            <LiveSwissBracketBoard
+              rounds={liveBracket.rounds}
+              teamMap={buildTeamMap(layout)}
+              source={liveBracket.source}
+              sourceUrl={liveBracket.sourceUrl}
+              fetchedAtIso={liveBracket.fetchedAtIso}
+            />
+          )}
+          {liveStandings && (
+            <LiveSwissStandings
+              rows={liveStandings.rows}
+              teamMap={buildTeamMap(layout)}
+              source={liveStandings.source}
+              sourceUrl={liveStandings.sourceUrl}
+              fetchedAtIso={liveStandings.fetchedAtIso}
+            />
+          )}
           {/* Poll the answer key + standings while the stage is live so the
               lineup updates without a manual reload (PHA-898 / PHA-902). */}
           <AutoRefresh intervalMs={60_000} />
