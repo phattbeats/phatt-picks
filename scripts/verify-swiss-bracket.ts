@@ -93,16 +93,18 @@ check("every Round 1 match is marked played with a decided winner",
 check("exactly one winner per played match (no double/zero wins)",
   raw.every((rd) => rd.matches.filter((m) => m.played).every((m) => (m.team1.winner ? 1 : 0) + (m.team2.winner ? 1 : 0) === 1)));
 
-console.log("\nswiss-bracket - round classification (advancing / eliminated / contention)");
+console.log("\nswiss-bracket - round classification by RECORD (3 wins adv / 3 losses elim)");
 
-// Columns are classified by what their matches DECIDE (HLTV/cs.money labeling).
-check("0:0 / 1:0 / 0:1 / 1:1 are contention (early progression Bo1s)", ["0:0", "1:0", "0:1", "1:1"].every((l) => bracketRoundKind(l) === "contention"));
-check("2:0 / 2:1 are advancing (winner clinches a 3rd win)", ["2:0", "2:1"].every((l) => bracketRoundKind(l) === "advancing"));
-check("0:2 / 1:2 are eliminated (loser takes a 3rd loss)", ["0:2", "1:2"].every((l) => bracketRoundKind(l) === "eliminated"));
-check("2:2 is BOTH (winner advances, loser eliminated)", bracketRoundKind("2:2") === "both");
+// Brandon: advancing/eliminated is the 3-0 / 0-3 record, NOT the 2-0 deciding match.
+check("still-playing records are contention (0:0 / 1:0 / 0:1 / 2:0 / 1:1 / 0:2 / 2:1 / 1:2 / 2:2)",
+  ["0:0", "1:0", "0:1", "2:0", "1:1", "0:2", "2:1", "1:2", "2:2"].every((l) => bracketRoundKind(l) === "contention"));
+check("2:0 is NOT advancing (a 2-0 team is still playing)", bracketRoundKind("2:0") === "contention");
+check("0:2 is NOT eliminated (a 0-2 team is still alive)", bracketRoundKind("0:2") === "contention");
+check("3:0 / 3:1 / 3:2 are advancing (3 wins = through)", ["3:0", "3:1", "3:2"].every((l) => bracketRoundKind(l) === "advancing"));
+check("0:3 / 1:3 / 2:3 are eliminated (3 losses = out)", ["0:3", "1:3", "2:3"].every((l) => bracketRoundKind(l) === "eliminated"));
 check("unparseable label → contention (never falsely 'out')", bracketRoundKind("???") === "contention");
-check("2-win format: 1:0 → advancing, 0:1 → eliminated under custom threshold",
-  bracketRoundKind("1:0", 2, 2) === "advancing" && bracketRoundKind("0:1", 2, 2) === "eliminated");
+check("2-win format: 2:0 → advancing, 0:2 → eliminated under custom threshold",
+  bracketRoundKind("2:0", 2, 2) === "advancing" && bracketRoundKind("0:2", 2, 2) === "eliminated");
 
 console.log("\nswiss-bracket - match every side to the committed Stage I layout");
 
@@ -123,10 +125,59 @@ console.log("\nswiss-bracket - summary + graceful empty");
 const sum = bracketSummary(matched);
 check("summary: 24 matches, 16 played at this snapshot (R1+R2 done)", sum.matches === 24 && sum.played === 16, JSON.stringify(sum));
 check("summary: 6 rounds", sum.rounds === 6);
+check("summary: 0 advanced / 0 eliminated at this snapshot (nobody has 3 W/L yet)",
+  sum.advanced === 0 && sum.eliminated === 0, JSON.stringify(sum));
+check("no round is mislabeled advancing/eliminated at this snapshot (all contention)",
+  matched.every((r) => r.kind === "contention"));
 check("the live frontier (2:0 / 1:1 / 0:2) is scheduled-not-played — the 'vs ???' state", (() => {
   const frontier = matched.filter((r) => ["2:0", "1:1", "0:2"].includes(r.label));
   return frontier.length === 3 && frontier.every((r) => r.matches.every((m) => !m.played));
 })());
+check("every round carries a teams array (terminal columns, empty here)",
+  matched.every((r) => Array.isArray(r.teams) && r.teams.length === 0));
+
+console.log("\nswiss-bracket - terminal columns (settled advanced / eliminated teams)");
+
+// Synthetic snapshot of a LATER state: a 3:0 column with a real advanced team +
+// an unfilled placeholder, and a 0:3 column with an eliminated team. (Real
+// HLTV markup: settled teams sit in a swiss-matchups-team-wrapper as
+// <img class="swiss-visual-team-logo" title="TeamName">; "?" = not yet filled.)
+const terminalHtml = `
+<div class="swiss-visual-matchups-title">3:0</div>
+<div class="swiss-matchups-team-wrapper">
+  <div class="swiss-visual-team "><img class="swiss-visual-team-logo" title="BetBoom"></div>
+  <div class="swiss-visual-team "><img class="swiss-visual-team-logo" title="?"></div>
+</div>
+<div class="swiss-visual-matchups-title">0:3</div>
+<div class="swiss-matchups-team-wrapper">
+  <div class="swiss-visual-team "><img class="swiss-visual-team-logo" title="Gaimin Gladiators"></div>
+</div>`;
+const term = matchBracketToLayout(parseSwissBracket(terminalHtml), stageTeams);
+check("parses a 3:0 (advancing) and 0:3 (eliminated) column", (() => {
+  const adv = term.find((r) => r.label === "3:0");
+  const elim = term.find((r) => r.label === "0:3");
+  return !!adv && adv.kind === "advancing" && !!elim && elim.kind === "eliminated";
+})());
+check("3:0 column lists the advanced team, drops the '?' placeholder", (() => {
+  const adv = term.find((r) => r.label === "3:0")!;
+  return adv.teams.length === 1 && adv.teams[0].name === "BetBoom" && adv.matches.length === 0;
+})());
+check("terminal team resolves to a layout pickid (logo renders)", (() => {
+  const adv = term.find((r) => r.label === "3:0")!;
+  const elim = term.find((r) => r.label === "0:3")!;
+  return adv.teams[0].pickid !== null && elim.teams[0].pickid !== null;
+})());
+check("summary counts settled teams (1 advanced, 1 eliminated)", (() => {
+  const s = bracketSummary(term);
+  return s.advanced === 1 && s.eliminated === 1;
+})());
+check("an all-placeholder terminal column yields no teams (stays hidden)", (() => {
+  const ph = `<div class="swiss-visual-matchups-title">3:0</div><div class="swiss-matchups-team-wrapper"><div class="swiss-visual-team "><img class="swiss-visual-team-logo" title="?"></div></div>`;
+  return parseSwissBracket(ph).length === 0;
+})());
+
+console.log("\nswiss-bracket - graceful empty");
+
 check("empty html → [] (graceful, no throw)", parseSwissBracket("").length === 0);
 check("html with no bracket → []", parseSwissBracket("<div>nothing here</div>").length === 0);
 check("malformed popup json for a cell is skipped, not thrown", (() => {

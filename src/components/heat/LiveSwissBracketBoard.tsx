@@ -19,12 +19,11 @@ import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
 import type { TeamDef } from "@/lib/layout";
 import { LastUpdated } from "@/components/LastUpdated";
-import type { BracketSide, SwissRound, BracketRoundKind } from "@/lib/swiss-bracket-core";
+import type { BracketSide, BracketTeam, SwissRound, BracketRoundKind } from "@/lib/swiss-bracket-core";
 
 const KIND_META: Record<BracketRoundKind, { label: string | null; color: string }> = {
   advancing: { label: "ADVANCING", color: "var(--tac-green, #9bd23c)" },
   eliminated: { label: "ELIMINATED", color: "var(--ember, #d8351c)" },
-  both: { label: "ADV · ELIM", color: "var(--heat)" },
   contention: { label: null, color: "var(--ink-low)" },
 };
 
@@ -61,7 +60,9 @@ export function LiveSwissBracketBoard({
       </div>
 
       <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "10px 0 14px", lineHeight: 1.5 }}>
-        The full Swiss bracket — every match, round by round. Your teams are ringed.
+        The full Swiss bracket — every match, round by round. A team is{" "}
+        <strong style={{ color: "var(--tac-green, #9bd23c)" }}>through</strong> at 3 wins,{" "}
+        <strong style={{ color: "var(--ember, #d8351c)" }}>out</strong> at 3 losses. Your teams are ringed.
       </p>
 
       {/* Horizontal-scroll bracket */}
@@ -69,14 +70,17 @@ export function LiveSwissBracketBoard({
         <div className="brkt-cols">
           {rounds.map((round) => {
             const meta = KIND_META[round.kind];
-            const bo = round.matches[0]?.bestOf ?? 1;
+            // Terminal columns (3:0 advanced / 0:3 eliminated) list settled teams;
+            // contention columns (still playing) list their matches.
+            const terminal = round.matches.length === 0;
+            const bo = round.matches[0]?.bestOf ?? 0;
             return (
               <div key={round.label} className="brkt-col">
-                {/* Column header: record label + Bo + advancing/eliminated tag */}
+                {/* Column header: record label + Bo (matches) + advancing/eliminated tag */}
                 <div className="brkt-colhead">
                   <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <span style={{ color: "var(--ink-hi)", fontWeight: 700 }}>{round.label}</span>
-                    <span style={{ color: "var(--ink-low)" }}>Bo{bo}</span>
+                    {bo > 0 && <span style={{ color: "var(--ink-low)" }}>Bo{bo}</span>}
                   </span>
                   {meta.label && (
                     <span style={{ color: meta.color, fontWeight: 700, letterSpacing: "0.1em" }}>
@@ -86,17 +90,27 @@ export function LiveSwissBracketBoard({
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {round.matches.map((m, i) => (
-                    <div
-                      key={m.matchId ?? `${round.label}:${i}`}
-                      className="brk brkt-match"
-                      style={{ borderColor: meta.label ? meta.color : "var(--hair)" }}
-                    >
-                      <SideRow side={m.team1} played={m.played} teamMap={teamMap} userPicked={userPickedPickids} />
-                      <div className="brkt-divider" />
-                      <SideRow side={m.team2} played={m.played} teamMap={teamMap} userPicked={userPickedPickids} />
-                    </div>
-                  ))}
+                  {terminal
+                    ? round.teams.map((t, i) => (
+                        <div
+                          key={`${round.label}:${t.pickid ?? t.name}:${i}`}
+                          className="brk brkt-match"
+                          style={{ borderColor: meta.color, padding: 0 }}
+                        >
+                          <TeamRow team={t} teamMap={teamMap} userPicked={userPickedPickids} accent={meta.color} />
+                        </div>
+                      ))
+                    : round.matches.map((m, i) => (
+                        <div
+                          key={m.matchId ?? `${round.label}:${i}`}
+                          className="brk brkt-match"
+                          style={{ borderColor: "var(--hair)" }}
+                        >
+                          <SideRow side={m.team1} played={m.played} teamMap={teamMap} userPicked={userPickedPickids} />
+                          <div className="brkt-divider" />
+                          <SideRow side={m.team2} played={m.played} teamMap={teamMap} userPicked={userPickedPickids} />
+                        </div>
+                      ))}
                 </div>
               </div>
             );
@@ -182,6 +196,46 @@ function SideRow({
         }}
       >
         {played && side.score != null ? side.score : side.winner ? "" : "·"}
+      </span>
+    </div>
+  );
+}
+
+/** A settled team in a terminal (advanced / eliminated) column. */
+function TeamRow({
+  team,
+  teamMap,
+  userPicked,
+  accent,
+}: {
+  team: BracketTeam;
+  teamMap: Map<number, TeamDef>;
+  userPicked: ReadonlySet<number>;
+  accent: string;
+}) {
+  const def = team.pickid != null ? teamMap.get(team.pickid) : undefined;
+  const mine = team.pickid != null && userPicked.has(team.pickid);
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 7,
+        padding: "8px 8px",
+        background: mine ? "rgba(240,163,0,0.10)" : "transparent",
+        borderLeft: `2px solid ${accent}`,
+      }}
+    >
+      {def ? (
+        <TeamLogo tiers={resolveLogoTiers(def)} teamName={def.name} size={20} />
+      ) : (
+        <span aria-hidden="true" style={monogramStyle}>
+          {team.name.slice(0, 2).toUpperCase()}
+        </span>
+      )}
+      <span style={{ minWidth: 0, flex: 1 }}>
+        <span style={{ ...nameStyle, color: "var(--ink-hi)" }}>{def?.name ?? team.name}</span>
+        {mine && <span style={pickTagStyle}>Your call</span>}
       </span>
     </div>
   );
