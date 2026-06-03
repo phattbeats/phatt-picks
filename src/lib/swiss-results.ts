@@ -248,6 +248,61 @@ export async function ingestStandingsNow(eventId: number, sectionId: number): Pr
   return n;
 }
 
+/** Is there already a cached standings blob for this section? (cheap existence check) */
+async function hasCachedSection(eventId: number, sectionId: number): Promise<boolean> {
+  try {
+    const row = await prisma.swissStandingsCache.findUnique({
+      where: { eventId_sectionId: { eventId, sectionId } },
+      select: { id: true },
+    });
+    return row != null;
+  } catch {
+    return false;
+  }
+}
+
+export interface WarmResult {
+  section: number;
+  status: "no-source" | "off-window" | "fresh" | "ingested" | "kept-cache";
+  rows: number;
+}
+
+/**
+ * Synchronously warm a section's standings cache (PHA-902 deploy-reliability).
+ *
+ * The on-read driver (refreshStandingsOnRead) defers its crawl past the response
+ * via `after()`, which means a freshly-deployed container with an empty cache
+ * shows nothing until a crawl lands — and if `after()` ever doesn't fire, the
+ * cache never fills at all. This is the synchronous, awaited path the ingest
+ * route (and a deploy smoke) call so the cache is guaranteed populated without
+ * depending on `after()` or a user happening to load the page.
+ *
+ * Safe to expose: only crawls the hard-coded HLTV event (no user input) and is
+ * gated — off-window → no-op; if a cache already exists it's bounded by the same
+ * ~1h SourceState claim so it can't be hammered; a COLD cache always crawls so a
+ * stamped-but-empty state self-heals. Never throws.
+ */
+export async function warmStandings(
+  eventId: number,
+  sectionId: number,
+  nowMs: number = Date.now(),
+): Promise<WarmResult> {
+  if (!hasStandingsSource(sectionId)) return { section: sectionId, status: "no-source", rows: 0 };
+  if (!isWithinMatchWindow(sectionId, nowMs)) return { section: sectionId, status: "off-window", rows: 0 };
+  const cold = !(await hasCachedSection(eventId, sectionId));
+  // Warm cache → respect the ~1h floor (don't re-crawl on every poke). Cold
+  // cache → always crawl, so a stamped-but-empty slot can't wedge it shut.
+  if (!cold && !(await claimStandingsRefreshSlot())) return { section: sectionId, status: "fresh", rows: 0 };
+  const rows = await ingestStandings(eventId, sectionId);
+  await stampStandingsRefreshSlot();
+  return { section: sectionId, status: rows > 0 ? "ingested" : "kept-cache", rows };
+}
+
+/** The sections that have a live standings source (for the warm-all entry point). */
+export function standingsSectionIds(): number[] {
+  return Object.keys(SECTION_SOURCES).map(Number);
+}
+
 /**
  * Read the live standings for a section, mapped to the current layout teams (for
  * logos + the viewer-pick highlight). Returns null when nothing is cached yet
