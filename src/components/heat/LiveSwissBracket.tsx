@@ -1,20 +1,21 @@
 /**
  * Live Swiss lineup (PHA-898) — the post-lock view for a Swiss stage.
  *
- * Brandon: "add a live updating bracket … like other sites have the swiss
- * lineup and you can check to see how your teams are doing." Once a stage locks
- * we drop the picker and render this instead: every competing team grouped by
- * its current clinch status (3:0 advance / advanced / still in it / 0:3 out),
- * with the teams the viewer picked ringed and tagged so they can track their
- * own calls landing in real time.
+ * Once a stage locks we drop the picker and render this instead. Two sections:
+ *   1. YOUR BUILD — the viewer's picks kept in the exact 3:0 / advance / 0:3
+ *      structure they called, with logos, marked ✓/✗/pending as teams clinch.
+ *      Brandon: "keep the 0-3 advancing 3-0 build, it shouldn't disappear."
+ *   2. THE FIELD — all 16 teams grouped by current clinch status.
  *
  * Server component — the data is built upstream (buildSwissStandings) from the
  * resolved answer key, which the on-read driver keeps fresh; the <AutoRefresh>
- * sibling re-renders the route so the lineup tracks results without a reload.
- * Honest empty state: pre-clinch every team sits in "still in contention", and
- * we never invent a win-loss record Valve hasn't confirmed.
+ * sibling re-renders the route so it tracks results without a reload. Honest
+ * empty state: pre-clinch every team sits in "still in contention", and we
+ * never invent a win-loss record Valve hasn't confirmed. The richer HLTV/BLAST
+ * style live W-L standings is a separate, hourly-refreshed feature (follow-up).
  */
 
+import type { CSSProperties } from "react";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
 import type { TeamDef } from "@/lib/layout";
@@ -49,6 +50,23 @@ export function LiveSwissBracket({
   for (const p of standings.userPicks) resultByTeam.set(p.pickid, p.result);
 
   const started = standings.resolvedTeamCount > 0;
+
+  // The viewer's "build" — their picks grouped by the bucket they slotted each
+  // team into (3:0 / advance / 0:3), in slot order. Brandon: keep this, it
+  // shouldn't vanish when the stage locks. Map keeps insertion order, and we
+  // insert in slot order, so the first-seen label (lowest slot) leads → the
+  // buckets come out 3:0 → advance → 0:3.
+  const buildBuckets: { label: string; picks: SwissUserPick[] }[] = [];
+  {
+    const byLabel = new Map<string, SwissUserPick[]>();
+    for (const p of [...standings.userPicks].sort((a, b) => a.slotIndex - b.slotIndex)) {
+      const bucket = byLabel.get(p.bucketLabel);
+      if (bucket) bucket.push(p);
+      else byLabel.set(p.bucketLabel, [p]);
+    }
+    for (const [label, picks] of byLabel) buildBuckets.push({ label, picks });
+  }
+  const showBuild = signedIn && buildBuckets.length > 0;
 
   return (
     <div className="panel brk" style={{ padding: "20px 18px 22px" }}>
@@ -86,12 +104,52 @@ export function LiveSwissBracket({
       )}
       {signedIn && standings.userTotal === 0 && (
         <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "10px 0 0" }}>
-          You didn&apos;t lock any picks for this stage — follow the lineup below.
+          You didn&apos;t lock any picks for this stage — follow the field below.
         </p>
       )}
 
+      {/* YOUR BUILD — the viewer's picks, kept in their 3:0 / advance / 0:3
+          structure so the locked stage still shows exactly what they called. */}
+      {showBuild && (
+        <div style={{ marginTop: 16 }}>
+          <div className="eyebrow-mono" style={{ color: "var(--ink-mid)", marginBottom: 10, display: "block" }}>
+            [ YOUR BUILD ]
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {buildBuckets.map(({ label, picks }) => (
+              <div key={label}>
+                <div style={bucketLabelStyle}>{label}</div>
+                <div className="swiss-grid">
+                  {picks.map((p) => {
+                    const team = teamMap.get(p.pickid);
+                    return (
+                      <div key={`${p.groupId}:${p.slotIndex}`} className="brk" style={buildTileStyle}>
+                        {team ? (
+                          <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={30} />
+                        ) : (
+                          <div style={{ width: 30, height: 30 }} />
+                        )}
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={teamNameStyle}>{team?.name ?? `#${p.pickid}`}</div>
+                          <div style={yourPickTagStyle}>Your call</div>
+                        </div>
+                        <ResultBadge result={p.result} />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* THE FIELD — all 16 teams by current clinch status. */}
+      <div className="eyebrow-mono" style={{ color: "var(--ink-mid)", margin: "20px 0 0", display: "block" }}>
+        [ THE FIELD ]
+      </div>
       {/* Status columns */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 16 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 12 }}>
         {SWISS_STATUS_GROUPS.map(({ status, label }) => {
           const rows = standings.teams.filter((t) => t.status === status);
           if (rows.length === 0) return null;
@@ -197,5 +255,62 @@ export function LiveSwissBracket({
         @media (min-width: 480px) { .swiss-grid { grid-template-columns: 1fr 1fr; } }
       `}</style>
     </div>
+  );
+}
+
+const bucketLabelStyle: CSSProperties = {
+  fontFamily: "var(--font-mono)",
+  fontSize: 9,
+  letterSpacing: "0.14em",
+  textTransform: "uppercase",
+  color: "var(--ink-low)",
+  marginBottom: 8,
+};
+
+const buildTileStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  padding: "9px 11px",
+  background: "rgba(240,163,0,0.07)",
+  border: "1px solid var(--hair-3)",
+  position: "relative",
+};
+
+const teamNameStyle: CSSProperties = {
+  fontSize: 13,
+  fontWeight: 500,
+  color: "var(--ink-hi)",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+
+const yourPickTagStyle: CSSProperties = {
+  fontFamily: "var(--font-mono)",
+  fontSize: 8,
+  letterSpacing: "0.1em",
+  textTransform: "uppercase",
+  color: "var(--heat)",
+};
+
+function ResultBadge({ result }: { result: SwissUserPick["result"] }) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        fontSize: 14,
+        fontWeight: 700,
+        color:
+          result === "hit"
+            ? "var(--tac-green, #9bd23c)"
+            : result === "miss"
+              ? "var(--ember, #d8351c)"
+              : "var(--ink-low)",
+      }}
+      title={result === "hit" ? "Called it" : result === "miss" ? "Landed elsewhere" : "Still in play"}
+    >
+      {result === "hit" ? "✓" : result === "miss" ? "✗" : "·"}
+    </span>
   );
 }
