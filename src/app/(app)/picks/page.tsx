@@ -14,6 +14,12 @@ import { LockCountdown } from "@/components/heat/LockCountdown";
 import { lockTimeForSection, isLockTimePassed } from "@/lib/lock-schedule-core";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { isSwissSection, bucketSwissSlots } from "@/lib/swiss-bucket-core";
+import {
+  isPlayoffSection,
+  buildPlayoffBracket,
+  PLAYOFF_ROUNDS,
+} from "@/lib/playoff-bracket-core";
+import { LivePlayoffBracket } from "@/components/heat/LivePlayoffBracket";
 import { buildSwissStandings, type SlotPickMap } from "@/lib/swiss-standings-core";
 import { LiveSwissBracket } from "@/components/heat/LiveSwissBracket";
 import { LiveSwissStandings } from "@/components/heat/LiveSwissStandings";
@@ -125,6 +131,42 @@ export default async function PicksPage({
       bucketSwissSlots,
       myPicks as SlotPickMap,
     );
+  }
+
+  // Live playoffs bracket (PHA-903): the single-elim QF → SF → GF tree. Unlike
+  // the Swiss bracket (an HLTV crawl), the playoff TREE is fully described by our
+  // layout — it just fills in live as Stage 3 resolves: seeded teams arrive on
+  // the layout team slots, winners arrive as StageOutcome rows. We always render
+  // the WHOLE tree (all three playoff sections) regardless of which playoff tab
+  // is open, matching Brandon's reference. Built only when viewing a playoff tab.
+  let playoffBracket: ReturnType<typeof buildPlayoffBracket> | null = null;
+  let playoffResolvedAtIso: string | null = null;
+  if (isPlayoffSection(activeSectionId)) {
+    const playoffSectionIds = PLAYOFF_ROUNDS.map((r) => r.sectionId);
+    const playoffSections = layout.sections.filter((s) => playoffSectionIds.includes(s.sectionid));
+    // Viewer's call per match (one pick slot per match group, slot 0).
+    const userPickByGroup = new Map<number, number>();
+    if (session) {
+      const myPlayoffPicks = await prisma.pick.findMany({
+        where: { playerId: session.playerId, eventId: EVENT_ID, sectionId: { in: playoffSectionIds } },
+      });
+      for (const p of myPlayoffPicks) {
+        if (p.slotIndex === 0 && p.pickId !== 0) userPickByGroup.set(p.groupId, p.pickId);
+      }
+    }
+    // Resolved winners per match.
+    const winnerByGroup = new Map<number, number>();
+    const playoffOutcomes = await prisma.stageOutcome.findMany({
+      where: { eventId: EVENT_ID, sectionId: { in: playoffSectionIds } },
+    });
+    let latest = 0;
+    for (const o of playoffOutcomes) {
+      if (o.slotIndex === 0) winnerByGroup.set(o.groupId, o.winnerPickId);
+      const t = o.resolvedAt.getTime();
+      if (t > latest) latest = t;
+    }
+    playoffResolvedAtIso = latest > 0 ? new Date(latest).toISOString() : null;
+    playoffBracket = buildPlayoffBracket({ sections: playoffSections, userPickByGroup, winnerByGroup });
   }
 
   const activeIdx = layout.sections.findIndex((s) => s.sectionid === activeSectionId);
@@ -276,6 +318,21 @@ export default async function PicksPage({
           )}
           {/* Poll the answer key + standings while the stage is live so the
               lineup updates without a manual reload (PHA-898 / PHA-902). */}
+          <AutoRefresh intervalMs={60_000} />
+        </div>
+      ) : playoffBracket ? (
+        // Playoffs view (PHA-903): the locked/unseeded playoff stage shows the
+        // single-elim QF → SF → GF tree (honest TBD until Stage 3 seeds it) in
+        // place of a bare locked card. Once Valve opens + seeds it, the branch
+        // above (activePickability.pickable) renders the picker instead.
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <LockedStageCard pickability={activePickability} compact />
+          <LivePlayoffBracket
+            bracket={playoffBracket}
+            teamMap={buildTeamMap(layout)}
+            signedIn={!!session}
+            resolvedAtIso={playoffResolvedAtIso}
+          />
           <AutoRefresh intervalMs={60_000} />
         </div>
       ) : (
