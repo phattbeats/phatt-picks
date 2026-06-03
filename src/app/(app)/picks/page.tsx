@@ -16,6 +16,8 @@ import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { isSwissSection, bucketSwissSlots } from "@/lib/swiss-bucket-core";
 import { buildSwissStandings, type SlotPickMap } from "@/lib/swiss-standings-core";
 import { LiveSwissBracket } from "@/components/heat/LiveSwissBracket";
+import { LiveSwissStandings } from "@/components/heat/LiveSwissStandings";
+import { refreshStandingsOnRead, getSwissStandings } from "@/lib/swiss-results";
 import { AutoRefresh } from "@/components/AutoRefresh";
 
 const EVENT_ID = 26;
@@ -95,7 +97,16 @@ export default async function PicksPage({
     !!section && !activePickability.pickable && isSwissSection(activeSectionId);
   let swissStandings: ReturnType<typeof buildSwissStandings> | null = null;
   let outcomeResolvedAtIso: string | null = null;
+  // Live HLTV/BLAST-style W-L standings (PHA-902): the running win-loss table the
+  // Valve answer key can't provide. Hourly on-read refresh, graceful-empty.
+  let liveStandings: Awaited<ReturnType<typeof getSwissStandings>> = null;
   if (showLineup && section) {
+    await refreshStandingsOnRead(EVENT_ID, activeSectionId); // ~1h claim, deferred crawl
+    liveStandings = await getSwissStandings(
+      EVENT_ID,
+      activeSectionId,
+      layout.teams.map((t) => ({ pickid: t.pickid, name: t.name })),
+    );
     const outcomeRows = await prisma.stageOutcome.findMany({
       where: { eventId: EVENT_ID, sectionId: activeSectionId },
     });
@@ -237,8 +248,26 @@ export default async function PicksPage({
             signedIn={!!session}
             resolvedAtIso={outcomeResolvedAtIso}
           />
-          {/* Poll the answer key while the stage is live so the lineup updates
-              without a manual reload (PHA-898). */}
+          {/* Live HLTV-style W-L standings for the whole field, under the build
+              (PHA-902). Hidden until the first hourly crawl lands. */}
+          {liveStandings && (
+            <LiveSwissStandings
+              rows={liveStandings.rows}
+              teamMap={buildTeamMap(layout)}
+              userPickedPickids={
+                new Set(
+                  Object.values(myPicks).flatMap((g) =>
+                    Object.values(g).filter((id) => id !== 0),
+                  ),
+                )
+              }
+              source={liveStandings.source}
+              sourceUrl={liveStandings.sourceUrl}
+              fetchedAtIso={liveStandings.fetchedAtIso}
+            />
+          )}
+          {/* Poll the answer key + standings while the stage is live so the
+              lineup updates without a manual reload (PHA-898 / PHA-902). */}
           <AutoRefresh intervalMs={60_000} />
         </div>
       ) : (
