@@ -676,12 +676,14 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .pickcard-icon { font-size: 11px; font-weight: 700; }
 .pickcard-icon.correct { color: var(--tac-green); }
 .pickcard-icon.wrong { color: var(--ink-low); }
-/* Field-share line (PHA-889) — "% of the field made this same pick". */
+/* Consensus line (PHA-889) — how many players made this same pick.
+   Plain counts over "% of field" jargon; the lone call gets the heat. */
 .pickcard-share {
   font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.06em;
   text-transform: uppercase; color: var(--ink-low); text-align: center;
 }
 .pickcard-share b { color: var(--heat); font-weight: 600; }
+.pickcard-share.lone { color: var(--heat); font-weight: 600; }
 
 /* ── LEADERBOARD PODIUM (mockup 04) ────────────────────────────────────── */
 .podium { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; align-items: end; }
