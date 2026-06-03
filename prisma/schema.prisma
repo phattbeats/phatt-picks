@@ -137,6 +137,27 @@ model NewsItem {
   @@index([publishedAt])
 }
 
+// Live HLTV/BLAST-style Swiss W-L standings (PHA-902). One JSON-blob row per
+// (event, section): the parsed standings table (each team's running win-loss
+// record, rounds for/against, status) cached from the external source (HLTV
+// event page via crawl4ai). Refreshed on an ~hourly floor by the on-read driver
+// (refreshStandingsOnRead, mirroring the wire/outcomes SourceState claim) — no
+// cron. The Valve answer key carries no running record, so this is the only
+// source of mid-stage W-L; a source outage degrades to the last cached blob (or
+// empty), never a fabricated record. Single-row-per-section blob (like
+// LayoutCache) keeps writes atomic and avoids 16-row churn each refresh.
+model SwissStandingsCache {
+  id        String   @id @default(cuid())
+  eventId   Int
+  sectionId Int
+  data      String   // JSON: { rows: RawStandingRow[], source, sourceUrl, fetchedAt }
+  fetchedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, sectionId])
+  @@index([eventId])
+}
+
 // PWA push subscriptions
 model PushSubscription {
   id       String   @id @default(cuid())

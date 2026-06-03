@@ -27,6 +27,10 @@ services:
       # Optional: enable destructive write-back to Valve, and per-stage pick locks
       - WRITE_ENABLED=${WRITE_ENABLED:-false}
       - STAGE_LOCKS_JSON=${STAGE_LOCKS_JSON:-}
+      # Live Swiss W-L standings (PHA-902) crawl the HLTV event page via crawl4ai,
+      # which sits on this same phattvip network — reachable by container name.
+      # Override only for a different topology; graceful-empty if unreachable.
+      - CRAWL4AI_URL=${CRAWL4AI_URL:-http://crawl4ai:11235}
       - NODE_ENV=production
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]

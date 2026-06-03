@@ -16,6 +16,9 @@ import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { isSwissSection, bucketSwissSlots } from "@/lib/swiss-bucket-core";
 import { buildSwissStandings, type SlotPickMap } from "@/lib/swiss-standings-core";
 import { LiveSwissBracket } from "@/components/heat/LiveSwissBracket";
+import { LiveSwissStandings } from "@/components/heat/LiveSwissStandings";
+import { LiveSwissBracketBoard } from "@/components/heat/LiveSwissBracketBoard";
+import { refreshStandingsOnRead, getSwissStandings, getSwissBracket } from "@/lib/swiss-results";
 import { AutoRefresh } from "@/components/AutoRefresh";
 
 const EVENT_ID = 26;
@@ -95,7 +98,15 @@ export default async function PicksPage({
     !!section && !activePickability.pickable && isSwissSection(activeSectionId);
   let swissStandings: ReturnType<typeof buildSwissStandings> | null = null;
   let outcomeResolvedAtIso: string | null = null;
+  // Live HLTV/BLAST-style W-L standings (PHA-902): the running win-loss table the
+  // Valve answer key can't provide. Hourly on-read refresh, graceful-empty.
+  let liveStandings: Awaited<ReturnType<typeof getSwissStandings>> = null;
+  let liveBracket: Awaited<ReturnType<typeof getSwissBracket>> = null;
   if (showLineup && section) {
+    await refreshStandingsOnRead(EVENT_ID, activeSectionId, nowMs); // ~1h claim on match days, deferred crawl
+    const matchTeams = layout.teams.map((t) => ({ pickid: t.pickid, name: t.name }));
+    liveBracket = await getSwissBracket(EVENT_ID, activeSectionId, matchTeams);
+    liveStandings = await getSwissStandings(EVENT_ID, activeSectionId, matchTeams);
     const outcomeRows = await prisma.stageOutcome.findMany({
       where: { eventId: EVENT_ID, sectionId: activeSectionId },
     });
@@ -241,8 +252,41 @@ export default async function PicksPage({
             signedIn={!!session}
             resolvedAtIso={outcomeResolvedAtIso}
           />
-          {/* Poll the answer key while the stage is live so the lineup updates
-              without a manual reload (PHA-898). */}
+          {/* Live HLTV/BLAST-style Swiss BRACKET for the whole field, under the
+              build (PHA-902). Round columns with match scores + advance/elim
+              branches — what Brandon asked it to resemble. Then the compact W-L
+              table below. Both hidden until the first hourly crawl lands. */}
+          {(() => {
+            const userPickedPickids = new Set(
+              Object.values(myPicks).flatMap((g) => Object.values(g).filter((id) => id !== 0)),
+            );
+            return (
+              <>
+                {liveBracket && (
+                  <LiveSwissBracketBoard
+                    rounds={liveBracket.rounds}
+                    teamMap={buildTeamMap(layout)}
+                    userPickedPickids={userPickedPickids}
+                    source={liveBracket.source}
+                    sourceUrl={liveBracket.sourceUrl}
+                    fetchedAtIso={liveBracket.fetchedAtIso}
+                  />
+                )}
+                {liveStandings && (
+                  <LiveSwissStandings
+                    rows={liveStandings.rows}
+                    teamMap={buildTeamMap(layout)}
+                    userPickedPickids={userPickedPickids}
+                    source={liveStandings.source}
+                    sourceUrl={liveStandings.sourceUrl}
+                    fetchedAtIso={liveStandings.fetchedAtIso}
+                  />
+                )}
+              </>
+            );
+          })()}
+          {/* Poll the answer key + standings while the stage is live so the
+              lineup updates without a manual reload (PHA-898 / PHA-902). */}
           <AutoRefresh intervalMs={60_000} />
         </div>
       ) : (

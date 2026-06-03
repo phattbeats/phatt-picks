@@ -52,6 +52,56 @@ export const COLOGNE_LOCK_SCHEDULE: LockSchedule = {
   // 110: Grand Final   — Jun 21 (likely), time TBD
 };
 
+/** A stage's competition window — the inclusive date span over which it plays. */
+export interface MatchWindow {
+  /** First moment of the first play day (UTC ISO). */
+  start: string;
+  /** Last moment of the last play day (UTC ISO). */
+  end: string;
+}
+
+/**
+ * Committed per-stage competition windows (PHA-902). A Swiss stage plays over
+ * several days, and the live HLTV standings/bracket only change while games are
+ * being played — so the hourly on-read refresh is gated to these windows
+ * (`isWithinMatchWindow`) and stays idle on off-days (before a stage starts,
+ * after it's decided, between stages). Brandon: "hourly refresh is also only
+ * needed on dates where games are being played."
+ *
+ * Dates are the confirmed HLTV event spans (events 9028 / 9029):
+ *   Stage 1 — Jun 2–5 · Stage 2 — Jun 6–9.
+ * Same truthful-by-construction rule as the lock schedule: a window lives here
+ * only once it's the published, authoritative span. A section with no committed
+ * window isn't suppressed (isWithinMatchWindow returns true) — better to refresh
+ * a stage we haven't dated than to wrongly freeze it. Add Stage III / playoffs
+ * here once their HLTV source + dates are confirmed.
+ */
+export const COLOGNE_MATCH_WINDOWS: Readonly<Record<number, MatchWindow>> = {
+  105: { start: "2026-06-02T00:00:00Z", end: "2026-06-05T23:59:59Z" }, // Stage I  — Jun 2–5
+  106: { start: "2026-06-06T00:00:00Z", end: "2026-06-09T23:59:59Z" }, // Stage II — Jun 6–9
+};
+
+/**
+ * Is `nowMs` inside the section's committed competition window — i.e. is today a
+ * day this stage plays games? Used to gate the live-standings hourly refresh so
+ * it only crawls on match days. A section with no committed window returns true
+ * (don't suppress an undated stage); a malformed window also returns true (fail
+ * open — never freeze the data because of a bad date). `nowMs` is injected to
+ * keep this pure and the verify harness deterministic.
+ */
+export function isWithinMatchWindow(
+  sectionId: number,
+  nowMs: number,
+  windows: Readonly<Record<number, MatchWindow>> = COLOGNE_MATCH_WINDOWS,
+): boolean {
+  const w = windows[sectionId];
+  if (!w) return true; // no committed window — don't suppress (safe default)
+  const start = Date.parse(w.start);
+  const end = Date.parse(w.end);
+  if (Number.isNaN(start) || Number.isNaN(end)) return true; // bad date — fail open
+  return nowMs >= start && nowMs <= end;
+}
+
 /**
  * Resolve the committed lock instant for a section, or `null` when none is
  * published (or the stored value isn't a valid future-or-any ISO instant).
