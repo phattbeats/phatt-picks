@@ -324,11 +324,28 @@ export default async function PlayerProfilePage({
                                     </span>
                                   )}
                                 </span>
-                                {share && (
-                                  <span className="pickcard-share" title={`${share.count} of ${consensus.get(consensusKey(section.sectionid, group.groupid, slot.index))?.total ?? share.count} players`}>
-                                    <b>{share.pct}%</b> of field
-                                  </span>
-                                )}
+                                {share && (() => {
+                                  // Consensus, told as a story instead of a stat. "20% of field"
+                                  // read like a bug at a 5-player table (every value rounds to a
+                                  // multiple of 20) and "of field" is jargon. Raw counts are honest
+                                  // at any size; the lone call is the contrarian flex PHA-900 is after.
+                                  const total = consensus.get(consensusKey(section.sectionid, group.groupid, slot.index))?.total ?? share.count;
+                                  if (total < 2) return null; // no consensus to speak of with a field of one
+                                  const lone = share.count === 1;
+                                  const label = lone
+                                    ? "Lone call"
+                                    : share.count === total
+                                      ? "Whole board"
+                                      : `${share.count} of ${total} picked`;
+                                  return (
+                                    <span
+                                      className={`pickcard-share${lone ? " lone" : ""}`}
+                                      title={`${share.count} of ${total} players made this same pick`}
+                                    >
+                                      {label}
+                                    </span>
+                                  );
+                                })()}
                               </div>
                             );
                           })}

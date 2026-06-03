@@ -1,28 +1,41 @@
 /**
- * Pick comparison — two players side by side, per stage.
+ * Pick comparison — head-to-head, redesigned (PHA-900).
  *
- * Rule: a player's picks stay hidden until the stage LOCKS. Open stages render
- * a locked placeholder for everyone (including yourself in this view — the
- * comparison is the post-lock reveal surface). Locked stages reveal both
- * players' team choices and, where a result exists, mark hit/miss.
+ * The hook: when a stage is revealed AND results have landed, the picks YOU
+ * called right that your opponent whiffed ("THE STEAL") get top billing —
+ * that's the good stuff. Below it, every stage is a logo grid: all of your
+ * picks lined up against all of theirs, hit/miss ringed once a result exists.
  *
- * Scores are always public (shown in the header); only the team choices are
- * gated. Works for local and connected players alike (rule #6).
+ * Reveal rule is unchanged (PHA-862 / PHA-898): a group's team choices stay
+ * hidden for EVERYONE until its stage locks (either Valve flips picks_allowed,
+ * the published lock time passes, or a result lands). Scores are always public.
+ * Section-qualified pick maps prevent a revealed stage from leaking a still-open
+ * stage's secret pick across a reused groupid.
  */
 
+import Image from "next/image";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { getCommittedLayout, buildTeamMap } from "@/lib/layout";
+import { getCommittedLayout, buildTeamMap, type TeamDef } from "@/lib/layout";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
 import { arePicksRevealed, groupOutcomeKey } from "@/lib/reveal-core";
 import { getSession } from "@/lib/session";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { isLockTimePassed } from "@/lib/lock-schedule-core";
+import { resolveLogoTiers } from "@/lib/logos";
+import { TeamLogo } from "@/components/ui/TeamLogo";
 
 const EVENT_ID = 26;
 
 export const dynamic = "force-dynamic";
 
+type PlayerLite = {
+  id: string;
+  displayName: string;
+  avatarUrl: string | null;
+  isLocal: boolean;
+  synced: boolean;
+};
 
 function toPlayerPickMap(picks: { sectionId: number; groupId: number; slotIndex: number; pickId: number }[]): PlayerPickMap[string] {
   const m: PlayerPickMap[string] = {};
@@ -32,6 +45,128 @@ function toPlayerPickMap(picks: { sectionId: number; groupId: number; slotIndex:
     m[p.sectionId][p.groupId][p.slotIndex] = p.pickId;
   }
   return m;
+}
+
+function provenance(p: PlayerLite): string {
+  return p.isLocal ? "Local" : p.synced ? "Synced" : "Steam";
+}
+
+/** Round avatar / monogram, matching the player-profile hero. */
+function Avatar({ player, size }: { player: PlayerLite; size: number }) {
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        overflow: "hidden",
+        background: "var(--bg3)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: "'Rajdhani', sans-serif",
+        fontWeight: 700,
+        fontSize: size * 0.34,
+        color: "var(--text-mid)",
+        flexShrink: 0,
+      }}
+      aria-hidden
+    >
+      {player.avatarUrl ? (
+        <Image src={player.avatarUrl} alt="" width={size} height={size} unoptimized style={{ objectFit: "cover", width: "100%", height: "100%" }} />
+      ) : (
+        player.displayName.slice(0, 2).toUpperCase()
+      )}
+    </div>
+  );
+}
+
+type TileState = "hit" | "miss" | "pending" | "empty";
+
+/** One team chip in a comparison row — logo + name, ringed by outcome. */
+function PickTile({
+  team,
+  state,
+  align,
+  steal,
+}: {
+  team: TeamDef | undefined;
+  state: TileState;
+  align: "left" | "right";
+  steal: boolean;
+}) {
+  const name = team?.name ?? "—";
+  const isHit = state === "hit";
+  const isMiss = state === "miss";
+  const reverse = align === "right";
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: reverse ? "row-reverse" : "row",
+        alignItems: "center",
+        gap: 8,
+        padding: "6px 9px",
+        border: isHit ? "1px solid var(--correct)" : "1px solid var(--bg3)",
+        background: isHit ? "rgba(155,210,60,0.09)" : "var(--bg2)",
+        borderRadius: "var(--radius-md)",
+        minWidth: 0,
+        opacity: isMiss ? 0.6 : 1,
+        boxShadow: steal ? "0 0 0 1px var(--correct), 0 0 14px rgba(155,210,60,0.28)" : undefined,
+      }}
+    >
+      {team ? (
+        <TeamLogo tiers={resolveLogoTiers(team)} teamName={name} size={26} />
+      ) : (
+        <div style={{ width: 26, height: 26, borderRadius: "50%", background: "var(--bg3)", flexShrink: 0 }} />
+      )}
+      <span
+        style={{
+          flex: 1,
+          minWidth: 0,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          fontSize: 13,
+          fontWeight: 600,
+          color: isHit ? "var(--text-hi)" : "var(--text-mid)",
+          textAlign: reverse ? "right" : "left",
+          textDecoration: isMiss ? "line-through" : undefined,
+        }}
+      >
+        {name}
+      </span>
+      {(isHit || isMiss) && (
+        <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 13, color: isHit ? "var(--correct)" : "var(--text-low)", flexShrink: 0 }}>
+          {isHit ? "✓" : "✗"}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** A "you called it" trophy chip in THE STEAL reel. */
+function StealChip({ team, label }: { team: TeamDef; label: string }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "8px 14px 8px 9px",
+        background: "rgba(155,210,60,0.10)",
+        border: "1px solid var(--correct)",
+        borderRadius: "var(--radius-md)",
+        flexShrink: 0,
+      }}
+    >
+      <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={34} />
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-hi)", whiteSpace: "nowrap" }}>{team.name}</div>
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-mid)", whiteSpace: "nowrap" }}>{label}</div>
+      </div>
+    </div>
+  );
 }
 
 export default async function ComparePage({
@@ -51,7 +186,10 @@ export default async function ComparePage({
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now();
 
-  const players = await prisma.player.findMany({ orderBy: { displayName: "asc" } });
+  const players: PlayerLite[] = await prisma.player.findMany({
+    orderBy: { displayName: "asc" },
+    select: { id: true, displayName: true, avatarUrl: true, isLocal: true, synced: true },
+  });
 
   // Need at least two players to compare.
   if (players.length < 2) {
@@ -60,13 +198,7 @@ export default async function ComparePage({
         <span className="br-tr" />
         <span className="br-bl" />
         <span className="eyebrow-mono">[ COMPARE ]</span>
-        <h1 className="font-display" style={{
-          fontWeight: 800,
-          fontSize: 28,
-          textTransform: "uppercase",
-          color: "var(--ink-hi)",
-          margin: "8px 0",
-        }}>
+        <h1 className="font-display" style={{ fontWeight: 800, fontSize: 28, textTransform: "uppercase", color: "var(--ink-hi)", margin: "8px 0" }}>
           Two players minimum
         </h1>
         <p style={{ color: "var(--ink-mid)", fontSize: 14, margin: "0 0 16px" }}>
@@ -112,101 +244,191 @@ export default async function ComparePage({
 
   const a = players.find((p) => p.id === aId)!;
   const b = players.find((p) => p.id === bId)!;
+  const aIsYou = session?.playerId === aId;
+  const bIsYou = session?.playerId === bId;
 
   // Section-qualified pick maps (sectionId → groupId → slotIndex → pickId).
-  // Must NOT be keyed by groupId alone: if Valve ever reuses a groupid across
-  // sections, a groupId-only map collides and a revealed (locked) section could
-  // surface another still-open section's secret pick — same hazard as the
-  // reveal gate above (PHA-862). Reuse toPlayerPickMap, which scoring also uses.
+  // Must NOT be keyed by groupId alone (see PHA-862): a groupId-only map collides
+  // if Valve reuses a groupid across sections, leaking a still-open section's
+  // secret pick. Reuse toPlayerPickMap, which scoring also uses.
   const aPicksMap = toPlayerPickMap(picksByPlayer.get(aId) ?? []);
   const bPicksMap = toPlayerPickMap(picksByPlayer.get(bId) ?? []);
 
   const aScore = scorePlayer(layout, aPicksMap, outcomeMap).total;
   const bScore = scorePlayer(layout, bPicksMap, outcomeMap).total;
+  const lead = aScore - bScore;
 
-  const teamName = (pickId: number | undefined): string => {
-    if (!pickId) return "—";
-    return teamMap.get(pickId)?.name ?? `#${pickId}`;
-  };
+  const team = (pickId: number | undefined): TeamDef | undefined =>
+    pickId && pickId !== 0 ? teamMap.get(pickId) : undefined;
+
+  // Walk every revealed + resolved slot once: compute THE STEAL (picks one
+  // player nailed that the other whiffed) and the head-to-head record.
+  // Only revealed groups are inspected, so this never leaks a hidden pick.
+  const aSteals: { team: TeamDef; label: string }[] = [];
+  const bSteals: { team: TeamDef; label: string }[] = [];
+  let bothRight = 0;
+  // sectionId:groupid → revealed?  (computed once, reused by the grid below)
+  const revealedByGroup = new Map<string, boolean>();
+
+  for (const section of layout.sections) {
+    const stageLabel = section.name.split(" | ")[0];
+    for (const group of section.groups) {
+      const gKey = `${section.sectionid}:${group.groupid}`;
+      const revealed = arePicksRevealed(
+        group,
+        groupHasOutcome.has(groupOutcomeKey(section.sectionid, group.groupid)),
+        isLockTimePassed(section.sectionid, nowMs),
+      );
+      revealedByGroup.set(gKey, revealed);
+      if (!revealed) continue;
+
+      const aGroup = aPicksMap[section.sectionid]?.[group.groupid] ?? {};
+      const bGroup = bPicksMap[section.sectionid]?.[group.groupid] ?? {};
+      const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
+
+      for (const slot of group.picks) {
+        const winner = groupOutcomes[slot.index];
+        if (winner === undefined || winner === 0) continue; // not resolved
+        const aRight = aGroup[slot.index] === winner;
+        const bRight = bGroup[slot.index] === winner;
+        const winTeam = team(winner);
+        if (!winTeam) continue;
+        if (aRight && bRight) bothRight++;
+        else if (aRight && !bRight) aSteals.push({ team: winTeam, label: stageLabel });
+        else if (bRight && !aRight) bSteals.push({ team: winTeam, label: stageLabel });
+      }
+    }
+  }
+
+  const head = (p: PlayerLite, score: number, you: boolean, side: "left" | "right") => (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: side === "left" ? "flex-start" : "flex-end", gap: 6, minWidth: 0 }}>
+      <Avatar player={p} size={52} />
+      <div
+        style={{
+          fontWeight: 700,
+          fontSize: 15,
+          color: "var(--text-hi)",
+          maxWidth: "100%",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          textAlign: side,
+        }}
+      >
+        {p.displayName}
+        {you && <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.12em", color: "var(--heat)", marginLeft: 6 }}>· YOU</span>}
+      </div>
+      <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 40, lineHeight: 0.9, color: score > 0 ? "var(--correct)" : "var(--text-low)" }}>
+        {score}
+      </div>
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-low)" }}>
+        {provenance(p)}
+      </div>
+    </div>
+  );
+
+  const resolvedAny = aSteals.length + bSteals.length + bothRight > 0;
 
   return (
     <>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <Link href="/leaderboard" style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: 11,
-          letterSpacing: "0.14em",
-          textTransform: "uppercase",
-          color: "var(--ink-mid)",
-          textDecoration: "none",
-        }}>
+        <Link href="/leaderboard" style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--ink-mid)", textDecoration: "none" }}>
           ← Leaderboard
         </Link>
         <span className="eyebrow-mono">[ HEAD_TO_HEAD ]</span>
-        <h1 className="font-display" style={{
-          fontWeight: 800,
-          fontSize: "clamp(28px, 5vw, 40px)",
-          textTransform: "uppercase",
-          lineHeight: 0.95,
-        }}>
+        <h1 className="font-display" style={{ fontWeight: 800, fontSize: "clamp(28px, 5vw, 40px)", textTransform: "uppercase", lineHeight: 0.95 }}>
           Compare
         </h1>
       </div>
 
-        {/* Player heads + scores */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr auto 1fr",
-            alignItems: "center",
-            gap: "var(--space-2)",
-            marginBottom: "var(--space-4)",
-            padding: "var(--space-3)",
-            background: "var(--bg1)",
-            border: "1px solid var(--bg3)",
-            borderRadius: "var(--radius-lg)",
-          }}
-        >
-          {[a, b].map((p, i) => {
-            const score = i === 0 ? aScore : bScore;
-            return (
-              <div key={p.id} style={{ textAlign: i === 0 ? "left" : "right" }}>
-                <div
-                  style={{
-                    fontWeight: 600,
-                    fontSize: "0.9375rem",
-                    color: "var(--text-hi)",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {p.displayName}
-                  {session?.playerId === p.id && " (you)"}
-                </div>
-                <div
-                  style={{
-                    fontFamily: "'Rajdhani', sans-serif",
-                    fontWeight: 700,
-                    fontSize: "1.5rem",
-                    color: score > 0 ? "var(--correct)" : "var(--text-low)",
-                  }}
-                >
-                  {score}
-                </div>
-                {/* Provenance only — local players never show a coin/tier (rule #4). */}
-                <div style={{ fontSize: "0.6875rem", color: "var(--text-low)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                  {p.isLocal ? "Local" : p.synced ? "Synced" : "Steam"}
-                </div>
-              </div>
-            );
-          })}
-          {/* center column placeholder for the grid's middle track */}
-          <span style={{ color: "var(--text-low)", fontFamily: "'Rajdhani', sans-serif", fontWeight: 700 }}>vs</span>
+      {/* Hero scoreboard */}
+      <section
+        className="brk"
+        style={{
+          position: "relative",
+          display: "grid",
+          gridTemplateColumns: "1fr auto 1fr",
+          alignItems: "center",
+          gap: "var(--space-3)",
+          margin: "var(--space-4) 0",
+          padding: "var(--space-4) var(--space-3)",
+          background: "linear-gradient(135deg, var(--surf-2), var(--surf-1))",
+          border: "1px solid var(--bg3)",
+          borderRadius: "var(--radius-lg)",
+        }}
+      >
+        <span className="br-tr" />
+        <span className="br-bl" />
+        {head(a, aScore, aIsYou, "left")}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+          <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 18, color: "var(--text-low)" }}>VS</span>
+          <span
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 10,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: lead === 0 ? "var(--text-low)" : "var(--heat)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {lead === 0 ? "TIED" : lead > 0 ? `+${lead} ←` : `→ +${-lead}`}
+          </span>
+        </div>
+        {head(b, bScore, bIsYou, "right")}
+      </section>
+
+      {/* THE STEAL — picks called right that the other whiffed */}
+      <section style={{ marginBottom: "var(--space-4)" }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "var(--space-2)" }}>
+          <span className="eyebrow-mono" style={{ color: "var(--correct)" }}>[ THE_STEAL ]</span>
+          {resolvedAny && (
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.08em", color: "var(--text-low)" }}>
+              {aSteals.length}–{bSteals.length} · {bothRight} SHARED
+            </span>
+          )}
         </div>
 
-        {/* Opponent switcher */}
-        <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", marginBottom: "var(--space-4)" }}>
+        {!resolvedAny ? (
+          <div style={{ padding: "var(--space-4)", textAlign: "center", color: "var(--text-low)", fontSize: 13, background: "var(--bg1)", border: "1px dashed var(--bg3)", borderRadius: "var(--radius-md)" }}>
+            No results in yet. The moment matches resolve, the picks you nailed that {bIsYou ? "they" : b.displayName} missed land right here.
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+            <div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-mid)", marginBottom: 6 }}>
+                {aIsYou ? "You" : a.displayName} called it · {b.displayName} didn&apos;t — {aSteals.length}
+              </div>
+              {aSteals.length ? (
+                <div style={{ display: "flex", gap: "var(--space-2)", overflowX: "auto", paddingBottom: 4 }}>
+                  {aSteals.map((s, i) => <StealChip key={`a${i}`} team={s.team} label={s.label} />)}
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: "var(--text-low)" }}>Nothing yet.</div>
+              )}
+            </div>
+            <div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-mid)", marginBottom: 6 }}>
+                {b.displayName} called it · {aIsYou ? "you" : a.displayName} didn&apos;t — {bSteals.length}
+              </div>
+              {bSteals.length ? (
+                <div style={{ display: "flex", gap: "var(--space-2)", overflowX: "auto", paddingBottom: 4 }}>
+                  {bSteals.map((s, i) => <StealChip key={`b${i}`} team={s.team} label={s.label} />)}
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: "var(--text-low)" }}>Nothing yet.</div>
+              )}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Opponent switcher */}
+      <div style={{ marginBottom: "var(--space-4)" }}>
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-low)", marginBottom: 6 }}>
+          Compare against
+        </div>
+        <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
           {players
             .filter((p) => p.id !== aId)
             .map((p) => {
@@ -216,62 +438,54 @@ export default async function ComparePage({
                   key={p.id}
                   href={`/leaderboard/compare?a=${aId}&b=${p.id}`}
                   style={{
-                    padding: "var(--space-1) var(--space-3)",
-                    borderRadius: "var(--radius-sm)",
-                    background: active ? "var(--accent)" : "var(--bg2)",
-                    color: active ? "#fff" : "var(--text-mid)",
-                    textDecoration: "none",
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    minHeight: 36,
                     display: "flex",
                     alignItems: "center",
+                    gap: 7,
+                    padding: "5px 12px 5px 6px",
+                    borderRadius: "var(--radius-md)",
+                    background: active ? "var(--accent)" : "var(--bg2)",
+                    color: active ? "#1c1812" : "var(--text-mid)",
+                    textDecoration: "none",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    minHeight: 36,
+                    border: active ? "1px solid var(--accent)" : "1px solid var(--bg3)",
                   }}
                 >
+                  <Avatar player={p} size={24} />
                   {p.displayName}
                 </a>
               );
             })}
         </div>
+      </div>
 
-        {/* Per-stage comparison */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-          {layout.sections.map((section) => (
+      {/* Per-stage logo grid */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+        {layout.sections.map((section) => {
+          const stageLabel = section.name.split(" | ")[0];
+          return (
             <div key={section.sectionid}>
-              <h2
-                style={{
-                  fontFamily: "'Rajdhani', sans-serif",
-                  fontSize: "0.875rem",
-                  fontWeight: 700,
-                  letterSpacing: "0.05em",
-                  textTransform: "uppercase",
-                  color: "var(--text-mid)",
-                  margin: "0 0 var(--space-2)",
-                }}
-              >
-                {section.name.split(" | ")[0]}
+              <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--text-mid)", margin: "0 0 var(--space-2)" }}>
+                {stageLabel}
               </h2>
 
               {section.groups.map((group) => {
-                const revealed = arePicksRevealed(
-                  group,
-                  groupHasOutcome.has(groupOutcomeKey(section.sectionid, group.groupid)),
-                  isLockTimePassed(section.sectionid, nowMs),
-                );
+                const revealed = revealedByGroup.get(`${section.sectionid}:${group.groupid}`) ?? false;
                 const aGroup = aPicksMap[section.sectionid]?.[group.groupid] ?? {};
                 const bGroup = bPicksMap[section.sectionid]?.[group.groupid] ?? {};
                 const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
 
+                const tileState = (pick: number | undefined, winner: number | undefined): TileState => {
+                  if (winner === undefined || winner === 0) return pick && pick !== 0 ? "pending" : "empty";
+                  if (pick && pick !== 0 && pick === winner) return "hit";
+                  return pick && pick !== 0 ? "miss" : "empty";
+                };
+
                 return (
                   <div
                     key={group.groupid}
-                    style={{
-                      background: "var(--bg1)",
-                      border: "1px solid var(--bg3)",
-                      borderRadius: "var(--radius-md)",
-                      overflow: "hidden",
-                      marginBottom: "var(--space-2)",
-                    }}
+                    style={{ background: "var(--bg1)", border: "1px solid var(--bg3)", borderRadius: "var(--radius-md)", overflow: "hidden", marginBottom: "var(--space-2)" }}
                   >
                     <div
                       style={{
@@ -282,51 +496,38 @@ export default async function ComparePage({
                         borderBottom: revealed ? "1px solid var(--bg3)" : "none",
                       }}
                     >
-                      <span style={{ fontSize: "0.75rem", color: "var(--text-mid)", fontWeight: 600 }}>
+                      <span style={{ fontSize: 13, color: "var(--text-mid)", fontWeight: 700 }}>
                         {group.name.split(" | ").slice(-1)[0]}
                       </span>
-                      <span style={{ fontSize: "0.6875rem", color: "var(--accent)", fontFamily: "'Rajdhani', sans-serif", fontWeight: 700 }}>
+                      <span style={{ fontSize: 11, color: "var(--accent)", fontFamily: "'Rajdhani', sans-serif", fontWeight: 700 }}>
                         {group.points_per_pick} PT{group.points_per_pick !== 1 ? "S" : ""}/PICK
                       </span>
                     </div>
 
                     {!revealed ? (
-                      <div style={{ padding: "var(--space-3)", textAlign: "center", color: "var(--text-low)", fontSize: "0.8125rem" }}>
-                        🔒 Picks hidden until this stage locks
+                      <div style={{ padding: "var(--space-4)", textAlign: "center", color: "var(--text-low)", fontSize: 13 }}>
+                        🔒 Both players&apos; picks unlock when this stage starts
                       </div>
                     ) : (
-                      <div style={{ padding: "var(--space-2) var(--space-3)" }}>
+                      <div style={{ padding: "var(--space-2) var(--space-3)", display: "flex", flexDirection: "column", gap: 6 }}>
                         {group.picks.map((slot) => {
                           const aPick = aGroup[slot.index];
                           const bPick = bGroup[slot.index];
                           const winner = groupOutcomes[slot.index];
-                          const mark = (pick: number | undefined) =>
-                            winner === undefined ? null : pick === winner ? "✓" : "✗";
-                          const markColor = (pick: number | undefined) =>
-                            winner === undefined ? "var(--text-low)" : pick === winner ? "var(--correct)" : "var(--text-low)";
+                          const aState = tileState(aPick, winner);
+                          const bState = tileState(bPick, winner);
+                          const aSteal = aState === "hit" && bState !== "hit";
+                          const bSteal = bState === "hit" && aState !== "hit";
                           return (
                             <div
                               key={slot.index}
-                              style={{
-                                display: "grid",
-                                gridTemplateColumns: "1fr auto 1fr",
-                                alignItems: "center",
-                                gap: "var(--space-2)",
-                                padding: "var(--space-1) 0",
-                                fontSize: "0.8125rem",
-                              }}
+                              style={{ display: "grid", gridTemplateColumns: "1fr 26px 1fr", alignItems: "center", gap: "var(--space-2)" }}
                             >
-                              <span style={{ color: markColor(aPick), textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                {mark(aPick) && <strong>{mark(aPick)} </strong>}
-                                {teamName(aPick)}
+                              <PickTile team={team(aPick)} state={aState} align="left" steal={aSteal} />
+                              <span style={{ textAlign: "center", color: "var(--text-low)", fontFamily: "var(--font-mono)", fontSize: 10 }}>
+                                {group.picks.length > 1 ? slot.index + 1 : "·"}
                               </span>
-                              <span style={{ color: "var(--text-low)", fontSize: "0.625rem" }}>
-                                {group.picks.length > 1 ? slot.index + 1 : ""}
-                              </span>
-                              <span style={{ color: markColor(bPick), textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                {teamName(bPick)}
-                                {mark(bPick) && <strong> {mark(bPick)}</strong>}
-                              </span>
+                              <PickTile team={team(bPick)} state={bState} align="right" steal={bSteal} />
                             </div>
                           );
                         })}
@@ -336,8 +537,9 @@ export default async function ComparePage({
                 );
               })}
             </div>
-          ))}
-        </div>
+          );
+        })}
+      </div>
     </>
   );
 }
