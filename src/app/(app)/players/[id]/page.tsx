@@ -20,6 +20,8 @@ import { getSession } from "@/lib/session";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
 import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
+import { buildSwissStandings, type SlotPickMap } from "@/lib/swiss-standings-core";
+import { LockedPicksBoard } from "@/components/heat/LockedPicksBoard";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { buildBucketConsensus, bucketShareFor } from "@/lib/consensus-core";
 import type { Section } from "@/lib/layout";
@@ -252,12 +254,58 @@ export default async function PlayerProfilePage({
         </Link>
       )}
 
-      {/* Per-stage picks (reveal-gated against non-self viewers) */}
+      {/* Per-stage picks (reveal-gated against non-self viewers). Swiss stages
+          render in the SAME locked-picks UI as /picks — the 3:0 / advance / 0:3
+          buckets, each call green when confirmed right, red when wrong OR no
+          longer winnable (PHA-902). Playoffs keep the per-match cards. */}
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {layout.sections.map((section) => (
+        {layout.sections.map((section) => {
+          const stageLabel = section.name.split(" | ")[0].toUpperCase();
+          if (isSwissSection(section.sectionid)) {
+            const group = section.groups[0];
+            const revealed =
+              isSelf ||
+              arePicksRevealed(
+                group,
+                groupHasOutcome.has(groupOutcomeKey(section.sectionid, group.groupid)),
+                isLockTimePassed(section.sectionid, nowMs),
+              );
+            if (!revealed) {
+              return (
+                <div key={section.sectionid} className="pickgroup">
+                  <div className="pickgroup-head">
+                    <span className="pickgroup-name" style={{ fontSize: 14 }}>{stageLabel}</span>
+                  </div>
+                  <div style={{ padding: 20, textAlign: "center", color: "var(--ink-low)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                    🔒 Hidden until this stage locks
+                  </div>
+                </div>
+              );
+            }
+            const swiss = buildSwissStandings(
+              section,
+              (outcomeMap[section.sectionid] ?? {}) as SlotPickMap,
+              bucketSwissSlots,
+              (pickMap[section.sectionid] ?? {}) as SlotPickMap,
+            );
+            const teamStatus = new Map(swiss.teams.map((t) => [t.pickid, t.status] as const));
+            return (
+              <LockedPicksBoard
+                key={section.sectionid}
+                section={section}
+                teamMap={teamMap}
+                myPicks={pickMap[section.sectionid] ?? {}}
+                teamStatus={teamStatus}
+                resolvedAtIso={null}
+                title={`[ ${stageLabel} ]`}
+              />
+            );
+          }
+          // Non-Swiss (playoffs): keep the per-match cards.
+          return (
           <div key={section.sectionid}>
             <h2 className="eyebrow-mono" style={{ marginBottom: 8, display: "block" }}>
-              [ {section.name.split(" | ")[0].toUpperCase()} ]
+              [ {stageLabel} ]
             </h2>
 
               {section.groups.map((group) => {
@@ -360,7 +408,8 @@ export default async function PlayerProfilePage({
                 );
               })}
           </div>
-        ))}
+          );
+        })}
       </div>
     </>
   );

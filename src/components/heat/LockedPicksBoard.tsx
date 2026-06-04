@@ -36,6 +36,7 @@ export function LockedPicksBoard({
   myPicks,
   teamStatus,
   resolvedAtIso,
+  title = "[ YOUR LOCKED PICKS ]",
 }: {
   section: Section;
   teamMap: Map<number, TeamDef>;
@@ -44,6 +45,8 @@ export function LockedPicksBoard({
   /** pickId -> answer-key status, from the live standings. */
   teamStatus: Map<number, SwissTeamStatus>;
   resolvedAtIso: string | null;
+  /** Header label — overridden on the player-profile page (e.g. "[ STAGE I ]"). */
+  title?: string;
 }) {
   return (
     <div className="panel brk" style={{ padding: "18px 16px 20px" }}>
@@ -51,7 +54,7 @@ export function LockedPicksBoard({
       <span className="br-bl" />
 
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
-        <span className="eyebrow-mono" style={{ color: "var(--heat)" }}>[ YOUR LOCKED PICKS ]</span>
+        <span className="eyebrow-mono" style={{ color: "var(--heat)" }}>{title}</span>
         <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-low)" }}>
           {resolvedAtIso ? <LastUpdated iso={resolvedAtIso} /> : "Turns green / red as teams clinch"}
         </span>

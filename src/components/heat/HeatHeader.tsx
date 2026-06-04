@@ -19,8 +19,9 @@ export type TopbarYouProps =
   | { kind: "avatar"; avatarUrl: string; label: string };
 
 /** Renders both the desktop top nav and the mobile header. CSS toggles which
- *  is visible based on viewport. */
-export function HeatHeader({ topbar }: { topbar: TopbarYouProps }) {
+ *  is visible based on viewport. `profileHref` is where the top-right avatar
+ *  goes — the signed-in player's own player profile (Brandon), or /profile. */
+export function HeatHeader({ topbar, profileHref = "/profile" }: { topbar: TopbarYouProps; profileHref?: string }) {
   const pathname = usePathname() ?? "/";
 
   return (
@@ -43,7 +44,7 @@ export function HeatHeader({ topbar }: { topbar: TopbarYouProps }) {
               </Link>
             ))}
           </div>
-          <YouChip topbar={topbar} variant="desktop" />
+          <YouChip topbar={topbar} variant="desktop" href={profileHref} />
         </div>
       </nav>
 
@@ -53,7 +54,7 @@ export function HeatHeader({ topbar }: { topbar: TopbarYouProps }) {
           <HeatMark size={26} />
           <HeatWordmark size={18} />
         </Link>
-        <YouChip topbar={topbar} variant="mobile" />
+        <YouChip topbar={topbar} variant="mobile" href={profileHref} />
       </header>
     </>
   );
@@ -62,9 +63,11 @@ export function HeatHeader({ topbar }: { topbar: TopbarYouProps }) {
 function YouChip({
   topbar,
   variant,
+  href,
 }: {
   topbar: TopbarYouProps;
   variant: "desktop" | "mobile";
+  href: string;
 }) {
   const size = variant === "desktop" ? 30 : 28;
   const ariaLabel =
@@ -73,7 +76,7 @@ function YouChip({
       : `Your profile — ${topbar.label}`;
 
   return (
-    <Link href="/profile" className="nav-avatar" aria-label={ariaLabel}>
+    <Link href={href} className="nav-avatar" aria-label={ariaLabel}>
       {topbar.kind === "avatar" ? (
         <Image
           src={topbar.avatarUrl}
