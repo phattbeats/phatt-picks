@@ -13,7 +13,7 @@
 
 import type { Layout } from "./layout";
 
-export type OutcomeSource = "valve" | "liquipedia";
+export type OutcomeSource = "valve" | "liquipedia" | "hltv";
 
 /** Attribution required by Liquipedia's API terms (content is CC-BY-SA). */
 export const LIQUIPEDIA_ATTRIBUTION =

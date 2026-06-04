@@ -74,37 +74,43 @@ check("slot 8 winner -> eliminated", byId.get(tOut)?.status === "eliminated");
 check("unresolved teams stay live", byId.get(teamIds[5])?.status === "live");
 check("resolvedTeamCount === 3", resolved.resolvedTeamCount === 3);
 
-console.log("\nswiss-standings - viewer picks tagged hit / miss / pending");
+console.log("\nswiss-standings - viewer picks tagged hit / miss / pending (bucket-aware, PHA-918)");
 
-// Viewer predicted: t30 goes 3:0 (slot 0 — correct), tAdv goes 3:0 (slot 1 —
-// but tAdv actually clinched the advance bucket, so that exact slot is
-// unresolved => pending), a team into slot 9 (0:3, unresolved => pending).
+// Bucket-aware: a pick is a HIT when the team clinched the bucket the viewer
+// slotted it into, a MISS when it clinched a DIFFERENT bucket, and PENDING only
+// while the team has clinched nothing yet (slot order within a bucket is
+// irrelevant — the answer key fills bucket slots in standings order, not the
+// viewer's). Viewer predicted: t30 goes 3:0 (correct -> hit); tAdv goes 3:0 but
+// it actually clinched the advance bucket (-> miss); teamIds[7] into a 0:3 slot
+// while it is still live (-> pending).
 const userPicks = {
   [groupId]: {
-    0: t30, // matches outcome slot 0 -> hit
-    1: tAdv, // slot 1 has no outcome -> pending
-    9: teamIds[7], // slot 9 no outcome -> pending
+    0: t30, // t30 clinched 3:0, slotted 3:0 -> hit
+    1: tAdv, // tAdv clinched advance, slotted 3:0 -> miss
+    9: teamIds[7], // teamIds[7] still live -> pending
   },
 };
 const withPicks = buildSwissStandings(stage1, outcomes, bucketSwissSlots, userPicks);
 const picks = new Map(withPicks.userPicks.map((p) => [p.slotIndex, p]));
-check("viewer pick on resolved+correct slot -> hit", picks.get(0)?.result === "hit");
-check("viewer pick on unresolved slot -> pending", picks.get(1)?.result === "pending");
-check("second unresolved viewer pick -> pending", picks.get(9)?.result === "pending");
+check("viewer pick in the bucket the team clinched -> hit", picks.get(0)?.result === "hit");
+check("team clinched a DIFFERENT bucket than predicted -> miss", picks.get(1)?.result === "miss");
+check("team not yet clinched -> pending", picks.get(9)?.result === "pending");
 check("userTotal counts every non-empty pick", withPicks.userTotal === 3);
 check("userHits === 1", withPicks.userHits === 1);
-check("userPending === 2", withPicks.userPending === 2);
+check("userPending === 1", withPicks.userPending === 1);
+check("the remaining pick is a miss", withPicks.userTotal - withPicks.userHits - withPicks.userPending === 1);
 check("picked teams flagged userPicked in the lineup", withPicks.teams.find((t) => t.pickid === t30)?.userPicked === true);
 check("unpicked team not flagged", withPicks.teams.find((t) => t.pickid === teamIds[10])?.userPicked === false);
 
 console.log("\nswiss-standings - a miss: viewer's team clinched a different bucket");
 
-// Viewer says teamIds[3] goes 3:0 (slot 1), but the answer key resolves slot 1
-// to a DIFFERENT team -> the viewer's slot-1 call is a miss.
-const missOutcome = { [groupId]: { 1: teamIds[4] } };
-const missPick = { [groupId]: { 1: teamIds[3] } };
+// Viewer says teamIds[3] goes 3:0, but the answer key resolves teamIds[3] into
+// the 0:3 bucket -> the viewer's 3:0 call for it is a miss (it clinched a
+// different, definitive bucket).
+const missOutcome = { [groupId]: { 8: teamIds[3] } }; // teamIds[3] clinched 0:3
+const missPick = { [groupId]: { 0: teamIds[3] } }; // viewer predicted it for 3:0
 const missed = buildSwissStandings(stage1, missOutcome, bucketSwissSlots, missPick);
-check("wrong team on a resolved slot -> miss", missed.userPicks[0]?.result === "miss");
+check("team that clinched a different bucket -> miss", missed.userPicks[0]?.result === "miss");
 check("miss counts toward neither hits nor pending", missed.userHits === 0 && missed.userPending === 0);
 
 console.log("\nswiss-standings - pickId 0 (cleared slot) is ignored");

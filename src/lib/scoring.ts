@@ -6,9 +6,19 @@
  *   3-0 / 0-3 / advance does NOT change points within a stage.
  * - Each playoff match is one pick worth that group's points_per_pick.
  * - Perfect tournament = 135 pts (60 Swiss + 75 Playoffs) — for verification only.
+ *
+ * BUCKET-AWARE SWISS (PHA-918): a Swiss stage's slots are grouped into buckets
+ * (3:0 / advance / 0:3) and the slots WITHIN a bucket are interchangeable — if
+ * you tag BetBoom and B8 as your two 3:0 teams it doesn't matter which slot each
+ * sits in. So Swiss scoring compares the player's picks against the resolved
+ * winners as SETS per bucket, not slot-for-slot. Playoff matches stay strict per
+ * slot (one match = one answer). This keeps the flat-value-per-stage rule intact
+ * (every correct bucket pick is worth the stage weight) while scoring the
+ * set-valued buckets the way Valve's Pick'Em actually resolves them.
  */
 
 import type { Layout } from "./layout";
+import { bucketSwissSlots, isSwissSection } from "./swiss-bucket-core";
 
 export interface PlayerPickMap {
   // playerId → sectionId → groupId → slotIndex → pickId
@@ -52,11 +62,39 @@ export function scorePlayer(
     let correct = 0;
     let possible = 0;
 
+    const swiss = isSwissSection(section.sectionid);
+
     for (const group of section.groups) {
       const ptsPerPick = group.points_per_pick;
       const groupPicks = playerPicks?.[section.sectionid]?.[group.groupid] ?? {};
       const groupOutcomes = outcomes?.[section.sectionid]?.[group.groupid] ?? {};
 
+      if (swiss) {
+        // Bucket-aware: within each bucket, count how many of the resolved teams
+        // the player also tagged for that bucket (set intersection). `possible`
+        // is the points on the table so far — the resolved-team count × weight —
+        // so it stays ≤ the bucket's slot count and points never exceed possible.
+        for (const bucket of bucketSwissSlots(group.picks.length)) {
+          const resolved = new Set<number>();
+          const picked = new Set<number>();
+          for (const slotIndex of bucket.slotIndexes) {
+            const w = groupOutcomes[slotIndex];
+            if (w !== undefined && w !== 0) resolved.add(w);
+            const p = groupPicks[slotIndex];
+            if (p !== undefined && p !== 0) picked.add(p);
+          }
+          for (const team of resolved) {
+            possible += ptsPerPick;
+            if (picked.has(team)) {
+              sectionPts += ptsPerPick;
+              correct++;
+            }
+          }
+        }
+        continue;
+      }
+
+      // Playoffs (and any non-Swiss group): strict per-slot match.
       for (const slot of group.picks) {
         const outWinner = groupOutcomes[slot.index];
         if (outWinner === undefined) continue; // not yet resolved
