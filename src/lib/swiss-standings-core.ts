@@ -78,6 +78,27 @@ function statusForBucketLabel(label: string): Exclude<SwissTeamStatus, "live"> {
   return "advanced"; // 3:1 / 3:2 advance, or the single-bucket fallback
 }
 
+/** Whether a viewer's pick has been confirmed right / wrong, or is still pending. */
+export type PickConfirm = "right" | "wrong" | "pending";
+
+/**
+ * Confirm a single pick (PHA-902): the viewer slotted a team into a predicted
+ * bucket (`predictedLabel`, e.g. "3:0 ADVANCED"); compare it to where the team
+ * ACTUALLY landed per the answer key (`actualStatus`). A team still in play is
+ * `pending`; once it clinches, it's `right` iff it landed in the predicted
+ * bucket, else `wrong` — the same bucket-grain match Valve scores on (the 3:0 /
+ * advance / 0:3 buckets are distinct, so predicting 3:0 for a team that only
+ * went 3:1 is `wrong`). Bucket-grain (not exact slot) so the two interchangeable
+ * 3:0 slots don't produce false misses.
+ */
+export function confirmPick(
+  predictedLabel: string,
+  actualStatus: SwissTeamStatus | undefined,
+): PickConfirm {
+  if (!actualStatus || actualStatus === "live") return "pending";
+  return statusForBucketLabel(predictedLabel) === actualStatus ? "right" : "wrong";
+}
+
 /** Per-section answer-key + viewer-pick maps: groupId -> slotIndex -> pickId. */
 export type SlotPickMap = Readonly<Record<number, Readonly<Record<number, number>>>>;
 

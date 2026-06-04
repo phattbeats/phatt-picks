@@ -21,7 +21,7 @@ import {
 } from "@/lib/playoff-bracket-core";
 import { LivePlayoffBracket } from "@/components/heat/LivePlayoffBracket";
 import { buildSwissStandings, type SlotPickMap } from "@/lib/swiss-standings-core";
-import { LiveSwissBracket } from "@/components/heat/LiveSwissBracket";
+import { LockedPicksBoard } from "@/components/heat/LockedPicksBoard";
 import { LiveSwissStandings } from "@/components/heat/LiveSwissStandings";
 import { LiveSwissBracketBoard } from "@/components/heat/LiveSwissBracketBoard";
 import { refreshStandingsOnRead, getSwissStandings, getSwissBracket } from "@/lib/swiss-results";
@@ -288,12 +288,18 @@ export default async function PicksPage({
       ) : swissStandings ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <LockedStageCard pickability={activePickability} compact />
-          <LiveSwissBracket
-            standings={swissStandings}
-            teamMap={buildTeamMap(layout)}
-            signedIn={!!session}
-            resolvedAtIso={outcomeResolvedAtIso}
-          />
+          {/* Your locked picks, in the SAME bucket-slot UI you picked them in
+              (PHA-902, replacing PHA-898's YOUR BUILD / THE FIELD). Each call
+              turns green/red as the answer key confirms it. Only when you picked. */}
+          {Object.values(myPicks).some((g) => Object.values(g).some((p) => p > 0)) && (
+            <LockedPicksBoard
+              section={section}
+              teamMap={buildTeamMap(layout)}
+              myPicks={myPicks}
+              teamStatus={new Map(swissStandings.teams.map((t) => [t.pickid, t.status]))}
+              resolvedAtIso={outcomeResolvedAtIso}
+            />
+          )}
           {/* Live HLTV/BLAST-style Swiss BRACKET (the fan) for the whole field,
               under the build (PHA-902), then the neutral W-L table below. Neither
               highlights the viewer's picks — that's the build's job. Both hidden

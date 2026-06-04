@@ -17,7 +17,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { buildSwissStandings } from "../src/lib/swiss-standings-core.ts";
+import { buildSwissStandings, confirmPick } from "../src/lib/swiss-standings-core.ts";
 import { bucketSwissSlots } from "../src/lib/swiss-bucket-core.ts";
 import type { Layout, Section } from "../src/lib/layout.ts";
 
@@ -111,6 +111,19 @@ console.log("\nswiss-standings - pickId 0 (cleared slot) is ignored");
 
 const clearedPick = buildSwissStandings(stage1, {}, bucketSwissSlots, { [groupId]: { 0: 0 } });
 check("a cleared (0) pick is not counted", clearedPick.userTotal === 0);
+
+console.log("\nswiss-standings - confirmPick: locked-pick green/red/pending (PHA-902)");
+
+check("predicted 3:0, team still in play -> pending", confirmPick("3:0 ADVANCED", "live") === "pending");
+check("no status yet -> pending", confirmPick("3:0 ADVANCED", undefined) === "pending");
+check("predicted 3:0, team went 3:0 -> right", confirmPick("3:0 ADVANCED", "advanced-3-0") === "right");
+check("predicted 3:0, team only went 3:1 (advanced) -> wrong", confirmPick("3:0 ADVANCED", "advanced") === "wrong");
+check("predicted 3:0, team eliminated -> wrong", confirmPick("3:0 ADVANCED", "eliminated") === "wrong");
+check("predicted advance, team advanced -> right", confirmPick("3:1 / 3:2 ADVANCED", "advanced") === "right");
+check("predicted advance, team went 3:0 -> wrong (different bucket)", confirmPick("3:1 / 3:2 ADVANCED", "advanced-3-0") === "wrong");
+check("predicted advance, team eliminated -> wrong", confirmPick("3:1 / 3:2 ADVANCED", "eliminated") === "wrong");
+check("predicted 0:3, team eliminated -> right", confirmPick("0:3 ELIMINATED", "eliminated") === "right");
+check("predicted 0:3, team advanced -> wrong", confirmPick("0:3 ELIMINATED", "advanced") === "wrong");
 
 console.log(`\n${pass}/${pass + fail} checks passed`);
 process.exit(fail === 0 ? 0 : 1);
