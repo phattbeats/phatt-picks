@@ -119,8 +119,8 @@ export function LiveSwissBracketBoard({
           width: var(--brkt-logo) !important; height: var(--brkt-logo) !important;
         }
         .brkt-col {
-          --brkt-logo: 40px;
-          flex: 0 0 auto; width: 184px; display: flex; flex-direction: column; justify-content: center; gap: 14px;
+          --brkt-logo: 46px;
+          flex: 0 0 auto; width: 196px; display: flex; flex-direction: column; justify-content: center; gap: 14px;
         }
         .brkt-box-head {
           display: flex; align-items: center; justify-content: space-between; gap: 6px;
@@ -135,7 +135,7 @@ export function LiveSwissBracketBoard({
         .brkt-flow { flex: 0 0 auto; width: 26px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; font-size: 15px; }
         /* Desktop: 2–3× the mobile size (Brandon). */
         @media (min-width: 760px) {
-          .brkt-col { --brkt-logo: 64px; width: 300px; gap: 22px; }
+          .brkt-col { --brkt-logo: 72px; width: 320px; gap: 22px; }
           .brkt-box-head { font-size: 13px; padding-bottom: 9px; }
           .brkt-row { gap: 12px; padding: 12px 14px; }
           .brkt-score { font-size: 24px; }
