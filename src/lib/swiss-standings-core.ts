@@ -83,20 +83,48 @@ export type PickConfirm = "right" | "wrong" | "pending";
 
 /**
  * Confirm a single pick (PHA-902): the viewer slotted a team into a predicted
- * bucket (`predictedLabel`, e.g. "3:0 ADVANCED"); compare it to where the team
- * ACTUALLY landed per the answer key (`actualStatus`). A team still in play is
- * `pending`; once it clinches, it's `right` iff it landed in the predicted
- * bucket, else `wrong` — the same bucket-grain match Valve scores on (the 3:0 /
- * advance / 0:3 buckets are distinct, so predicting 3:0 for a team that only
- * went 3:1 is `wrong`). Bucket-grain (not exact slot) so the two interchangeable
- * 3:0 slots don't produce false misses.
+ * bucket (`predictedLabel`, e.g. "3:0 ADVANCED"); resolve it against the answer
+ * key.
+ *
+ * - The team already clinched → `right` iff it landed in the predicted bucket,
+ *   else `wrong` (bucket-grain — the two interchangeable 3:0 slots don't false-
+ *   miss; predicting 3:0 for a team that only went 3:1 is `wrong`).
+ * - The team is still in play → normally `pending`, BUT `wrong` if the predicted
+ *   bucket is already FULL of other teams (`predictedBucketFullOfOthers`): the
+ *   pick'em can no longer come true even though the team isn't out yet. Brandon:
+ *   once both 3:0 (or both 0:3) slots are taken by others, my 3:0/0:3 pick is
+ *   impossible → red.
  */
 export function confirmPick(
   predictedLabel: string,
   actualStatus: SwissTeamStatus | undefined,
+  predictedBucketFullOfOthers = false,
 ): PickConfirm {
-  if (!actualStatus || actualStatus === "live") return "pending";
-  return statusForBucketLabel(predictedLabel) === actualStatus ? "right" : "wrong";
+  if (actualStatus && actualStatus !== "live") {
+    return statusForBucketLabel(predictedLabel) === actualStatus ? "right" : "wrong";
+  }
+  return predictedBucketFullOfOthers ? "wrong" : "pending";
+}
+
+/**
+ * Is the bucket the viewer predicted already filled by OTHER teams (PHA-902)?
+ * A predicted bucket holds `capacity` teams (e.g. the 3:0 and 0:3 buckets hold 2
+ * each). Once that many teams OTHER than `myPickId` have clinched that bucket,
+ * the viewer's pick for it is impossible — even if their team is still alive. The
+ * `teamStatuses` are the answer key's pickid→status entries.
+ */
+export function isPredictedBucketFull(
+  predictedLabel: string,
+  myPickId: number,
+  teamStatuses: Iterable<readonly [number, SwissTeamStatus]>,
+  capacity: number,
+): boolean {
+  const expected = statusForBucketLabel(predictedLabel);
+  let others = 0;
+  for (const [pickid, status] of teamStatuses) {
+    if (status === expected && pickid !== myPickId) others++;
+  }
+  return others >= capacity;
 }
 
 /** Per-section answer-key + viewer-pick maps: groupId -> slotIndex -> pickId. */
