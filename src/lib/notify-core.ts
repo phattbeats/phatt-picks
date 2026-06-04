@@ -91,6 +91,18 @@ export function dueReminders(
   );
 }
 
+/**
+ * Stable dedup key for a single fired reminder. The scheduler runs every ~5 min
+ * while `dueReminders` keeps a reminder "due" across the 15-min fire window —
+ * roughly three ticks. Tracking fired keys (event+section+exact fire instant)
+ * lets the job send each reminder once instead of on every tick inside the
+ * window. fireAtMs (= lockAt - offset) uniquely identifies the 24h vs the 1h
+ * reminder, so the two never collide.
+ */
+export function reminderFireKey(eventId: number, sectionId: number, fireAtMs: number): string {
+  return `${eventId}:${sectionId}:${fireAtMs}`;
+}
+
 /** Build the push payload for a pre-lock reminder. */
 export function buildPreLockPayload(args: {
   stageName: string;
