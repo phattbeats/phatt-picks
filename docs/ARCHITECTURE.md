@@ -126,7 +126,7 @@ Everything that changes for the *next* Major is committed config, not fetched. T
 full list and the order to change it is in **[NEXT-MAJOR.md](NEXT-MAJOR.md)**. The
 short version:
 
-- `lock-schedule-core.ts` — `LOCK_SCHEDULE` (section → lock instant) + `COLOGNE_MATCH_WINDOWS`.
+- `lock-schedule-core.ts` — `COLOGNE_LOCK_SCHEDULE` (section → lock instant) + `COLOGNE_MATCH_WINDOWS`.
 - `swiss-results.ts` — `SECTION_SOURCES` (section → HLTV event URL).
 - Team / pickid / region / logo / stats maps — one file each, keyed by Valve pickid.
 - The committed bracket layout (sections 105–110).

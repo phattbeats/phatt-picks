@@ -29,8 +29,11 @@ You need, for the new Major:
    live standings/bracket scrape.
 4. The **32-team field** with HLTV team profile URLs and rough regions.
 
-See `docs/PRE-MAJOR-CHECKLIST.md` if present (committed by the runtime-automation work)
-for a tighter pre-event checklist; this doc is the code-seam reference behind it.
+**Companion doc:** [PRE-MAJOR-CHECKLIST.md](PRE-MAJOR-CHECKLIST.md) is the focused,
+tickable checklist for **gathering** these facts — HLTV event ids, the 32-team field →
+pickids → HLTV ids, and the per-stage stats-refresh routine. Use it to *collect* the
+inputs; use **this** doc as the *code-seam map* that says where each input gets wired in.
+They're deliberately split: the checklist is the field guide, this is the wiring diagram.
 
 ---
 
@@ -49,7 +52,7 @@ list and a sample predictions blob — refresh them from the same capture.
 
 ### 1b. Lock schedule + match windows — `src/lib/lock-schedule-core.ts`
 Two committed constants:
-- **`LOCK_SCHEDULE`**: `sectionId → ISO-8601 lock instant (UTC)`. This is when each
+- **`COLOGNE_LOCK_SCHEDULE`**: `sectionId → ISO-8601 lock instant (UTC)`. This is when each
   stage's picker freezes and picks reveal. Set it to each stage's **first-match** time.
   ```ts
   105: "2026-06-02T10:30:00Z", // Stage I — Jun 2, 12:30 CEST first match
@@ -130,7 +133,7 @@ Once live, each stage start is a small recurring routine:
 ```
 [ ] cologne-layout.json        → new event's sections + pickids        (Phase 1a)
 [ ] cologne-items/predictions  → refreshed from same capture           (Phase 1a)
-[ ] LOCK_SCHEDULE              → each stage's first-match instant       (Phase 1b)
+[ ] COLOGNE_LOCK_SCHEDULE      → each stage's first-match instant       (Phase 1b)
 [ ] COLOGNE_MATCH_WINDOWS      → each stage's played date-span          (Phase 1b)
 [ ] SECTION_SOURCES            → HLTV event URL per Swiss stage          (Phase 2a)
 [ ] cologne-logos.json         → re-run build-logos.ts                  (Phase 3)

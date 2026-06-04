@@ -13,7 +13,8 @@ Read these in roughly this order. Each is self-contained.
 | Doc | What it answers | Read it when |
 |---|---|---|
 | **[ARCHITECTURE.md](ARCHITECTURE.md)** | How the whole thing fits together — data flow, the core modules, the patterns that repeat. | You're new, or you're about to change how picks / scoring / brackets work. |
-| **[NEXT-MAJOR.md](NEXT-MAJOR.md)** | The runbook to re-point the app at a *new* Major (the one that matters most for "more majors"). Every seam that changes per-event, in order. | A new Major is announced and you need to stand it up. |
+| **[NEXT-MAJOR.md](NEXT-MAJOR.md)** | The runbook to re-point the app at a *new* Major (the one that matters most for "more majors"). The code-seam map: every constant/fixture that changes per-event, in order, with a checklist. | A new Major is announced and you need to stand it up. |
+| **[PRE-MAJOR-CHECKLIST.md](PRE-MAJOR-CHECKLIST.md)** | The field guide that *pairs* with NEXT-MAJOR: a tickable checklist for gathering the inputs — HLTV event ids, the 32-team field → pickids, and the per-stage stats-refresh routine. | You're collecting the facts for a new event before wiring them in. |
 | **[OPERATIONS.md](OPERATIONS.md)** | Every env var, every HTTP route, one-time setup, smoke checks. The ops reference. | You're deploying, flipping a flag, or debugging a 500. |
 | **[GOTCHAS.md](GOTCHAS.md)** | Hard-won lessons. The bugs that cost hours, why they happened, and the rule that prevents the repeat. | Something is behaving strangely, or you're touching iOS / crawl4ai / browserless / deploy / the shared checkout. |
 
