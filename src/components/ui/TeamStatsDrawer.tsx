@@ -13,7 +13,7 @@ interface Props {
 }
 
 /**
- * Team dossier (PHA-893) — roster, world standing, and the three most recent
+ * Team dossier (PHA-893) — roster, world standing, and the five most recent
  * matches. Deliberately off-board: nothing here renders on the pickems stage by
  * default; it surfaces only when a scout taps the [i] on a team. Pure-data
  * backed (team-stats-core), so it degrades to "no stats yet" for TBD slots.
@@ -23,6 +23,10 @@ interface Props {
  * is trapped below it and the root-level `.botnav` (z-index 50) painted over the
  * bottom of the panel on mobile, clipping the last match + footer. Portaling to
  * <body> lifts the modal out of that context so the backdrop covers everything.
+ *
+ * PHA-897 follow-up (Brandon): scrollbar chrome hidden in CSS for a cleaner
+ * desktop look, recent matches expanded 3 → 5, and a link out to the team's
+ * HLTV profile (the dossier's data source) added beneath the match list.
  */
 export function TeamStatsDrawer({ team, onClose }: Props) {
   // Esc closes — modal convention; backdrop click also closes.
@@ -87,7 +91,7 @@ export function TeamStatsDrawer({ team, onClose }: Props) {
             </section>
 
             <section className="tsd-sec">
-              <h4 className="tsd-sec-title">Last 3 matches</h4>
+              <h4 className="tsd-sec-title">Last 5 matches</h4>
               {stats.recent.length === 0 ? (
                 <p className="tsd-empty">No recent matches on file.</p>
               ) : (
@@ -106,6 +110,20 @@ export function TeamStatsDrawer({ team, onClose }: Props) {
                 </ul>
               )}
             </section>
+
+            {stats.hltvUrl && (
+              <a
+                className="tsd-link"
+                href={stats.hltvUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Full profile on HLTV
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M7 17 17 7M9 7h8v8" />
+                </svg>
+              </a>
+            )}
           </>
         )}
 
