@@ -43,9 +43,13 @@ const CRAWL4AI_TOKEN = process.env.CRAWL4AI_API_TOKEN ?? "Phatt-tech-2026";
 const REFRESH_MIN_INTERVAL_MS = 60 * 60_000;
 const TEAM_STATS_REFRESH_SOURCE = "hltv-team-stats";
 
-// Bound the batch crawl (32 profiles) so a hung render service can't wedge a
-// refresh tick. Runs deferred (off the render path) on the on-read path anyway.
-const CRAWL_TIMEOUT_MS = 90_000;
+// Bound the batch crawl so a hung render service can't wedge a refresh tick.
+// crawl4ai renders the 32 profiles in ONE request SEQUENTIALLY (deliberately — a
+// burst of parallel requests trips HLTV's Cloudflare challenge and most come back
+// blocked; sequential yields 32/32). Measured ~120s for the full field, so give
+// generous headroom. Runs deferred (off the render path) on the on-read path;
+// the warm route awaits it (a one-shot ops/deploy poke, not user-facing).
+const CRAWL_TIMEOUT_MS = 240_000;
 
 /** The persisted blob shape (data column of TeamStatsCache). */
 interface TeamStatsBlob {
