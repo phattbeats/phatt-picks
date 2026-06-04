@@ -33,6 +33,9 @@ import {
   buildUploadBody,
   parseAssignedItemIds,
   classifyWriteFailure,
+  buildSteamStateMap,
+  partitionBySteamState,
+  steamStateKey,
   WriteShapeError,
   PLAYOFF_SECTION_IDS,
   type LocalPick,
@@ -175,11 +178,105 @@ function proveResolveGuards(): void {
   check("stored itemId used as fallback when map misses", fallback.itemId === "17293822569790899385");
 }
 
+// [6] skip-unchanged is keyed group+slot, NOT slot alone (PHA-928).
+//
+// The playoff bracket is multi-group and every group has a single slot at
+// index 0. A slot-only key collapses all seven picks onto one entry, so a
+// favorite advancing QF→SF→GF (same team across groups) matches the QF's
+// slot-0 state and never gets uploaded to SF/GF — while the UI says synced.
+function proveMultiGroupSkipUnchanged(): void {
+  console.log("\n[6] SKIP-UNCHANGED KEY (PHA-928) — group+slot, not slot alone (multi-group playoff)");
+
+  const fav = teamIds[0]; // the advancing favorite
+  const qfOther = teamIds[1];
+  const sfOther = teamIds[2];
+  const gfOther = teamIds[3];
+
+  // User's local bracket picks: the favorite in QF1(274), SF1(278) and GF(280),
+  // plus three other groups holding different teams. Every slot is index 0.
+  const rows: LocalPick[] = [
+    { sectionId: 108, groupId: 274, slotIndex: 0, pickId: fav, itemId: "" },     // QF1 → favorite
+    { sectionId: 108, groupId: 275, slotIndex: 0, pickId: qfOther, itemId: "" }, // QF2 → other
+    { sectionId: 109, groupId: 278, slotIndex: 0, pickId: fav, itemId: "" },     // SF1 → favorite (advanced)
+    { sectionId: 109, groupId: 279, slotIndex: 0, pickId: sfOther, itemId: "" }, // SF2 → other
+    { sectionId: 110, groupId: 280, slotIndex: 0, pickId: fav, itemId: "" },     // GF  → favorite (advanced)
+  ];
+  const resolved = orderPicks(rows.map((p) => resolveUploadPick(p, itemsMap)));
+
+  // Steam currently holds: QF1 already has the favorite (unchanged), but SF1/GF
+  // hold DIFFERENT teams — those must upload. Raw shape mirrors the live API
+  // (`pick`, `groupid`, `index`; no `sectionid`).
+  const rawSteam = [
+    { groupid: 274, index: 0, pick: fav },      // QF1 already correct → skip
+    { groupid: 275, index: 0, pick: qfOther },  // QF2 already correct → skip
+    { groupid: 278, index: 0, pick: sfOther },  // SF1 has a DIFFERENT team → must upload
+    { groupid: 279, index: 0, pick: sfOther },  // SF2 already correct → skip
+    { groupid: 280, index: 0, pick: gfOther },  // GF has a DIFFERENT team → must upload
+  ];
+  const steamState = buildSteamStateMap(rawSteam);
+
+  check("steam state keyed group:slot keeps all groups distinct", steamState.size === 5, `size=${steamState.size}`);
+  check("each group's slot-0 retained (no collapse)",
+    steamState.get(steamStateKey(274, 0)) === fav &&
+    steamState.get(steamStateKey(278, 0)) === sfOther &&
+    steamState.get(steamStateKey(280, 0)) === gfOther);
+
+  const { toUpload, alreadySynced } = partitionBySteamState(resolved, steamState);
+  const uploadGroups = toUpload.map((p) => p.groupId).sort((a, b) => a - b);
+
+  // THE BUG: with a slot-only key, every pick collapses to slot 0 == favorite,
+  // so the favorite at SF1/GF "matches" and is dropped. Prove the fix uploads
+  // exactly the two genuinely-changed groups (SF1 278, GF 280).
+  check("SF1 (favorite advanced, group 278) IS uploaded — the PHA-928 drop",
+    toUpload.some((p) => p.groupId === 278 && p.pickId === fav));
+  check("GF (favorite advanced, group 280) IS uploaded",
+    toUpload.some((p) => p.groupId === 280 && p.pickId === fav));
+  check("exactly the 2 changed groups upload (278, 280)",
+    JSON.stringify(uploadGroups) === JSON.stringify([278, 280]), uploadGroups.join(","));
+  check("the 3 unchanged groups are skipped (274, 275, 279)",
+    alreadySynced.length === 3 &&
+    alreadySynced.every((p) => [274, 275, 279].includes(p.groupId)));
+
+  // Regression guard: faithfully reproduce the OLD code — filter the Steam read
+  // to rows[0].groupId (the QF1 group), then key by slot alone. That leaves
+  // {slot0 → favorite}, so the favorite at SF1/GF "matches" slot 0 and is wrongly
+  // dropped from the upload while the UI reports it synced. This is exactly the
+  // PHA-928 corruption; the fix above must NOT exhibit it.
+  const oldTargetGroupId = rows[0].groupId; // 274
+  const oldSlotOnly = new Map<number, number>();
+  for (const r of rawSteam) {
+    if (Number(r.groupid) !== oldTargetGroupId) continue; // old single-group filter
+    oldSlotOnly.set(Number(r.index), Number(r.pick));
+  }
+  const buggyUpload = resolved.filter((p) => oldSlotOnly.get(p.slotIndex) !== p.pickId);
+  const buggyGroups = buggyUpload.map((p) => p.groupId).sort((a, b) => a - b);
+  check("OLD slot-only+single-group key WOULD have dropped the advancing favorite (278, 280)",
+    !buggyUpload.some((p) => p.groupId === 278 && p.pickId === fav) &&
+    !buggyUpload.some((p) => p.groupId === 280 && p.pickId === fav),
+    `old would upload groups ${buggyGroups.join(",")}`);
+
+  // Swiss sanity: a single-group batch still partitions correctly (the group in
+  // the key is constant there, so behavior is unchanged for Stage I/II/III).
+  const swissRows: LocalPick[] = teamIds.slice(0, 3).map((t, i) => ({
+    sectionId: 105, groupId: 271, slotIndex: i, pickId: t, itemId: "",
+  }));
+  const swissResolved = orderPicks(swissRows.map((p) => resolveUploadPick(p, itemsMap)));
+  const swissSteam = buildSteamStateMap([
+    { groupid: 271, index: 0, pick: teamIds[0] }, // slot 0 unchanged
+    { groupid: 271, index: 1, pick: teamIds[9] }, // slot 1 different → upload
+  ]);
+  const swiss = partitionBySteamState(swissResolved, swissSteam);
+  check("swiss single-group: slot 0 skipped, slots 1+2 uploaded",
+    swiss.alreadySynced.length === 1 && swiss.toUpload.length === 2 &&
+    swiss.alreadySynced[0].slotIndex === 0);
+}
+
 console.log("=== phaTT Picks M5 write-path verification ===");
 proveItemidCarry();
 proveSinglePickShape();
 provePlayoffOrder();
 proveFailureClassification();
 proveResolveGuards();
+proveMultiGroupSkipUnchanged();
 console.log(`\n${failures === 0 ? "M5 WRITE CHECKS PASSED" : `M5 WRITE CHECKS FAILED — ${failures} failure(s)`}`);
 process.exit(failures === 0 ? 0 : 1);
