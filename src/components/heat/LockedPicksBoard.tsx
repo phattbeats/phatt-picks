@@ -19,7 +19,7 @@ import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
 import type { Section, TeamDef } from "@/lib/layout";
 import { bucketSwissSlots } from "@/lib/swiss-bucket-core";
-import { confirmPick, type SwissTeamStatus, type PickConfirm } from "@/lib/swiss-standings-core";
+import { confirmPick, isPredictedBucketFull, type SwissTeamStatus, type PickConfirm } from "@/lib/swiss-standings-core";
 import { LastUpdated } from "@/components/LastUpdated";
 
 const LOGO = 56;
@@ -85,7 +85,13 @@ export function LockedPicksBoard({
                             </div>
                           );
                         }
-                        const confirm = confirmPick(bucket.label, teamStatus.get(pickId));
+                        const bucketFull = isPredictedBucketFull(
+                          bucket.label,
+                          pickId,
+                          teamStatus.entries(),
+                          bucket.slotIndexes.length,
+                        );
+                        const confirm = confirmPick(bucket.label, teamStatus.get(pickId), bucketFull);
                         const meta = CONFIRM_META[confirm];
                         return (
                           <div

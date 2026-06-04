@@ -17,7 +17,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { buildSwissStandings, confirmPick } from "../src/lib/swiss-standings-core.ts";
+import { buildSwissStandings, confirmPick, isPredictedBucketFull } from "../src/lib/swiss-standings-core.ts";
+import type { SwissTeamStatus } from "../src/lib/swiss-standings-core.ts";
 import { bucketSwissSlots } from "../src/lib/swiss-bucket-core.ts";
 import type { Layout, Section } from "../src/lib/layout.ts";
 
@@ -124,6 +125,21 @@ check("predicted advance, team went 3:0 -> wrong (different bucket)", confirmPic
 check("predicted advance, team eliminated -> wrong", confirmPick("3:1 / 3:2 ADVANCED", "eliminated") === "wrong");
 check("predicted 0:3, team eliminated -> right", confirmPick("0:3 ELIMINATED", "eliminated") === "right");
 check("predicted 0:3, team advanced -> wrong", confirmPick("0:3 ELIMINATED", "advanced") === "wrong");
+
+console.log("\nswiss-standings - pick'em unwinnable when the bucket fills with others (PHA-902)");
+
+// My pick = team 999, predicted 3:0. The 3:0 bucket holds 2.
+const twoOthers3_0: Array<readonly [number, SwissTeamStatus]> = [
+  [11, "advanced-3-0"], [12, "advanced-3-0"], [999, "live"], [13, "advanced"],
+];
+const oneOther3_0: Array<readonly [number, SwissTeamStatus]> = [[11, "advanced-3-0"], [999, "live"]];
+check("3:0 bucket full of 2 OTHER teams -> my live 3:0 pick is impossible", isPredictedBucketFull("3:0 ADVANCED", 999, twoOthers3_0, 2) === true);
+check("only 1 other in 3:0 -> not full yet", isPredictedBucketFull("3:0 ADVANCED", 999, oneOther3_0, 2) === false);
+check("my own team in the bucket is not counted as an 'other'", isPredictedBucketFull("3:0 ADVANCED", 11, twoOthers3_0, 2) === false);
+check("confirmPick: live team + bucket full of others -> WRONG (no longer winnable)", confirmPick("3:0 ADVANCED", "live", true) === "wrong");
+check("confirmPick: live team + bucket NOT full -> still pending", confirmPick("3:0 ADVANCED", "live", false) === "pending");
+check("confirmPick: a team that already clinched ignores the fullness flag (still right)", confirmPick("3:0 ADVANCED", "advanced-3-0", true) === "right");
+check("0:3 bucket full of 2 others -> live 0:3 pick impossible", isPredictedBucketFull("0:3 ELIMINATED", 999, [[21, "eliminated"], [22, "eliminated"], [999, "live"]], 2) === true);
 
 console.log(`\n${pass}/${pass + fail} checks passed`);
 process.exit(fail === 0 ? 0 : 1);
