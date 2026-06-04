@@ -6,8 +6,11 @@ export async function GET() {
     await prisma.$queryRaw`SELECT 1`;
     return NextResponse.json({ status: "ok", db: "ok" });
   } catch (err) {
+    // Log detail server-side; don't disclose DB internals (file path, connection
+    // string fragments) to an unauthenticated caller.
+    console.error("[health] db check failed:", err);
     return NextResponse.json(
-      { status: "error", db: "unavailable", error: String(err) },
+      { status: "error", db: "unavailable" },
       { status: 503 }
     );
   }
