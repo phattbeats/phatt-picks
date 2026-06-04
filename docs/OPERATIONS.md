@@ -96,13 +96,33 @@ If it shows `Add your Steam auth code to sync`, hit `/help/auth-code` and paste.
 
 ## Verify scripts
 
-Each milestone ships an offline harness under `scripts/verify-*.ts`. Run with
-node + `--experimental-strip-types` (no bundler, no DB):
+Each milestone ships an offline harness under `scripts/verify-*.ts` (no bundler,
+no DB, no network). Run the **whole suite** with one command:
 
 ```
-node --experimental-strip-types --no-warnings scripts/verify-m9-4-swiss-bucket.ts
+node scripts/verify-all.mjs
 ```
 
-Current verifies: `m3-read`, `m4-scoring`, `m5-write`, `m6-logos`, `m7-polish`,
-`m8-3-local-auth`, `m8-4-nav`, `m9-2-topbar-you`, `m9-4-swiss-bucket`,
-`picks-guard`, `stage-gate`, `outcomes-gate`.
+This spawns every `scripts/verify-*.ts` under `--experimental-strip-types` and
+exits non-zero if any fails (CI-gateable). Each line is a `──── name ────`
+banner; the tail prints `ALL GREEN` or the list of failures.
+
+To run a single verify on its own, mirror what the runner does:
+
+```
+node --experimental-strip-types --import ./scripts/register-ts-resolve.mjs \
+     --no-warnings scripts/verify-m9-4-swiss-bucket.ts
+```
+
+### Why the `--import ./scripts/register-ts-resolve.mjs` flag
+
+The app uses `moduleResolution: "bundler"` (tsconfig), so source files import
+siblings **without** a file extension (e.g. `import { x } from "./swiss-bucket-core"`).
+Node's stock ESM resolver does NOT auto-append `.ts`, so any verify whose import
+chain reaches such a *value* import dies with `ERR_MODULE_NOT_FOUND` under bare
+`--experimental-strip-types`. `register-ts-resolve.mjs` installs a tiny,
+zero-dependency resolver hook (`ts-resolve-hook.mjs`) that retries failed
+relative specifiers against `.ts`/`.tsx`/`.js`/`/index.ts` — matching what the
+bundler would have found. **Do not** add `.ts` extensions to the source imports:
+that breaks `tsc`'s bundler resolution unless `allowImportingTsExtensions` is set.
+`verify-all.mjs` passes this flag for you.

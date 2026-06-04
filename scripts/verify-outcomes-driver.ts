@@ -65,9 +65,9 @@ check(
 );
 check(
   "claim is best-effort (outer catch grants slot on any DB error)",
-  // Inner catch returns false (create race / within floor).
-  // Outer catch returns true (DB hiccup — allow rather than block forever).
-  /claimOutcomesRefreshSlot[\s\S]*?return false;[\s\S]*?} catch \{[\s\S]{0,80}return true;/.test(outcomes),
+  // Slot loss is silent — INSERT OR IGNORE returns 0 (`return inserted > 0`),
+  // no throw. Outer catch returns true (DB hiccup — allow rather than block forever).
+  /claimOutcomesRefreshSlot[\s\S]*?} catch \{[\s\S]{0,120}return true;/.test(outcomes),
 );
 
 console.log("\noutcomes-driver - source fetch is bounded (can't hang the deferred run)");
