@@ -5,16 +5,13 @@
  *
  * Three facets per team, mirroring the issue: world STANDING (HLTV world ranking),
  * ROSTER (active five), and the FIVE most recent official matches. Sourced from
- * HLTV (hltv.org) on the date below; this is a frozen snapshot, not a live feed —
- * re-run scripts/gather is manual. Teams with no entry (TBD slots, late swaps)
- * resolve to null and the drawer degrades to "no stats yet".
- *
- * PHA-897 follow-up: recent results expanded 3 → 5 (re-gathered from each team's
- * HLTV profile via crawl4ai) and an `hltvUrl` added per team so the dossier can
- * link out to the source profile.
+ * HLTV (hltv.org) on the date below; this is a frozen snapshot, not a live feed.
+ * Re-run `scripts/gather-team-stats.ts` to refresh recent results + hltvUrl at
+ * each stage boundary (PHA-897; see docs/PRE-MAJOR-CHECKLIST.md). Teams with no
+ * entry (TBD slots, late swaps) resolve to null and the drawer degrades.
  */
 
-export const TEAM_STATS_AS_OF = "2026-06-03"; // HLTV world ranking + recent results snapshot
+export const TEAM_STATS_AS_OF = "2026-06-04"; // HLTV world ranking + recent results snapshot
 
 export type MatchResult = "W" | "L" | "T";
 
