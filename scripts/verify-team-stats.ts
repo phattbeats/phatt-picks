@@ -50,8 +50,12 @@ for (const pid of FIELD) {
     s.roster.every((p) => typeof p === "string" && p.trim().length > 0),
   );
   check(
-    `pickid ${pid}: 1-3 recent matches`,
-    s.recent.length >= 1 && s.recent.length <= 3,
+    `pickid ${pid}: 1-5 recent matches`,
+    s.recent.length >= 1 && s.recent.length <= 5,
+  );
+  check(
+    `pickid ${pid}: hltvUrl is an HLTV team profile`,
+    /^https:\/\/www\.hltv\.org\/team\/\d+\/[a-z0-9-]+$/.test(s.hltvUrl),
   );
   for (const m of s.recent) {
     const scoreOk = /^\d+-\d+$/.test(m.score);

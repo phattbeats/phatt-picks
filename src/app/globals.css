@@ -962,7 +962,13 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   /* As a bottom sheet the panel now reaches the viewport edge (PHA-897 portal
      lifts it over the botnav), so pad the foot past the home indicator. */
   padding: 22px 20px calc(18px + env(safe-area-inset-bottom));
+  /* PHA-897 follow-up: the panel can still scroll on short viewports, but the
+     visible scrollbar gutter looked grubby on desktop (Brandon). Hide the
+     chrome cross-browser — scrolling still works via wheel/touch. */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* old Edge */
 }
+.tsd-panel::-webkit-scrollbar { width: 0; height: 0; display: none; } /* WebKit/Blink */
 @media (min-width: 560px) {
   .tsd-backdrop { align-items: center; padding: 24px; }
   /* Centered dialog clears the safe area via backdrop padding — drop the extra. */
@@ -1019,6 +1025,16 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .tsd-score { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--ink-hi); }
 .tsd-date { font-family: var(--font-mono); font-size: 10px; color: var(--ink-low); }
 .tsd-empty { font-size: 13px; color: var(--ink-mid); margin: 14px 0 0; }
+.tsd-link {
+  display: inline-flex; align-items: center; gap: 7px; margin-top: 16px;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none;
+  color: var(--heat); padding: 8px 13px;
+  border: 1px solid var(--hair-3); background: rgba(240,163,0,0.06);
+  transition: all 150ms var(--ease);
+}
+.tsd-link:hover { border-color: var(--heat); background: rgba(240,163,0,0.12); }
+.tsd-link svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; }
 .tsd-foot {
   font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.06em; color: var(--ink-low);
   margin: 18px 0 0; padding-top: 12px; border-top: 1px solid var(--hair);
