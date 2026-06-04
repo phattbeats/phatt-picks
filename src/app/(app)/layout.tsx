@@ -19,10 +19,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     session,
     avatarUrl: playerRow?.avatarUrl,
   });
+  // The top-right avatar opens your own player profile (Brandon). Anonymous →
+  // the account/sign-in surface.
+  const profileHref = session ? `/players/${session.playerId}` : "/profile";
 
   return (
     <>
-      <HeatHeader topbar={topbar} />
+      <HeatHeader topbar={topbar} profileHref={profileHref} />
       <main className="shell with-nav">{children}</main>
       <HeatBottomNav />
     </>
