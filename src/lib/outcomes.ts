@@ -30,6 +30,10 @@ import { fetchLiquipediaResults, LiquipediaThrottledError } from "./liquipedia";
 import { fetchTournamentLayout } from "./valve";
 import { cacheLiveLayout } from "./layout-state";
 import { writeRankSnapshots } from "./rank-snapshot";
+import { getSwissStandings } from "./swiss-results";
+import { deriveClinchedSlots } from "./swiss-clinch-core";
+import { bucketSwissSlots, isSwissSection } from "./swiss-bucket-core";
+import { isLockTimePassed } from "./lock-schedule-core";
 
 export interface IngestSummary {
   eventId: number;
@@ -262,7 +266,85 @@ async function claimOutcomesRefreshSlot(): Promise<boolean> {
  */
 export async function refreshOutcomesOnRead(eventId: number): Promise<void> {
   if (!(await claimOutcomesRefreshSlot())) return; // within floor or lost the race — no-op
-  runDeferred(() => ingestOutcomes(eventId)); // slow ingest — off the render path
+  runDeferred(async () => {
+    // Valve / Liquipedia answer key (a no-op for the set-valued Swiss buckets it
+    // can't resolve), THEN the HLTV bridge that DOES resolve those buckets from
+    // the live standings already crawled for the picks-page bracket (PHA-918).
+    await ingestOutcomes(eventId);
+    await bridgeSwissOutcomes(eventId);
+  });
+}
+
+/**
+ * Bridge live HLTV Swiss standings → StageOutcome (PHA-918).
+ *
+ * Why this exists: scoring reads StageOutcome, but Valve's GetTournamentLayout
+ * returns set-valued pickids for each Swiss slot, which the oracle leaves
+ * "ambiguous" — so a Swiss stage never resolves there and the leaderboard sits at
+ * zero even after teams clinch. The picks-page bracket already shows live results
+ * because it reads the HLTV standings cache (PHA-902); the leaderboard did not.
+ * This closes that gap: it reads the SAME warm cache, derives each team's clinched
+ * pick bucket from its terminal W-L record, and writes the resolved slots so the
+ * leaderboard, player pages, compare, reveal, and rank snapshots all score off
+ * the live results — "when the picks page updates, the leaderboard updates too".
+ *
+ * Cheap + safe: reads the already-crawled cache (no network), only resolves LOCKED
+ * Swiss sections, writes only terminal/idempotent rows (deriveClinchedSlots never
+ * rewrites a filled slot), and validates every row against the layout before
+ * persisting. Graceful by contract: any failure logs and returns what we had.
+ * Returns the number of newly-resolved slots.
+ */
+export async function bridgeSwissOutcomes(
+  eventId: number,
+  nowMs: number = Date.now(),
+): Promise<number> {
+  const layout = getCommittedLayout();
+  const matchTeams = layout.teams.map((t) => ({ pickid: t.pickid, name: t.name }));
+  let written = 0;
+
+  for (const section of layout.sections) {
+    if (!isSwissSection(section.sectionid)) continue;
+    // Results can only exist once the pick window has closed. Schedule-driven
+    // lock (PHA-898), independent of the fixture's picks_allowed flag.
+    if (!isLockTimePassed(section.sectionid, nowMs)) continue;
+
+    let live;
+    try {
+      live = await getSwissStandings(eventId, section.sectionid, matchTeams);
+    } catch (e) {
+      console.error("[outcomes] HLTV bridge read failed (non-fatal):", e);
+      continue;
+    }
+    if (!live || live.rows.length === 0) continue;
+
+    const standings = live.rows
+      .filter((r) => r.pickid != null)
+      .map((r) => ({ pickid: r.pickid as number, wins: r.wins, losses: r.losses }));
+
+    const existing = await prisma.stageOutcome.findMany({
+      where: { eventId, sectionId: section.sectionid },
+      select: { groupId: true, slotIndex: true, winnerPickId: true },
+    });
+
+    const fresh = deriveClinchedSlots(section, standings, existing, bucketSwissSlots);
+    if (fresh.length === 0) continue;
+
+    const raw: RawResolvedSlot[] = fresh.map((r) => ({ sectionId: section.sectionid, ...r }));
+    const { outcomes } = normalizeOutcomes(layout, raw, "hltv");
+    await persistOutcomes(eventId, outcomes);
+    written += outcomes.length;
+  }
+
+  // Freeze cumulative standings whenever new outcomes landed (delta arrows + Stage
+  // Reveal, PHA-858). Non-fatal: a snapshot miss never breaks the bridge.
+  if (written > 0) {
+    try {
+      await writeRankSnapshots(eventId);
+    } catch (e) {
+      console.error("[outcomes] HLTV bridge rank-snapshot write failed (non-fatal):", e);
+    }
+  }
+  return written;
 }
 
 /**

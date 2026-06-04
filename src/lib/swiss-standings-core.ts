@@ -182,15 +182,21 @@ export function buildSwissStandings(
   const userPicks: SwissUserPick[] = [];
   for (const group of section.groups) {
     const gPicks = userPicksForSection[group.groupid] ?? {};
-    const gOut = outcomesForSection[group.groupid] ?? {};
     for (const [slotStr, pickId] of Object.entries(gPicks)) {
       if (!pickId || pickId === 0) continue;
       const slotIndex = Number(slotStr);
       userPickedTeams.add(pickId);
       const bucketLabel = bucketLabelByGroupSlot.get(`${group.groupid}:${slotIndex}`) ?? "PICK";
-      const winner = gOut[slotIndex];
+      // Bucket-aware (PHA-918): a Swiss bucket's slots are interchangeable, so a
+      // pick is a HIT when the team clinched the SAME bucket the viewer slotted it
+      // into — compared by clinched status, not slot-for-slot (the answer key
+      // resolves teams into bucket slots in standings order, not the viewer's). A
+      // team that clinched a different bucket is a miss; one not yet resolved is
+      // pending.
+      const expected = statusForBucketLabel(bucketLabel);
+      const actual = statusByTeam.get(pickId);
       const result: SwissUserPick["result"] =
-        winner === undefined || winner === 0 ? "pending" : winner === pickId ? "hit" : "miss";
+        actual === undefined ? "pending" : actual === expected ? "hit" : "miss";
       userPicks.push({ pickid: pickId, groupId: group.groupid, slotIndex, bucketLabel, result });
     }
   }
