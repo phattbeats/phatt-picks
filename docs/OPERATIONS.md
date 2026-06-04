@@ -8,9 +8,9 @@ Container env vars, HTTP routes, and one-time setup for `pickems.phatt.vip`.
 
 ## Environment variables
 
-Every var the running app reads. Pre-populated values in the Unraid template
-(`scripts/phatt-picks.unraid.xml`) are sane defaults — rotate when convenient,
-not on a schedule. **Required** = the app errors or skips features when missing.
+Every var the running app reads. `.env.example` carries sane defaults — rotate when
+convenient, not on a schedule. **Required** = the app errors or skips features when
+missing.
 
 | Var | Required | Read by | Behavior |
 |---|---|---|---|
@@ -19,11 +19,17 @@ not on a schedule. **Required** = the app errors or skips features when missing.
 | `NEXTAUTH_SECRET` | yes | Session JWT signing | Any high-entropy string. Rotate any time with `openssl rand -base64 32` — existing sessions become invalid until users reload. |
 | `STEAM_API_KEY` | yes for live read/write | `src/lib/valve.ts` | Your Steam Web API key from <https://steamcommunity.com/dev/apikey>. Server-side only — never reaches the client. Without it the read pipeline can't pull predictions / items and the write path 401s. |
 | `AUTH_CODE_ENCRYPTION_KEY` | yes for Steam users | `src/lib/crypto.ts` | 32-byte hex (64 hex chars). Encrypts each user's Steam Pick'Em auth code at rest with AES-256-GCM. Rotating it invalidates every stored auth code — users have to repaste at `/help/auth-code`. |
-| `WRITE_ENABLED` | optional, default `false` | `src/lib/picks-write.ts:42` | **DESTRUCTIVE if `true`.** Gates the Steam upload path. When `false`, every `Lock In to Steam` click skips with `Steam sync disabled by owner`; local picks still save. Set to `true` once you're ready to lock real picks on Valve's servers. |
+| `WRITE_ENABLED` | optional, default `false` | `src/lib/picks-write.ts` (`isWriteEnabled()`) | **DESTRUCTIVE if `true`.** Gates the Steam upload path. When `false`, every `Lock In to Steam` click skips with `Steam sync disabled by owner`; local picks still save. Set to `true` once you're ready to lock real picks on Valve's servers. |
 | `OWNER_STEAM_ID` | optional | `src/lib/owner.ts` | SteamID64 (string, e.g. `7656119xxxxxxxxxx`) of the single owner. Unlocks the `/profile` "Admin · Local players" section and the `/api/players/local*` cleanup endpoints. When unset, the gate fails closed (nobody is owner). |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | optional | `src/lib/notify.ts` | Web Push keys. Pre-generated and paired in the template. Generate a fresh pair with `npx web-push generate-vapid-keys` — rotating invalidates every push subscription (users have to re-opt-in). When either is missing, `/api/push/public-key` returns `{ key: null }` and the UI hides the opt-in. |
-| `VAPID_SUBJECT` | optional | `src/lib/notify.ts` | Contact URI sent with every push (`mailto:brandon@phatt.tech`). Required by the Web Push spec; web-push will throw without it. |
-| `NODE_ENV` | optional, default `production` in image | `src/app/api/auth/steam/callback/route.ts:86` | Leave as `production` in the deployed container. (Used only to enable a dev-only debug branch in the Steam callback.) |
+| `VAPID_SUBJECT` | optional | `src/lib/notify.ts:39` | Contact URI sent with every push. Defaults to `mailto:admin@phatt.tech` when unset. Required by the Web Push spec; web-push will throw without a value. |
+| `NODE_ENV` | optional, default `production` in image | `src/app/api/auth/steam/callback/route.ts:103` | Leave as `production` in the deployed container. Gates the session cookie's `secure` flag (`secure: NODE_ENV === "production"`) — set non-`production` only for local HTTP dev. |
+| `CRAWL4AI_URL` | optional, default `http://crawl4ai:11235` | `src/lib/swiss-results.ts:43` | Endpoint for the crawl4ai service that fetches HLTV (bypasses Cloudflare). Override only if the container name/port differs. |
+| `CRAWL4AI_API_TOKEN` | optional | `scripts/gather-team-stats.ts` | Bearer token for crawl4ai when the gather tooling hits it. |
+| `TURNSTILE_SECRET_KEY` | optional | `src/lib/captcha.ts:22` | Cloudflare Turnstile secret for the local-signup CAPTCHA. When unset, CAPTCHA enforcement is **skipped** (signups still work, no challenge). |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | optional | `src/app/login/local/page.tsx` | Public Turnstile site key for the CAPTCHA widget. Name must match **exactly** (a misspelled var = silent no-widget — see GOTCHAS). |
+| `STAGE_LOCKS_JSON` | optional | `scripts/send-prelock-reminders.ts` | Per-section pick cutoffs for the pre-lock reminder job, e.g. `{"105":{"name":"Stage I","lockAt":"2026-06-02T10:30:00Z"}}`. |
+| `EVENT_ID` | optional, default `26` | `scripts/send-prelock-reminders.ts` | Valve tournament event id (the layout's internal id, **not** the HLTV event id). Only the reminder script reads it. |
 
 ### Common tweaks
 
@@ -40,14 +46,23 @@ not on a schedule. **Required** = the app errors or skips features when missing.
 | `/` | open (dashboard chip changes per session) | `src/app/(app)/page.tsx` |
 | `/login` | open | `src/app/login/page.tsx` |
 | `/login/local` | open (creates local-only player on submit) | `src/app/login/local/page.tsx` |
-| `/picks` | open (read-only without session); pickable with session | `src/app/picks/page.tsx` — Swiss stages render bucketed cards, drag-drop + tap-to-arm, `Lock In to Steam` for steam-linked sessions |
-| `/leaderboard` | open | `src/app/leaderboard/page.tsx` |
-| `/leaderboard/compare` | open | `src/app/leaderboard/compare/page.tsx` |
-| `/news` | open | `src/app/news/page.tsx` |
-| `/players/[id]` | open | `src/app/players/[id]/page.tsx` |
-| `/profile` | session-gated | `src/app/profile/page.tsx` |
-| `/help/auth-code` | open (instructions for capturing the Steam Pick'Em code) | `src/app/help/auth-code/page.tsx` |
+| `/login/auth` | open | `src/app/login/auth/page.tsx` |
+| `/picks` | open (read-only without session); pickable with session | `src/app/(app)/picks/page.tsx` — Swiss stages render bucketed cards, drag-drop + tap-to-arm, `Lock In to Steam` for steam-linked sessions |
+| `/leaderboard` | open | `src/app/(app)/leaderboard/page.tsx` |
+| `/leaderboard/compare` | open | `src/app/(app)/leaderboard/compare/page.tsx` |
+| `/reveal/[section]` | open (gated by reveal-core — only renders once the stage locks) | `src/app/(app)/reveal/[section]/page.tsx` |
+| `/news` | open | `src/app/(app)/news/page.tsx` |
+| `/players` | open (directory) | `src/app/(app)/players/page.tsx` |
+| `/players/[id]` | open | `src/app/(app)/players/[id]/page.tsx` |
+| `/profile` | session-gated | `src/app/(app)/profile/page.tsx` |
+| `/faq` | open | `src/app/(app)/faq/page.tsx` |
+| `/pwa` | open (install help) | `src/app/(app)/pwa/page.tsx` |
+| `/help/auth-code` | open (instructions for capturing the Steam Pick'Em code) | `src/app/(app)/help/auth-code/page.tsx` |
 | `/join/[code]` | open (invite-link landing → onboards to a Steam or local session) | `src/app/join/[code]/page.tsx` |
+
+> Pages under the `(app)` route group share the app shell (nav + splash gate);
+> `/login*` and `/join/[code]` sit outside it. The folder is `src/app/(app)/…` even
+> though the URL has no `(app)` segment — route groups are path-transparent.
 
 ### API
 
@@ -66,6 +81,9 @@ not on a schedule. **Required** = the app errors or skips features when missing.
 | `POST` | `/api/picks/sync-stage` | session | **Write path** — push the session player's locally-stored picks up to Valve via `UploadTournamentPredictions`. Body `{ sectionId }` for a Swiss stage or `{ playoff: true }` for the bracket (one ordered QF→SF→GF call). Returns a `WriteResult` (`ok` / `skipped` / `degraded` / `escalate`); the UI's `Lock In to Steam` pill copies from that shape. |
 | `GET` | `/api/leaderboard` | open | Scores all players (local + synced) against resolved `StageOutcome` rows. Picks hidden until stage lock; coin tier only when `synced && hasViewerPass && hasValveCoin` (rule #4). |
 | `POST` | `/api/outcomes/ingest` | session (operational) | Pull stage results from Liquipedia / Valve, write `StageOutcome` rows. Event-gated (PHA-844) — responds `reason: "no-locked-unresolved"` when nothing's resolvable; callers MUST back off. |
+| `GET` / `POST` | `/api/standings/refresh` | **open (safe by construction)** | Synchronously warm the live Swiss `SwissStandingsCache` by crawling the committed HLTV event pages. Takes no user input (no SSRF), only writes our public standings cache, and is rate-limited by the same ~1h `SourceState` floor (off-window sections no-op; a cold cache always crawls so a stamped-empty slot self-heals). Hit it after a deploy during a live stage to guarantee the bracket/table render. See `docs/GOTCHAS.md` → "Live bracket renders blank on a freshly deployed container". |
+| `POST` | `/api/avatar` | session | Upload a (client-resized) profile picture for the session player. |
+| `POST` | `/api/news/ingest` | session (operational) | Pull/refresh the committed news feed. Back-off semantics like the other ingest routes. |
 | `GET` | `/api/push/public-key` | open | VAPID public key for browser subscribe. Returns `{ key: null }` when push isn't configured. |
 | `POST` | `/api/push/subscribe` | session | Store a browser `PushSubscription`. Idempotent on endpoint. |
 | `POST` | `/api/push/unsubscribe` | session | Remove a subscription by endpoint. No-op if not ours. |
@@ -75,16 +93,20 @@ not on a schedule. **Required** = the app errors or skips features when missing.
 
 ## One-time setup
 
-After a fresh container start against a fresh SQLite file:
+**The image self-creates its schema on every boot** — the container `CMD`
+(`Dockerfile:74`) runs `prisma db push --skip-generate` before starting the server,
+so a fresh SQLite file is migrated automatically. New models (`SourceState`,
+`SwissStandingsCache`, …) are part of the Prisma schema and get pushed the same way —
+no separate migration step. (This is why a Force Update that introduces a new model
+"just works" once the new image boots.)
+
+You only need to run anything by hand to **warm caches** (optional, skips first-request lag):
 
 ```bash
 # inside the container
-npx prisma db push                # creates the schema
-node scripts/build-logos.ts       # warms team logo cache (optional but skips first-request lag)
+node scripts/build-logos.ts                       # warm the team logo manifest
+curl http://localhost:3000/api/standings/refresh  # warm live Swiss standings during a stage
 ```
-
-`SourceState` (the Liquipedia ingestion gate added in PHA-844) is part of the
-Prisma schema — `prisma db push` covers it; you don't need a separate migration step.
 
 ## Smoke after a config flip
 

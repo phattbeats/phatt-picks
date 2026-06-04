@@ -15,8 +15,8 @@ or outcome resolution.
   - `browserless:3000` — real Chrome, used for screenshots / verification only.
 
 Deploy = Brandon **Force Update** on Unraid (pulls the new ghcr image and recreates).
-The first boot of a fresh DB needs `npx prisma db push` (the `docker-entrypoint.sh`
-handles schema; see OPERATIONS.md).
+A fresh DB self-migrates on boot — the image `CMD` (`Dockerfile:74`) runs
+`prisma db push --skip-generate` before starting the server (see OPERATIONS.md).
 
 ## The one pattern to understand first: `-core` leaf modules
 
