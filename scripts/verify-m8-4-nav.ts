@@ -28,7 +28,7 @@ function check(name: string, cond: boolean) {
 
 console.log("\nm8.4 - /players/[id] route");
 
-const playerRoute = "src/app/players/[id]/page.tsx";
+const playerRoute = "src/app/(app)/players/[id]/page.tsx";
 check("players/[id]/page.tsx exists", existsSync(join(ROOT, playerRoute)));
 
 const playerSrc = read(playerRoute);
@@ -37,17 +37,20 @@ check("player page calls notFound() when player missing", playerSrc.includes("no
 check("player page imports reveal-core", playerSrc.includes('from "@/lib/reveal-core"'));
 check(
   "player page reveals own picks even pre-lock (isSelf bypass)",
-  /isSelf \|\| arePicksRevealed/.test(playerSrc),
+  /isSelf \|\|\s*arePicksRevealed/.test(playerSrc),
 );
 check(
   'compare CTA targets /leaderboard/compare?b=<id>',
   /\/leaderboard\/compare\?b=\$\{encodeURIComponent\(player\.id\)\}/.test(playerSrc),
 );
-check("player page renders MobileNav", playerSrc.includes("<MobileNav />"));
+// Bottom nav moved out of each page into the shared (app) route-group layout
+// (HeatBottomNav). The layout wraps every app page, so the profile route gets it.
+const appLayoutSrc = read("src/app/(app)/layout.tsx");
+check("(app) layout mounts the bottom nav for every page", appLayoutSrc.includes("<HeatBottomNav />"));
 
 console.log("\nm8.4 - leaderboard rows are clickable");
 
-const lbSrc = read("src/app/leaderboard/page.tsx");
+const lbSrc = read("src/app/(app)/leaderboard/page.tsx");
 check("leaderboard imports Link", /import Link from "next\/link"/.test(lbSrc));
 check(
   "each row is a <Link href=\"/players/{id}\">",
@@ -62,7 +65,7 @@ check("rows close with </Link>", /<\/Link>\s*\);\s*\}\)\}/.test(lbSrc));
 
 console.log("\nm8.4 - /profile graceful sign-in card (no redirect)");
 
-const profileSrc = read("src/app/profile/page.tsx");
+const profileSrc = read("src/app/(app)/profile/page.tsx");
 check(
   'profile no longer imports redirect from next/navigation',
   !/from "next\/navigation"/.test(profileSrc),
@@ -92,16 +95,14 @@ check(
   /Session expired/i.test(profileSrc),
 );
 
-console.log("\nm8.4 - home header surfaces 'You' label next to profile icon");
+console.log("\nm8.4 - app header surfaces the 'You' chip next to the profile icon");
 
-const homeSrc = read("src/app/(app)/page.tsx");
+// The 'You' label + profile link moved out of each page's header into the shared
+// (app) layout's HeatHeader (the YouChip). Deep YouChip behaviour is covered by
+// verify-m9-2-topbar-you; here we just assert the home route inherits the header.
 check(
-  "home header profile link carries aria-label",
-  /aria-label="Your profile"/.test(homeSrc),
-);
-check(
-  "home header shows 'You' label",
-  />\s*You\s*<\/span>/.test(homeSrc),
+  "(app) layout mounts the HOTLINE header (carries the You chip)",
+  /<HeatHeader\b/.test(appLayoutSrc),
 );
 
 console.log(`\n${pass} pass / ${fail} fail`);
