@@ -244,11 +244,32 @@ export function parseSwissBracket(
 
   // 2. Settled teams in terminal columns (advanced / eliminated). Each wrapper
   // owns the team titles from its start up to the next wrapper marker.
+  //
+  // PHA-936: a wrapper's label is NOT simply the nearest preceding title. HLTV
+  // stacks the two terminal boxes of a deciding column (e.g. 3:1 over 3:2, or
+  // 1:3 over 2:3) by emitting BOTH titles consecutively and THEN both team
+  // wrappers, in the same order. Nearest-preceding-title collapses both wrappers
+  // onto the LATER title (3:2), leaving the yesterday-decided box (3:1) wrongly
+  // empty and dumping its teams into the not-yet-played box. So pair terminal
+  // titles to wrappers POSITIONALLY: each wrapper, in source order, claims the
+  // next unconsumed terminal title that precedes it (FIFO). Non-terminal
+  // (contention) titles carry match cells, never team wrappers, so they're not
+  // in the queue. Falls back to labelAt if the queue is exhausted (defensive).
+  const terminalTitles = titles.filter(
+    (t) => bracketRoundKind(t.label, opts.advanceAt, opts.eliminateAt) !== "contention",
+  );
+  let ti = 0;
   const boundaries = [...html.matchAll(WRAPPER_BOUNDARY_RE)].map((m) => m.index ?? 0);
   for (const w of html.matchAll(TEAM_WRAPPER_RE)) {
     const start = w.index ?? 0;
     const end = boundaries.find((b) => b > start) ?? html.length;
-    const label = labelAt(start, titles);
+    let label: string;
+    if (ti < terminalTitles.length && terminalTitles[ti].pos <= start) {
+      label = terminalTitles[ti].label;
+      ti++; // consume even when the wrapper is all placeholders, to stay aligned
+    } else {
+      label = labelAt(start, titles);
+    }
     for (const t of html.slice(start, end).matchAll(TEAM_TITLE_RE)) {
       const name = decodeEntities(t[1]).trim();
       if (!name || name === "?") continue; // unfilled placeholder slot
