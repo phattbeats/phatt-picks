@@ -176,6 +176,48 @@ check("an all-placeholder terminal column yields no teams (stays hidden)", (() =
   return parseSwissBracket(ph).length === 0;
 })());
 
+// PHA-936 regression: HLTV stacks the two terminal boxes of a deciding column by
+// emitting BOTH titles consecutively (3:1 then 3:2) and THEN both wrappers in the
+// same order — the yesterday-decided 3:1 box is filled, the not-yet-played 3:2
+// box is still all "?". Nearest-preceding-title wrongly put the 3:1 teams under
+// 3:2 (leaving 3:1 empty). Titles must pair to wrappers positionally.
+const stackedHtml = `
+<div class="swiss-visual-matchups-title">3:1</div>
+<div class="swiss-visual-matchups-title">3:2</div>
+<div class="swiss-matchups-team-wrapper">
+  <div class="swiss-visual-team "><img class="swiss-visual-team-logo" title="GamerLegion"></div>
+  <div class="swiss-visual-team "><img class="swiss-visual-team-logo" title="MIBR"></div>
+  <div class="swiss-visual-team "><img class="swiss-visual-team-logo" title="M80"></div>
+</div>
+<div class="swiss-matchups-team-wrapper">
+  <div class="swiss-visual-team "><img class="swiss-visual-team-logo" title="?"></div>
+  <div class="swiss-visual-team "><img class="swiss-visual-team-logo" title="?"></div>
+  <div class="swiss-visual-team "><img class="swiss-visual-team-logo" title="?"></div>
+</div>
+<div class="swiss-visual-matchups-title">1:3</div>
+<div class="swiss-visual-matchups-title">2:3</div>
+<div class="swiss-matchups-team-wrapper">
+  <div class="swiss-visual-team "><img class="swiss-visual-team-logo" title="THUNDER dOWNUNDER"></div>
+  <div class="swiss-visual-team "><img class="swiss-visual-team-logo" title="Sharks"></div>
+  <div class="swiss-visual-team "><img class="swiss-visual-team-logo" title="HEROIC"></div>
+</div>
+<div class="swiss-matchups-team-wrapper">
+  <div class="swiss-visual-team "><img class="swiss-visual-team-logo" title="?"></div>
+</div>`;
+const stacked = parseSwissBracket(stackedHtml);
+check("stacked deciding column: 3:1 holds the decided advancers (NOT 3:2)", (() => {
+  const r31 = stacked.find((r) => r.label === "3:1");
+  return !!r31 && r31.teams.map((t) => t.name).join(",") === "GamerLegion,MIBR,M80";
+})());
+check("stacked deciding column: 3:2 stays empty (no '?'-only round emitted)", () =>
+  stacked.find((r) => r.label === "3:2") === undefined);
+check("stacked deciding column: 1:3 holds the decided eliminated (NOT 2:3)", (() => {
+  const r13 = stacked.find((r) => r.label === "1:3");
+  return !!r13 && r13.teams.map((t) => t.name).join(",") === "THUNDER dOWNUNDER,Sharks,HEROIC";
+})());
+check("stacked deciding column: 2:3 stays empty (fills after today's games)", () =>
+  stacked.find((r) => r.label === "2:3") === undefined);
+
 console.log("\nswiss-bracket - graceful empty");
 
 check("empty html → [] (graceful, no throw)", parseSwissBracket("").length === 0);
