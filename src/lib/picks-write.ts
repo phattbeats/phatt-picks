@@ -32,6 +32,8 @@ import {
   parseAssignedItemIds,
   classifyWriteFailure,
   orderPicks,
+  buildSteamStateMap,
+  partitionBySteamState,
   PLAYOFF_SECTION_IDS,
   WriteShapeError,
   type LocalPick,
@@ -267,22 +269,16 @@ async function resolveAndUpload(
   // Read current Steam picks — skip any that are already correctly set so we
   // only send changed picks. This avoids conflicts where re-uploading an
   // already-locked pick interferes with subsequent uploads (PHA-875 root cause).
-  let steamBySlot: Map<number, number> = new Map();
+  //
+  // PHA-928: key by group+slot across ALL groups in the batch. The playoff
+  // bracket is multi-group (each group has a single slot at index 0), so the
+  // old slot-only key collapsed all picks onto one entry and dropped the rest —
+  // a favorite advancing QF→SF→GF would never reach Valve past the QF.
+  let steamState: Map<string, number> = new Map();
   try {
     const pred = await fetchTournamentPredictions(eventId, steamId, authCode);
-    const rawPicks = pred?.result?.picks ?? [];
-    // Valve's live API uses `pick` (not `pickid`) and omits `sectionid`.
-    // Filter to our target groupId since sectionid isn't available.
-    const targetGroupId = rows.length > 0 ? rows[0].groupId : null;
-    for (const p of rawPicks) {
-      const slotIndex = Number(p.index);
-      const groupId = Number(p.groupid);
-      const pickId = Number(p.pick ?? p.pickid);
-      if (!Number.isFinite(pickId) || !Number.isFinite(slotIndex) || pickId === 0) continue;
-      if (targetGroupId !== null && groupId !== targetGroupId) continue;
-      steamBySlot.set(slotIndex, pickId);
-    }
-    console.info(`[write] Steam picks read: ${steamBySlot.size} for groupId=${targetGroupId}`);
+    steamState = buildSteamStateMap(pred?.result?.picks ?? []);
+    console.info(`[write] Steam picks read: ${steamState.size} (keyed group:slot)`);
   } catch (e) {
     console.warn("[write] could not read current Steam state, uploading all picks:", e instanceof Error ? e.message : String(e));
   }
@@ -295,18 +291,18 @@ async function resolveAndUpload(
     return { ok: false, synced: 0, escalate: true, error: e instanceof Error ? e.message : String(e) };
   }
 
-  // Only upload picks that differ from what's currently on Steam.
-  // Sending an unchanged pick (same team at same slot) can conflict with partial
-  // sticker-lock state left by previous failed uploads (PHA-875).
-  const toUpload = resolved.filter(p => steamBySlot.get(p.slotIndex) !== p.pickId);
-  const skipped = resolved.length - toUpload.length;
+  // Only upload picks that differ from what's currently on Steam (same team at
+  // the same group+slot). Re-sending an unchanged pick can conflict with partial
+  // sticker-lock state left by previous failed uploads (PHA-875). Keying by
+  // group+slot keeps each playoff group distinct (PHA-928).
+  const { toUpload, alreadySynced } = partitionBySteamState(resolved, steamState);
+  const skipped = alreadySynced.length;
   if (skipped > 0) {
     console.info(`[write] skipping ${skipped} pick(s) already correctly set on Steam`);
   }
   console.info(`[write] uploading ${toUpload.length} pick(s)`);
 
   // Mark skipped picks as synced in the DB (they already match Steam state).
-  const alreadySynced = resolved.filter(p => steamBySlot.get(p.slotIndex) === p.pickId);
   for (const p of alreadySynced) {
     await prisma.pick.update({
       where: {

@@ -624,6 +624,20 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;
 }
 
+/* Region chip (PHA-892) — NA / EU / SA / ASIA / OCE, tinted per region */
+.region-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 8px; font-weight: 700; letter-spacing: 0.1em;
+  line-height: 1; padding: 3px 5px;
+  color: var(--region-color, var(--ink-mid));
+  background: color-mix(in srgb, var(--region-color, var(--ink-mid)) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--region-color, var(--ink-mid)) 40%, transparent);
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.ptile-region, .pslot-region { margin-top: -2px; }
+
 .pool-armed-hint {
   display: flex; align-items: center; gap: 8px;
   font-family: var(--font-mono);
@@ -662,6 +676,14 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .pickcard-icon { font-size: 11px; font-weight: 700; }
 .pickcard-icon.correct { color: var(--tac-green); }
 .pickcard-icon.wrong { color: var(--ink-low); }
+/* Consensus line (PHA-889) — how many players made this same pick.
+   Plain counts over "% of field" jargon; the lone call gets the heat. */
+.pickcard-share {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink-low); text-align: center;
+}
+.pickcard-share b { color: var(--heat); font-weight: 600; }
+.pickcard-share.lone { color: var(--heat); font-weight: 600; }
 
 /* ── LEADERBOARD PODIUM (mockup 04) ────────────────────────────────────── */
 .podium { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; align-items: end; }
@@ -856,6 +878,164 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .dir-av { width: 34px; height: 34px; border-radius: var(--r-sm); border: 1px solid var(--hair-2); overflow: hidden; background: linear-gradient(135deg, var(--surf-3), var(--surf-2)); display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: 12px; color: var(--ink-mid); }
 .dir-sc { font-family: var(--font-mono); font-weight: 600; font-size: 16px; color: var(--ink-hi); }
 
+/* Pick consensus (PHA-889) — field-wide "X% picked this team" split. */
+.consensus { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+.consensus-head { display: flex; align-items: baseline; justify-content: space-between; }
+.consensus-lbl {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--ink-low);
+}
+.consensus-n {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-low);
+}
+.consensus-row {
+  position: relative; display: flex; align-items: center; gap: 8px;
+  padding: 5px 8px; border: 1px solid var(--hair); background: var(--surf-1);
+  overflow: hidden;
+}
+.consensus-fill {
+  position: absolute; inset: 0 auto 0 0; height: 100%;
+  background: rgba(240,163,0,0.10); border-right: 1px solid rgba(240,163,0,0.22);
+  z-index: 0;
+}
+.consensus-row.you { border-color: var(--hair-3); }
+.consensus-row.you .consensus-fill { background: rgba(240,163,0,0.18); border-right-color: var(--heat); }
+.consensus-row.win .consensus-fill { background: rgba(155,210,60,0.12); border-right-color: rgba(155,210,60,0.4); }
+.consensus-row > :not(.consensus-fill) { position: relative; z-index: 1; }
+.consensus-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--surf-3); flex-shrink: 0; }
+.consensus-name {
+  flex: 1; min-width: 0; font-size: 12px; color: var(--ink-hi);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.consensus-check { color: var(--tac-green); font-weight: 700; }
+.consensus-you { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; color: var(--heat); }
+.consensus-pct { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--ink-hi); flex-shrink: 0; }
+.consensus-more {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--ink-low); padding: 2px 8px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; }
+}
+
+/* ── Team dossier (PHA-893): stats & standings, off-board by default ─────── */
+/* Pool tile gets a wrapper so the [i] affordance can be a sibling of the tile
+   button — that keeps it live when the tile is `used` (pointer-events:none) or
+   the stage is locked (button disabled). */
+/* min-width:0 on both the grid item (wrap) and the flex child (tile) lets them
+   shrink to the track so .ptile-name's ellipsis engages — without it a long
+   no-wrap name (e.g. "THUNDER dOWNUNDER") overflows into the next tile. */
+.ptile-wrap { position: relative; display: flex; min-width: 0; }
+.ptile-wrap .ptile { flex: 1; min-width: 0; }
+.ptile-info {
+  position: absolute; top: 5px; right: 5px;
+  width: 19px; height: 19px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-weight: 700; font-size: 11px; font-style: italic;
+  line-height: 1;
+  color: var(--ink-mid);
+  background: var(--surf-3);
+  border: 1px solid var(--hair-2);
+  border-radius: 50%;
+  cursor: pointer; user-select: none; z-index: 2;
+  transition: all 150ms var(--ease);
+}
+.ptile-info:hover, .ptile-info:focus-visible {
+  color: var(--heat); border-color: var(--heat);
+  background: rgba(240,163,0,0.1); outline: none;
+}
+
+.tsd-backdrop {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(8,6,3,0.72);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  padding: 0;
+}
+.tsd-panel {
+  width: 100%; max-width: 460px;
+  max-height: 86vh; overflow-y: auto;
+  background: var(--surf-2);
+  border: 1px solid var(--hair-3);
+  /* As a bottom sheet the panel now reaches the viewport edge (PHA-897 portal
+     lifts it over the botnav), so pad the foot past the home indicator. */
+  padding: 22px 20px calc(18px + env(safe-area-inset-bottom));
+  /* PHA-897 follow-up: the panel can still scroll on short viewports, but the
+     visible scrollbar gutter looked grubby on desktop (Brandon). Hide the
+     chrome cross-browser — scrolling still works via wheel/touch. */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* old Edge */
+}
+.tsd-panel::-webkit-scrollbar { width: 0; height: 0; display: none; } /* WebKit/Blink */
+@media (min-width: 560px) {
+  .tsd-backdrop { align-items: center; padding: 24px; }
+  /* Centered dialog clears the safe area via backdrop padding — drop the extra. */
+  .tsd-panel { padding-bottom: 18px; }
+}
+.tsd-close {
+  position: absolute; top: 12px; right: 12px;
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid var(--hair-2);
+  color: var(--ink-mid); cursor: pointer; z-index: 3;
+  transition: all 150ms var(--ease);
+}
+.tsd-close:hover { color: var(--heat); border-color: var(--heat); }
+.tsd-close svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2.4; }
+
+.tsd-head { display: flex; align-items: center; gap: 13px; padding-right: 30px; }
+.tsd-head-text { flex: 1; min-width: 0; }
+.tsd-name {
+  margin: 2px 0 0; font-weight: 800; font-size: 24px;
+  text-transform: uppercase; letter-spacing: 0.01em;
+  color: var(--ink-hi); line-height: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tsd-rank {
+  display: flex; flex-direction: column; align-items: center; flex-shrink: 0;
+  padding: 5px 10px; border: 1px solid var(--hair-3); background: rgba(240,163,0,0.06);
+}
+.tsd-rank-num { font-family: var(--font-display); font-weight: 800; font-size: 22px; color: var(--heat); line-height: 1; }
+.tsd-rank-lbl { font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.14em; color: var(--ink-mid); margin-top: 2px; }
+
+.tsd-sec { margin-top: 20px; }
+.tsd-sec-title {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--heat); margin: 0 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--hair-2);
+}
+.tsd-roster { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 7px; }
+.tsd-roster li {
+  font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--ink-hi);
+  padding: 5px 11px; background: var(--surf-3); border: 1px solid var(--hair-2);
+}
+.tsd-matches { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.tsd-match {
+  display: grid; grid-template-columns: 22px 1fr auto auto; align-items: center; gap: 10px;
+  padding: 8px 11px; background: var(--surf-3); border: 1px solid var(--hair); border-left-width: 3px;
+}
+.tsd-match.win { border-left-color: var(--tac-green); }
+.tsd-match.loss { border-left-color: var(--ember); }
+.tsd-match.tie { border-left-color: var(--ink-low); }
+.tsd-res { font-family: var(--font-display); font-weight: 800; font-size: 16px; text-align: center; }
+.tsd-match.win .tsd-res { color: var(--tac-green); }
+.tsd-match.loss .tsd-res { color: var(--ember); }
+.tsd-match.tie .tsd-res { color: var(--ink-mid); }
+.tsd-opp { font-size: 13px; color: var(--ink-hi); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tsd-score { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--ink-hi); }
+.tsd-date { font-family: var(--font-mono); font-size: 10px; color: var(--ink-low); }
+.tsd-empty { font-size: 13px; color: var(--ink-mid); margin: 14px 0 0; }
+.tsd-link {
+  display: inline-flex; align-items: center; gap: 7px; margin-top: 16px;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none;
+  color: var(--heat); padding: 8px 13px;
+  border: 1px solid var(--hair-3); background: rgba(240,163,0,0.06);
+  transition: all 150ms var(--ease);
+}
+.tsd-link:hover { border-color: var(--heat); background: rgba(240,163,0,0.12); }
+.tsd-link svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; }
+.tsd-foot {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.06em; color: var(--ink-low);
+  margin: 18px 0 0; padding-top: 12px; border-top: 1px solid var(--hair);
 }

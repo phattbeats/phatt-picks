@@ -53,6 +53,104 @@ export const COLOGNE_LOCK_SCHEDULE: LockSchedule = {
 };
 
 /**
+ * Human stage names per section id — the single committed source for the
+ * "Stage I / II / III" labels. Kept beside the schedule so a label and its lock
+ * instant can never drift. Used by the pre-lock reminder copy (PHA-929).
+ */
+export const COLOGNE_SECTION_NAMES: Readonly<Record<number, string>> = {
+  105: "Stage I",
+  106: "Stage II",
+  107: "Stage III",
+  108: "Quarterfinals",
+  109: "Semifinals",
+  110: "Grand Final",
+};
+
+/** A section's published lock instant paired with its display name. */
+export interface StageLock {
+  name: string;
+  /** UTC ISO lock instant. */
+  lockAt: string;
+}
+
+/**
+ * Derive the {sectionId: {name, lockAt}} map the pre-lock reminder job iterates
+ * over from the committed lock schedule + section names — so there is exactly
+ * ONE source of truth for stage cutoffs (PHA-929). Previously the reminder job
+ * read a separate STAGE_LOCKS_JSON env (empty by default → it silently never
+ * fired); deriving from COLOGNE_LOCK_SCHEDULE means a reminder fires for the same
+ * instant the countdown clock and the pick lock-gate already use.
+ *
+ * Only sections with a valid published lock instant are included — a section
+ * without one (the playoff sections) is skipped, never handed a fabricated
+ * cutoff. A section missing a name falls back to "Section {id}". Pure; injectable
+ * for tests and for future majors.
+ */
+export function stageLocksFromSchedule(
+  schedule: LockSchedule = COLOGNE_LOCK_SCHEDULE,
+  names: Readonly<Record<number, string>> = COLOGNE_SECTION_NAMES,
+): Record<number, StageLock> {
+  const out: Record<number, StageLock> = {};
+  for (const key of Object.keys(schedule)) {
+    const sectionId = Number(key);
+    const lockAt = lockTimeForSection(sectionId, schedule);
+    if (lockAt === null) continue;
+    out[sectionId] = { name: names[sectionId] ?? `Section ${sectionId}`, lockAt };
+  }
+  return out;
+}
+
+/** A stage's competition window — the inclusive date span over which it plays. */
+export interface MatchWindow {
+  /** First moment of the first play day (UTC ISO). */
+  start: string;
+  /** Last moment of the last play day (UTC ISO). */
+  end: string;
+}
+
+/**
+ * Committed per-stage competition windows (PHA-902). A Swiss stage plays over
+ * several days, and the live HLTV standings/bracket only change while games are
+ * being played — so the hourly on-read refresh is gated to these windows
+ * (`isWithinMatchWindow`) and stays idle on off-days (before a stage starts,
+ * after it's decided, between stages). Brandon: "hourly refresh is also only
+ * needed on dates where games are being played."
+ *
+ * Dates are the confirmed HLTV event spans (events 9028 / 9029):
+ *   Stage 1 — Jun 2–5 · Stage 2 — Jun 6–9.
+ * Same truthful-by-construction rule as the lock schedule: a window lives here
+ * only once it's the published, authoritative span. A section with no committed
+ * window isn't suppressed (isWithinMatchWindow returns true) — better to refresh
+ * a stage we haven't dated than to wrongly freeze it. Add Stage III / playoffs
+ * here once their HLTV source + dates are confirmed.
+ */
+export const COLOGNE_MATCH_WINDOWS: Readonly<Record<number, MatchWindow>> = {
+  105: { start: "2026-06-02T00:00:00Z", end: "2026-06-05T23:59:59Z" }, // Stage I  — Jun 2–5
+  106: { start: "2026-06-06T00:00:00Z", end: "2026-06-09T23:59:59Z" }, // Stage II — Jun 6–9
+};
+
+/**
+ * Is `nowMs` inside the section's committed competition window — i.e. is today a
+ * day this stage plays games? Used to gate the live-standings hourly refresh so
+ * it only crawls on match days. A section with no committed window returns true
+ * (don't suppress an undated stage); a malformed window also returns true (fail
+ * open — never freeze the data because of a bad date). `nowMs` is injected to
+ * keep this pure and the verify harness deterministic.
+ */
+export function isWithinMatchWindow(
+  sectionId: number,
+  nowMs: number,
+  windows: Readonly<Record<number, MatchWindow>> = COLOGNE_MATCH_WINDOWS,
+): boolean {
+  const w = windows[sectionId];
+  if (!w) return true; // no committed window — don't suppress (safe default)
+  const start = Date.parse(w.start);
+  const end = Date.parse(w.end);
+  if (Number.isNaN(start) || Number.isNaN(end)) return true; // bad date — fail open
+  return nowMs >= start && nowMs <= end;
+}
+
+/**
  * Resolve the committed lock instant for a section, or `null` when none is
  * published (or the stored value isn't a valid future-or-any ISO instant).
  * Returning `null` is what makes the countdown degrade to "no clock" instead of
@@ -66,4 +164,31 @@ export function lockTimeForSection(
   if (typeof iso !== "string" || iso.length === 0) return null;
   if (Number.isNaN(Date.parse(iso))) return null;
   return iso;
+}
+
+/**
+ * Has a section's published lock instant already passed (PHA-898)?
+ *
+ * "A stage's picks lock when its first match begins" — the same instant Valve
+ * flips `picks_allowed` off (see the schedule doc above). Our committed layout
+ * fixture is frozen all-open, so it never carries that flip; until a live Valve
+ * fetch lands on the render path, the published schedule is the truthful signal
+ * that Stage I (Jun 2) has begun and its picks are closed. The stage-gate
+ * (`isStagePickable`) and the picks write-guard both consult this so a stage
+ * that has started shows Locked and refuses new writes, even against the stale
+ * all-open fixture.
+ *
+ * `nowMs` is injected (not read) to keep this pure and the verify harness
+ * deterministic. Returns false when no lock time is published (e.g. the playoff
+ * sections) — those stay governed by seeding / `picks_allowed` as before, never
+ * by a fabricated time.
+ */
+export function isLockTimePassed(
+  sectionId: number,
+  nowMs: number,
+  schedule: LockSchedule = COLOGNE_LOCK_SCHEDULE,
+): boolean {
+  const iso = lockTimeForSection(sectionId, schedule);
+  if (iso === null) return false;
+  return Date.parse(iso) <= nowMs;
 }

@@ -9,6 +9,11 @@ Next.js (App Router) + TypeScript + Prisma/SQLite. Deploys as a single container
 `phattvip` network behind SWAG at `pickems.phatt.vip`. The responsive **installable PWA** is the
 entire mobile story (no native apps).
 
+> **📚 Knowledge base → [`docs/`](docs/README.md)** — architecture, the
+> [next-Major runbook](docs/NEXT-MAJOR.md), [operations](docs/OPERATIONS.md), and
+> [hard-won gotchas](docs/GOTCHAS.md). Start there before changing the system or
+> standing up a new Major. **Keep it true: update the relevant doc in the same PR.**
+
 ## Getting started (local dev)
 
 ```bash

@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { getCommittedLayout } from "@/lib/layout";
 import { prisma } from "@/lib/db";
-import { buildResolvedKeys, isStagePickable } from "@/lib/stage-gate-core";
+import { isStagePickable } from "@/lib/stage-gate-core";
 import { getSession } from "@/lib/session";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
 import { HeatMark } from "@/components/heat/HeatMark";
 import { LockCountdown } from "@/components/heat/LockCountdown";
-import { lockTimeForSection } from "@/lib/lock-schedule-core";
+import { lockTimeForSection, isLockTimePassed } from "@/lib/lock-schedule-core";
 import { WireFeed } from "@/components/heat/WireFeed";
 import { getWireItems } from "@/lib/news";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
@@ -46,8 +46,6 @@ export default async function DashboardPage() {
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
 
-  const resolvedKeys = buildResolvedKeys(resolvedRows);
-
   // Maximum possible points across every group.
   const maxPoints = layout.sections.reduce(
     (acc, s) =>
@@ -63,7 +61,9 @@ export default async function DashboardPage() {
   // fall back to the most recent section.
   const stageStatuses = layout.sections.map((s) => ({
     section: s,
-    pick: isStagePickable(layout, resolvedKeys, s.sectionid),
+    pick: isStagePickable(layout, s.sectionid, {
+      lockedByTime: isLockTimePassed(s.sectionid, now),
+    }),
   }));
   const activeIdx = stageStatuses.findIndex((s) => s.pick.pickable);
   const active =
@@ -358,6 +358,13 @@ function StageStatusTag({
   if (pickability.pickable) {
     return <span className="live-tag">Picks Open</span>;
   }
+  if (pickability.reason === "locked-time-passed") {
+    return (
+      <span className="live-tag" style={{ color: "var(--ink-mid)", borderColor: "var(--hair-2)", background: "var(--surf-2)" }}>
+        Underway · Locked
+      </span>
+    );
+  }
   if (pickability.reason === "locked-by-valve") {
     return (
       <span className="live-tag" style={{ color: "var(--ink-mid)", borderColor: "var(--hair-2)", background: "var(--surf-2)" }}>
@@ -365,10 +372,10 @@ function StageStatusTag({
       </span>
     );
   }
-  if (pickability.reason === "previous-stage-unresolved") {
+  if (pickability.reason === "teams-not-set") {
     return (
       <span className="live-tag" style={{ color: "var(--ink-mid)", borderColor: "var(--hair-2)", background: "var(--surf-2)" }}>
-        Awaiting prior stage
+        Teams not set
       </span>
     );
   }
@@ -397,11 +404,13 @@ function StageBody({
           ? `${filledSlots} of ${totalSlots} ${sectionName} slots locked. Finish the rest — who goes 3‑0, who crashes 0‑3, your advancing eight — before the window shuts.`
           : `You haven't called your ${sectionName} picks yet. Lock who goes 3‑0, who crashes 0‑3, and your advancing eight before the window shuts.`
       : `Pick window is open. Sign in to lock your ${sectionName} picks before the window shuts.`
-    : pickability.reason === "previous-stage-unresolved"
-      ? `Opens after ${pickability.previousSectionName} resolves. Results flow in as matches complete.`
-      : pickability.reason === "locked-by-valve"
-        ? `Valve has closed the pick window for ${sectionName}. Watch the wire for results.`
-        : "This stage isn't available.";
+    : pickability.reason === "teams-not-set"
+      ? `Teams for ${sectionName} aren't seeded yet. Picks open automatically once Valve sets the bracket.`
+      : pickability.reason === "locked-time-passed"
+        ? `${sectionName} is underway — picks are locked. Open the stage to watch the live lineup and see how your teams are doing.`
+        : pickability.reason === "locked-by-valve"
+          ? `Valve has closed the pick window for ${sectionName}. Watch the wire for results.`
+          : "This stage isn't available.";
 
   return (
     <p style={{

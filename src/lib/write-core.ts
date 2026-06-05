@@ -107,6 +107,78 @@ export function orderPicks(picks: UploadPick[]): UploadPick[] {
 }
 
 /**
+ * Skip-unchanged key for a pick's current Steam state (PHA-928).
+ *
+ * MUST include groupId, not just slotIndex. The playoff bracket is multi-group
+ * (QF 274–277, SF 278–279, GF 280) and every group has a single slot at index 0,
+ * so a slot-only key collapses all seven picks onto one entry — the moment a
+ * favorite advances QF→SF→GF (same team across groups) the SF/GF picks "match"
+ * the QF's slot-0 entry and get silently dropped from the upload while the UI
+ * reports them synced. Swiss is one group/section so the key happens to be
+ * unique there too, but the bracket REQUIRES the group in the key.
+ */
+export function steamStateKey(groupId: number, slotIndex: number): string {
+  return `${groupId}:${slotIndex}`;
+}
+
+/** Raw pick shape from GetTournamentPredictions. The live API uses `pick`
+ * (not `pickid`) and omits `sectionid`, so the group+slot is all we can key on. */
+export interface RawSteamPick {
+  index?: number | string | null;
+  groupid?: number | string | null;
+  pick?: number | string | null;
+  pickid?: number | string | null;
+}
+
+/**
+ * Build the skip-unchanged map from the live Steam predictions, keyed by
+ * group+slot across ALL groups in the response (PHA-928). The previous code
+ * filtered to a single target groupId because sectionid is unavailable, but for
+ * a multi-group playoff batch that dropped every group but the first. Keying by
+ * group+slot makes the section irrelevant — the group disambiguates.
+ */
+export function buildSteamStateMap(rawPicks: RawSteamPick[]): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const p of rawPicks) {
+    const slotIndex = Number(p.index);
+    const groupId = Number(p.groupid);
+    const pickId = Number(p.pick ?? p.pickid);
+    if (
+      !Number.isFinite(pickId) ||
+      !Number.isFinite(slotIndex) ||
+      !Number.isFinite(groupId) ||
+      pickId === 0
+    ) {
+      continue;
+    }
+    out.set(steamStateKey(groupId, slotIndex), pickId);
+  }
+  return out;
+}
+
+/**
+ * Partition resolved picks into those that must be uploaded vs those already
+ * correctly set on Steam (skip-unchanged, PHA-875). A pick is "already synced"
+ * only when the SAME group+slot already holds the SAME team — so a favorite
+ * advancing across bracket groups is correctly uploaded to each group (PHA-928).
+ */
+export function partitionBySteamState(
+  resolved: UploadPick[],
+  steamState: Map<string, number>,
+): { toUpload: UploadPick[]; alreadySynced: UploadPick[] } {
+  const toUpload: UploadPick[] = [];
+  const alreadySynced: UploadPick[] = [];
+  for (const p of resolved) {
+    if (steamState.get(steamStateKey(p.groupId, p.slotIndex)) === p.pickId) {
+      alreadySynced.push(p);
+    } else {
+      toUpload.push(p);
+    }
+  }
+  return { toUpload, alreadySynced };
+}
+
+/**
  * Build the form body for a SINGLE pick upload (PHA-853 live finding).
  *
  * PHA-826 §0.3 had two unconfirmed shapes: an indexed batch (`sectionid1…

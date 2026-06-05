@@ -1,25 +1,28 @@
 /**
  * Stage-pickability gate (pure).
  *
- * A stage's pick window opens only once the prior stage's outcomes are fully
- * resolved. Pre-event everything is "future" except the first section, which
- * is pickable from the start. The committed cologne layout ships every group
- * `picks_allowed:true`, and stages 3 / playoffs carry `pickid:0` (TBD) team
- * slots — without this gate the UI would let players "pick" placeholder
- * teams that don't yet exist (Brandon's 2026-05-28 live-deploy report).
+ * Valve opens the Pick'Em windows for every Swiss stage at once — you call your
+ * 3-0 / 0-3 / advancing picks for Stage I, II and III up front, before a single
+ * map is played (Brandon confirmed live on 2026-06-02: "Stage 1, 2, and 3 are
+ * all active … its open"). So pickability is NOT a sequential chain that waits
+ * for the prior stage to resolve. It is driven by two live facts only:
+ *
+ *   1. Valve's `picks_allowed` flag — while it's true the window is open; once
+ *      every group in a section flips it off, that stage is locked.
+ *   2. Whether the stage is SEEDED — i.e. it has real teams to choose from.
+ *      The committed cologne layout carries `pickid:0` (TBD) team slots for the
+ *      playoff bracket (QF/SF/GF) and any not-yet-seeded Swiss slot. A stage
+ *      whose every team slot is still TBD has nothing real to pick, so it stays
+ *      locked until Valve seeds it — this is what stops players "picking"
+ *      placeholder teams that don't exist yet (Brandon's 2026-05-28 report).
  *
  * The rule:
- *   - Section 0 (in layout order) is pickable iff its groups remain open
- *     (`picks_allowed === true`).
- *   - Every other section is pickable iff (a) its groups remain open AND
- *     (b) every slot of the IMMEDIATELY PREVIOUS section already has a
- *     resolved StageOutcome row.
- *
- * Why "immediately previous" and not "every previous": stages are sequential,
- * and the chain naturally enforces transitive resolution (you can't reach
- * stage 3 without stage 2 being fully resolved, because stage 2 only unlocks
- * after stage 1). For the playoff sections (108 QF -> 109 SF -> 110 Final)
- * the same chain handles bracket reveal: SFs unlock once all four QFs resolve.
+ *   - A section is pickable iff its groups remain open (`picks_allowed === true`
+ *     on at least one group) AND at least one of its team slots is a real team
+ *     (`pickid !== 0`).
+ *   - The Swiss stages (I/II/III) are seeded, so they open together the moment
+ *     Valve allows picks. The playoff sections stay locked until the bracket is
+ *     seeded, then open on their own.
  *
  * Pure module (no `@/` alias, no prisma, no fetch) so the verify script can
  * import it directly under `node`.
@@ -30,15 +33,12 @@ import type { Layout } from "./layout";
 export type StagePickability =
   /** Open for picks — render the picker. */
   | { pickable: true; reason: "open" }
-  /** Valve closed the window — render the same Locked card; picks are revealed elsewhere. */
+  /** The stage's published lock time has passed — it has begun, picks closed. */
+  | { pickable: false; reason: "locked-time-passed" }
+  /** Valve closed the window — render the Locked card; picks are revealed elsewhere. */
   | { pickable: false; reason: "locked-by-valve" }
-  /** Upstream stage hasn't resolved yet — render Locked card pointing at it. */
-  | {
-      pickable: false;
-      reason: "previous-stage-unresolved";
-      previousSectionId: number;
-      previousSectionName: string;
-    }
+  /** Teams aren't seeded yet (every slot TBD) — render Locked card. */
+  | { pickable: false; reason: "teams-not-set" }
   /** Unknown section id — defensive deny (e.g. typo in querystring). */
   | { pickable: false; reason: "unknown-section" };
 
@@ -49,30 +49,43 @@ export function buildResolvedKeys(
   return new Set(rows.map((r) => `${r.sectionId}:${r.groupId}:${r.slotIndex}`));
 }
 
-/** Does the previous section have a resolved StageOutcome for every slot it defines? */
-function isSectionFullyResolved(
-  section: Layout["sections"][number],
-  resolvedKeys: ReadonlySet<string>,
-): boolean {
+/** Does this section have at least one real (non-TBD) team to pick from? */
+function isSectionSeeded(section: Layout["sections"][number]): boolean {
   for (const group of section.groups) {
-    for (const p of group.picks) {
-      if (!resolvedKeys.has(`${section.sectionid}:${group.groupid}:${p.index}`)) {
-        return false;
-      }
+    for (const team of group.teams) {
+      if (team.pickid !== 0) return true;
     }
   }
-  return true;
+  return false;
+}
+
+export interface StageGateOpts {
+  /**
+   * The section's published lock instant has passed (PHA-898). The caller
+   * computes this from the lock schedule vs. the current time
+   * (`isLockTimePassed`) and passes it in, keeping this module pure. When true
+   * the stage is locked regardless of the (stale, all-open) committed
+   * `picks_allowed` flag — "Stage 1 has begun" is the truth the fixture can't
+   * carry until a live Valve fetch lands.
+   */
+  lockedByTime?: boolean;
 }
 
 export function isStagePickable(
   layout: Layout,
-  resolvedKeys: ReadonlySet<string>,
   sectionId: number,
+  opts: StageGateOpts = {},
 ): StagePickability {
-  const idx = layout.sections.findIndex((s) => s.sectionid === sectionId);
-  if (idx < 0) return { pickable: false, reason: "unknown-section" };
+  const section = layout.sections.find((s) => s.sectionid === sectionId);
+  if (!section) return { pickable: false, reason: "unknown-section" };
 
-  const section = layout.sections[idx];
+  // The stage's published lock time has passed — its first match has begun, so
+  // the Pick'Em window is closed even though the frozen fixture still says
+  // `picks_allowed:true`. Takes precedence over the live flag below: a stage
+  // that has demonstrably started is never "open" again.
+  if (opts.lockedByTime) {
+    return { pickable: false, reason: "locked-time-passed" };
+  }
 
   // Valve has closed the pick window on every group in this stage -> locked.
   // (The committed fixture is all-open, so this branch only fires once the
@@ -81,17 +94,10 @@ export function isStagePickable(
     return { pickable: false, reason: "locked-by-valve" };
   }
 
-  // First stage is always open until Valve locks it.
-  if (idx === 0) return { pickable: true, reason: "open" };
-
-  const prev = layout.sections[idx - 1];
-  if (!isSectionFullyResolved(prev, resolvedKeys)) {
-    return {
-      pickable: false,
-      reason: "previous-stage-unresolved",
-      previousSectionId: prev.sectionid,
-      previousSectionName: prev.name.split(" | ")[0],
-    };
+  // No real teams yet (every slot TBD) — e.g. the playoff bracket pre-seeding.
+  // Stay locked so the picker never offers placeholder teams.
+  if (!isSectionSeeded(section)) {
+    return { pickable: false, reason: "teams-not-set" };
   }
 
   return { pickable: true, reason: "open" };

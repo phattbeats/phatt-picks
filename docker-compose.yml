@@ -26,7 +26,17 @@ services:
       - VAPID_SUBJECT=${VAPID_SUBJECT}
       # Optional: enable destructive write-back to Valve, and per-stage pick locks
       - WRITE_ENABLED=${WRITE_ENABLED:-false}
+      # STAGE_LOCKS_JSON is now an OPTIONAL override only (PHA-929): the pre-lock
+      # reminder job reads the committed COLOGNE_LOCK_SCHEDULE by default. Set
+      # this to override cutoffs for a future major / out-of-band sections.
       - STAGE_LOCKS_JSON=${STAGE_LOCKS_JSON:-}
+      # Pre-lock push reminders — 24h + 1h before each stage locks (PHA-929).
+      # OFF by default (owner decision); set to 1 to arm the in-process scheduler.
+      - PRELOCK_REMINDERS_ENABLED=${PRELOCK_REMINDERS_ENABLED:-false}
+      # Live Swiss W-L standings (PHA-902) crawl the HLTV event page via crawl4ai,
+      # which sits on this same phattvip network — reachable by container name.
+      # Override only for a different topology; graceful-empty if unreachable.
+      - CRAWL4AI_URL=${CRAWL4AI_URL:-http://crawl4ai:11235}
       - NODE_ENV=production
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]

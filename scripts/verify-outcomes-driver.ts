@@ -53,9 +53,11 @@ check(
   /if \(!\(await claimOutcomesRefreshSlot\(\)\)\) return/.test(outcomes),
 );
 check(
-  "slow ingest is DEFERRED past the response via Next `after`",
+  "slow ingest + HLTV bridge are DEFERRED past the response via Next `after`",
   /import \{ after \} from "next\/server"/.test(outcomes) &&
-    /runDeferred\(\(\) => ingestOutcomes\(eventId\)\)/.test(outcomes) &&
+    // PHA-918: the deferred body now runs the answer-key ingest AND the HLTV
+    // Swiss bridge that resolves the buckets Valve leaves ambiguous.
+    /runDeferred\(async \(\) => \{[\s\S]*?ingestOutcomes\(eventId\)[\s\S]*?bridgeSwissOutcomes\(eventId\)/.test(outcomes) &&
     /after\(run\)/.test(outcomes),
 );
 check(
@@ -65,9 +67,9 @@ check(
 );
 check(
   "claim is best-effort (outer catch grants slot on any DB error)",
-  // Slot loss is silent — INSERT OR IGNORE returns 0 (`return inserted > 0`),
-  // no throw. Outer catch returns true (DB hiccup — allow rather than block forever).
-  /claimOutcomesRefreshSlot[\s\S]*?} catch \{[\s\S]{0,120}return true;/.test(outcomes),
+  // Within-floor / lost-race returns `inserted > 0` (0 = backed off).
+  // Outer catch returns true (DB hiccup — allow rather than block forever).
+  /claimOutcomesRefreshSlot[\s\S]*?return inserted > 0;[\s\S]*?} catch \{[\s\S]{0,80}return true;/.test(outcomes),
 );
 
 console.log("\noutcomes-driver - source fetch is bounded (can't hang the deferred run)");

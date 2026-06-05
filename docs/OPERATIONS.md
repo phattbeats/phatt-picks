@@ -2,6 +2,10 @@
 
 Container env vars, HTTP routes, and one-time setup for `pickems.phatt.vip`.
 
+> Spinning up a **new major**? Start with the
+> [pre-major checklist](PRE-MAJOR-CHECKLIST.md) — event ids, stage dates, the
+> team → pickid → HLTV id mapping, and the per-stage stats refresh routine.
+
 ## Environment variables
 
 Every var the running app reads. Pre-populated values in the Unraid template

@@ -14,12 +14,16 @@ import { prisma } from "@/lib/db";
 import { getCommittedLayout, buildTeamMap } from "@/lib/layout";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
 import { arePicksRevealed, groupOutcomeKey } from "@/lib/reveal-core";
+import { isLockTimePassed } from "@/lib/lock-schedule-core";
 import { visibleCoinTier } from "@/lib/coin-core";
 import { getSession } from "@/lib/session";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
 import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
+import { buildSwissStandings, type SlotPickMap } from "@/lib/swiss-standings-core";
+import { LockedPicksBoard } from "@/components/heat/LockedPicksBoard";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
+import { buildBucketConsensus, bucketShareFor } from "@/lib/consensus-core";
 import type { Section } from "@/lib/layout";
 
 const EVENT_ID = 26;
@@ -61,6 +65,11 @@ export default async function PlayerProfilePage({
   const session = await getSession();
   await refreshOutcomesOnRead(EVENT_ID); // live driver (PHA-866) — shared 30s claim
 
+  // Published lock schedule (PHA-898): reveal a started stage's picks even before
+  // Valve flips picks_allowed or a result lands. Dynamic RSC — time read intended.
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now();
+
   const player = await prisma.player.findUnique({ where: { id } });
   if (!player) notFound();
 
@@ -98,6 +107,12 @@ export default async function PlayerProfilePage({
     where: { eventId: EVENT_ID },
     select: { playerId: true, sectionId: true, groupId: true, slotIndex: true, pickId: true },
   });
+  // Field-wide pick distribution (PHA-889), measured per Swiss bucket so all
+  // 0:3 calls for a team count together regardless of slot (PHA-900 follow-up).
+  // Only surfaced on revealed (post-lock) groups below, so it never leaks live
+  // picks or invites herding.
+  const consensus = buildBucketConsensus(allPicks);
+
   const everyPickMap: PlayerPickMap = {};
   for (const p of allPicks) {
     everyPickMap[p.playerId] ??= {};
@@ -239,22 +254,68 @@ export default async function PlayerProfilePage({
         </Link>
       )}
 
-      {/* Per-stage picks (reveal-gated against non-self viewers) */}
+      {/* Per-stage picks (reveal-gated against non-self viewers). Swiss stages
+          render in the SAME locked-picks UI as /picks — the 3:0 / advance / 0:3
+          buckets, each call green when confirmed right, red when wrong OR no
+          longer winnable (PHA-902). Playoffs keep the per-match cards. */}
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {layout.sections.map((section) => (
+        {layout.sections.map((section) => {
+          const stageLabel = section.name.split(" | ")[0].toUpperCase();
+          if (isSwissSection(section.sectionid)) {
+            const group = section.groups[0];
+            const revealed =
+              isSelf ||
+              arePicksRevealed(
+                group,
+                groupHasOutcome.has(groupOutcomeKey(section.sectionid, group.groupid)),
+                isLockTimePassed(section.sectionid, nowMs),
+              );
+            if (!revealed) {
+              return (
+                <div key={section.sectionid} className="pickgroup">
+                  <div className="pickgroup-head">
+                    <span className="pickgroup-name" style={{ fontSize: 14 }}>{stageLabel}</span>
+                  </div>
+                  <div style={{ padding: 20, textAlign: "center", color: "var(--ink-low)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                    🔒 Hidden until this stage locks
+                  </div>
+                </div>
+              );
+            }
+            const swiss = buildSwissStandings(
+              section,
+              (outcomeMap[section.sectionid] ?? {}) as SlotPickMap,
+              bucketSwissSlots,
+              (pickMap[section.sectionid] ?? {}) as SlotPickMap,
+            );
+            const teamStatus = new Map(swiss.teams.map((t) => [t.pickid, t.status] as const));
+            return (
+              <LockedPicksBoard
+                key={section.sectionid}
+                section={section}
+                teamMap={teamMap}
+                myPicks={pickMap[section.sectionid] ?? {}}
+                teamStatus={teamStatus}
+                resolvedAtIso={null}
+                title={`[ ${stageLabel} ]`}
+              />
+            );
+          }
+          // Non-Swiss (playoffs): keep the per-match cards.
+          return (
           <div key={section.sectionid}>
             <h2 className="eyebrow-mono" style={{ marginBottom: 8, display: "block" }}>
-              [ {section.name.split(" | ")[0].toUpperCase()} ]
+              [ {stageLabel} ]
             </h2>
 
               {section.groups.map((group) => {
                 // Self always sees own picks; others wait for stage lock.
-                const revealed =
-                  isSelf ||
-                  arePicksRevealed(
-                    group,
-                    groupHasOutcome.has(groupOutcomeKey(section.sectionid, group.groupid)),
-                  );
+                const lockRevealed = arePicksRevealed(
+                  group,
+                  groupHasOutcome.has(groupOutcomeKey(section.sectionid, group.groupid)),
+                  isLockTimePassed(section.sectionid, nowMs),
+                );
+                const revealed = isSelf || lockRevealed;
                 const groupPicks = pickMap[section.sectionid]?.[group.groupid] ?? {};
                 const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
 
@@ -287,6 +348,13 @@ export default async function PlayerProfilePage({
                             const hit = winner !== undefined && pick === winner;
                             const wrong = winner !== undefined && pick !== undefined && pick !== winner;
                             const typeLabel = bucketLabelFor(section.sectionid, group, slot.index);
+                            // Consensus % stays gated on the LOCK (not isSelf): showing the
+                            // field split while a stage is still open invites herd-following
+                            // even on your own profile (PHA-889). Your pick still shows; only
+                            // the % waits for lock — same discipline as the reveal gate.
+                            const share = pick && lockRevealed
+                              ? bucketShareFor(consensus, section.sectionid, group.groupid, slot.index, pick)
+                              : null;
                             return (
                               <div
                                 key={slot.index}
@@ -306,6 +374,30 @@ export default async function PlayerProfilePage({
                                     </span>
                                   )}
                                 </span>
+                                {share && (() => {
+                                  // Consensus, told as a story instead of a stat. "20% of field"
+                                  // read like a bug at a 5-player table (every value rounds to a
+                                  // multiple of 20) and "of field" is jargon. Raw counts are honest
+                                  // at any size; the lone call is the contrarian flex PHA-900 is after.
+                                  // share is bucket-level: how many called this team to go 3:0 /
+                                  // advance / 0:3, not how many used this exact slot.
+                                  const total = share.total;
+                                  if (total < 2) return null; // no consensus to speak of with a field of one
+                                  const lone = share.count === 1;
+                                  const label = lone
+                                    ? "Lone call"
+                                    : share.count === total
+                                      ? "Whole board"
+                                      : `${share.count} of ${total} picked`;
+                                  return (
+                                    <span
+                                      className={`pickcard-share${lone ? " lone" : ""}`}
+                                      title={`${share.count} of ${total} players made this same call`}
+                                    >
+                                      {label}
+                                    </span>
+                                  );
+                                })()}
                               </div>
                             );
                           })}
@@ -316,7 +408,8 @@ export default async function PlayerProfilePage({
                 );
               })}
           </div>
-        ))}
+          );
+        })}
       </div>
     </>
   );

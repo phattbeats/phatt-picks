@@ -21,8 +21,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { assertBigIntString } from "@/lib/bigint";
-import { getCommittedLayout, validatePickAgainstLayout } from "@/lib/layout";
+import { validatePickAgainstLayout } from "@/lib/layout";
+import { getEffectiveLayout } from "@/lib/layout-state";
 import { isStageWritable } from "@/lib/reveal-core";
+import { isLockTimePassed } from "@/lib/lock-schedule-core";
 
 const EVENT_ID = 26;
 
@@ -59,7 +61,7 @@ export async function POST(req: NextRequest) {
   const evtId = Number(eventId);
   const secId = Number(sectionId);
 
-  const layout = getCommittedLayout();
+  const layout = await getEffectiveLayout(evtId);
   const section = layout.sections.find((s) => s.sectionid === secId);
   if (!section) {
     return NextResponse.json({ error: `unknown section ${secId}` }, { status: 400 });
@@ -72,7 +74,14 @@ export async function POST(req: NextRequest) {
   });
   const hasOutcome = resolvedCount > 0;
 
-  if (section.groups.some((g) => !isStageWritable(g, hasOutcome))) {
+  // The committed fixture is frozen all-open, so `picks_allowed` never flips for
+  // it. Once a stage's published lock instant passes it has begun — reject the
+  // write so a crafted POST can't slip a pick past the (now Locked) UI (PHA-898).
+  // Same lockedByTime signal the reveal gate uses, so writable and revealed stay
+  // exact inverses (no edit-but-can't-compare dead zone).
+  const lockedByTime = isLockTimePassed(secId, Date.now());
+
+  if (section.groups.some((g) => !isStageWritable(g, hasOutcome, lockedByTime))) {
     return NextResponse.json({ error: "stage_locked" }, { status: 409 });
   }
 

@@ -28,7 +28,12 @@ import {
 } from "./outcomes-core";
 import { fetchLiquipediaResults, LiquipediaThrottledError } from "./liquipedia";
 import { fetchTournamentLayout } from "./valve";
+import { cacheLiveLayout } from "./layout-state";
 import { writeRankSnapshots } from "./rank-snapshot";
+import { getSwissStandings } from "./swiss-results";
+import { deriveClinchedSlots } from "./swiss-clinch-core";
+import { bucketSwissSlots, isSwissSection } from "./swiss-bucket-core";
+import { isLockTimePassed } from "./lock-schedule-core";
 
 export interface IngestSummary {
   eventId: number;
@@ -68,6 +73,10 @@ async function tryValveOracle(eventId: number): Promise<RawResolvedSlot[] | null
     const envelope = await fetchTournamentLayout(eventId);
     const live = envelope?.result;
     if (!live?.sections) return null;
+    // Free overlay refresh (PHA-896): this same payload carries the live seeded
+    // teams + picks_allowed the picks UI overlays. Cache it while we have it so
+    // an outcomes tick also advances the layout state. Non-fatal.
+    await cacheLiveLayout(eventId, envelope).catch(() => {});
     const { resolved, ambiguous } = resolveOutcomesFromLayout(live);
     if (ambiguous.length > 0) {
       console.warn(
@@ -88,8 +97,11 @@ async function tryValveOracle(eventId: number): Promise<RawResolvedSlot[] | null
 }
 
 /**
- * Ingest outcomes for an event. Only fetches when unresolved slots remain.
- * Idempotent: re-running after full resolution is a no-op (no network call).
+ * Ingest outcomes for an event. Probes the live Valve layout each tick (the
+ * only authoritative lock/result source — the committed fixture never flips
+ * `picks_allowed`); resolveOutcomesFromLayout self-gates on the live state so
+ * open stages are a no-op. Idempotent: already-resolved slots are filtered out
+ * before persist, so re-running after full resolution writes nothing.
  */
 export async function ingestOutcomes(eventId: number): Promise<IngestSummary> {
   const layout = getCommittedLayout();
@@ -101,33 +113,41 @@ export async function ingestOutcomes(eventId: number): Promise<IngestSummary> {
   const resolvedKey = new Set(existing.map((o) => `${o.sectionId}:${o.groupId}:${o.slotIndex}`));
   const resolvedBefore = resolvedKey.size;
 
-  // Gate on stage state, not just resolved rows. Only stages whose pick window
-  // has CLOSED can have results — pre-event every stage is open, so this is []
-  // and we never touch the source (PHA-844: the old `unresolved` set was the
-  // entire layout pre-event, hammering Liquipedia on every tick).
-  const lockedUnresolved = pickLockedUnresolvedSlots(layout, resolvedKey);
-  if (lockedUnresolved.length === 0) {
-    return {
-      eventId,
-      source: "none",
-      resolvedBefore,
-      resolvedAfter: resolvedBefore,
-      written: 0,
-      rejected: 0,
-      reason: resolvedBefore > 0 ? "fully-resolved" : "no-locked-unresolved",
-    };
-  }
-
   let raw: RawResolvedSlot[] = [];
   let source: "valve" | "liquipedia" | "none" = "none";
   let error: string | undefined;
 
   try {
+    // ALWAYS probe the Valve oracle first. The lock state can only come from the
+    // LIVE layout (GetTournamentLayout): our committed fixture is permanently
+    // `picks_allowed:true`, so gating on it (the old behavior) meant the oracle
+    // was NEVER reached and outcomes/scoring stayed frozen at 0 all event —
+    // PHA-886. resolveOutcomesFromLayout self-gates on the live `picks_allowed`,
+    // so this is a no-op while a stage is open and resolves only genuinely-locked
+    // slots. Rate-limited upstream by refreshOutcomesOnRead's 30s cluster claim.
     const valve = await tryValveOracle(eventId);
     if (valve && valve.length > 0) {
       raw = valve;
       source = "valve";
     } else {
+      // Liquipedia fallback stays gated on locked-unresolved slots so it never
+      // hammers the source pre-event (PHA-844). Against the all-open committed
+      // fixture this is always [] — and Liquipedia can't resolve this event's
+      // Swiss buckets anyway (PHA-869) — so it stays dormant; Valve is the live
+      // source of truth. We short-circuit here only when Valve had nothing AND
+      // no committed-locked slot exists to justify a fallback request.
+      const lockedUnresolved = pickLockedUnresolvedSlots(layout, resolvedKey);
+      if (lockedUnresolved.length === 0) {
+        return {
+          eventId,
+          source: "none",
+          resolvedBefore,
+          resolvedAfter: resolvedBefore,
+          written: 0,
+          rejected: 0,
+          reason: resolvedBefore > 0 ? "fully-resolved" : "no-locked-unresolved",
+        };
+      }
       // Fallback: Liquipedia. The bracket page + slot mapper are event-specific;
       // pre-tournament this yields [] (no completed matches yet).
       raw = await fetchLiquipediaResults("IEM_Cologne_2026", () => null);
@@ -246,7 +266,85 @@ async function claimOutcomesRefreshSlot(): Promise<boolean> {
  */
 export async function refreshOutcomesOnRead(eventId: number): Promise<void> {
   if (!(await claimOutcomesRefreshSlot())) return; // within floor or lost the race — no-op
-  runDeferred(() => ingestOutcomes(eventId)); // slow ingest — off the render path
+  runDeferred(async () => {
+    // Valve / Liquipedia answer key (a no-op for the set-valued Swiss buckets it
+    // can't resolve), THEN the HLTV bridge that DOES resolve those buckets from
+    // the live standings already crawled for the picks-page bracket (PHA-918).
+    await ingestOutcomes(eventId);
+    await bridgeSwissOutcomes(eventId);
+  });
+}
+
+/**
+ * Bridge live HLTV Swiss standings → StageOutcome (PHA-918).
+ *
+ * Why this exists: scoring reads StageOutcome, but Valve's GetTournamentLayout
+ * returns set-valued pickids for each Swiss slot, which the oracle leaves
+ * "ambiguous" — so a Swiss stage never resolves there and the leaderboard sits at
+ * zero even after teams clinch. The picks-page bracket already shows live results
+ * because it reads the HLTV standings cache (PHA-902); the leaderboard did not.
+ * This closes that gap: it reads the SAME warm cache, derives each team's clinched
+ * pick bucket from its terminal W-L record, and writes the resolved slots so the
+ * leaderboard, player pages, compare, reveal, and rank snapshots all score off
+ * the live results — "when the picks page updates, the leaderboard updates too".
+ *
+ * Cheap + safe: reads the already-crawled cache (no network), only resolves LOCKED
+ * Swiss sections, writes only terminal/idempotent rows (deriveClinchedSlots never
+ * rewrites a filled slot), and validates every row against the layout before
+ * persisting. Graceful by contract: any failure logs and returns what we had.
+ * Returns the number of newly-resolved slots.
+ */
+export async function bridgeSwissOutcomes(
+  eventId: number,
+  nowMs: number = Date.now(),
+): Promise<number> {
+  const layout = getCommittedLayout();
+  const matchTeams = layout.teams.map((t) => ({ pickid: t.pickid, name: t.name }));
+  let written = 0;
+
+  for (const section of layout.sections) {
+    if (!isSwissSection(section.sectionid)) continue;
+    // Results can only exist once the pick window has closed. Schedule-driven
+    // lock (PHA-898), independent of the fixture's picks_allowed flag.
+    if (!isLockTimePassed(section.sectionid, nowMs)) continue;
+
+    let live;
+    try {
+      live = await getSwissStandings(eventId, section.sectionid, matchTeams);
+    } catch (e) {
+      console.error("[outcomes] HLTV bridge read failed (non-fatal):", e);
+      continue;
+    }
+    if (!live || live.rows.length === 0) continue;
+
+    const standings = live.rows
+      .filter((r) => r.pickid != null)
+      .map((r) => ({ pickid: r.pickid as number, wins: r.wins, losses: r.losses }));
+
+    const existing = await prisma.stageOutcome.findMany({
+      where: { eventId, sectionId: section.sectionid },
+      select: { groupId: true, slotIndex: true, winnerPickId: true },
+    });
+
+    const fresh = deriveClinchedSlots(section, standings, existing, bucketSwissSlots);
+    if (fresh.length === 0) continue;
+
+    const raw: RawResolvedSlot[] = fresh.map((r) => ({ sectionId: section.sectionid, ...r }));
+    const { outcomes } = normalizeOutcomes(layout, raw, "hltv");
+    await persistOutcomes(eventId, outcomes);
+    written += outcomes.length;
+  }
+
+  // Freeze cumulative standings whenever new outcomes landed (delta arrows + Stage
+  // Reveal, PHA-858). Non-fatal: a snapshot miss never breaks the bridge.
+  if (written > 0) {
+    try {
+      await writeRankSnapshots(eventId);
+    } catch (e) {
+      console.error("[outcomes] HLTV bridge rank-snapshot write failed (non-fatal):", e);
+    }
+  }
+  return written;
 }
 
 /**
