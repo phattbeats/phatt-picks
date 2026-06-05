@@ -52,6 +52,54 @@ export const COLOGNE_LOCK_SCHEDULE: LockSchedule = {
   // 110: Grand Final   — Jun 21 (likely), time TBD
 };
 
+/**
+ * Human stage names per section id — the single committed source for the
+ * "Stage I / II / III" labels. Kept beside the schedule so a label and its lock
+ * instant can never drift. Used by the pre-lock reminder copy (PHA-929).
+ */
+export const COLOGNE_SECTION_NAMES: Readonly<Record<number, string>> = {
+  105: "Stage I",
+  106: "Stage II",
+  107: "Stage III",
+  108: "Quarterfinals",
+  109: "Semifinals",
+  110: "Grand Final",
+};
+
+/** A section's published lock instant paired with its display name. */
+export interface StageLock {
+  name: string;
+  /** UTC ISO lock instant. */
+  lockAt: string;
+}
+
+/**
+ * Derive the {sectionId: {name, lockAt}} map the pre-lock reminder job iterates
+ * over from the committed lock schedule + section names — so there is exactly
+ * ONE source of truth for stage cutoffs (PHA-929). Previously the reminder job
+ * read a separate STAGE_LOCKS_JSON env (empty by default → it silently never
+ * fired); deriving from COLOGNE_LOCK_SCHEDULE means a reminder fires for the same
+ * instant the countdown clock and the pick lock-gate already use.
+ *
+ * Only sections with a valid published lock instant are included — a section
+ * without one (the playoff sections) is skipped, never handed a fabricated
+ * cutoff. A section missing a name falls back to "Section {id}". Pure; injectable
+ * for tests and for future majors.
+ */
+export function stageLocksFromSchedule(
+  schedule: LockSchedule = COLOGNE_LOCK_SCHEDULE,
+  names: Readonly<Record<number, string>> = COLOGNE_SECTION_NAMES,
+): Record<number, StageLock> {
+  const out: Record<number, StageLock> = {};
+  for (const key of Object.keys(schedule)) {
+    const sectionId = Number(key);
+    const lockAt = lockTimeForSection(sectionId, schedule);
+    if (lockAt === null) continue;
+    out[sectionId] = { name: names[sectionId] ?? `Section ${sectionId}`, lockAt };
+  }
+  return out;
+}
+
 /** A stage's competition window — the inclusive date span over which it plays. */
 export interface MatchWindow {
   /** First moment of the first play day (UTC ISO). */
