@@ -42,8 +42,9 @@ The dossier, regions, logos and stats are all keyed by **Valve pickid**. For a
 new major you need, per team: the pickid (from Valve's layout), the HLTV team id
 + url slug, and the display name.
 
-- [ ] Pull the field + pickids from Valve's tournament layout (see
-      `src/lib/layout-core.ts` / `getEffectiveLayout`).
+- [ ] Pull the field + pickids from Valve's tournament layout (`fetchTournamentLayout`
+      in `src/lib/valve.ts`; the effective in-app layout is `getEffectiveLayout` in
+      `src/lib/layout-state.ts`).
 - [ ] Get HLTV team ids in bulk — fastest is to crawl the event page and the
       world-ranking page and scrape `/team/{id}/{slug}` links:
       ```bash

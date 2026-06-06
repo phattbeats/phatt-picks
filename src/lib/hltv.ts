@@ -85,9 +85,13 @@ export async function claimRefreshSlot(): Promise<boolean> {
     // INSERT OR IGNORE is atomic — succeeds only when no row exists, silently
     // skips otherwise. Avoids the P2002 that `create` throws (and Prisma logs)
     // when multiple workers race at startup before the row exists.
+    // id + updatedAt are NOT NULL with only client-side Prisma defaults, so a raw
+    // insert MUST supply them or OR IGNORE silently swallows the NOT NULL violation
+    // and the row never inserts (permanent wedge on a fresh DB). Generate the id in
+    // SQL and stamp updatedAt = now.
     const inserted = await prisma.$executeRaw`
-      INSERT OR IGNORE INTO "SourceState" ("source", "lastCallAt")
-      VALUES (${SOURCE}, ${now})
+      INSERT OR IGNORE INTO "SourceState" ("id", "source", "lastCallAt", "updatedAt")
+      VALUES (lower(hex(randomblob(16))), ${SOURCE}, ${now}, ${now})
     `;
     return inserted > 0; // 1 = first-ever pull; 0 = within floor or lost the race
   } catch {

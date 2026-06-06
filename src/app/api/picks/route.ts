@@ -85,6 +85,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "stage_locked" }, { status: 409 });
   }
 
+  // Per-pick validation below only checks a slot exists and the team is eligible.
+  // It does NOT stop a crafted batch from putting the SAME team in two slots, or
+  // sending more picks than a group has slots — either of which writes an illegal
+  // local board (the leaderboard's source of truth). Guard the batch as a whole:
+  // within any group, non-zero picks must be unique and not exceed the slot count.
+  const byGroup = new Map<number, number[]>();
+  for (const pick of picks) {
+    const gId = Number(pick.groupId);
+    const pId = Number(pick.pickId);
+    if (pId === 0) continue; // a cleared slot never collides
+    const seen = byGroup.get(gId) ?? [];
+    if (seen.includes(pId)) {
+      return NextResponse.json(
+        { error: `duplicate team ${pId} in group ${gId}` },
+        { status: 400 },
+      );
+    }
+    seen.push(pId);
+    byGroup.set(gId, seen);
+  }
+  for (const [gId, teams] of byGroup) {
+    const group = section.groups.find((g) => g.groupid === gId);
+    if (group && teams.length > group.picks.length) {
+      return NextResponse.json(
+        { error: `too many picks for group ${gId} (${teams.length} > ${group.picks.length})` },
+        { status: 400 },
+      );
+    }
+  }
+
   const upserts = [];
 
   for (const pick of picks) {

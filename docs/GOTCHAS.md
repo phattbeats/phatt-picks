@@ -20,8 +20,9 @@ These cost real hours. Add to this file whenever a bug burns you.
 
 ### New Prisma model? It needs `prisma db push` on boot
 - **Cause:** new models (`SourceState`, `SwissStandingsCache`, …) aren't in the live DB
-  until the schema is pushed. The entrypoint handles it, but a half-deployed container can
-  500 on the new table.
+  until the schema is pushed. The image `CMD` (`Dockerfile:74`) runs `prisma db push` on
+  boot, so the new image self-heals — but a container still on the *old* image (not yet
+  Force-Updated) will 500 on the new table.
 - **Rule:** ship schema changes knowing first boot must `prisma db push`. Confirm the new
   table exists before declaring a feature live.
 

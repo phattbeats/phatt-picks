@@ -21,7 +21,7 @@ You need, for the new Major:
 
 1. The **Valve tournament layout** — the master document. It lists every section, every
    group, and every team's **pickid**. Pull it the same way the app does
-   (`fetchTournamentLayout` in `src/lib/layout.ts`) once Valve publishes the event, or
+   (`fetchTournamentLayout` in `src/lib/valve.ts`) once Valve publishes the event, or
    capture the raw `GetTournamentLayout` JSON. This becomes `src/fixtures/<event>-layout.json`.
 2. **Stage dates + first-match times** (for the lock schedule). Cross-check HLTV,
    Liquipedia, and cs.money — they agreed on 12:30 CEST opener times for Cologne.

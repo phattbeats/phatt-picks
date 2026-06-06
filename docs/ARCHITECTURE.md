@@ -15,8 +15,8 @@ or outcome resolution.
   - `browserless:3000` — real Chrome, used for screenshots / verification only.
 
 Deploy = Brandon **Force Update** on Unraid (pulls the new ghcr image and recreates).
-The first boot of a fresh DB needs `npx prisma db push` (the `docker-entrypoint.sh`
-handles schema; see OPERATIONS.md).
+A fresh DB self-migrates on boot — the image `CMD` (`Dockerfile:74`) runs
+`prisma db push --skip-generate` before starting the server (see OPERATIONS.md).
 
 ## The one pattern to understand first: `-core` leaf modules
 
@@ -130,3 +130,35 @@ short version:
 - `swiss-results.ts` — `SECTION_SOURCES` (section → HLTV event URL).
 - Team / pickid / region / logo / stats maps — one file each, keyed by Valve pickid.
 - The committed bracket layout (sections 105–110).
+
+## Does HOTLINE need an LLM / agent running?
+
+**No. The running app has zero LLM dependency for end-user usage.** This matters for
+"more majors" — the thing must keep working when no agent is around.
+
+- **No AI at runtime.** There is no LLM SDK in `package.json` and no LLM API call
+  anywhere in `src/` or `scripts/`. Login, picking, scoring, leaderboards, brackets,
+  and live standings are plain TypeScript + Prisma/SQLite. If every LLM/agent vanished
+  forever, a deployed HOTLINE keeps serving the current event **exactly as-is**.
+- **The data pipeline is deterministic scraping, not AI.** The only external calls are
+  the Steam Web API (`api.steampowered.com`), HLTV (fetched through `crawl4ai` purely to
+  bypass Cloudflare — `cache_mode: "BYPASS"`, **no** LLM extraction strategy; the app
+  parses the raw markdown/HTML itself with committed regex), Liquipedia, and Cloudflare
+  Turnstile (CAPTCHA). Outcomes come from Valve's tournament layout + the HLTV parse;
+  scoring is pure code (`scoring.ts`).
+- **What needs an *operator* (a human — or, conveniently, an agent — but never an LLM at
+  runtime):**
+  - **Deploy** a new image → Brandon's Unraid Force Update.
+  - **Per-event setup** for the next Major → edit the committed config seams above
+    (the [NEXT-MAJOR.md](NEXT-MAJOR.md) runbook; doable by a person).
+  - **Per-stage upkeep** → warm the standings cache after a deploy
+    (`GET /api/standings/refresh` — any HTTP poke / uptime monitor works), refresh team
+    stats, and apply a new stage's HLTV source. These are committed scripts
+    (`build-logos.ts`, `gather-team-stats.ts`, `check-stage3-source.ts`) and on-read
+    drivers, increasingly automated by routines — **none require an LLM.**
+
+**Bottom line:** end-user gameplay is fully autonomous code; an agent has been a
+*convenience* for setup/ops, not a runtime requirement. The one place this used to leak
+— a fresh-DB cold start that wedged the on-read refresh driver until someone manually
+poked it — was fixed (see `verify-source-state-claim.ts`), making a fresh deploy *more*
+self-sufficient, not less.

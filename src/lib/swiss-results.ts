@@ -117,9 +117,13 @@ async function claimStandingsRefreshSlot(): Promise<boolean> {
       data: { lastCallAt: now },
     });
     if (res.count > 0) return true; // won the slot: floor had elapsed
+    // id + updatedAt are NOT NULL with only client-side Prisma defaults, so a raw
+    // insert MUST supply them or OR IGNORE silently swallows the NOT NULL violation
+    // and the row never inserts (permanent wedge on a fresh DB). Generate the id in
+    // SQL and stamp updatedAt = now.
     const inserted = await prisma.$executeRaw`
-      INSERT OR IGNORE INTO "SourceState" ("source", "lastCallAt")
-      VALUES (${STANDINGS_REFRESH_SOURCE}, ${now})
+      INSERT OR IGNORE INTO "SourceState" ("id", "source", "lastCallAt", "updatedAt")
+      VALUES (lower(hex(randomblob(16))), ${STANDINGS_REFRESH_SOURCE}, ${now}, ${now})
     `;
     return inserted > 0; // 1 = first-ever pull; 0 = within floor or lost the race
   } catch {
