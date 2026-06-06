@@ -2,9 +2,9 @@ import Image from "next/image";
 
 /**
  * PHA-942 — "Watch Now" band for the dashboard. Nudges players toward the
- * official IEM Cologne Major 2026 broadcasts (ESL's own channels). YouTube is
- * surfaced as the featured card per Brandon's own viewing habit; Twitch and
- * Kick sit alongside it. Channels verified live 2026-06-05 (ESLCS on all three).
+ * official IEM Cologne Major 2026 broadcasts (ESL's own channels). YouTube
+ * leads, with Twitch and Kick alongside it. Channels verified live 2026-06-05
+ * (ESLCS on all three).
  *
  * Pure server component: brand glyphs are inlined SVG (simple-icons paths), the
  * event lockup is the official PNG given a white treatment so it reads on the
@@ -17,7 +17,6 @@ type Platform = {
   href: string;
   color: string;
   glyph: React.ReactNode;
-  featured?: boolean;
 };
 
 // simple-icons brand paths (24×24 viewBox), official brand colors.
@@ -44,7 +43,6 @@ const PLATFORMS: Platform[] = [
     href: "https://www.youtube.com/@ESLCS",
     color: "#FF0000",
     glyph: YouTubeGlyph,
-    featured: true,
   },
   {
     name: "Twitch",
@@ -95,10 +93,9 @@ export function WatchNow() {
             href={p.href}
             target="_blank"
             rel="noopener noreferrer"
-            className={"watch-tile" + (p.featured ? " featured" : "")}
+            className="watch-tile"
             style={{ ["--brand" as string]: p.color }}
           >
-            {p.featured && <span className="watch-flag">Brandon watches here</span>}
             <span className="watch-glyph">{p.glyph}</span>
             <span className="watch-meta">
               <span className="watch-name">{p.name}</span>
@@ -179,25 +176,6 @@ export function WatchNow() {
           border-color: var(--brand);
           background: var(--surf-2);
           transform: translateY(-2px);
-        }
-        .watch-tile.featured {
-          border-color: var(--hair-3);
-          background: rgba(240,163,0,0.05);
-        }
-        .watch-flag {
-          position: absolute;
-          top: -9px;
-          left: 13px;
-          font-family: var(--font-mono);
-          font-size: 8.5px;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          color: var(--surf-1);
-          background: var(--heat);
-          padding: 2px 7px;
-          border-radius: var(--r-sm);
-          font-weight: 600;
-          white-space: nowrap;
         }
         .watch-glyph {
           display: flex;
