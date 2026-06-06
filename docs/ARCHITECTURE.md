@@ -132,6 +132,9 @@ leaves / pure helpers) or the verifier can't load it standalone.
 ### Reveal / compare
 - `reveal-core` keeps a player's picks hidden until the stage locks. Core invariant:
   `revealed === !writable`. The compare page and `players/[id]` both pass through it.
+- The compare grid / steal reel judge a Swiss pick **at bucket grain** (`resolveBucketWinners`
+  / `bucketPickState` in `swiss-bucket-core`, PHA-946) — same grain as `scoring.ts`, so a pick
+  that scored as correct can't render as a miss just because it sat in a different slot.
 - **Two independent reveal gates — don't conflate them.** *Player-pick* reveal stays at lock
   time (`reveal-core`). The *live Swiss bracket* reveals **24h before lock** —
   `bracketRevealTime(section) = lockAt − BRACKET_REVEAL_LEAD_MS (24h)` / `isBracketRevealed` in
