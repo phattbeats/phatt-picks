@@ -10,6 +10,7 @@ import { lockTimeForSection, isLockTimePassed } from "@/lib/lock-schedule-core";
 import { WireFeed } from "@/components/heat/WireFeed";
 import { getWireItems } from "@/lib/news";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
+import { WatchNow } from "@/components/watch/WatchNow";
 
 const EVENT_ID = 26;
 
@@ -338,6 +339,9 @@ export default async function DashboardPage() {
           </div>
         )}
       </section>
+
+      {/* Watch the official streams (PHA-942) — sits below everything else */}
+      <WatchNow />
 
       <style>{`
         .dash-cols { display: grid; grid-template-columns: 1fr; gap: 14px; }
