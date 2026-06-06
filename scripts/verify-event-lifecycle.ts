@@ -28,6 +28,13 @@ import {
   DEFAULT_GO_LIVE_LEAD_MS,
   type LifecycleEvent,
 } from "../src/lib/event-lifecycle-core.ts";
+import {
+  liveEvents,
+  currentEvent,
+  currentEventId,
+  resolveActiveEvent,
+  ACTIVE_EVENT_ID,
+} from "../src/lib/events-core.ts";
 
 let pass = 0;
 let fail = 0;
@@ -125,6 +132,18 @@ check("among two archived, current picks the most-recently-concluded",
     ],
     ms("2027-01-01T00:00:00Z"),
   )?.eventId === 27);
+
+// — events-core is now CLOCK-DERIVED but lands behind current behaviour —
+// (the live registry holds only Cologne, so these hold whenever verify runs).
+check("liveEvents(Jun6) is exactly [Cologne]", liveEvents(JUN6).length === 1 && liveEvents(JUN6)[0]?.eventId === 26);
+check("currentEvent(Jun6) is Cologne and effectively live", currentEvent(JUN6).eventId === 26 && currentEvent(JUN6).status === "live");
+check("currentEventId(Jun6) === 26", currentEventId(JUN6) === 26);
+check("resolveActiveEvent(Jun6) === 26 (clock-derived, same as before)", resolveActiveEvent(JUN6).eventId === 26);
+check("ACTIVE_EVENT_ID is still 26 (the value pages read)", ACTIVE_EVENT_ID === 26);
+// the reminder driver reads each live event's OWN schedule from the registry:
+check("live event exposes its own lockSchedule (drives reminders)", Object.keys(liveEvents(JUN6)[0]?.lockSchedule ?? {}).length >= 3);
+// pre-go-live: a far-earlier clock still serves Cologne (it never demotes below its live baseline)
+check("before go-live the live registry still serves Cologne", currentEventId(ms("2026-01-01T00:00:00Z")) === 26);
 
 console.log(`\nverify-event-lifecycle: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);
