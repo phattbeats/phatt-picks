@@ -25,9 +25,9 @@ import { LockedPicksBoard } from "@/components/heat/LockedPicksBoard";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { buildBucketConsensus, bucketShareFor } from "@/lib/consensus-core";
 import type { Section } from "@/lib/layout";
+import { ACTIVE_EVENT_ID } from "@/lib/events-core";
 
-const EVENT_ID = 26;
-
+const EVENT_ID = ACTIVE_EVENT_ID;
 function ordSuffix(n: number): string {
   const v = n % 100;
   if (v >= 11 && v <= 13) return "th";

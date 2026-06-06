@@ -30,9 +30,9 @@ import {
   resolveBucketWinners,
   bucketPickState,
 } from "@/lib/swiss-bucket-core";
+import { ACTIVE_EVENT_ID } from "@/lib/events-core";
 
-const EVENT_ID = 26;
-
+const EVENT_ID = ACTIVE_EVENT_ID;
 export const dynamic = "force-dynamic";
 
 type PlayerLite = {
