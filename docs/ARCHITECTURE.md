@@ -32,7 +32,9 @@ Why it matters: every `-core` module has an **offline verifier** under
 `scripts/verify-*.ts` that runs with no bundler and no DB:
 
 ```bash
-node --experimental-strip-types --no-warnings scripts/verify-swiss-results.ts
+node scripts/verify-all.mjs        # the whole suite (PHA-925 zero-dep resolver hook)
+# single verifier (mirror what the runner does, for extensionless value-imports):
+node --experimental-strip-types --import ./scripts/register-ts-resolve.mjs --no-warnings scripts/verify-swiss-results.ts
 ```
 
 These are the test suite. When you change a `-core` module, run its verifier; if you
@@ -69,7 +71,9 @@ leaves / pure helpers) or the verifier can't load it standalone.
 
    LIVE BOARDS (display only, do NOT feed scoring except via PHA-918 bridge)
      Swiss standings/bracket : HLTV event pages → crawl4ai → swiss-results(-core) → SwissStandingsCache
-                               gated by isWithinMatchWindow (only crawl on match days)
+                               gated by isWithinRefreshWindow (opens 24h before lock → match-window end)
+     Team dossier (Last-5)   : HLTV profiles → crawl4ai (batch 32, retry) → TeamStatsCache (team-stats.ts)
+                               gated by isWithinAnyMatchWindow; merged over the frozen snapshot
      Playoff bracket         : committed layout (108/109/110) + StageOutcome, NO crawl; ??? until seeded
 ```
 
@@ -112,13 +116,29 @@ leaves / pure helpers) or the verifier can't load it standalone.
   claims an ~hourly refresh slot, crawls, and persists a `SwissStandingsCache` JSON blob;
   `swiss-results-core` parses it. Map scores live in HLTV's `data-match-details-popup-json`
   (the markdown rendering drops them — read the HTML).
-- The crawl is **gated by `isWithinMatchWindow`** so it only runs on days games are played.
+- The crawl is **gated by `isWithinRefreshWindow`** — the window opens **24h before each stage
+  locks** (the bracket-reveal lead, PHA-943) and runs through the stage's match-window end, so the
+  live bracket can appear before the first match. (Was `isWithinMatchWindow` = match-days-only.)
 - The **playoff bracket** needs no crawl: its tree comes from the committed layout and fills
   from `StageOutcome`. It honestly shows `???` until Stage 3 seeds the quarterfinals.
+- **Team dossier (Last-5):** the roster + world-rank ship as a frozen snapshot (`team-stats-core`),
+  but the **recent results auto-refresh live** — `refreshTeamStatsOnRead` (`team-stats.ts`) runs the
+  same atomic-claim + `after()` deferred crawl as the standings/outcomes drivers, batching all 32 HLTV
+  **profiles** in one crawl4ai request (with up to 3 retry passes for Cloudflare-challenged teams) and
+  persisting a one-row-per-event `TeamStatsCache`. Gated by `isWithinAnyMatchWindow`. The read path
+  always merges live `recent[]` over the frozen snapshot, so the drawer never renders empty. Warm via
+  `GET /api/team-stats/refresh` (PHA-921).
 
 ### Reveal / compare
 - `reveal-core` keeps a player's picks hidden until the stage locks. Core invariant:
   `revealed === !writable`. The compare page and `players/[id]` both pass through it.
+- **Two independent reveal gates — don't conflate them.** *Player-pick* reveal stays at lock
+  time (`reveal-core`). The *live Swiss bracket* reveals **24h before lock** —
+  `bracketRevealTime(section) = lockAt − BRACKET_REVEAL_LEAD_MS (24h)` / `isBracketRevealed` in
+  `lock-schedule-core.ts` (PHA-943). So in the 24h pre-lock window the public HLTV bracket renders
+  beneath the picker while the picker is still open, but **no player's picks are exposed** — the
+  bracket shows only public HLTV match data + the viewer's own picks. The early bracket reveal does
+  not touch the `revealed === !writable` invariant.
 
 ## Where the per-major seams are
 
