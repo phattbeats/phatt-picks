@@ -11,7 +11,7 @@ import {
   type StagePickability,
 } from "@/lib/stage-gate-core";
 import { LockCountdown } from "@/components/heat/LockCountdown";
-import { lockTimeForSection, isLockTimePassed } from "@/lib/lock-schedule-core";
+import { lockTimeForSection, isLockTimePassed, isBracketRevealed } from "@/lib/lock-schedule-core";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { isSwissSection, bucketSwissSlots } from "@/lib/swiss-bucket-core";
 import {
@@ -100,18 +100,35 @@ export default async function PicksPage({
   // Live Swiss lineup (PHA-898): once a Swiss stage locks we show the standings
   // in place of the picker. Build it from the resolved answer key + the viewer's
   // picks. Only fetch when we'd actually render it (locked Swiss section).
-  const showLineup =
-    !!section && !activePickability.pickable && isSwissSection(activeSectionId);
+  const isSwiss = isSwissSection(activeSectionId);
+  const showLineup = !!section && !activePickability.pickable && isSwiss;
+  // PHA-943: the live Swiss bracket goes live 24h before the stage's lock (= its
+  // first match) — so the opening matchups are visible the day before, while
+  // picks are STILL open — and stays up after lock. Before that reveal instant we
+  // don't render it (and the crawl is gated off). Playoff sections have no lock
+  // time → isBracketRevealed is false; they render via the playoff branch below.
+  const bracketRevealed = isBracketRevealed(activeSectionId, nowMs);
+  const showLiveBracket = !!section && isSwiss && (showLineup || bracketRevealed);
+  const matchTeams = layout.teams.map((t) => ({ pickid: t.pickid, name: t.name }));
+
   let swissStandings: ReturnType<typeof buildSwissStandings> | null = null;
   let outcomeResolvedAtIso: string | null = null;
   // Live HLTV/BLAST-style W-L standings (PHA-902): the running win-loss table the
   // Valve answer key can't provide. Hourly on-read refresh, graceful-empty.
   let liveStandings: Awaited<ReturnType<typeof getSwissStandings>> = null;
   let liveBracket: Awaited<ReturnType<typeof getSwissBracket>> = null;
-  if (showLineup && section) {
-    await refreshStandingsOnRead(EVENT_ID, activeSectionId, nowMs); // ~1h claim on match days, deferred crawl
-    const matchTeams = layout.teams.map((t) => ({ pickid: t.pickid, name: t.name }));
+
+  // The bracket (the fan of matchups) shows from the reveal instant on — pre- and
+  // post-lock. The refresh window opens at the same instant, so a crawl from now
+  // picks up the opening matchups the moment HLTV publishes them.
+  if (showLiveBracket && section) {
+    await refreshStandingsOnRead(EVENT_ID, activeSectionId, nowMs); // ~1h claim, deferred crawl
     liveBracket = await getSwissBracket(EVENT_ID, activeSectionId, matchTeams);
+  }
+
+  // The W-L table + your locked-picks board + the resolved answer key are the
+  // post-lock lineup — only built once the stage actually locks.
+  if (showLineup && section) {
     liveStandings = await getSwissStandings(EVENT_ID, activeSectionId, matchTeams);
     const outcomeRows = await prisma.stageOutcome.findMany({
       where: { eventId: EVENT_ID, sectionId: activeSectionId },
@@ -277,14 +294,37 @@ export default async function PicksPage({
       {!section ? (
         <p style={{ color: "var(--ink-mid)" }}>Section not found.</p>
       ) : activePickability.pickable ? (
-        <PicksBoard
-          section={section}
-          teams={layout.teams}
-          initialPicks={myPicks}
-          enabled={!!session}
-          eventId={EVENT_ID}
-          steamLinked={!!session?.steamId}
-        />
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <PicksBoard
+            section={section}
+            teams={layout.teams}
+            initialPicks={myPicks}
+            enabled={!!session}
+            eventId={EVENT_ID}
+            steamLinked={!!session?.steamId}
+          />
+          {/* PHA-943: 24h before this stage locks, the live Swiss bracket appears
+              beneath the picker so you can study the opening matchups before you
+              lock. Renders once HLTV has published them; an honest placeholder
+              stands in while the bracket is live but not yet announced. */}
+          {showLiveBracket &&
+            (liveBracket ? (
+              <LiveSwissBracketBoard
+                rounds={liveBracket.rounds}
+                teamMap={buildTeamMap(layout)}
+                source={liveBracket.source}
+                sourceUrl={liveBracket.sourceUrl}
+                fetchedAtIso={liveBracket.fetchedAtIso}
+              />
+            ) : (
+              <div className="panel" style={{ padding: "20px 18px" }}>
+                <span className="eyebrow-mono" style={{ color: "var(--heat)" }}>[ LIVE BRACKET ]</span>
+                <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "10px 0 0", lineHeight: 1.5 }}>
+                  The bracket goes live here as soon as the opening matchups are announced.
+                </p>
+              </div>
+            ))}
+        </div>
       ) : swissStandings ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <LockedStageCard pickability={activePickability} compact />
