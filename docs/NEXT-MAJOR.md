@@ -108,7 +108,7 @@ so they can only be filled after Phase 1's layout lands.
 |---|---|---|
 | **Logos** | `src/fixtures/cologne-logos.json` | `pickid → { name, image }`. **Generated** — run `node scripts/build-logos.ts`, which resolves Steam CDN images. The manifest goes **stale when the upstream feed rotates**; if logos 404 site-wide, re-run it. |
 | **Regions** | `src/lib/regions-core.ts` | `TEAM_REGIONS`: `pickid → "EU"\|"NA"\|"SA"\|"ASIA"\|"OCE"` (CIS folds into EU). Drives the region chips. |
-| **Team stats** | `src/lib/team-stats-core.ts` | `TEAM_STATS`: `pickid → { roster, world rank, recent W-L, hltvUrl }`, a **frozen HLTV snapshot** with a `TEAM_STATS_AS_OF` date. Re-gather per stage as rosters/ranks move (gather tooling if present, else crawl4ai the HLTV profiles). Powers the team dossier drawer. |
+| **Team stats** | `src/lib/team-stats-core.ts` **+ `team-stats-sources.ts`** | `TEAM_STATS` (in `-core`): `pickid → { roster, world rank, recent W-L, hltvUrl }`, a **frozen HLTV snapshot** with a `TEAM_STATS_AS_OF` date — the fallback + roster/rank base. **As of PHA-921 the `recent[]` (Last-5) auto-refreshes live** during a stage via `team-stats.ts` + the **`TEAM_SOURCES`** map in `team-stats-sources.ts` (`pickid → HLTV profile URL`), so per major you update **both** files. Roster/rank still re-gathered by hand (`scripts/gather-team-stats.ts`, `TEAM_STATS_AS_OF` bump). Powers the dossier drawer. See `PRE-MAJOR-CHECKLIST.md` §3. |
 
 Run their verifiers: `verify-regions.ts`, `verify-team-stats.ts`, `verify-m6-logos.ts`.
 
@@ -122,8 +122,10 @@ Once live, each stage start is a small recurring routine:
    answer key resolves (the on-read outcome driver + Valve oracle handle this; watch a
    `/leaderboard` load to confirm `StageOutcome` rows appear).
 2. **Add the stage's HLTV URL** to `SECTION_SOURCES` if not already mapped.
-3. **Warm the standings cache** after any deploy during the stage (Phase 2a note).
-4. **Re-gather team stats** if you want fresh ranks (`TEAM_STATS_AS_OF` bump).
+3. **Warm the caches** after any deploy during the stage — `GET /api/standings/refresh`
+   (standings + outcome resolve) **and** `GET /api/team-stats/refresh` (dossier Last-5).
+4. **Re-gather team stats** only for **roster/world-rank** moves (`TEAM_STATS_AS_OF` bump);
+   the Last-5 results auto-refresh live, so you rarely need this mid-stage.
 5. **Verify the match window** covers the stage dates so the crawl actually fires.
 
 ---
@@ -139,6 +141,7 @@ Once live, each stage start is a small recurring routine:
 [ ] cologne-logos.json         → re-run build-logos.ts                  (Phase 3)
 [ ] TEAM_REGIONS               → pickid → region                        (Phase 3)
 [ ] TEAM_STATS + AS_OF         → frozen HLTV snapshot                   (Phase 3)
+[ ] TEAM_SOURCES               → pickid → HLTV profile URL (live Last-5)(Phase 3)
 [ ] run every scripts/verify-*.ts that touches the above
 [ ] deploy → warm /api/standings/refresh inside a match window
 ```

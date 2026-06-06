@@ -39,7 +39,8 @@ See `.env.example`. Summary:
 | `WRITE_ENABLED` | `"true"` enables the stage-batched write-back to Valve (**destructive** — overwrites the owner's live picks). Defaults `false`; leave off for the first tournament run, flip on only for deploy-smoke. |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web Push keypair. Generate: `npx web-push generate-vapid-keys`. |
 | `VAPID_SUBJECT` | `mailto:` contact for push. |
-| `STAGE_LOCKS_JSON` | (optional) per-section pick cutoffs for the reminder job, e.g. `{"105":{"name":"Stage I","lockAt":"2026-06-02T09:00:00Z"}}`. |
+| `PRELOCK_REMINDERS_ENABLED` | (optional) `1`/`true` arms the in-process pre-lock reminder scheduler; off by default. |
+| `STAGE_LOCKS_JSON` | (optional) **override** for the reminder cutoffs; defaults to the committed `COLOGNE_LOCK_SCHEDULE` when unset. |
 
 ## PWA install & push reminders
 
@@ -54,9 +55,11 @@ each stage locks) are delivered via Web Push.
 
 Enable reminders under **You → Pick-lock reminders**, then **Send a test reminder** to confirm.
 
-The scheduler that fires the real 24h/1h reminders is `scripts/send-prelock-reminders.ts`, run on a
-short cadence by the in-container sidecar/cron once `STAGE_LOCKS_JSON` holds the live cutoffs. Pure
-scheduling logic lives in `src/lib/notify-core.ts`.
+The real 24h/1h reminders are fired by an **in-process scheduler** (`src/instrumentation.ts`, a
+~5-min tick) — **no external cron/sidecar**. Enable it by setting `PRELOCK_REMINDERS_ENABLED=1` in
+the deploy env (PHA-929). Cutoffs come from the committed `COLOGNE_LOCK_SCHEDULE`; `STAGE_LOCKS_JSON`
+is only an optional override. The `scripts/send-prelock-reminders.ts` CLI shares the same code path
+(`src/lib/prelock-reminders.ts`); pure scheduling logic is in `src/lib/notify-core.ts`.
 
 ## Inviting friends
 
