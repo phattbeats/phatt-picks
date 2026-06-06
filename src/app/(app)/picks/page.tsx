@@ -125,18 +125,20 @@ export default async function PicksPage({
   let liveStandings: Awaited<ReturnType<typeof getSwissStandings>> = null;
   let liveBracket: Awaited<ReturnType<typeof getSwissBracket>> = null;
 
-  // The bracket (the fan of matchups) shows from the reveal instant on — pre- and
-  // post-lock. The refresh window opens at the same instant, so a crawl from now
-  // picks up the opening matchups the moment HLTV publishes them.
+  // The bracket (the fan of matchups) AND the W-L standings table both go live
+  // from the reveal instant on — pre- and post-lock (Brandon, PHA-943: "and the
+  // standings as well for stage II and III"). Both come from the same HLTV crawl,
+  // whose refresh window opens at the same instant, so they appear together the
+  // moment HLTV publishes the field.
   if (showLiveBracket && section) {
     await refreshStandingsOnRead(EVENT_ID, activeSectionId, nowMs); // ~1h claim, deferred crawl
     liveBracket = await getSwissBracket(EVENT_ID, activeSectionId, matchTeams);
+    liveStandings = await getSwissStandings(EVENT_ID, activeSectionId, matchTeams);
   }
 
-  // The W-L table + your locked-picks board + the resolved answer key are the
-  // post-lock lineup — only built once the stage actually locks.
+  // The viewer's locked-picks board + the resolved answer key are the post-lock
+  // lineup — only built once the stage actually locks.
   if (showLineup && section) {
-    liveStandings = await getSwissStandings(EVENT_ID, activeSectionId, matchTeams);
     const outcomeRows = await prisma.stageOutcome.findMany({
       where: { eventId: EVENT_ID, sectionId: activeSectionId },
     });
@@ -318,24 +320,38 @@ export default async function PicksPage({
             liveTeamStats={liveTeamStats?.byPickid}
             liveStatsAsOf={liveTeamStats?.asOf}
           />
-          {/* PHA-943: 24h before this stage locks, the live Swiss bracket appears
-              beneath the picker so you can study the opening matchups before you
-              lock. Renders once HLTV has published them; an honest placeholder
-              stands in while the bracket is live but not yet announced. */}
+          {/* PHA-943: 24h before this stage locks, the live Swiss bracket AND the
+              W-L standings table appear beneath the picker so you can study the
+              opening matchups + field before you lock. Render once HLTV has
+              published them; an honest placeholder stands in while they're live
+              but not yet announced. */}
           {showLiveBracket &&
-            (liveBracket ? (
-              <LiveSwissBracketBoard
-                rounds={liveBracket.rounds}
-                teamMap={buildTeamMap(layout)}
-                source={liveBracket.source}
-                sourceUrl={liveBracket.sourceUrl}
-                fetchedAtIso={liveBracket.fetchedAtIso}
-              />
+            (liveBracket || liveStandings ? (
+              <>
+                {liveBracket && (
+                  <LiveSwissBracketBoard
+                    rounds={liveBracket.rounds}
+                    teamMap={buildTeamMap(layout)}
+                    source={liveBracket.source}
+                    sourceUrl={liveBracket.sourceUrl}
+                    fetchedAtIso={liveBracket.fetchedAtIso}
+                  />
+                )}
+                {liveStandings && (
+                  <LiveSwissStandings
+                    rows={liveStandings.rows}
+                    teamMap={buildTeamMap(layout)}
+                    source={liveStandings.source}
+                    sourceUrl={liveStandings.sourceUrl}
+                    fetchedAtIso={liveStandings.fetchedAtIso}
+                  />
+                )}
+              </>
             ) : (
               <div className="panel" style={{ padding: "20px 18px" }}>
                 <span className="eyebrow-mono" style={{ color: "var(--heat)" }}>[ LIVE BRACKET ]</span>
                 <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "10px 0 0", lineHeight: 1.5 }}>
-                  The bracket goes live here as soon as the opening matchups are announced.
+                  The bracket and standings go live here as soon as the opening matchups are announced.
                 </p>
               </div>
             ))}
