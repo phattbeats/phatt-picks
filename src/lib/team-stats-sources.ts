@@ -159,9 +159,20 @@ export type CrawlProfilesFn = (
  *     caller's persist, discarding a good earlier pass.)
  *  2. BOUNDED — a total wall-clock budget (MAX_TOTAL_CRAWL_MS) caps the whole
  *     multi-pass duration; once the budget is spent it persists what it has.
+ *  3. PARSE-ISOLATED — each team's parse runs in its own try/catch, so a single
+ *     malformed profile (e.g. HLTV reformats one page, or a future parser swap
+ *     throws on an edge case) can't drop the other teams in the same pass OR the
+ *     `fresh` from earlier passes. Future-proofs the partial-safe guarantee
+ *     against parser changes, not just crawl-transport failures.
  *
  * Pure: `crawl`, `parse`, and the clock are injected, so the verify harness
  * proves the retry/accumulate/partial-discard behaviour offline (no network).
+ *
+ * Field-size-agnostic: the work-list is whatever `targets` is passed (today the
+ * 32-team Cologne field via teamStatsCrawlTargets, a future major's field after
+ * swapping TEAM_SOURCES) — no hardcoded count. The pass/budget constants are
+ * tuned for ~32 profiles (~120s full field); a much larger field would land
+ * partial under the budget and finish on the next ~1h tick, never wedge.
  */
 export async function accumulateRecentAcrossPasses(
   targets: ReadonlyArray<{ pickid: number; url: string }>,
@@ -192,8 +203,17 @@ export async function accumulateRecentAcrossPasses(
       break;
     }
     for (const [pid, md] of Object.entries(mdByPickid)) {
-      const matches = parse(md);
-      if (matches.length > 0) fresh[Number(pid)] = matches;
+      try {
+        const matches = parse(md);
+        if (matches.length > 0) fresh[Number(pid)] = matches;
+      } catch (e) {
+        // A malformed single profile must not drop the rest of this pass or the
+        // accumulated earlier passes — skip just this team (PHA-944 hardening).
+        console.warn(
+          `[team-stats] parse failed for pickid ${pid}; skipping that team:`,
+          e instanceof Error ? e.message : e,
+        );
+      }
     }
     remaining = targets.filter((t) => !(t.pickid in fresh));
     if (remaining.length > 0) {
