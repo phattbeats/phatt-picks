@@ -14,7 +14,8 @@
  * Unlike the standings (one HLTV EVENT page per section), the dossier is keyed by
  * each team's HLTV PROFILE — global across stages — so the cache is a single blob
  * per event and the gate is `isWithinAnyMatchWindow` (any stage playing), not the
- * per-section window. One crawl4ai request batches all 32 profiles.
+ * per-section window. One crawl4ai request batches all 32 profiles, retrying the
+ * teams HLTV challenges and accumulating coverage across hourly cycles.
  *
  * Graceful by contract: a source outage / parse miss degrades to the last cache,
  * and the read path ALWAYS merges over the committed frozen snapshot, so the
@@ -119,15 +120,26 @@ function resultMarkdown(r: Crawl4aiResult | undefined): string {
   return typeof md === "string" ? md : (md?.raw_markdown ?? "");
 }
 
+// A single ingest re-tries the teams that came back without a parseable results
+// table (HLTV intermittently serves a Cloudflare challenge instead of the
+// profile, especially while the standings crawl is also running). The manual
+// gather tool retries per-url for exactly this reason and lands 32/32; we mirror
+// that. Each pass crawls only the still-missing teams, so the cost scales with
+// the misses, not the field. Proven live: pass1 27/32 → pass2 31/32 → pass3 32/32.
+const MAX_CRAWL_PASSES = 3;
+
 /**
- * Crawl every team profile in ONE crawl4ai request (it renders + bypasses the
+ * Crawl a set of team profiles in ONE crawl4ai request (it renders + bypasses the
  * Cloudflare gate that 403s a direct fetch). Returns pickid → markdown, matched
- * back by result url (crawl4ai may not preserve input order). Best-effort: throws
- * on a network / non-2xx / empty-body failure so the caller keeps the prior
- * cache. Never used directly on the render path — the driver defers it.
+ * back by result url (crawl4ai may not preserve input order). Deliberately a
+ * single sequential request, NOT parallel: a burst of concurrent requests trips
+ * HLTV's Cloudflare challenge and most come back blocked. Best-effort: throws on a
+ * network / non-2xx / empty-body failure so the caller can fall back. Never used
+ * directly on the render path — the driver defers it.
  */
-async function crawlAllProfiles(): Promise<Record<number, string>> {
-  const targets = teamStatsCrawlTargets();
+async function crawlProfiles(
+  targets: ReadonlyArray<{ pickid: number; url: string }>,
+): Promise<Record<number, string>> {
   const urlToPickid = new Map(targets.map((t) => [t.url, t.pickid]));
   const res = await fetch(`${CRAWL4AI_URL}/crawl`, {
     method: "POST",
@@ -158,30 +170,60 @@ async function crawlAllProfiles(): Promise<Record<number, string>> {
   return out;
 }
 
+/** Read the prior cached live results (so a partial refresh accumulates, not regresses). */
+async function readPriorRecent(eventId: number): Promise<Record<number, ParsedMatch[]>> {
+  try {
+    const row = await prisma.teamStatsCache.findUnique({ where: { eventId } });
+    if (!row) return {};
+    const blob = JSON.parse(row.data) as TeamStatsBlob;
+    return blob.recentByPickid && typeof blob.recentByPickid === "object" ? blob.recentByPickid : {};
+  } catch {
+    return {};
+  }
+}
+
 /**
  * Crawl + parse + persist the live recent results for the whole field. Best-
- * effort: returns the number of teams with fresh matches, or 0 on any failure
- * (outage, total parse miss) — it NEVER throws and NEVER overwrites a good cache
- * with an all-empty parse (so a transient Cloudflare hiccup can't blank the
- * dossier). A partial parse (some teams empty) is fine: empties simply fall back
- * to the frozen snapshot at read time.
+ * effort: returns the number of teams with live matches after this run, or 0 on a
+ * total failure (outage, every parse blocked) — it NEVER throws and NEVER blanks a
+ * good cache.
+ *
+ * Two robustness properties, both because HLTV intermittently challenges the crawl:
+ *  1. RETRY — re-crawls only the teams still missing a results table, up to
+ *     MAX_CRAWL_PASSES, so a one-off Cloudflare challenge doesn't drop a team.
+ *  2. ACCUMULATE — overlays this run's fresh results on top of the PRIOR cached
+ *     results, so a team that was fetched live earlier keeps its live data even if
+ *     this particular crawl missed it (it only ever upgrades to newer live data,
+ *     never regresses to the frozen snapshot). Over a few hourly cycles coverage
+ *     climbs to the full field and stays there.
  */
 async function ingestTeamStats(eventId: number): Promise<number> {
   try {
-    const mdByPickid = await crawlAllProfiles();
-    const recentByPickid: Record<number, ParsedMatch[]> = {};
-    let withMatches = 0;
-    for (const [pid, md] of Object.entries(mdByPickid)) {
-      const matches = parseRecentResults(md);
-      if (matches.length > 0) {
-        recentByPickid[Number(pid)] = matches;
-        withMatches++;
+    const all = teamStatsCrawlTargets();
+    const fresh: Record<number, ParsedMatch[]> = {};
+    let remaining: typeof all = all;
+    for (let pass = 0; pass < MAX_CRAWL_PASSES && remaining.length > 0; pass++) {
+      const mdByPickid = await crawlProfiles(remaining);
+      for (const [pid, md] of Object.entries(mdByPickid)) {
+        const matches = parseRecentResults(md);
+        if (matches.length > 0) fresh[Number(pid)] = matches;
+      }
+      remaining = all.filter((t) => !(t.pickid in fresh));
+      if (remaining.length > 0) {
+        console.warn(`[team-stats] pass ${pass + 1}: ${remaining.length} team(s) still missing, retrying`);
       }
     }
-    if (withMatches === 0) {
+
+    const freshCount = Object.keys(fresh).length;
+    if (freshCount === 0) {
       console.warn("[team-stats] parsed 0 teams with matches — keeping prior cache");
       return 0;
     }
+
+    // Accumulate: prior live results, then this run's fresh ones on top.
+    const prior = await readPriorRecent(eventId);
+    const recentByPickid: Record<number, ParsedMatch[]> = { ...prior, ...fresh };
+
     const blob: TeamStatsBlob = {
       recentByPickid,
       source: "HLTV",
@@ -193,7 +235,10 @@ async function ingestTeamStats(eventId: number): Promise<number> {
       update: { data, fetchedAt: new Date() },
       create: { eventId, data, fetchedAt: new Date() },
     });
-    return withMatches;
+    console.warn(
+      `[team-stats] ingested ${freshCount} fresh, ${Object.keys(recentByPickid).length}/${all.length} total live after merge`,
+    );
+    return Object.keys(recentByPickid).length;
   } catch (e) {
     console.error(
       "[team-stats] ingest failed (non-fatal, keeping prior cache):",
