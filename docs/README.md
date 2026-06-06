@@ -17,6 +17,7 @@ Read these in roughly this order. Each is self-contained.
 | **[PRE-MAJOR-CHECKLIST.md](PRE-MAJOR-CHECKLIST.md)** | The field guide that *pairs* with NEXT-MAJOR: a tickable checklist for gathering the inputs — HLTV event ids, the 32-team field → pickids, and the per-stage stats-refresh routine. | You're collecting the facts for a new event before wiring them in. |
 | **[OPERATIONS.md](OPERATIONS.md)** | Every env var, every HTTP route, one-time setup, smoke checks. The ops reference. | You're deploying, flipping a flag, or debugging a 500. |
 | **[GOTCHAS.md](GOTCHAS.md)** | Hard-won lessons. The bugs that cost hours, why they happened, and the rule that prevents the repeat. | Something is behaving strangely, or you're touching iOS / crawl4ai / browserless / deploy / the shared checkout. |
+| **[ROADMAP-MULTI-MAJOR.md](ROADMAP-MULTI-MAJOR.md)** | The forward plan: make HOTLINE self-sustaining, turnkey for every Major, with historic scores you can look back on. Grounded in the already-event-scoped data model. | You're thinking about the next Major, the event registry, or the history/archive feature. |
 
 ## What this app is, in three sentences
 
