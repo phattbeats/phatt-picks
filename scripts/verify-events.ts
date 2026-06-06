@@ -1,0 +1,102 @@
+/**
+ * verify-events - offline proof for PHA-948 (event registry + active event).
+ *
+ * The registry is the backbone of multi-major support. This proves:
+ *   • exactly one event is `live`, and resolveActiveEvent() returns it;
+ *   • ACTIVE_EVENT_ID equals that event's id (the value the ~15 pages/routes
+ *     used to hardcode as `26`) — i.e. the refactor is behind current behavior;
+ *   • getEventConfig() round-trips by id and is null for an unregistered id;
+ *   • the active event's identity matches the committed layout fixture
+ *     (eventId === result.event, name === result.name) — the registry can't
+ *     drift from the fixture it indexes;
+ *   • the per-event config the registry references IS the committed
+ *     lock-schedule constants (no duplicate, no drift);
+ *   • SECTION_SOURCES (what swiss-results.ts now imports) equals the active
+ *     event's sectionSources and still maps the Cologne Swiss stages.
+ *
+ * Run: node scripts/verify-events.ts
+ */
+
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import {
+  EVENTS,
+  getEventConfig,
+  resolveActiveEvent,
+  ACTIVE_EVENT_ID,
+  SECTION_SOURCES,
+} from "../src/lib/events-core.ts";
+import {
+  COLOGNE_LOCK_SCHEDULE,
+  COLOGNE_MATCH_WINDOWS,
+  COLOGNE_SECTION_NAMES,
+} from "../src/lib/lock-schedule-core.ts";
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const read = (p: string) => readFileSync(join(ROOT, p), "utf8");
+
+interface LayoutResult {
+  result: { event: number; name: string };
+}
+const layout = (JSON.parse(read("src/fixtures/cologne-layout.json")) as LayoutResult)
+  .result;
+
+let pass = 0;
+let fail = 0;
+function check(name: string, cond: boolean) {
+  if (cond) {
+    pass++;
+  } else {
+    fail++;
+    console.error(`  ✗ ${name}`);
+  }
+}
+
+// — exactly one live event, and it is what resolves —
+const liveEntries = Object.values(EVENTS).filter((e) => e.status === "live");
+check("exactly one live event in the registry", liveEntries.length === 1);
+
+const active = resolveActiveEvent();
+check("resolveActiveEvent() returns the live event", active.status === "live");
+check("active event id is 26 (Cologne — current behavior)", active.eventId === 26);
+check("ACTIVE_EVENT_ID === active.eventId", ACTIVE_EVENT_ID === active.eventId);
+check("ACTIVE_EVENT_ID === 26 (the value pages hardcoded before)", ACTIVE_EVENT_ID === 26);
+
+// — getEventConfig round-trips and is honest about misses —
+check("getEventConfig(26) returns the active event", getEventConfig(26) === active);
+check("getEventConfig(999) is null for an unregistered id", getEventConfig(999) === null);
+check("getEventConfig(0) is null", getEventConfig(0) === null);
+
+// — registry identity matches the committed layout fixture —
+check("active.eventId === layout result.event", active.eventId === layout.event);
+check("active.name === layout result.name", active.name === layout.name);
+check("active.slug is a non-empty url-safe handle", /^[a-z0-9-]+$/.test(active.slug));
+
+// — the per-event config references the committed constants (no drift) —
+check("lockSchedule IS COLOGNE_LOCK_SCHEDULE", active.lockSchedule === COLOGNE_LOCK_SCHEDULE);
+check("matchWindows IS COLOGNE_MATCH_WINDOWS", active.matchWindows === COLOGNE_MATCH_WINDOWS);
+check("sectionNames IS COLOGNE_SECTION_NAMES", active.sectionNames === COLOGNE_SECTION_NAMES);
+
+// — sectionSources / SECTION_SOURCES (consumed by swiss-results) —
+check("SECTION_SOURCES === active.sectionSources", SECTION_SOURCES === active.sectionSources);
+check("Stage I (105) maps to HLTV event 9028", SECTION_SOURCES[105]?.url.includes("/9028/") === true);
+check("Stage II (106) maps to HLTV event 9029", SECTION_SOURCES[106]?.url.includes("/9029/") === true);
+check("every section source has a label", Object.values(SECTION_SOURCES).every((s) => !!s.label));
+
+// — dates + resource bindings are present and well-formed —
+check("dates.start parses", !Number.isNaN(Date.parse(active.dates.start)));
+check("dates.end parses and is after start", Date.parse(active.dates.end) > Date.parse(active.dates.start));
+check("fixtures.layout names the committed fixture", active.fixtures.layout === "cologne-layout");
+check("fixtures.logos names the committed manifest", active.fixtures.logos === "cologne-logos");
+check("teamMaps record the owning modules", !!active.teamMaps.regions && !!active.teamMaps.stats && !!active.teamMaps.sources);
+
+// — anti-rigging: the live-count invariant resolveActiveEvent() enforces —
+check(
+  "registry has no second live event (would break resolveActiveEvent)",
+  Object.values(EVENTS).filter((e) => e.status === "live").length === 1,
+);
+
+console.log(`\nverify-events: ${pass} passed, ${fail} failed`);
+process.exit(fail === 0 ? 0 : 1);

@@ -38,6 +38,10 @@ import {
   type SwissRound,
 } from "./swiss-bracket-core";
 import { isWithinRefreshWindow } from "./lock-schedule-core";
+// Which HLTV event page carries the live Swiss table for each pick'em section
+// is now per-event config in the registry (PHA-948). For the active event
+// (Cologne) these are exactly the section ids/urls this module declared before.
+import { SECTION_SOURCES } from "./events-core";
 
 // crawl4ai on the phattvip network. Same hostname resolves in the workspace and
 // in the deployed container; CRAWL4AI_URL overrides for other topologies.
@@ -52,25 +56,6 @@ const STANDINGS_REFRESH_SOURCE = "hltv-standings";
 // renders + bypasses Cloudflare, so it's slower than a bare fetch — give it room
 // but cap it; this runs deferred (off the render path) anyway.
 const CRAWL_TIMEOUT_MS = 45_000;
-
-/**
- * Which HLTV event page carries the live Swiss table for each pick'em section.
- * Committed, not derived: the section ids are ours (the Valve layout) and the
- * HLTV event ids are external, so the mapping is a small piece of config. Only
- * sections with a known live source are listed; an unmapped section simply has
- * no standings (graceful — the picker/lineup still render). Stage I + II are
- * live HLTV events; Stage III + playoffs map in as HLTV publishes them.
- */
-const SECTION_SOURCES: Readonly<Record<number, { url: string; label: string }>> = {
-  105: {
-    url: "https://www.hltv.org/events/9028/iem-cologne-major-2026-stage-1",
-    label: "HLTV",
-  },
-  106: {
-    url: "https://www.hltv.org/events/9029/iem-cologne-major-2026-stage-2",
-    label: "HLTV",
-  },
-};
 
 /** The persisted blob shape (data column of SwissStandingsCache). */
 interface StandingsBlob {

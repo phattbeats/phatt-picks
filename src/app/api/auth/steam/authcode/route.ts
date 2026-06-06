@@ -15,9 +15,9 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { encryptAuthCode } from "@/lib/crypto";
 import { mirrorPlayerPredictions } from "@/lib/predictions-sync";
+import { ACTIVE_EVENT_ID } from "@/lib/events-core";
 
-const EVENT_ID = 26;
-
+const EVENT_ID = ACTIVE_EVENT_ID;
 // Valve auth codes are uppercase alphanumeric in a 4-5-4 hyphenated shape (e.g. ABCD-12345-WXYZ).
 const AUTH_CODE_RE = /^[A-Z0-9]{4}-[A-Z0-9]{5}-[A-Z0-9]{4}$/;
 

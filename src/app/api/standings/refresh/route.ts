@@ -36,9 +36,9 @@
 import { NextResponse } from "next/server";
 import { warmStandings, standingsSectionIds } from "@/lib/swiss-results";
 import { bridgeSwissOutcomes } from "@/lib/outcomes";
+import { ACTIVE_EVENT_ID } from "@/lib/events-core";
 
-const EVENT_ID = 26;
-
+const EVENT_ID = ACTIVE_EVENT_ID;
 export const dynamic = "force-dynamic";
 
 async function warmAll() {

@@ -6,9 +6,9 @@ import { visibleCoinTier } from "@/lib/coin-core";
 import { getSession } from "@/lib/session";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { UserDirectory, type DirRow } from "@/components/heat/UserDirectory";
+import { ACTIVE_EVENT_ID } from "@/lib/events-core";
 
-const EVENT_ID = 26;
-
+const EVENT_ID = ACTIVE_EVENT_ID;
 export const metadata = { title: "Directory · HOTLINE" };
 
 export default async function DirectoryPage() {
