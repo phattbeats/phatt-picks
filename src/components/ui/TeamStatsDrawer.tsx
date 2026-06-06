@@ -5,11 +5,19 @@ import { createPortal } from "react-dom";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
 import type { TeamDef } from "@/lib/layout";
-import { statsForPickid, TEAM_STATS_AS_OF } from "@/lib/team-stats-core";
+import { statsForPickid, TEAM_STATS_AS_OF, type TeamStats } from "@/lib/team-stats-core";
 
 interface Props {
   team: TeamDef;
   onClose: () => void;
+  /**
+   * Live dossier for this team (PHA-921), with `recent[]` pulled live for the
+   * current stage. Preferred over the frozen snapshot when present; undefined
+   * off-window / cold start, in which case the frozen snapshot is shown.
+   */
+  liveStats?: TeamStats;
+  /** Snapshot date of the live crawl (YYYY-MM-DD); falls back to the frozen label. */
+  liveAsOf?: string;
 }
 
 /**
@@ -27,8 +35,13 @@ interface Props {
  * PHA-897 follow-up (Brandon): scrollbar chrome hidden in CSS for a cleaner
  * desktop look, recent matches expanded 3 → 5, and a link out to the team's
  * HLTV profile (the dossier's data source) added beneath the match list.
+ *
+ * PHA-921: the "Last 5 matches" now refresh per stage on their own. The picks
+ * page reads a live cache server-side and passes `liveStats` (recent[] pulled
+ * live, roster/rank kept frozen) — preferred here over the committed snapshot,
+ * which remains the fallback off-window / before the first crawl lands.
  */
-export function TeamStatsDrawer({ team, onClose }: Props) {
+export function TeamStatsDrawer({ team, onClose, liveStats, liveAsOf }: Props) {
   // Esc closes — modal convention; backdrop click also closes.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -38,7 +51,9 @@ export function TeamStatsDrawer({ team, onClose }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const stats = statsForPickid(team.pickid);
+  // Prefer the live per-stage dossier; fall back to the committed frozen snapshot.
+  const stats = liveStats ?? statsForPickid(team.pickid);
+  const asOf = (liveStats && liveAsOf) || TEAM_STATS_AS_OF;
 
   // Only ever rendered client-side (opened by a tap, so absent from SSR output);
   // bail if document is somehow unavailable rather than crash createPortal.
@@ -127,7 +142,7 @@ export function TeamStatsDrawer({ team, onClose }: Props) {
           </>
         )}
 
-        <p className="tsd-foot">World ranking &amp; results via HLTV · snapshot {TEAM_STATS_AS_OF}</p>
+        <p className="tsd-foot">World ranking &amp; results via HLTV · snapshot {asOf}</p>
       </div>
     </div>,
     document.body,

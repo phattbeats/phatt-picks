@@ -158,6 +158,24 @@ model SwissStandingsCache {
   @@index([eventId])
 }
 
+// Live team-dossier recent results (PHA-921). One JSON-blob row per event: each
+// team's last-5 matches parsed from its HLTV PROFILE via crawl4ai, cached so the
+// dossier's "Last 5 matches" updates per stage without a manual gather/commit.
+// The dossier is keyed by team profile (global across stages), not by section,
+// so unlike SwissStandingsCache this is ONE row per event, not per section.
+// Refreshed on an ~hourly floor by the on-read driver (refreshTeamStatsOnRead,
+// the same SourceState claim the standings/outcomes drivers use) — no cron, gated
+// to match windows. Roster + world rank stay in the committed snapshot; only
+// recent[] is live. A source outage degrades to the last blob, then to the frozen
+// snapshot — never empty, never a fabricated result.
+model TeamStatsCache {
+  id        String   @id @default(cuid())
+  eventId   Int      @unique
+  data      String   // JSON: { recentByPickid: Record<pickid, ParsedMatch[]>, source, fetchedAt }
+  fetchedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // PWA push subscriptions
 model PushSubscription {
   id       String   @id @default(cuid())

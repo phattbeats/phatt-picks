@@ -6,6 +6,7 @@ import { TeamStatsDrawer } from "@/components/ui/TeamStatsDrawer";
 import { RegionBadge } from "@/components/ui/RegionBadge";
 import { resolveLogoTiers } from "@/lib/logos";
 import type { Section, TeamDef } from "@/lib/layout";
+import type { TeamStats } from "@/lib/team-stats-core";
 import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
 import { isPlayoffSection } from "@/lib/write-core";
 import { LockInStage } from "@/components/LockInStage";
@@ -23,6 +24,14 @@ interface Props {
   enabled: boolean;
   eventId: number;
   steamLinked: boolean;
+  /**
+   * Live per-stage dossier map (PHA-921), pickid → stats with `recent[]` pulled
+   * live. Optional: undefined off-window / cold start, in which case the drawer
+   * falls back to the committed frozen snapshot.
+   */
+  liveTeamStats?: Record<number, TeamStats>;
+  /** Snapshot date of the live dossier crawl (YYYY-MM-DD), for the drawer footer. */
+  liveStatsAsOf?: string;
 }
 
 const SAVED_FLASH_MS = 1200;
@@ -40,6 +49,8 @@ export function PicksBoard({
   enabled,
   eventId,
   steamLinked,
+  liveTeamStats,
+  liveStatsAsOf,
 }: Props) {
   const teamMap = useMemo(() => new Map(teams.map((t) => [t.pickid, t])), [teams]);
 
@@ -401,7 +412,14 @@ export function PicksBoard({
         />
       )}
 
-      {statsTeam && <TeamStatsDrawer team={statsTeam} onClose={() => setStatsTeam(null)} />}
+      {statsTeam && (
+        <TeamStatsDrawer
+          team={statsTeam}
+          onClose={() => setStatsTeam(null)}
+          liveStats={liveTeamStats?.[statsTeam.pickid]}
+          liveAsOf={liveStatsAsOf}
+        />
+      )}
     </div>
   );
 }
