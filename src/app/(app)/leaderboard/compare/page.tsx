@@ -24,7 +24,12 @@ import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { isLockTimePassed } from "@/lib/lock-schedule-core";
 import { resolveLogoTiers } from "@/lib/logos";
 import { TeamLogo } from "@/components/ui/TeamLogo";
-import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
+import {
+  bucketSwissSlots,
+  isSwissSection,
+  resolveBucketWinners,
+  bucketPickState,
+} from "@/lib/swiss-bucket-core";
 
 const EVENT_ID = 26;
 
@@ -287,26 +292,32 @@ export default async function ComparePage({
       const bGroup = bPicksMap[section.sectionid]?.[group.groupid] ?? {};
       const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
 
-      // Tag a steal with its Swiss bucket (3:0 / advance / 0:3) so the reel
-      // says "Stage I · 3:0" — the bucket is the story, not slot N of 10.
-      const swissBuckets = isSwissSection(section.sectionid)
+      // Judge picks at BUCKET grain for Swiss (PHA-946): within a 3:0 / advance /
+      // 0:3 bucket the slots are interchangeable, so a team that landed in the
+      // bucket counts no matter which slot row its winner occupies — same grain
+      // scoring.ts uses. Playoffs collapse to one single-slot bucket per match
+      // (a match's winner is strict per slot). The bucket also tags the steal's
+      // label ("Stage I · 3:0") — the bucket is the story, not slot N of 10.
+      const isSwiss = isSwissSection(section.sectionid);
+      const buckets = isSwiss
         ? bucketSwissSlots(group.picks.length)
-        : null;
-      const slotLabel = (idx: number): string => {
-        const bkt = swissBuckets?.find((bk) => bk.slotIndexes.includes(idx));
-        return bkt ? `${stageLabel} · ${bkt.label.split(" ")[0]}` : stageLabel;
-      };
+        : group.picks.map((p) => ({ label: "", slotIndexes: [p.index] }));
 
-      for (const slot of group.picks) {
-        const winner = groupOutcomes[slot.index];
-        if (winner === undefined || winner === 0) continue; // not resolved
-        const aRight = aGroup[slot.index] === winner;
-        const bRight = bGroup[slot.index] === winner;
-        const winTeam = team(winner);
-        if (!winTeam) continue;
-        if (aRight && bRight) bothRight++;
-        else if (aRight && !bRight) aSteals.push({ team: winTeam, label: slotLabel(slot.index) });
-        else if (bRight && !aRight) bSteals.push({ team: winTeam, label: slotLabel(slot.index) });
+      for (const bucket of buckets) {
+        const { winners } = resolveBucketWinners(bucket.slotIndexes, groupOutcomes);
+        if (winners.size === 0) continue; // nothing resolved in this bucket yet
+        const aPicked = new Set(bucket.slotIndexes.map((i) => aGroup[i]).filter((x) => x && x !== 0));
+        const bPicked = new Set(bucket.slotIndexes.map((i) => bGroup[i]).filter((x) => x && x !== 0));
+        const label = isSwiss ? `${stageLabel} · ${bucket.label.split(" ")[0]}` : stageLabel;
+        for (const winner of winners) {
+          const winTeam = team(winner);
+          if (!winTeam) continue;
+          const aRight = aPicked.has(winner);
+          const bRight = bPicked.has(winner);
+          if (aRight && bRight) bothRight++;
+          else if (aRight) aSteals.push({ team: winTeam, label });
+          else if (bRight) bSteals.push({ team: winTeam, label });
+        }
       }
     }
   }
@@ -488,12 +499,6 @@ export default async function ComparePage({
                 const bGroup = bPicksMap[section.sectionid]?.[group.groupid] ?? {};
                 const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
 
-                const tileState = (pick: number | undefined, winner: number | undefined): TileState => {
-                  if (winner === undefined || winner === 0) return pick && pick !== 0 ? "pending" : "empty";
-                  if (pick && pick !== 0 && pick === winner) return "hit";
-                  return pick && pick !== 0 ? "miss" : "empty";
-                };
-
                 return (
                   <div
                     key={group.groupid}
@@ -528,7 +533,17 @@ export default async function ComparePage({
                         {(isSwiss
                           ? bucketSwissSlots(group.picks.length)
                           : [{ label: group.name.split(" | ").slice(-1)[0], slotIndexes: group.picks.map((p) => p.index) }]
-                        ).map((bucket) => (
+                        ).map((bucket) => {
+                          // Swiss → judge the whole bucket as a set (PHA-946);
+                          // playoffs → each slot is its own match, resolved per row.
+                          const swissRes = isSwiss ? resolveBucketWinners(bucket.slotIndexes, groupOutcomes) : null;
+                          const aBucketPicked = isSwiss
+                            ? new Set(bucket.slotIndexes.map((i) => aGroup[i]).filter((x) => x && x !== 0))
+                            : null;
+                          const bBucketPicked = isSwiss
+                            ? new Set(bucket.slotIndexes.map((i) => bGroup[i]).filter((x) => x && x !== 0))
+                            : null;
+                          return (
                           <div key={bucket.label}>
                             {isSwiss && (
                               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -544,11 +559,14 @@ export default async function ComparePage({
                               {bucket.slotIndexes.map((slotIndex) => {
                                 const aPick = aGroup[slotIndex];
                                 const bPick = bGroup[slotIndex];
-                                const winner = groupOutcomes[slotIndex];
-                                const aState = tileState(aPick, winner);
-                                const bState = tileState(bPick, winner);
-                                const aSteal = aState === "hit" && bState !== "hit";
-                                const bSteal = bState === "hit" && aState !== "hit";
+                                const res = swissRes ?? resolveBucketWinners([slotIndex], groupOutcomes);
+                                const aScope = aBucketPicked ?? new Set([aPick].filter((x) => x && x !== 0));
+                                const bScope = bBucketPicked ?? new Set([bPick].filter((x) => x && x !== 0));
+                                const aState = bucketPickState(aPick, res);
+                                const bState = bucketPickState(bPick, res);
+                                // Steal = you hit a team your opponent never picked (in scope).
+                                const aSteal = aState === "hit" && aPick !== undefined && !bScope.has(aPick);
+                                const bSteal = bState === "hit" && bPick !== undefined && !aScope.has(bPick);
                                 return (
                                   <div
                                     key={slotIndex}
@@ -562,7 +580,8 @@ export default async function ComparePage({
                               })}
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
