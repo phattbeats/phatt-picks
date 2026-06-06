@@ -267,5 +267,37 @@ const allTargets = teamStatsCrawlTargets();
   );
 }
 
+// (f) PARSE-ISOLATED: a parser that THROWS on one team's markdown must not drop
+// the other teams in the same pass, nor the accumulated earlier passes (PHA-944
+// hardening — future-proofs against an HLTV reformat / parser swap that throws).
+{
+  const crawl = async (
+    targets: ReadonlyArray<{ pickid: number; url: string }>,
+  ): Promise<Record<number, string>> => {
+    const out: Record<number, string> = {};
+    for (const t of targets) out[t.pickid] = teamMd(`opp${t.pickid}`);
+    return out;
+  };
+  // Throw for exactly one team's markdown; parse the rest normally.
+  const poisonPid = allTargets[0].pickid;
+  const poisonMd = teamMd(`opp${poisonPid}`);
+  const flakyParse = (md: string): ParsedMatch[] => {
+    if (md === poisonMd) throw new Error("parser blew up on a malformed profile");
+    return parseRecentResults(md);
+  };
+  let threw = false;
+  let fresh: Record<number, ParsedMatch[]> = {};
+  try {
+    fresh = await accumulateRecentAcrossPasses(allTargets, crawl, flakyParse);
+  } catch {
+    threw = true;
+  }
+  check("parse-isolated: a throwing parse does NOT propagate", !threw);
+  check(
+    "parse-isolated: the poison team is skipped, all others land",
+    Object.keys(fresh).length === allTargets.length - 1 && !(poisonPid in fresh),
+  );
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);
