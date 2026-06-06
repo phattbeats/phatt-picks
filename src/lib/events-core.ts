@@ -39,6 +39,10 @@ import {
   type MatchWindow,
 } from "./lock-schedule-core";
 import { isSwissSection } from "./swiss-bucket-core";
+import {
+  isEffectivelyLive,
+  selectCurrentEvent,
+} from "./event-lifecycle-core";
 
 /** Lifecycle of a Major in the registry. Exactly one entry is `live`. */
 export type EventStatus = "upcoming" | "live" | "archived";
@@ -152,21 +156,50 @@ export function getEventConfig(id: number): EventConfig | null {
 }
 
 /**
- * The single event currently being run. Exactly one registry entry must be
- * `status: "live"` — this throws if zero or more than one are, because a
- * mis-edited registry should fail loudly at build/verify time, never silently
- * serve the wrong Major. (The registry is committed config, so this can only
- * trip on an edit, and verify-events.ts guards it.)
+ * The events that are effectively LIVE at `nowMs` — derived from the clock, not
+ * a hand-set flag (PHA-950, workstream C). A registry entry's `status` is the
+ * staged baseline; `event-lifecycle-core` advances it forward as time passes
+ * (an `upcoming` Major flips to live on its staging lead, a `live` one to
+ * archived at its `dates.end` ceiling — see `resolveEffectiveStatus`). This is
+ * what the on-read drivers / watchers / reminders iterate instead of a single
+ * hardcoded id, so the next Major's reminders fire on schedule with nobody
+ * editing the registry. Today this is exactly `[Cologne]` — behind current
+ * behavior. Normally length 1; 0 between Majors, briefly >1 across an overlap.
  */
-export function resolveActiveEvent(): EventConfig {
-  const live = Object.values(EVENTS).filter((e) => e.status === "live");
-  if (live.length !== 1) {
-    throw new Error(
-      `event registry must have exactly one live event, found ${live.length}` +
-        ` (${live.map((e) => e.eventId).join(", ") || "none"})`,
-    );
+export function liveEvents(nowMs: number = Date.now()): EventConfig[] {
+  return Object.values(EVENTS).filter((e) => isEffectivelyLive(e, nowMs));
+}
+
+/**
+ * The single event the picker / pages should serve right now — robust across
+ * the gaps a self-sustaining multi-Major site has (live › soonest-upcoming ›
+ * most-recently-archived, so the off-season still shows the last Major rather
+ * than a blank site). Throws only if the registry is empty, which is a build
+ * error, never a runtime state. Clock-derived; Cologne today.
+ */
+export function currentEvent(nowMs: number = Date.now()): EventConfig {
+  const e = selectCurrentEvent(Object.values(EVENTS), nowMs) as EventConfig | null;
+  if (!e) {
+    throw new Error("event registry is empty — no event to serve");
   }
-  return live[0];
+  return e;
+}
+
+/** The active event's Valve id at `nowMs`. */
+export function currentEventId(nowMs: number = Date.now()): number {
+  return currentEvent(nowMs).eventId;
+}
+
+/**
+ * The event currently being run. Now CLOCK-DERIVED (PHA-950): it returns the
+ * event whose *effective* status — baseline `status` advanced by the wall clock
+ * — makes it the one to serve, so the registry transitions upcoming→live→
+ * archived across Majors with no human flipping the `status` field. Today that
+ * is Cologne (effective `live`), so every existing caller is unchanged. Kept
+ * with a no-arg signature for the PHA-948 call sites; takes `nowMs` for tests.
+ */
+export function resolveActiveEvent(nowMs: number = Date.now()): EventConfig {
+  return currentEvent(nowMs);
 }
 
 /**
@@ -269,16 +302,19 @@ export function validateSwissClassification(event: EventConfig): string[] {
 
 /**
  * Convenience constant for the ~15 pages/routes that previously hardcoded
- * `const EVENT_ID = 26`. Resolved once at module load from the sole live entry,
- * so every consumer shares one source of truth for the active event id.
+ * `const EVENT_ID = 26`. Resolved once at module load from the clock-derived
+ * active event, so every consumer shares one source of truth — and a deploy/
+ * restart inside the next Major's window auto-serves it (the boot-time half of
+ * the self-sustaining lifecycle; in-process drivers re-evaluate via the
+ * `liveEvents(now)` / `currentEvent(now)` accessors above).
  */
-export const ACTIVE_EVENT_ID: number = resolveActiveEvent().eventId;
+export const ACTIVE_EVENT_ID: number = currentEvent().eventId;
 
 /**
  * The active event's HLTV Swiss sources, keyed by section id. swiss-results.ts
  * imports this so the standings/bracket crawl reads the registry rather than a
- * private duplicate. A stable reference to the live event's `sectionSources`
- * (Cologne today) — identical bytes to the constant swiss-results used before.
+ * private duplicate. The clock-derived live event's `sectionSources` (Cologne
+ * today) — identical bytes to the constant swiss-results used before.
  */
 export const SECTION_SOURCES: Readonly<Record<number, SectionSource>> =
-  resolveActiveEvent().sectionSources;
+  currentEvent().sectionSources;
