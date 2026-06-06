@@ -17,8 +17,9 @@ import { getDecryptedAuthCode } from "@/lib/authcode";
 import { fetchTournamentPredictions, ValveApiError } from "@/lib/valve";
 import { parsePredictions } from "@/lib/predictions";
 import { getCommittedLayout, buildSectionByGroup } from "@/lib/layout";
+import { isEventArchivedById } from "@/lib/majors-core";
 
-export type MirrorSkip = "no-steam-id" | "no-auth-code";
+export type MirrorSkip = "no-steam-id" | "no-auth-code" | "event-archived";
 
 export interface MirrorResult {
   ok: boolean;
@@ -36,6 +37,10 @@ export async function mirrorPlayerPredictions(
   playerId: string,
   eventId: number,
 ): Promise<MirrorResult> {
+  // PHA-949: an archived Major is frozen — never push/mirror Steam predictions
+  // for a finished event. No-op for the live event.
+  if (isEventArchivedById(eventId)) return { ok: false, mirrored: 0, skipped: "event-archived" };
+
   const player = await prisma.player.findUnique({
     where: { id: playerId },
     select: { steamId: true },

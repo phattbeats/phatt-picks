@@ -20,6 +20,14 @@
  * Morgan inverses of each other on the same inputs, so adding `lockedByTime` to
  * one without the others can never open a leak or a dead zone.
  *
+ * ARCHIVED MAJORS (PHA-949). A fourth signal, `eventArchived`, closes the
+ * window for a finished Major: once an event's Grand Final resolves it becomes
+ * read-only history, so every stage is locked, revealed, and not writable
+ * regardless of the per-stage lock gate. It's an optional trailing param
+ * defaulting to false, so every existing call site (the live Cologne event)
+ * behaves exactly as before, and it's added to all three functions together so
+ * the revealed-iff-not-writable invariant still holds.
+ *
  * Pure module (no `@/` alias, no prisma, no fetch) so the verify script can
  * import it directly under `node` without the Next path-alias resolver.
  */
@@ -32,13 +40,20 @@ export interface LockableGroup {
  * Is this group's stage locked (picks editable window closed)?
  * `hasResolvedOutcome` = at least one slot in the group already has a result.
  * `lockedByTime` = the section's published lock instant has passed (PHA-898).
+ * `eventArchived` = the whole Major is finished history (PHA-949).
  */
 export function isStageLocked(
   group: LockableGroup,
   hasResolvedOutcome = false,
   lockedByTime = false,
+  eventArchived = false,
 ): boolean {
-  return group.picks_allowed === false || hasResolvedOutcome === true || lockedByTime === true;
+  return (
+    group.picks_allowed === false ||
+    hasResolvedOutcome === true ||
+    lockedByTime === true ||
+    eventArchived === true
+  );
 }
 
 /**
@@ -49,8 +64,9 @@ export function arePicksRevealed(
   group: LockableGroup,
   hasResolvedOutcome = false,
   lockedByTime = false,
+  eventArchived = false,
 ): boolean {
-  return isStageLocked(group, hasResolvedOutcome, lockedByTime);
+  return isStageLocked(group, hasResolvedOutcome, lockedByTime, eventArchived);
 }
 
 /**
@@ -75,6 +91,12 @@ export function isStageWritable(
   group: LockableGroup,
   hasResolvedOutcome = false,
   lockedByTime = false,
+  eventArchived = false,
 ): boolean {
-  return group.picks_allowed === true && hasResolvedOutcome !== true && lockedByTime !== true;
+  return (
+    group.picks_allowed === true &&
+    hasResolvedOutcome !== true &&
+    lockedByTime !== true &&
+    eventArchived !== true
+  );
 }
