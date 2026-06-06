@@ -30,6 +30,8 @@ import {
   resolveBucketWinners,
   bucketPickState,
 } from "@/lib/swiss-bucket-core";
+import { isBucketImpossibleByRecord } from "@/lib/swiss-standings-core";
+import { getSwissRecords } from "@/lib/swiss-results";
 
 const EVENT_ID = 26;
 
@@ -185,6 +187,19 @@ export default async function ComparePage({
   const teamMap = buildTeamMap(layout);
   const session = await getSession();
   await refreshOutcomesOnRead(EVENT_ID); // live driver (PHA-866) — shared 30s claim
+
+  // Live partial W-L per Swiss section (PHA-951): a 3:0/0:3 pick reads red in the
+  // grid the moment the team's record rules its bucket out, before the answer key
+  // resolves it. Reads the cached HLTV standings (no crawl); empty when cold.
+  const matchTeams = layout.teams.map((t) => ({ pickid: t.pickid, name: t.name }));
+  const recordsBySection = new Map<number, Map<number, { wins: number; losses: number }>>();
+  await Promise.all(
+    layout.sections
+      .filter((s) => isSwissSection(s.sectionid))
+      .map(async (s) => {
+        recordsBySection.set(s.sectionid, await getSwissRecords(EVENT_ID, s.sectionid, matchTeams));
+      }),
+  );
 
   // Per-request server clock for the published lock schedule (PHA-898): a stage
   // that has begun reveals its picks for comparison even before Valve flips
@@ -562,8 +577,15 @@ export default async function ComparePage({
                                 const res = swissRes ?? resolveBucketWinners([slotIndex], groupOutcomes);
                                 const aScope = aBucketPicked ?? new Set([aPick].filter((x) => x && x !== 0));
                                 const bScope = bBucketPicked ?? new Set([bPick].filter((x) => x && x !== 0));
-                                const aState = bucketPickState(aPick, res);
-                                const bState = bucketPickState(bPick, res);
+                                // Early-red (PHA-951): a 3:0/0:3 pick whose team's
+                                // partial record already rules its bucket out is a
+                                // miss now, before the answer key resolves it. Swiss
+                                // only — playoff matches resolve strictly per slot.
+                                const recs = isSwiss ? recordsBySection.get(section.sectionid) : undefined;
+                                const aImpossible = !!aPick && isBucketImpossibleByRecord(bucket.label, recs?.get(aPick));
+                                const bImpossible = !!bPick && isBucketImpossibleByRecord(bucket.label, recs?.get(bPick));
+                                const aState = bucketPickState(aPick, res, aImpossible);
+                                const bState = bucketPickState(bPick, res, bImpossible);
                                 // Steal = you hit a team your opponent never picked (in scope).
                                 const aSteal = aState === "hit" && aPick !== undefined && !bScope.has(aPick);
                                 const bSteal = bState === "hit" && bPick !== undefined && !aScope.has(bPick);

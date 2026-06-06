@@ -22,6 +22,7 @@ import {
   normalizeTeamName,
   deriveStatus,
   summarizeStandings,
+  recordsByPickId,
 } from "../src/lib/swiss-results-core.ts";
 import type { Layout, Section } from "../src/lib/layout.ts";
 
@@ -123,6 +124,24 @@ check("summary: live === 16 at this snapshot (none clinched yet)", summary.live 
 check("empty markdown → [] (graceful, no throw)", parseHltvSwissStandings("").length === 0);
 check("markdown with no Swiss table → []", parseHltvSwissStandings("# just a page\nno table here").length === 0);
 check("match on empty rows → [] (graceful)", matchStandingsToLayout([], stageTeams).length === 0);
+
+console.log("\nswiss-results - recordsByPickId: partial W-L map for early-red (PHA-951)");
+
+const records = recordsByPickId(matched);
+check("every matched team with a game played has a record", records.size === 16);
+check("records carry the parsed W-L (BetBoom 2-0)", (() => {
+  const bb = matched.find((r) => r.name === "BetBoom");
+  const rec = bb?.pickid != null ? records.get(bb.pickid) : undefined;
+  return rec?.wins === 2 && rec?.losses === 0;
+})());
+check("a row with no game played (0-0) is omitted", (() => {
+  const zero = matchStandingsToLayout(
+    [{ seed: null, name: stageTeams[0].name, matches: 0, roundsWon: 0, roundsLost: 0, roundDiff: 0, wins: 0, losses: 0 }],
+    stageTeams,
+  );
+  return recordsByPickId(zero).size === 0;
+})());
+check("unmatched rows (pickid null) are skipped", recordsByPickId([]).size === 0);
 
 console.log(`\nswiss-results: ${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);

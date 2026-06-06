@@ -23,6 +23,7 @@ import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
 import { buildSwissStandings, type SlotPickMap } from "@/lib/swiss-standings-core";
 import { LockedPicksBoard } from "@/components/heat/LockedPicksBoard";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
+import { getSwissRecords } from "@/lib/swiss-results";
 import { buildBucketConsensus, bucketShareFor } from "@/lib/consensus-core";
 import type { Section } from "@/lib/layout";
 
@@ -130,6 +131,20 @@ export default async function PlayerProfilePage({
   const rank = standings.findIndex((r) => r.id === player.id) + 1;
   const leaderScore = standings[0]?.score ?? 0;
   const fieldSize = standings.length;
+
+  // Live partial W-L per Swiss section (PHA-951) so a 3:0/0:3 pick strikes red as
+  // soon as the team's record rules its bucket out — for THIS player too, not just
+  // your own /picks view. Reads the cached HLTV standings (no crawl); empty when
+  // cold. Keyed by section so each stage is judged against its own records.
+  const matchTeams = layout.teams.map((t) => ({ pickid: t.pickid, name: t.name }));
+  const recordsBySection = new Map<number, Map<number, { wins: number; losses: number }>>();
+  await Promise.all(
+    layout.sections
+      .filter((s) => isSwissSection(s.sectionid))
+      .map(async (s) => {
+        recordsBySection.set(s.sectionid, await getSwissRecords(EVENT_ID, s.sectionid, matchTeams));
+      }),
+  );
 
   // Accuracy — correct picks over resolved picks (only counts decided slots).
   let resolved = 0;
@@ -296,6 +311,7 @@ export default async function PlayerProfilePage({
                 teamMap={teamMap}
                 myPicks={pickMap[section.sectionid] ?? {}}
                 teamStatus={teamStatus}
+                recordByTeam={recordsBySection.get(section.sectionid)}
                 resolvedAtIso={null}
                 title={`[ ${stageLabel} ]`}
               />
