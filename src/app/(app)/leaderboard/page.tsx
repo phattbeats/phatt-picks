@@ -156,6 +156,10 @@ export default async function LeaderboardPage() {
           {rows.length} participant{rows.length !== 1 ? "s" : ""} · IEM Cologne 2026 ·{" "}
           <Link href="/players" style={{ color: "var(--heat)", textDecoration: "none" }}>
             directory →
+          </Link>{" "}
+          ·{" "}
+          <Link href="/majors" style={{ color: "var(--heat)", textDecoration: "none" }}>
+            your Majors →
           </Link>
         </p>
         {latestSection !== null && (

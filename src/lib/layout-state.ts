@@ -22,6 +22,7 @@ import { parseSafeJson } from "./bigint";
 import { getCommittedLayout, type Layout, type LayoutEnvelope } from "./layout";
 import { mergeLiveLayout } from "./layout-merge-core";
 import { fetchTournamentLayout } from "./valve";
+import { isEventArchivedById } from "./majors-core";
 
 /**
  * Persist the live layout envelope for an event. Idempotent upsert keyed by
@@ -120,6 +121,7 @@ async function claimLayoutRefreshSlot(): Promise<boolean> {
  * Never throws.
  */
 export async function refreshLayoutOnRead(eventId: number): Promise<void> {
+  if (isEventArchivedById(eventId)) return; // PHA-949: archived Majors are frozen — never re-crawl
   if (!(await claimLayoutRefreshSlot())) return; // within floor or lost the race — no-op
   runDeferred(async () => {
     const envelope = await fetchTournamentLayout(eventId);
