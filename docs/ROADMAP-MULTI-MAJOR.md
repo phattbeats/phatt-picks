@@ -1,124 +1,90 @@
-# Multi-Major roadmap
+# Roadmap — self-sustaining, every-major, with history
 
-How HOTLINE goes from a one-Major app to one that runs itself across every CS2
-Major, season after season, with nobody flipping switches. This is the **spec**;
-`NEXT-MAJOR.md` is the mechanical re-point **runbook** and `PRE-MAJOR-CHECKLIST.md`
-is the go-live checklist. Read this for the *why* and the *shape*; read those two
-for the *what to edit*.
+> The vision (Brandon, 2026-06-06): *"self-sustaining looking forward pass. we need to
+> get this ready for every major. historic scores, so you can look back at your picks
+> throughout every major."*
 
-The work is split into three workstreams. A is the backbone; B and C build on it.
+This is the plan to take HOTLINE from "a great app pointed at IEM Cologne 2026" to **a
+durable platform that runs itself across every Major and keeps your history forever.**
+It's deliberately grounded in what already exists — this is an *evolution*, not a rewrite.
 
-| Workstream | Issue | What it does | State |
-|---|---|---|---|
-| **A** — Event registry | PHA-948 | One committed index of events (`src/lib/events-core.ts`), each with a `status` field; every page/route reads `ACTIVE_EVENT_ID` instead of a hardcoded `26`. | **Merged.** |
-| **B** — Your Majors / history | PHA-949 | Per-event historic scores + a "your Majors" surface; archived events freeze (picks closed, reveal always on). | See PHA-949. |
-| **C** — Self-sustaining lifecycle | PHA-950 | Derive an event's *effective* status from the clock so it auto-transitions `upcoming → live → archived`; drivers/watchers/reminders iterate the registry's live events, not a constant. | This doc. |
+## The good news: the foundation is already here
 
----
+- **The data model is event-scoped from day one.** `Pick`, `StageOutcome`, `RankSnapshot`,
+  `SwissStandingsCache`, `TeamStatsCache`, `LayoutCache` all carry `eventId` in their keys
+  (`Pick.eventId` is literally commented *"always keyed — multi-event from day one"*). So
+  **picks and scores for many Majors already co-exist in one database** — nothing is
+  overwritten between events. "Historic scores" is therefore mostly a *read + UI* problem,
+  not a migration.
+- **Much of "self-sustaining" already runs:** on-read refresh drivers (outcomes / standings /
+  team-stats) with atomic claims + `after()`, the schema self-pushes on boot, the pre-lock
+  reminder scheduler (PHA-929), and the Stage-3 source watcher (PHA-926). The app needs no LLM
+  at runtime (see ARCHITECTURE → "Does HOTLINE need an LLM / agent?").
 
-## A — the registry (backbone)
+## What's missing (the gaps to close)
 
-`EVENTS[eventId] → EventConfig { slug, name, status, dates, lockSchedule,
-matchWindows, sectionSources, sectionNames, fixtures, teamMaps }`.
+1. **No "active event" — `EVENT_ID = 26` is hardcoded in ~15 files** (every page + every API
+   route) and the per-Major config is Cologne-specific singletons (`COLOGNE_LOCK_SCHEDULE`,
+   `cologne-layout.json`, `SECTION_SOURCES`, `TEAM_*`, …) spread across ~10 modules. Adding the
+   next Major today means hand-editing all of that. There is no single source of truth for
+   "which event is live."
+2. **No archive / history surface.** Past-event data exists in the DB but nothing lets a user
+   *see* it — the leaderboard, compare, and profile all implicitly render "event 26." There's
+   no event switcher and no "your picks across every Major" view.
+3. **No event lifecycle.** Nothing transitions an event `upcoming → live → archived`; a human
+   decides when a Major is "over." Truly self-sustaining means the app does this itself.
 
-- **`status`**: `"upcoming" | "live" | "archived"` — the *baseline / staged intent*
-  of a Major (see C for how the clock advances it).
-- **`resolveActiveEvent()` / `ACTIVE_EVENT_ID` / `getEventConfig(id)`** — the single
-  source of truth for "which Major are we serving." ~15 pages and routes read
-  `ACTIVE_EVENT_ID`, so the active event is decided in one place.
+## The plan — three workstreams
 
-The registry currently *references* the committed `COLOGNE_*` constants
-(`lockSchedule`, `matchWindows`, `sectionNames`) rather than owning their bytes.
-Inverting that — making the domain modules read the active event's config by
-default instead of their own `COLOGNE_*` constant — is the **cutover** (PHA-952),
-deliberately deferred until after Cologne's Grand Final so we don't destabilise a
-live event. Verify: `node scripts/verify-events.ts`.
+### A. Event registry & "active event" *(the backbone — unblocks B and C)*
+Replace the 16 hardcoded `EVENT_ID = 26` and the `COLOGNE_*` singletons with **one committed
+registry**:
 
----
+```
+EVENTS = {
+  26: { slug, name, status: 'upcoming'|'live'|'archived',
+        layoutFixture, lockSchedule, matchWindows, sectionSources, teamMaps, dates },
+  …   // the next Major is one more entry
+}
+resolveActiveEvent()   // the single source of truth pages/routes call instead of `= 26`
+getEventConfig(id)     // per-event lock schedule / sources / maps
+```
 
-## C — self-sustaining lifecycle
+Adding a Major becomes: **drop in one registry entry + flip `status` to `live`.** This is the
+turnkey "ready for every Major" piece, and it's mostly mechanical — the data layer already
+takes `eventId`, so this is plumbing the *active id* + per-event config, not changing storage.
+Keep the per-Major seam files (NEXT-MAJOR runbook) but index them by event in the registry.
 
-**Goal: no human flips a switch.** A Major staged as `upcoming` goes live on
-schedule; a live Major archives when it's over — without anyone editing the
-registry's `status` field the morning of.
+### B. Historic scores & "look back" *(the headline feature)*
+With the registry's `status` field, archived events are read-only views over data that's
+already persisted:
+- An **event switcher** on `/leaderboard`, `/leaderboard/compare`, and `/players/[id]`.
+- A **"your Majors" history** view — every event you played, your picks, your score, your
+  finish — so you can look back across all of them.
+- **Freeze archived events:** no writes (`picks` 409), no crawls (drivers skip non-live), reveal
+  always on. Mostly read + UI because the rows are already there.
 
-### How the clock drives status — `src/lib/event-lifecycle-core.ts`
+### C. Self-sustaining event lifecycle
+- Auto-transition `upcoming → live` (first lock approaches) and `live → archived` (the Grand
+  Final resolves) so no human flips a switch.
+- Make the watchers/reminders/drivers **registry-driven** (iterate live events, not a constant).
+- The next Major's config can even be staged as `upcoming` and goes live on schedule.
 
-A pure leaf module (no registry import, no `Date.now()` — every entry point takes
-`nowMs`) that derives an event's **effective** status from its baseline + the
-wall clock:
+**Dependencies:** A is the foundation; B and C both build on the registry. Suggested order:
+A → (B ∥ C).
 
-- **`resolveEffectiveStatus(event, nowMs, opts)`**
-  - `upcoming → live` once `nowMs` reaches the event's **go-live instant**: the
-    earlier of `dates.start` and `firstLock − DEFAULT_GO_LIVE_LEAD_MS` (7-day
-    staging runway, so the picker/countdown open before the first match).
-  - `live → archived` once the **Grand Final resolves** (an injected
-    `grandFinalResolved` signal — the precise trigger) **or** `nowMs` passes
-    `dates.end` (the safety ceiling that needs no outcome data).
-  - **Monotonic clamp**: the clock can only push an event *forward* on the
-    `upcoming < live < archived` line, never back. An `archived` baseline is
-    terminal (a retired Major is never resurrected); a `live` baseline is never
-    demoted to `upcoming`. The baseline is the floor; the clock raises it.
-- **`selectLiveEvents(events, nowMs, optsFor)`** — the events that are effectively
-  live now. **What the drivers iterate** instead of a single hardcoded id.
-  Normally length 1; 0 between Majors; briefly >1 across an overlap.
-- **`selectCurrentEvent(events, nowMs, optsFor)`** — the one event the picker/pages
-  should show, robust across gaps: live › soonest-upcoming › most-recently-
-  archived, so the off-season shows the last Major rather than a blank site.
+## The one decision that gates *when*, not *what*
 
-Verify: `node scripts/verify-event-lifecycle.ts` (incl. the proof that *Cologne
-today still derives `live`* — C lands behind current behaviour).
+The registry refactor touches ~15 files + core config **while Cologne is live** (Stage III Jun 11,
+playoffs Jun 18–21). Two safe options:
+- **Stage it:** land the registry groundwork now behind the current behavior (active event still
+  resolves to 26), but **hold the cutover + history UI until after Cologne's Grand Final** — zero
+  risk to the live event, and Cologne becomes the first archived Major the day it ends.
+- **Build now:** do it all immediately, accepting more regression surface during a live tournament.
 
-### How the registry uses it — `src/lib/events-core.ts`
+Recommendation: **stage it** — groundwork now, cutover + history right after the Grand Final, so
+Cologne is the first entry in "look back at your picks throughout every Major."
 
-`resolveActiveEvent()`, `ACTIVE_EVENT_ID` and `SECTION_SOURCES` are now
-**clock-derived** (via `selectCurrentEvent`), plus three accessors for callers
-that need a live answer at call time rather than module-load time:
-
-- `liveEvents(nowMs)` — the effectively-live events (drivers iterate this).
-- `currentEvent(nowMs)` / `currentEventId(nowMs)` — the single event to serve.
-
-Two halves of "self-sustaining":
-
-1. **Boot-time** — `ACTIVE_EVENT_ID` / `SECTION_SOURCES` resolve once at module
-   load, so a deploy/restart inside the next Major's window auto-serves it. (The
-   app already transitions across Majors on a deploy; this just removes the manual
-   `status` edit that used to gate it.)
-2. **In-process** — long-running drivers re-evaluate by calling
-   `liveEvents(now)` / `currentEventId(now)` each tick, so they follow the
-   calendar without a restart.
-
-### Registry-driven drivers
-
-The on-read drivers / watchers / reminders iterate `liveEvents(now)` and read each
-live event's **own** config from the registry, so they follow the Major with no
-re-pointing:
-
-- **`src/lib/prelock-reminders.ts`** — `reminderTargets(now)` iterates
-  `liveEvents(now)` and fires each event's reminders off its own committed
-  `lockSchedule` / `sectionNames`. (Operator escape hatches preserved:
-  `STAGE_LOCKS_JSON` for out-of-band cutoffs, `EVENT_ID` to pin one event.)
-- Standings + team-stats crawls already read the active event's
-  `sectionSources` / windows via the registry (A). They gate on match windows, so
-  they idle automatically off-season; pointing them at `liveEvents(now)` for true
-  multi-event overlap is a thin follow-up (single live event today).
-
-### Staging the next Major
-
-When the next Major's details are known, add a registry entry with
-`status: "upcoming"`, its real `dates` and `lockSchedule`, and the per-fixture
-swaps from `NEXT-MAJOR.md`. Then **do nothing on go-live day** — it flips to live
-on its staging lead and Cologne archives at its `dates.end`. To go live earlier or
-later, adjust that entry's `dates.start` / `lockSchedule`, not a status flag.
-
-### Known follow-ups
-
-- **GF-resolve fast-path**: the `grandFinalResolved` trigger is wired into the
-  lifecycle core and proven, but no live caller injects it yet — archive currently
-  fires on the `dates.end` ceiling. Feeding the Grand Final's resolved StageOutcome
-  into `currentEvent` / `liveEvents` (an impure driver-layer helper) makes archive
-  precise. Low risk to defer; the ceiling already removes the human.
-- **Cutover (PHA-952)**: invert the `COLOGNE_*` domain-module defaults to read the
-  active event's config. Gated post-Cologne-GF.
-- **Multi-event drivers**: the standings/team-stats crawls iterate a single active
-  event today; switch them to `liveEvents(now)` if two Majors ever overlap.
+## Tracking
+Workstreams A/B/C are tracked as child issues of PHA-922 (see the issue thread). This doc is their
+shared spec; keep it updated as they land.
