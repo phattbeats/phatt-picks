@@ -123,6 +123,39 @@ open /picks (Steam session)        → Lock In to Steam button visible
 If `Lock In` shows `Steam sync disabled by owner`, `WRITE_ENABLED` isn't set true.
 If it shows `Add your Steam auth code to sync`, hit `/help/auth-code` and paste.
 
+## Remaining stages — Stage III + playoffs readiness
+
+> Snapshot as of **2026-06-06** (Stages I & II complete/live). This is the forward-look
+> for what's wired vs pending for the rest of IEM Cologne 2026. Sections: `107` Stage III,
+> `108` QF · `109` SF · `110` GF.
+
+### Stage III (section 107) — locks **Jun 11, 10:30 UTC**
+- **READY now:** the picker locks + picks reveal on schedule (`COLOGNE_LOCK_SCHEDULE[107]`),
+  and the live bracket reveals 24h before (Jun 10, 10:30 UTC, PHA-943). Pre-lock push
+  reminders fire Jun 10/11 if `PRELOCK_REMINDERS_ENABLED=1` (PHA-929).
+- **BLOCKED — live standings + scoring:** `SECTION_SOURCES[107]` and `COLOGNE_MATCH_WINDOWS[107]`
+  are **not yet set**, because the only missing fact is the **HLTV event id** for Stage 3
+  (external; it is **not** 9030). Until added, Stage III locks correctly but its
+  standings/bracket panel is empty and it never scores.
+- **Unblock (PHA-926):** `scripts/check-stage3-source.ts` watches HLTV event hub `8301` and,
+  when the Stage 3 sub-event appears, prints the exact `SECTION_SOURCES[107]` +
+  `COLOGNE_MATCH_WINDOWS[107]` lines (with the authoritative date span) to paste. A daily
+  routine runs it. **When it fires (≈Jun 10–11): paste both lines, run
+  `node scripts/verify-all.mjs` + `verify-lock-schedule`, ship, then warm with
+  `GET /api/standings/refresh`** (which also resolves outcomes once games finish).
+
+### Playoffs (sections 108/109/110) — **Jun 18–21**
+- **READY now:** the single-elim QF→SF→GF bracket ships (PHA-903) and renders honest `???`
+  until Stage III seeds the quarterfinals. It fills **on-read from the committed layout +
+  `StageOutcome`** — no crawl needed — so once Stage III resolves the QF seeds, the tree
+  populates automatically.
+- **PENDING — lock times:** sections 108/109/110 are intentionally **dark** in
+  `COLOGNE_LOCK_SCHEDULE` / `COLOGNE_MATCH_WINDOWS` (per-round day + time TBD). Fill them in
+  once HLTV/Valve publishes the bracket schedule, so the picker locks + reminders fire per
+  round. (No fabricated dates — an undated section degrades gracefully, never falsely freezes.)
+- **Deferred polish:** the HLTV map-score overlay on the playoff bracket was a PHA-903
+  follow-up, gated on Stage-3 seeding — pick up if desired once the bracket is live.
+
 ## Verify scripts
 
 Each milestone ships an offline harness under `scripts/verify-*.ts` (no bundler,
