@@ -7,6 +7,18 @@ you change, in roughly the order events happen in time.
 If you do nothing else, do **Phase 1** (layout + schedule) — that's what makes the
 app *work* for the new event. The rest sharpens it.
 
+> **The registry (PHA-948).** `src/lib/events-core.ts` is the committed index of
+> events: `EVENTS[eventId] → { slug, name, status, dates, lockSchedule,
+> matchWindows, sectionSources, sectionNames, fixtures, teamMaps }`, plus
+> `resolveActiveEvent()` / `getEventConfig(id)` / `ACTIVE_EVENT_ID`. Every page
+> and API route reads `ACTIVE_EVENT_ID` instead of a hardcoded `26`, so the
+> active event is flipped in **one place** (set the new entry's `status` to
+> `"live"` and the old one's to `"archived"`). The registry currently
+> *references* the committed `COLOGNE_*` constants below rather than owning their
+> values — the full cutover (inverting the domain modules' default params to read
+> the active event's config) is a follow-up, deliberately deferred until after
+> Cologne's Grand Final. Verify: `node scripts/verify-events.ts`.
+
 > Nomenclature: a **section** is a Valve `sectionid`. For Cologne 2026 they are
 > `105` Stage I · `106` Stage II · `107` Stage III · `108` QF · `109` SF · `110` GF.
 > A **pickid** is Valve's per-team id *within this event* — it changes every Major.
@@ -131,6 +143,7 @@ Once live, each stage start is a small recurring routine:
 ## The "did I get them all?" checklist
 
 ```
+[ ] events-core.ts EVENTS      → new registry entry + flip status:live  (PHA-948)
 [ ] cologne-layout.json        → new event's sections + pickids        (Phase 1a)
 [ ] cologne-items/predictions  → refreshed from same capture           (Phase 1a)
 [ ] COLOGNE_LOCK_SCHEDULE      → each stage's first-match instant       (Phase 1b)

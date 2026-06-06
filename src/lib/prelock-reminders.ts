@@ -22,8 +22,9 @@ import { prisma } from "@/lib/db";
 import { sendPushToPlayer } from "@/lib/notify";
 import { buildPreLockPayload, dueReminders, isReminderRecipient, reminderFireKey } from "@/lib/notify-core";
 import { stageLocksFromSchedule, type StageLock } from "@/lib/lock-schedule-core";
+import { ACTIVE_EVENT_ID } from "@/lib/events-core";
 
-const EVENT_ID = Number(process.env.EVENT_ID ?? 26);
+const EVENT_ID = Number(process.env.EVENT_ID ?? ACTIVE_EVENT_ID);
 
 /**
  * Optional override map from the deploy env (future majors / out-of-band

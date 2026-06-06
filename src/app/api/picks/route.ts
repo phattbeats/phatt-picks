@@ -25,9 +25,9 @@ import { validatePickAgainstLayout } from "@/lib/layout";
 import { getEffectiveLayout } from "@/lib/layout-state";
 import { isStageWritable } from "@/lib/reveal-core";
 import { isLockTimePassed } from "@/lib/lock-schedule-core";
+import { ACTIVE_EVENT_ID } from "@/lib/events-core";
 
-const EVENT_ID = 26;
-
+const EVENT_ID = ACTIVE_EVENT_ID;
 export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });

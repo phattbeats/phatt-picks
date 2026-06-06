@@ -13,9 +13,9 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { isOwner } from "@/lib/owner";
 import { ingestOutcomes } from "@/lib/outcomes";
+import { ACTIVE_EVENT_ID } from "@/lib/events-core";
 
-const EVENT_ID = 26;
-
+const EVENT_ID = ACTIVE_EVENT_ID;
 export async function POST() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });

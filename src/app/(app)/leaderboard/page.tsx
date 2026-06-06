@@ -9,10 +9,9 @@ import { getSession } from "@/lib/session";
 import { rankMapForSection, snapshotSectionIds } from "@/lib/rank-snapshot";
 import { baselineSectionId, latestSectionId, rankDelta, type RankDelta } from "@/lib/rank-snapshot-core";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
+import { ACTIVE_EVENT_ID } from "@/lib/events-core";
 
-const EVENT_ID = 26;
-
-
+const EVENT_ID = ACTIVE_EVENT_ID;
 export default async function LeaderboardPage() {
   const layout = getCommittedLayout();
   const session = await getSession();
