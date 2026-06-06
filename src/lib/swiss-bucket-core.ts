@@ -48,3 +48,57 @@ const SWISS_SECTION_IDS = new Set([105, 106, 107]);
 export function isSwissSection(sectionId: number): boolean {
   return SWISS_SECTION_IDS.has(sectionId);
 }
+
+/** Per-pick comparison verdict used by the compare grid / steal reel. */
+export type PickOutcomeState = "hit" | "miss" | "pending" | "empty";
+
+export interface BucketWinners {
+  /** pickIds of teams that actually landed in this bucket (set, order-free). */
+  winners: Set<number>;
+  /** true once every slot in the bucket has a resolved winner. */
+  fullyResolved: boolean;
+}
+
+/**
+ * Collapse a Swiss bucket's resolved slots into a winner SET (PHA-946).
+ *
+ * Within a Swiss bucket the slots are interchangeable — a team that lands in
+ * the 3:1/3:2 bucket counts regardless of which of the six slots its winner row
+ * occupies. Scoring already judges Swiss buckets as set intersections
+ * (scoring.ts, PHA-918); the compare page must use the same grain or a correct
+ * pick sitting in a different slot than its winner row reads as a miss.
+ *
+ * `0` is the API's "unresolved/placeholder" sentinel and is never a winner.
+ */
+export function resolveBucketWinners(
+  slotIndexes: number[],
+  groupOutcomes: { [slotIndex: number]: number },
+): BucketWinners {
+  const winners = new Set<number>();
+  let resolved = 0;
+  for (const idx of slotIndexes) {
+    const w = groupOutcomes[idx];
+    if (w !== undefined && w !== 0) {
+      winners.add(w);
+      resolved++;
+    }
+  }
+  return { winners, fullyResolved: resolved === slotIndexes.length };
+}
+
+/**
+ * Hit/miss/pending for a single pick judged against a bucket's winner set.
+ *
+ * A pick is a HIT if its team is among the bucket's resolved winners. It is a
+ * MISS only once the bucket is fully resolved (every slot decided) and the team
+ * isn't a winner — until then a not-yet-winning pick is still PENDING, never
+ * prematurely struck through.
+ */
+export function bucketPickState(
+  pick: number | undefined,
+  { winners, fullyResolved }: BucketWinners,
+): PickOutcomeState {
+  if (!pick || pick === 0) return "empty";
+  if (winners.has(pick)) return "hit";
+  return fullyResolved ? "miss" : "pending";
+}
