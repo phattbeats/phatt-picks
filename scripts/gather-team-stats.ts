@@ -29,6 +29,12 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import {
+  TEAM_SOURCES,
+  parseRecentResults,
+  hltvProfileUrl,
+  type ParsedMatch,
+} from "../src/lib/team-stats-sources.ts";
 
 const CRAWL_URL = process.env.CRAWL4AI_URL ?? "http://crawl4ai:11235";
 const CRAWL_TOKEN = process.env.CRAWL4AI_API_TOKEN ?? "Phatt-tech-2026";
@@ -37,53 +43,11 @@ const CHECK_ONLY = process.argv.includes("--check");
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CORE_PATH = resolve(HERE, "../src/lib/team-stats-core.ts");
 
-/** pickid → HLTV team id, url slug, display name. The IEM Cologne 2026 field. */
-interface Source {
-  hltvId: number;
-  slug: string;
-  name: string;
-}
-const TEAM_SOURCES: Record<number, Source> = {
-  12: { hltvId: 4608, slug: "natus-vincere", name: "Natus Vincere" },
-  48: { hltvId: 5973, slug: "liquid", name: "Liquid" },
-  59: { hltvId: 5995, slug: "g2", name: "G2" },
-  60: { hltvId: 6665, slug: "astralis", name: "Astralis" },
-  69: { hltvId: 7532, slug: "big", name: "BIG" },
-  74: { hltvId: 4863, slug: "tyloo", name: "TYLOO" },
-  80: { hltvId: 9215, slug: "mibr", name: "MIBR" },
-  81: { hltvId: 7020, slug: "spirit", name: "Spirit" },
-  85: { hltvId: 8297, slug: "furia", name: "FURIA" },
-  87: { hltvId: 6673, slug: "nrg", name: "NRG" },
-  89: { hltvId: 9565, slug: "vitality", name: "Vitality" },
-  95: { hltvId: 7175, slug: "heroic", name: "HEROIC" },
-  102: { hltvId: 4773, slug: "pain", name: "paiN" },
-  104: { hltvId: 8113, slug: "sharks", name: "Sharks" },
-  106: { hltvId: 4494, slug: "mouz", name: "MOUZ" },
-  112: { hltvId: 9996, slug: "9z", name: "9z" },
-  115: { hltvId: 9928, slug: "gamerlegion", name: "GamerLegion" },
-  119: { hltvId: 11811, slug: "monte", name: "Monte" },
-  122: { hltvId: 6248, slug: "the-mongolz", name: "The MongolZ" },
-  126: { hltvId: 12468, slug: "legacy", name: "Legacy" },
-  127: { hltvId: 8840, slug: "lynn-vision", name: "Lynn Vision" },
-  132: { hltvId: 12774, slug: "flyquest", name: "FlyQuest" },
-  134: { hltvId: 11861, slug: "aurora", name: "Aurora" },
-  135: { hltvId: 11241, slug: "b8", name: "B8" },
-  137: { hltvId: 12394, slug: "betboom", name: "BetBoom" },
-  139: { hltvId: 11283, slug: "falcons", name: "Falcons" },
-  140: { hltvId: 12376, slug: "m80", name: "M80" },
-  142: { hltvId: 12467, slug: "parivision", name: "PARIVISION" },
-  145: { hltvId: 13286, slug: "fut", name: "FUT" },
-  146: { hltvId: 11571, slug: "gaimin-gladiators", name: "Gaimin Gladiators" },
-  147: { hltvId: 10577, slug: "sinners", name: "SINNERS" },
-  148: { hltvId: 13486, slug: "thunder-downunder", name: "THUNDER dOWNUNDER" },
-};
-
-interface Match {
-  date: string;
-  opponent: string;
-  score: string;
-  result: "W" | "L" | "T";
-}
+// The source map + recent-results parser are shared with the LIVE on-read refresh
+// (src/lib/team-stats.ts) via team-stats-sources, so the manual snapshot and the
+// automated cache can never drift in WHICH profile they read or HOW they parse it
+// (PHA-921). This script is the by-hand path; the runtime is the automated one.
+type Match = ParsedMatch;
 
 async function crawl(url: string): Promise<string> {
   const res = await fetch(`${CRAWL_URL}/crawl`, {
@@ -101,31 +65,9 @@ async function crawl(url: string): Promise<string> {
   return typeof md === "string" ? md : (md?.raw_markdown ?? "");
 }
 
-const ROW = /\|\s*(\d{2}\/\d{2}\/\d{4})\s*\|([\s\S]+?)\|\s*\[Match\]/g;
-const SCORE = /(\d+)\s*:\s*(\d+)/;
-const TEAMLINK = /\[([^\][]+)\]\(https:\/\/www\.hltv\.org\/team\/\d+\/[a-z0-9-]+\)/g;
-
-/** Parse up to 5 most-recent matches from a team page's markdown. */
+/** Parse up to 5 most-recent matches from a team page's markdown (shared parser). */
 function parseRecent(md: string): Match[] {
-  const i = md.indexOf("Recent results");
-  if (i < 0) return [];
-  const seg = md.slice(i, i + 6000);
-  const out: Match[] = [];
-  for (const m of seg.matchAll(ROW)) {
-    const date = m[1];
-    const cell = m[2];
-    const sc = SCORE.exec(cell);
-    if (!sc) continue;
-    const a = Number(sc[1]);
-    const b = Number(sc[2]);
-    const right = cell.slice(sc.index + sc[0].length);
-    const opps = [...right.matchAll(TEAMLINK)].map((x) => x[1].trim());
-    const opponent = opps[0] ?? "?";
-    const result = a > b ? "W" : a < b ? "L" : "T";
-    out.push({ date, opponent, score: `${a}-${b}`, result });
-    if (out.length >= 5) break;
-  }
-  return out;
+  return parseRecentResults(md);
 }
 
 /** Pull existing worldRank + roster (kept as-is) out of the committed core. */
@@ -207,7 +149,7 @@ export const TEAM_STATS: Record<number, TeamStats> = {`;
       );
     }
     lines.push(`    ],`);
-    lines.push(`    hltvUrl: "https://www.hltv.org/team/${src.hltvId}/${src.slug}",`);
+    lines.push(`    hltvUrl: "${hltvProfileUrl(src)}",`);
     lines.push(`  },`);
   }
   lines.push(`};`);

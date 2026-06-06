@@ -225,6 +225,26 @@ export function isWithinRefreshWindow(
 }
 
 /**
+ * Is `nowMs` inside ANY committed competition window — i.e. is *some* stage of
+ * the event playing games right now (PHA-921)?
+ *
+ * The team dossier's recent-results refresh isn't section-scoped the way the
+ * Swiss standings are: it crawls each team's HLTV PROFILE, which changes whenever
+ * that team plays — in any stage. So the live refresh gate is "is any stage in
+ * its match window", folding the same per-section windows the standings use.
+ * Empty window map → true (no committed windows means don't suppress an undated
+ * event); each window applies the same fail-open rules as `isWithinMatchWindow`.
+ */
+export function isWithinAnyMatchWindow(
+  nowMs: number,
+  windows: Readonly<Record<number, MatchWindow>> = COLOGNE_MATCH_WINDOWS,
+): boolean {
+  const ids = Object.keys(windows);
+  if (ids.length === 0) return true; // no committed windows — don't suppress
+  return ids.some((id) => isWithinMatchWindow(Number(id), nowMs, windows));
+}
+
+/**
  * Resolve the committed lock instant for a section, or `null` when none is
  * published (or the stored value isn't a valid future-or-any ISO instant).
  * Returning `null` is what makes the countdown degrade to "no clock" instead of

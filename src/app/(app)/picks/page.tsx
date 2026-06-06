@@ -25,6 +25,7 @@ import { LockedPicksBoard } from "@/components/heat/LockedPicksBoard";
 import { LiveSwissStandings } from "@/components/heat/LiveSwissStandings";
 import { LiveSwissBracketBoard } from "@/components/heat/LiveSwissBracketBoard";
 import { refreshStandingsOnRead, getSwissStandings, getSwissBracket } from "@/lib/swiss-results";
+import { refreshTeamStatsOnRead, getLiveTeamStats } from "@/lib/team-stats";
 import { AutoRefresh } from "@/components/AutoRefresh";
 
 const EVENT_ID = 26;
@@ -54,6 +55,12 @@ export default async function PicksPage({
   // intentional (mirrors the dashboard).
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now();
+
+  // Live team-dossier refresh (PHA-921): keep each team's "Last 5 matches" fresh
+  // per stage. Atomic ~1h claim, deferred batch crawl, gated to match windows —
+  // off-days no-op. The merged read below feeds the [i] dossier; off-window /
+  // cold start falls back to the committed frozen snapshot (never empty).
+  await refreshTeamStatsOnRead(EVENT_ID, nowMs);
 
   // Signed in via Steam but no auth code yet: picks save in HOTLINE, but we
   // can't push them to the official in-game CS2 Pick'Em until they connect a
@@ -186,6 +193,12 @@ export default async function PicksPage({
     playoffBracket = buildPlayoffBracket({ sections: playoffSections, userPickByGroup, winnerByGroup });
   }
 
+  // Live dossier map for the picker's [i] affordance (PHA-921). Only read when
+  // the picker is actually shown; the merged map overrides each team's recent[]
+  // with live results while keeping roster/rank frozen, and is null off-window /
+  // cold (the drawer then uses the committed snapshot).
+  const liveTeamStats = activePickability.pickable ? await getLiveTeamStats(EVENT_ID) : null;
+
   const activeIdx = layout.sections.findIndex((s) => s.sectionid === activeSectionId);
   const activeLabel = section?.name.split(" | ")[0] ?? "Picks";
   const activeNumber = activeIdx >= 0 ? activeIdx + 1 : 1;
@@ -302,6 +315,8 @@ export default async function PicksPage({
             enabled={!!session}
             eventId={EVENT_ID}
             steamLinked={!!session?.steamId}
+            liveTeamStats={liveTeamStats?.byPickid}
+            liveStatsAsOf={liveTeamStats?.asOf}
           />
           {/* PHA-943: 24h before this stage locks, the live Swiss bracket appears
               beneath the picker so you can study the opening matchups before you

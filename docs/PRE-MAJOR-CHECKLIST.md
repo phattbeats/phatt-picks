@@ -55,9 +55,10 @@ new major you need, per team: the pickid (from Valve's layout), the HLTV team id
       ```
       Top-ranked teams that don't appear on the event page are on
       <https://www.hltv.org/ranking/teams>.
-- [ ] Update the `TEAM_SOURCES` map in `scripts/gather-team-stats.ts`
-      (pickid → `{ hltvId, slug, name }`) — this is the field-of-record the
-      gather tool crawls.
+- [ ] Update the `TEAM_SOURCES` map in `src/lib/team-stats-sources.ts`
+      (pickid → `{ hltvId, slug, name }`) — the single field-of-record that BOTH
+      the gather tool (the by-hand snapshot) and the live runtime refresh
+      (PHA-921) crawl, so they can never point at different profiles.
 - [ ] Refresh the other pickid-keyed maps for the new field:
       `src/lib/regions-core.ts` (region per team) and the logo manifest
       (`scripts/build-logos.ts` → `public/logos/`, re-run when the feed rotates).
@@ -83,23 +84,31 @@ new major you need, per team: the pickid (from Valve's layout), the HLTV team id
 > stage 2 the stage 1 team should have refreshed stats and the stage two teams
 > should have their stats."
 
-Until the runtime auto-refresh lands (tracked as a child of PHA-897), this is a
-**one-command manual refresh** run at each stage transition:
+**This is now automated (PHA-921).** The dossier's "Last 5 matches" refresh on
+their own: opening the picker fires an on-read, atomic-claimed, deferred batch
+crawl of all 32 HLTV profiles, gated to `COLOGNE_MATCH_WINDOWS` (only on days
+games are played), persisted to `TeamStatsCache`, and merged over the committed
+snapshot at read time. So at the start of Stage 2 the Stage 1 teams already show
+their just-played results — no gather/commit/deploy needed mid-event. `worldRank`
+and `roster` stay frozen (live crawl doesn't touch them).
 
-- [ ] **Before Stage 2 opens** (and again before Stage 3 / playoffs): re-run the
-      gather tool, verify, commit, Force Update. Each team's "Last 5 matches"
-      then includes whatever they just played in the previous stage.
+- [ ] **After deploy, during a stage:** warm the cache so the first viewer
+      doesn't have to — `GET /api/team-stats/refresh` (unauth-safe; off-window it
+      no-ops). Same pattern as `GET /api/standings/refresh`.
+- [ ] On the HLTV ranking update (weekly), bump `worldRank` (still by hand): re-run
+      the gather tool + verify + commit + Force Update. The gather tool remains the
+      way to refresh the **frozen fallback** (roster/rank + a baseline recent[]):
       ```bash
       node --experimental-strip-types --no-warnings scripts/gather-team-stats.ts --check  # preview
       node --experimental-strip-types --no-warnings scripts/gather-team-stats.ts          # write
       node --experimental-strip-types --no-warnings scripts/verify-team-stats.ts
       ```
-- [ ] On the HLTV ranking update (weekly), bump `worldRank` if a team moved.
 
-The live **Swiss standings/bracket** (PHA-902) already auto-refresh hourly on
-match days via the same `COLOGNE_MATCH_WINDOWS` gate — warm them after deploy
-with `GET /api/standings/refresh`. The team-stats auto-refresh (this checklist's
-§4 automated) will hang off that same window gate.
+The live **Swiss standings/bracket** (PHA-902) auto-refresh the same way (hourly,
+match-window-gated) — warm with `GET /api/standings/refresh`. Both the team-stats
+and standings caches are DB tables: a new major's deploy needs **one**
+`prisma db push` (for `TeamStatsCache` + `SwissStandingsCache`); the committed
+frozen snapshot is what renders until the first live crawl lands.
 
 ## 5. Go-live config sanity pass
 
@@ -109,7 +118,11 @@ with `GET /api/standings/refresh`. The team-stats auto-refresh (this checklist's
       [OPERATIONS.md](OPERATIONS.md)).
 - [ ] Logos present in `public/logos/` (monograms = stale manifest → re-run
       `scripts/build-logos.ts`).
-- [ ] `verify-team-stats`, `verify-lock-schedule`, `verify-regions` all green.
+- [ ] `verify-team-stats`, `verify-team-stats-live`, `verify-lock-schedule`,
+      `verify-regions` all green.
+- [ ] `prisma db push` ran on the deploy (creates `TeamStatsCache` +
+      `SwissStandingsCache`); warm with `GET /api/team-stats/refresh` +
+      `GET /api/standings/refresh` during a match window.
 
 ---
 
