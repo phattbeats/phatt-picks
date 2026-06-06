@@ -25,7 +25,7 @@ missing.
 | `VAPID_SUBJECT` | optional | `src/lib/notify.ts:39` | Contact URI sent with every push. Defaults to `mailto:admin@phatt.vip` when unset. Required by the Web Push spec; web-push will throw without a value. |
 | `NODE_ENV` | optional, default `production` in image | `src/app/api/auth/steam/callback/route.ts:103` | Leave as `production` in the deployed container. Gates the session cookie's `secure` flag (`secure: NODE_ENV === "production"`) — set non-`production` only for local HTTP dev. |
 | `CRAWL4AI_URL` | optional, default `http://crawl4ai:11235` | `src/lib/swiss-results.ts:43` | Endpoint for the crawl4ai service that fetches HLTV (bypasses Cloudflare). Override only if the container name/port differs. |
-| `CRAWL4AI_API_TOKEN` | optional | `scripts/gather-team-stats.ts` | Bearer token for crawl4ai when the gather tooling hits it. |
+| `CRAWL4AI_API_TOKEN` | optional | `src/lib/team-stats.ts:40`, `scripts/gather-team-stats.ts` | Bearer token for crawl4ai. Read by the gather tooling **and** the live on-read team-stats refresh (`/api/team-stats/refresh`). Both default to `Phatt-tech-2026` when unset. |
 | `TURNSTILE_SECRET_KEY` | optional | `src/lib/captcha.ts:22` | Cloudflare Turnstile secret for the local-signup CAPTCHA. When unset, CAPTCHA enforcement is **skipped** (signups still work, no challenge). |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | optional | `src/app/login/local/page.tsx` | Public Turnstile site key for the CAPTCHA widget. Name must match **exactly** (a misspelled var = silent no-widget — see GOTCHAS). |
 | `STAGE_LOCKS_JSON` | optional | `scripts/send-prelock-reminders.ts` | Per-section pick cutoffs for the pre-lock reminder job, e.g. `{"105":{"name":"Stage I","lockAt":"2026-06-02T10:30:00Z"}}`. |
@@ -83,7 +83,8 @@ missing.
 | `POST` | `/api/picks/sync-stage` | session | **Write path** — push the session player's locally-stored picks up to Valve via `UploadTournamentPredictions`. Body `{ sectionId }` for a Swiss stage or `{ playoff: true }` for the bracket (one ordered QF→SF→GF call). Returns a `WriteResult` (`ok` / `skipped` / `degraded` / `escalate`); the UI's `Lock In to Steam` pill copies from that shape. |
 | `GET` | `/api/leaderboard` | open | Scores all players (local + synced) against resolved `StageOutcome` rows. Picks hidden until stage lock; coin tier only when `synced && hasViewerPass && hasValveCoin` (rule #4). |
 | `POST` | `/api/outcomes/ingest` | session (operational) | Pull stage results from Liquipedia / Valve, write `StageOutcome` rows. Event-gated (PHA-844) — responds `reason: "no-locked-unresolved"` when nothing's resolvable; callers MUST back off. |
-| `GET` / `POST` | `/api/standings/refresh` | **open (safe by construction)** | Synchronously warm the live Swiss `SwissStandingsCache` by crawling the committed HLTV event pages. Takes no user input (no SSRF), only writes our public standings cache, and is rate-limited by the same ~1h `SourceState` floor (off-window sections no-op; a cold cache always crawls so a stamped-empty slot self-heals). Hit it after a deploy during a live stage to guarantee the bracket/table render. See `docs/GOTCHAS.md` → "Live bracket renders blank on a freshly deployed container". |
+| `GET` / `POST` | `/api/standings/refresh` | **open (safe by construction)** | Synchronously warm the live Swiss `SwissStandingsCache` by crawling the committed HLTV event pages. Takes no user input (no SSRF), only writes our public standings cache, and the crawl is rate-limited by the ~1h `SourceState` floor (off-window sections no-op; a cold cache always crawls so a stamped-empty slot self-heals). **It then resolves outcomes from the freshly-warmed cache (`bridgeSwissOutcomes`, PHA-937)** — so a headless poke keeps the leaderboard *scoring* through a stage's final matches, not just the standings table, independent of page traffic. The resolve self-gates on each stage's published lock time (no-op before a stage starts) and writes only terminal, layout-validated, idempotent `StageOutcome` rows; a bridge failure never breaks the warm. Hit it after a deploy during a live stage. See `docs/GOTCHAS.md` → "Live bracket renders blank on a freshly deployed container". |
+| `GET` / `POST` | `/api/team-stats/refresh` | **open (safe by construction)** | Synchronously warm the team-dossier `TeamStatsCache` by batch-crawling the committed field's HLTV **profiles** (one crawl4ai request for all 32, up to 3 retry passes for Cloudflare-challenged teams). No user input (no SSRF — only the hard-coded `TEAM_SOURCES` profiles), writes only our public dossier cache, gated by the same ~1h `SourceState` floor + `isWithinAnyMatchWindow`. Hit it after a deploy during a stage so the dossier "Last 5" is live (PHA-921). Mirrors `/api/standings/refresh`. |
 | `POST` | `/api/avatar` | session | Upload a (client-resized) profile picture for the session player. |
 | `POST` | `/api/news/ingest` | session (operational) | Pull/refresh the committed news feed. Back-off semantics like the other ingest routes. |
 | `GET` | `/api/push/public-key` | open | VAPID public key for browser subscribe. Returns `{ key: null }` when push isn't configured. |
@@ -107,7 +108,8 @@ You only need to run anything by hand to **warm caches** (optional, skips first-
 ```bash
 # inside the container
 node scripts/build-logos.ts                       # warm the team logo manifest
-curl http://localhost:3000/api/standings/refresh  # warm live Swiss standings during a stage
+curl http://localhost:3000/api/standings/refresh  # warm live Swiss standings + resolve outcomes during a stage
+curl http://localhost:3000/api/team-stats/refresh # warm live team-dossier "Last 5" during a stage
 ```
 
 ## Smoke after a config flip
