@@ -26,6 +26,7 @@ import { prisma } from "./db";
 import {
   parseHltvSwissStandings,
   matchStandingsToLayout,
+  recordsByPickId,
   type RawStandingRow,
   type StandingRow,
   type MatchableTeam,
@@ -344,6 +345,21 @@ export async function getSwissStandings(
     sourceUrl: blob.sourceUrl,
     fetchedAtIso: new Date(blob.fetchedAt ?? row.fetchedAt.getTime()).toISOString(),
   };
+}
+
+/**
+ * Reduce a section's live standings to a pickid → partial W-L record map (PHA-951)
+ * for the early-red logic (isBucketImpossibleByRecord). Reads the SAME cached blob
+ * as getSwissStandings — no extra crawl — and returns an empty map when the cache
+ * is cold / unmapped. Only teams that have played at least one game appear.
+ */
+export async function getSwissRecords(
+  eventId: number,
+  sectionId: number,
+  teams: readonly MatchableTeam[],
+): Promise<Map<number, { wins: number; losses: number }>> {
+  const live = await getSwissStandings(eventId, sectionId, teams);
+  return live ? recordsByPickId(live.rows) : new Map();
 }
 
 /**

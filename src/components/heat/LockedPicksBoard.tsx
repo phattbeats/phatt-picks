@@ -19,7 +19,14 @@ import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
 import type { Section, TeamDef } from "@/lib/layout";
 import { bucketSwissSlots } from "@/lib/swiss-bucket-core";
-import { confirmPick, isPredictedBucketFull, type SwissTeamStatus, type PickConfirm } from "@/lib/swiss-standings-core";
+import {
+  confirmPick,
+  isPredictedBucketFull,
+  isBucketImpossibleByRecord,
+  type SwissTeamStatus,
+  type PickConfirm,
+  type TeamRecord,
+} from "@/lib/swiss-standings-core";
 import { LastUpdated } from "@/components/LastUpdated";
 
 const LOGO = 56;
@@ -35,6 +42,7 @@ export function LockedPicksBoard({
   teamMap,
   myPicks,
   teamStatus,
+  recordByTeam,
   resolvedAtIso,
   title = "[ YOUR LOCKED PICKS ]",
 }: {
@@ -44,6 +52,10 @@ export function LockedPicksBoard({
   myPicks: Record<number, Record<number, number>>;
   /** pickId -> answer-key status, from the live standings. */
   teamStatus: Map<number, SwissTeamStatus>;
+  /** pickId -> partial live W-L record (PHA-951) — strikes a 3:0/0:3 pick red
+   *  early once the team's record makes its bucket impossible. Optional: omit
+   *  (or pass an empty map) and the board falls back to terminal-only confirms. */
+  recordByTeam?: Map<number, TeamRecord>;
   resolvedAtIso: string | null;
   /** Header label — overridden on the player-profile page (e.g. "[ STAGE I ]"). */
   title?: string;
@@ -94,7 +106,11 @@ export function LockedPicksBoard({
                           teamStatus.entries(),
                           bucket.slotIndexes.length,
                         );
-                        const confirm = confirmPick(bucket.label, teamStatus.get(pickId), bucketFull);
+                        const impossible = isBucketImpossibleByRecord(
+                          bucket.label,
+                          recordByTeam?.get(pickId),
+                        );
+                        const confirm = confirmPick(bucket.label, teamStatus.get(pickId), bucketFull, impossible);
                         const meta = CONFIRM_META[confirm];
                         return (
                           <div

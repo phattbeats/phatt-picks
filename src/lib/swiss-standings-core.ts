@@ -89,21 +89,65 @@ export type PickConfirm = "right" | "wrong" | "pending";
  * - The team already clinched → `right` iff it landed in the predicted bucket,
  *   else `wrong` (bucket-grain — the two interchangeable 3:0 slots don't false-
  *   miss; predicting 3:0 for a team that only went 3:1 is `wrong`).
- * - The team is still in play → normally `pending`, BUT `wrong` if the predicted
- *   bucket is already FULL of other teams (`predictedBucketFullOfOthers`): the
- *   pick'em can no longer come true even though the team isn't out yet. Brandon:
- *   once both 3:0 (or both 0:3) slots are taken by others, my 3:0/0:3 pick is
- *   impossible → red.
+ * - The team is still in play → normally `pending`, BUT `wrong` if EITHER:
+ *     · the predicted bucket is already FULL of other teams
+ *       (`predictedBucketFullOfOthers`) — once both 3:0 (or both 0:3) slots are
+ *       taken by others, my 3:0/0:3 pick is impossible (Brandon, PHA-902); OR
+ *     · the team's own partial record already rules the bucket out
+ *       (`impossibleByOwnRecord`, PHA-951) — a 3:0 pick whose team has lost a
+ *       game, or a 0:3 pick whose team has won one, can never come true. See
+ *       isBucketImpossibleByRecord for that decision.
  */
 export function confirmPick(
   predictedLabel: string,
   actualStatus: SwissTeamStatus | undefined,
   predictedBucketFullOfOthers = false,
+  impossibleByOwnRecord = false,
 ): PickConfirm {
   if (actualStatus && actualStatus !== "live") {
     return statusForBucketLabel(predictedLabel) === actualStatus ? "right" : "wrong";
   }
-  return predictedBucketFullOfOthers ? "wrong" : "pending";
+  return predictedBucketFullOfOthers || impossibleByOwnRecord ? "wrong" : "pending";
+}
+
+/** A team's partial running W-L record this stage (from the live HLTV table). */
+export interface TeamRecord {
+  wins: number;
+  losses: number;
+}
+
+/**
+ * Is the bucket the viewer predicted already mathematically IMPOSSIBLE for a team
+ * given its PARTIAL running record (PHA-951)? Unlike confirmPick's terminal check,
+ * this fires on the FIRST contradicting game — before the team is fully resolved:
+ *
+ *   - 3:0 pick  → dead the moment the team loses a single game (losses >= 1): it
+ *                 can never finish 3-0.
+ *   - 0:3 pick  → dead the moment the team wins a single game (wins >= 1): it can
+ *                 never finish 0-3.
+ *   - advance   → dead once the team is eliminated (losses >= eliminateAt) without
+ *                 reaching the advance threshold.
+ *
+ * Brandon (PHA-951): "Tyloo was my 0-3, they won a game today — that should lock
+ * red." A record that doesn't yet rule the bucket out (incl. all-zero pre-match,
+ * or no record at all) returns false. Bucketed via the same statusForBucketLabel
+ * convention as the rest of this module, so the 3:1/3:2 card and the single-bucket
+ * fallback both read as "advance".
+ */
+export function isBucketImpossibleByRecord(
+  predictedLabel: string,
+  record: TeamRecord | undefined,
+  eliminateAt = 3,
+): boolean {
+  if (!record) return false;
+  switch (statusForBucketLabel(predictedLabel)) {
+    case "advanced-3-0":
+      return record.losses >= 1; // any loss → can never finish 3-0
+    case "eliminated":
+      return record.wins >= 1; // any win → can never finish 0-3
+    case "advanced":
+      return record.losses >= eliminateAt; // eliminated → can never advance
+  }
 }
 
 /**

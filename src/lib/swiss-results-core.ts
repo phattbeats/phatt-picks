@@ -158,6 +158,26 @@ export function matchStandingsToLayout(
   }));
 }
 
+/**
+ * Reduce matched standings rows to a pickid → partial W-L record map (PHA-951).
+ * Only rows mapped to a layout team AND with at least one game played are kept,
+ * so an all-zero pre-match row never falsely rules a pick out. Feeds the early-red
+ * predicate (isBucketImpossibleByRecord): a 0:3 pick whose team has already won a
+ * game, or a 3:0 pick whose team has lost one, can be struck red before the team
+ * is terminally resolved.
+ */
+export function recordsByPickId(
+  rows: readonly StandingRow[],
+): Map<number, { wins: number; losses: number }> {
+  const map = new Map<number, { wins: number; losses: number }>();
+  for (const r of rows) {
+    if (r.pickid != null && (r.wins > 0 || r.losses > 0)) {
+      map.set(r.pickid, { wins: r.wins, losses: r.losses });
+    }
+  }
+  return map;
+}
+
 /** Summary counts for the standings header copy. */
 export interface StandingsSummary {
   total: number;

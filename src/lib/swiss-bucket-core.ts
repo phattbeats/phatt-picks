@@ -90,15 +90,19 @@ export function resolveBucketWinners(
  * Hit/miss/pending for a single pick judged against a bucket's winner set.
  *
  * A pick is a HIT if its team is among the bucket's resolved winners. It is a
- * MISS only once the bucket is fully resolved (every slot decided) and the team
- * isn't a winner — until then a not-yet-winning pick is still PENDING, never
+ * MISS once the bucket is fully resolved (every slot decided) and the team isn't
+ * a winner — OR early, when `impossible` is set: the team's partial record has
+ * already ruled this bucket out (PHA-951; e.g. a 0:3 pick whose team won a game).
+ * Until one of those holds, a not-yet-winning pick is still PENDING, never
  * prematurely struck through.
  */
 export function bucketPickState(
   pick: number | undefined,
   { winners, fullyResolved }: BucketWinners,
+  impossible = false,
 ): PickOutcomeState {
   if (!pick || pick === 0) return "empty";
   if (winners.has(pick)) return "hit";
+  if (impossible) return "miss";
   return fullyResolved ? "miss" : "pending";
 }

@@ -25,6 +25,7 @@ import { LockedPicksBoard } from "@/components/heat/LockedPicksBoard";
 import { LiveSwissStandings } from "@/components/heat/LiveSwissStandings";
 import { LiveSwissBracketBoard } from "@/components/heat/LiveSwissBracketBoard";
 import { refreshStandingsOnRead, getSwissStandings, getSwissBracket } from "@/lib/swiss-results";
+import { recordsByPickId } from "@/lib/swiss-results-core";
 import { refreshTeamStatsOnRead, getLiveTeamStats } from "@/lib/team-stats";
 import { AutoRefresh } from "@/components/AutoRefresh";
 
@@ -368,6 +369,7 @@ export default async function PicksPage({
               teamMap={buildTeamMap(layout)}
               myPicks={myPicks}
               teamStatus={new Map(swissStandings.teams.map((t) => [t.pickid, t.status]))}
+              recordByTeam={liveStandings ? recordsByPickId(liveStandings.rows) : undefined}
               resolvedAtIso={outcomeResolvedAtIso}
             />
           )}

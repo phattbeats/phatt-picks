@@ -130,6 +130,15 @@ check("single-slot wrong pick → miss", bucketPickState(BIG, soloWinners) === "
 const soloUnresolved = resolveBucketWinners([0], {});
 check("single-slot unresolved pick → pending", bucketPickState(MIBR, soloUnresolved) === "pending");
 
+// Early-red override (PHA-951): a pick whose team's record already rules its
+// bucket out reads MISS even while the bucket is unresolved — but a confirmed
+// winner still wins, and an empty slot stays empty.
+const unresolved = resolveBucketWinners(advanceBucket.slotIndexes, {});
+check("impossible pick reads MISS even before the bucket resolves", bucketPickState(VITALITY, unresolved, true) === "miss");
+check("a confirmed winner stays HIT even if flagged impossible", bucketPickState(MIBR, advanceWinners, true) === "hit");
+check("impossible flag never resurrects an empty slot", bucketPickState(undefined, unresolved, true) === "empty");
+check("not-impossible + unresolved is still pending", bucketPickState(VITALITY, unresolved, false) === "pending");
+
 // --- Summary ------------------------------------------------------------------
 
 console.log(`\n${pass} passed, ${fail} failed`);

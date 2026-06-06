@@ -17,7 +17,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { buildSwissStandings, confirmPick, isPredictedBucketFull } from "../src/lib/swiss-standings-core.ts";
+import { buildSwissStandings, confirmPick, isPredictedBucketFull, isBucketImpossibleByRecord } from "../src/lib/swiss-standings-core.ts";
 import type { SwissTeamStatus } from "../src/lib/swiss-standings-core.ts";
 import { bucketSwissSlots } from "../src/lib/swiss-bucket-core.ts";
 import type { Layout, Section } from "../src/lib/layout.ts";
@@ -146,6 +146,26 @@ check("confirmPick: live team + bucket full of others -> WRONG (no longer winnab
 check("confirmPick: live team + bucket NOT full -> still pending", confirmPick("3:0 ADVANCED", "live", false) === "pending");
 check("confirmPick: a team that already clinched ignores the fullness flag (still right)", confirmPick("3:0 ADVANCED", "advanced-3-0", true) === "right");
 check("0:3 bucket full of 2 others -> live 0:3 pick impossible", isPredictedBucketFull("0:3 ELIMINATED", 999, [[21, "eliminated"], [22, "eliminated"], [999, "live"]], 2) === true);
+
+console.log("\nswiss-standings - early red: a pick's own partial record rules its bucket out (PHA-951)");
+
+// Brandon: "Tyloo was my 0-3, they won a game today — lock it red." A 3:0 pick
+// dies on the first loss; a 0:3 pick dies on the first win; an advance pick dies
+// once the team is eliminated. The team is NOT terminally resolved yet.
+check("0:3 pick + team has 1 win -> impossible (red)", isBucketImpossibleByRecord("0:3 ELIMINATED", { wins: 1, losses: 0 }) === true);
+check("0:3 pick + team still 0-0 -> not yet impossible", isBucketImpossibleByRecord("0:3 ELIMINATED", { wins: 0, losses: 0 }) === false);
+check("0:3 pick + team 0-2 (still alive for 0:3) -> not impossible", isBucketImpossibleByRecord("0:3 ELIMINATED", { wins: 0, losses: 2 }) === false);
+check("3:0 pick + team has 1 loss -> impossible (red)", isBucketImpossibleByRecord("3:0 ADVANCED", { wins: 2, losses: 1 }) === true);
+check("3:0 pick + team 2-0 (still alive for 3:0) -> not impossible", isBucketImpossibleByRecord("3:0 ADVANCED", { wins: 2, losses: 0 }) === false);
+check("advance pick + team eliminated 2-3 -> impossible (can't advance)", isBucketImpossibleByRecord("3:1 / 3:2 ADVANCED", { wins: 2, losses: 3 }) === true);
+check("advance pick + team 2-2 (still alive) -> not impossible", isBucketImpossibleByRecord("3:1 / 3:2 ADVANCED", { wins: 2, losses: 2 }) === false);
+check("no record at all -> never impossible", isBucketImpossibleByRecord("0:3 ELIMINATED", undefined) === false);
+
+// confirmPick threads the own-record signal: a live team with an impossible
+// bucket is WRONG; a resolved team ignores the flag (terminal status wins).
+check("confirmPick: live team + impossible-by-record -> WRONG", confirmPick("0:3 ELIMINATED", "live", false, true) === "wrong");
+check("confirmPick: live team + bucket still possible -> pending", confirmPick("0:3 ELIMINATED", "live", false, false) === "pending");
+check("confirmPick: already clinched right ignores impossible flag", confirmPick("0:3 ELIMINATED", "eliminated", false, true) === "right");
 
 console.log(`\n${pass}/${pass + fail} checks passed`);
 process.exit(fail === 0 ? 0 : 1);
