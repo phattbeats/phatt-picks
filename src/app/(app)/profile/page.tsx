@@ -151,6 +151,9 @@ export default async function ProfilePage() {
 
       {/* Account links */}
       <section style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 8 }}>
+        <Link href="/majors" style={accountLink}>
+          › Your Majors — your picks &amp; score every event
+        </Link>
         <Link href="/help/auth-code" style={accountLink}>
           › How Steam sync &amp; the auth code work
         </Link>
