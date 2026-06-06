@@ -18,6 +18,11 @@ import {
   hltvProfileUrl,
   parseRecentResults,
   mergeLiveStats,
+  accumulateRecentAcrossPasses,
+  MAX_CRAWL_PASSES,
+  MAX_TOTAL_CRAWL_MS,
+  CRAWL_PASS_TIMEOUT_MS,
+  type ParsedMatch,
 } from "../src/lib/team-stats-sources.ts";
 import {
   isWithinAnyMatchWindow,
@@ -151,6 +156,116 @@ check(
   "window: future-major config gates on its own windows (out)",
   !isWithinAnyMatchWindow(ms("2027-09-01T12:00:00Z"), futureWindows),
 );
+
+// ── Multi-pass crawl: retry + accumulate + partial-discard guard (PHA-944) ─────
+// A parseable HLTV "Recent results" page for a fake team, so the injected crawl
+// returns markdown the real parser turns into ≥1 match.
+const teamMd = (opp: string) =>
+  `Recent results\n| 03/06/2026 | [A](https://www.hltv.org/team/1/a) 2 : 0 [${opp}](https://www.hltv.org/team/2/b) | [Match](https://www.hltv.org/m/x) |`;
+
+const allTargets = teamStatsCrawlTargets();
+
+// (a) Happy path: pass 1 lands a partial set, pass 2 fills the rest. Accumulates.
+{
+  const calls: number[] = [];
+  let n = 0;
+  const crawl = async (
+    targets: ReadonlyArray<{ pickid: number; url: string }>,
+  ): Promise<Record<number, string>> => {
+    calls.push(targets.length);
+    n++;
+    const out: Record<number, string> = {};
+    // First pass covers all but the last 5; second pass covers the rest.
+    const give = n === 1 ? targets.slice(0, targets.length - 5) : targets;
+    for (const t of give) out[t.pickid] = teamMd(`opp${t.pickid}`);
+    return out;
+  };
+  const fresh = await accumulateRecentAcrossPasses(allTargets, crawl, parseRecentResults);
+  check("retry: two passes cover the full field", Object.keys(fresh).length === allTargets.length);
+  check("retry: pass 2 only re-crawled the 5 missing", calls.length === 2 && calls[1] === 5);
+}
+
+// (b) THE FIX: pass 1 lands 27, pass 2 THROWS (transient crawl4ai 5xx). The 27
+// must survive — before PHA-944 the throw unwound past the caller's persist and
+// discarded them, blanking a good partial for ~1h.
+{
+  let n = 0;
+  const crawl = async (
+    targets: ReadonlyArray<{ pickid: number; url: string }>,
+  ): Promise<Record<number, string>> => {
+    n++;
+    if (n >= 2) throw new Error("crawl4ai returned 502");
+    const out: Record<number, string> = {};
+    for (const t of targets.slice(0, 27)) out[t.pickid] = teamMd(`opp${t.pickid}`);
+    return out;
+  };
+  let threw = false;
+  let fresh: Record<number, ParsedMatch[]> = {};
+  try {
+    fresh = await accumulateRecentAcrossPasses(allTargets, crawl, parseRecentResults);
+  } catch {
+    threw = true;
+  }
+  check("partial-discard: a throwing later pass does NOT propagate", !threw);
+  check("partial-discard: the 27 from pass 1 are retained", Object.keys(fresh).length === 27);
+}
+
+// (c) First pass throwing → empty result (caller keeps prior cache), never throws.
+{
+  const crawl = async (): Promise<Record<number, string>> => {
+    throw new Error("crawl4ai unreachable");
+  };
+  const fresh = await accumulateRecentAcrossPasses(allTargets, crawl, parseRecentResults);
+  check("partial-discard: pass-1 throw → empty, no propagation", Object.keys(fresh).length === 0);
+}
+
+// (d) Bounded passes: a field that's NEVER fully covered stops at MAX_CRAWL_PASSES
+// (no infinite loop), and only ever re-crawls the still-missing teams.
+{
+  let n = 0;
+  const crawl = async (
+    targets: ReadonlyArray<{ pickid: number; url: string }>,
+  ): Promise<Record<number, string>> => {
+    n++;
+    const out: Record<number, string> = {};
+    // Each pass lands exactly one more team, so it can never reach full coverage.
+    for (const t of targets.slice(0, 1)) out[t.pickid] = teamMd(`opp${t.pickid}`);
+    return out;
+  };
+  const fresh = await accumulateRecentAcrossPasses(allTargets, crawl, parseRecentResults);
+  check("bounded: stops after MAX_CRAWL_PASSES passes", n === MAX_CRAWL_PASSES);
+  check("bounded: keeps the per-pass partials it did land", Object.keys(fresh).length === MAX_CRAWL_PASSES);
+}
+
+// (e) Total wall-clock budget: once MAX_TOTAL_CRAWL_MS is spent, no further pass
+// runs even if teams remain — and the per-pass timeout is clamped to the budget.
+{
+  let n = 0;
+  let lastTimeout = -1;
+  // Injected clock: starts at 0, and the SECOND budget-check reads past the
+  // deadline so pass 2 is skipped. Sequence of nowMs() reads:
+  //   deadline = read#1; pass0 budget = read#2; pass1 budget = read#3 (> deadline).
+  const reads = [0, 0, MAX_TOTAL_CRAWL_MS + 1];
+  let r = 0;
+  const clock = () => reads[Math.min(r++, reads.length - 1)];
+  const crawl = async (
+    targets: ReadonlyArray<{ pickid: number; url: string }>,
+    timeoutMs: number,
+  ): Promise<Record<number, string>> => {
+    n++;
+    lastTimeout = timeoutMs;
+    const out: Record<number, string> = {};
+    for (const t of targets.slice(0, 1)) out[t.pickid] = teamMd(`opp${t.pickid}`);
+    return out;
+  };
+  const fresh = await accumulateRecentAcrossPasses(allTargets, crawl, parseRecentResults, clock);
+  check("budget: only one pass ran before the budget was spent", n === 1);
+  check("budget: pass-1 partial still retained", Object.keys(fresh).length === 1);
+  check(
+    "budget: per-pass timeout clamped to remaining budget",
+    lastTimeout === Math.min(CRAWL_PASS_TIMEOUT_MS, MAX_TOTAL_CRAWL_MS),
+  );
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

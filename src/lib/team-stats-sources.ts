@@ -123,6 +123,88 @@ export function parseRecentResults(md: string): ParsedMatch[] {
   return out;
 }
 
+// ── Multi-pass retry policy (pure, crawl injected) ─────────────────────────────
+// A single ingest re-tries the teams that came back without a parseable results
+// table (HLTV intermittently serves a Cloudflare challenge instead of the
+// profile, especially while the standings crawl is also running). The manual
+// gather tool retries per-url for exactly this reason and lands 32/32; the live
+// path mirrors that. Each pass crawls only the still-missing teams, so the cost
+// scales with the misses, not the field. Proven live: 27/32 → 31/32 → 32/32.
+export const MAX_CRAWL_PASSES = 3;
+// ~120s measured for the full field; the 240s ceiling keeps the original
+// per-pass headroom over a slow render…
+export const CRAWL_PASS_TIMEOUT_MS = 240_000;
+// …but a total wall-clock budget across ALL passes bounds the whole multi-pass
+// ingest at ~5min, so a slow crawl4ai (e.g. contending with the standings crawl
+// on the same instance) can't run the full 3×240s (~12min) inside one after()
+// task. `remaining` shrinks monotonically, so this is a ceiling, not a thrash.
+export const MAX_TOTAL_CRAWL_MS = 300_000;
+
+/** Injected crawl: a set of (pickid,url) targets → pickid → page markdown. */
+export type CrawlProfilesFn = (
+  targets: ReadonlyArray<{ pickid: number; url: string }>,
+  timeoutMs: number,
+) => Promise<Record<number, string>>;
+
+/**
+ * Run up to MAX_CRAWL_PASSES crawl passes, accumulating parsed recent results and
+ * re-crawling only the still-missing teams (PHA-921 / PHA-944). Two robustness
+ * properties, both because HLTV intermittently challenges the crawl:
+ *
+ *  1. PARTIAL-SAFE — a pass that THROWS (transient crawl4ai 5xx / timeout, the
+ *     exact Cloudflare condition the retry exists for) does NOT discard the
+ *     `fresh` accumulated by earlier passes: it breaks and returns what landed so
+ *     far, so the caller still persists partial coverage. The next ~1h tick
+ *     re-pulls the still-missing teams. (Before PHA-944 the throw unwound past the
+ *     caller's persist, discarding a good earlier pass.)
+ *  2. BOUNDED — a total wall-clock budget (MAX_TOTAL_CRAWL_MS) caps the whole
+ *     multi-pass duration; once the budget is spent it persists what it has.
+ *
+ * Pure: `crawl`, `parse`, and the clock are injected, so the verify harness
+ * proves the retry/accumulate/partial-discard behaviour offline (no network).
+ */
+export async function accumulateRecentAcrossPasses(
+  targets: ReadonlyArray<{ pickid: number; url: string }>,
+  crawl: CrawlProfilesFn,
+  parse: (md: string) => ParsedMatch[] = parseRecentResults,
+  nowMs: () => number = Date.now,
+): Promise<Record<number, ParsedMatch[]>> {
+  const fresh: Record<number, ParsedMatch[]> = {};
+  let remaining: ReadonlyArray<{ pickid: number; url: string }> = targets;
+  const deadline = nowMs() + MAX_TOTAL_CRAWL_MS;
+  for (let pass = 0; pass < MAX_CRAWL_PASSES && remaining.length > 0; pass++) {
+    const budget = deadline - nowMs();
+    if (budget <= 0) {
+      console.warn(
+        `[team-stats] crawl budget spent after ${pass} pass(es); persisting ${Object.keys(fresh).length} accumulated`,
+      );
+      break;
+    }
+    let mdByPickid: Record<number, string>;
+    try {
+      mdByPickid = await crawl(remaining, Math.min(CRAWL_PASS_TIMEOUT_MS, budget));
+    } catch (e) {
+      // Don't let a transient failure on a later pass discard earlier passes.
+      console.warn(
+        `[team-stats] pass ${pass + 1} crawl threw; persisting ${Object.keys(fresh).length} from earlier pass(es):`,
+        e instanceof Error ? e.message : e,
+      );
+      break;
+    }
+    for (const [pid, md] of Object.entries(mdByPickid)) {
+      const matches = parse(md);
+      if (matches.length > 0) fresh[Number(pid)] = matches;
+    }
+    remaining = targets.filter((t) => !(t.pickid in fresh));
+    if (remaining.length > 0) {
+      console.warn(
+        `[team-stats] pass ${pass + 1}: ${remaining.length} team(s) still missing, retrying`,
+      );
+    }
+  }
+  return fresh;
+}
+
 /**
  * Merge live recent results over a team's frozen snapshot (PHA-921). The live
  * crawl only refreshes `recent[]` (and back-fills hltvUrl) — roster + world rank

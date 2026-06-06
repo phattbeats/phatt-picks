@@ -29,6 +29,8 @@ import {
   teamStatsCrawlTargets,
   parseRecentResults,
   mergeLiveStats,
+  accumulateRecentAcrossPasses,
+  CRAWL_PASS_TIMEOUT_MS,
   type ParsedMatch,
 } from "./team-stats-sources";
 import { statsForPickid, type TeamStats } from "./team-stats-core";
@@ -44,13 +46,13 @@ const CRAWL4AI_TOKEN = process.env.CRAWL4AI_API_TOKEN ?? "Phatt-tech-2026";
 const REFRESH_MIN_INTERVAL_MS = 60 * 60_000;
 const TEAM_STATS_REFRESH_SOURCE = "hltv-team-stats";
 
-// Bound the batch crawl so a hung render service can't wedge a refresh tick.
-// crawl4ai renders the 32 profiles in ONE request SEQUENTIALLY (deliberately — a
-// burst of parallel requests trips HLTV's Cloudflare challenge and most come back
-// blocked; sequential yields 32/32). Measured ~120s for the full field, so give
-// generous headroom. Runs deferred (off the render path) on the on-read path;
-// the warm route awaits it (a one-shot ops/deploy poke, not user-facing).
-const CRAWL_TIMEOUT_MS = 240_000;
+// The per-pass timeout + multi-pass retry/budget policy live in the pure
+// team-stats-sources module (CRAWL_PASS_TIMEOUT_MS / MAX_TOTAL_CRAWL_MS /
+// MAX_CRAWL_PASSES) so the verify harness can prove the retry + partial-discard
+// behaviour offline. crawl4ai renders the 32 profiles in ONE request
+// SEQUENTIALLY (a burst of parallel requests trips HLTV's Cloudflare challenge);
+// measured ~120s for the full field. Runs deferred (off the render path) on the
+// on-read path; the warm route awaits it (a one-shot ops/deploy poke).
 
 /** The persisted blob shape (data column of TeamStatsCache). */
 interface TeamStatsBlob {
@@ -124,14 +126,6 @@ function resultMarkdown(r: Crawl4aiResult | undefined): string {
   return typeof md === "string" ? md : (md?.raw_markdown ?? "");
 }
 
-// A single ingest re-tries the teams that came back without a parseable results
-// table (HLTV intermittently serves a Cloudflare challenge instead of the
-// profile, especially while the standings crawl is also running). The manual
-// gather tool retries per-url for exactly this reason and lands 32/32; we mirror
-// that. Each pass crawls only the still-missing teams, so the cost scales with
-// the misses, not the field. Proven live: pass1 27/32 → pass2 31/32 → pass3 32/32.
-const MAX_CRAWL_PASSES = 3;
-
 /**
  * Crawl a set of team profiles in ONE crawl4ai request (it renders + bypasses the
  * Cloudflare gate that 403s a direct fetch). Returns pickid → markdown, matched
@@ -143,6 +137,7 @@ const MAX_CRAWL_PASSES = 3;
  */
 async function crawlProfiles(
   targets: ReadonlyArray<{ pickid: number; url: string }>,
+  timeoutMs: number = CRAWL_PASS_TIMEOUT_MS,
 ): Promise<Record<number, string>> {
   const urlToPickid = new Map(targets.map((t) => [t.url, t.pickid]));
   const res = await fetch(`${CRAWL4AI_URL}/crawl`, {
@@ -156,7 +151,7 @@ async function crawlProfiles(
       crawler_config: { cache_mode: "BYPASS" },
     }),
     cache: "no-store",
-    signal: AbortSignal.timeout(CRAWL_TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!res.ok) throw new Error(`crawl4ai returned ${res.status}`);
   const json = (await res.json()) as { results?: Crawl4aiResult[] };
@@ -194,7 +189,10 @@ async function readPriorRecent(eventId: number): Promise<Record<number, ParsedMa
  *
  * Two robustness properties, both because HLTV intermittently challenges the crawl:
  *  1. RETRY — re-crawls only the teams still missing a results table, up to
- *     MAX_CRAWL_PASSES, so a one-off Cloudflare challenge doesn't drop a team.
+ *     MAX_CRAWL_PASSES (bounded by a total wall-clock budget). A pass that throws
+ *     keeps the teams earlier passes landed instead of discarding them, so a
+ *     transient crawl4ai 5xx never blanks a good partial (see PHA-944 /
+ *     accumulateRecentAcrossPasses).
  *  2. ACCUMULATE — overlays this run's fresh results on top of the PRIOR cached
  *     results, so a team that was fetched live earlier keeps its live data even if
  *     this particular crawl missed it (it only ever upgrades to newer live data,
@@ -204,19 +202,11 @@ async function readPriorRecent(eventId: number): Promise<Record<number, ParsedMa
 async function ingestTeamStats(eventId: number): Promise<number> {
   try {
     const all = teamStatsCrawlTargets();
-    const fresh: Record<number, ParsedMatch[]> = {};
-    let remaining: typeof all = all;
-    for (let pass = 0; pass < MAX_CRAWL_PASSES && remaining.length > 0; pass++) {
-      const mdByPickid = await crawlProfiles(remaining);
-      for (const [pid, md] of Object.entries(mdByPickid)) {
-        const matches = parseRecentResults(md);
-        if (matches.length > 0) fresh[Number(pid)] = matches;
-      }
-      remaining = all.filter((t) => !(t.pickid in fresh));
-      if (remaining.length > 0) {
-        console.warn(`[team-stats] pass ${pass + 1}: ${remaining.length} team(s) still missing, retrying`);
-      }
-    }
+    // Multi-pass crawl with per-pass retry + total budget. A later pass throwing
+    // (transient crawl4ai 5xx/timeout) keeps the fresh from earlier passes rather
+    // than discarding it — the persist block below then saves partial coverage
+    // and the next ~1h tick re-pulls the still-missing teams (PHA-944).
+    const fresh = await accumulateRecentAcrossPasses(all, crawlProfiles, parseRecentResults);
 
     const freshCount = Object.keys(fresh).length;
     if (freshCount === 0) {
