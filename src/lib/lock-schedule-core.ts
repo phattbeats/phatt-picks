@@ -125,8 +125,9 @@ export interface MatchWindow {
  * here once their HLTV source + dates are confirmed.
  */
 export const COLOGNE_MATCH_WINDOWS: Readonly<Record<number, MatchWindow>> = {
-  105: { start: "2026-06-02T00:00:00Z", end: "2026-06-05T23:59:59Z" }, // Stage I  — Jun 2–5
-  106: { start: "2026-06-06T00:00:00Z", end: "2026-06-09T23:59:59Z" }, // Stage II — Jun 6–9
+  105: { start: "2026-06-02T00:00:00Z", end: "2026-06-05T23:59:59Z" }, // Stage I   — Jun 2–5
+  106: { start: "2026-06-06T00:00:00Z", end: "2026-06-09T23:59:59Z" }, // Stage II  — Jun 6–9
+  107: { start: "2026-06-11T00:00:00Z", end: "2026-06-14T23:59:59Z" }, // Stage III — Jun 11–14
 };
 
 /**
@@ -148,6 +149,79 @@ export function isWithinMatchWindow(
   const end = Date.parse(w.end);
   if (Number.isNaN(start) || Number.isNaN(end)) return true; // bad date — fail open
   return nowMs >= start && nowMs <= end;
+}
+
+/**
+ * How long BEFORE a stage's lock (= its first match) its live bracket goes live
+ * (PHA-943). Brandon: "the bracket should go live 24 hours before the start of
+ * the stage, or whenever the first round of matches are announced." The 24h lead
+ * is the committed trigger; the "or whenever announced" half is data-driven — the
+ * crawl window opens at the same instant (`isWithinRefreshWindow`), so the moment
+ * HLTV publishes the opening matchups inside that window they're picked up and
+ * rendered. Future majors inherit this for free by filling COLOGNE_LOCK_SCHEDULE.
+ */
+export const BRACKET_REVEAL_LEAD_MS = 24 * 60 * 60_000;
+
+/**
+ * The UTC instant a section's live bracket should first appear: `lockAt − 24h`.
+ * Returns `null` when the stage has no published lock (the playoff sections) —
+ * those reveal by seeding (`isStagePickable`), never by a fabricated clock. Pure;
+ * `leadMs`/`schedule` injected for tests and future majors.
+ */
+export function bracketRevealTime(
+  sectionId: number,
+  schedule: LockSchedule = COLOGNE_LOCK_SCHEDULE,
+  leadMs: number = BRACKET_REVEAL_LEAD_MS,
+): string | null {
+  const iso = lockTimeForSection(sectionId, schedule);
+  if (iso === null) return null;
+  return new Date(Date.parse(iso) - leadMs).toISOString();
+}
+
+/**
+ * Has a section's bracket-reveal instant (`lockAt − 24h`) passed? `false` when no
+ * lock time is published (playoff sections stay governed by seeding). Drives both
+ * the crawl window and whether the picks page renders the bracket while picks are
+ * still open. `nowMs` injected to stay pure and deterministic.
+ */
+export function isBracketRevealed(
+  sectionId: number,
+  nowMs: number,
+  schedule: LockSchedule = COLOGNE_LOCK_SCHEDULE,
+  leadMs: number = BRACKET_REVEAL_LEAD_MS,
+): boolean {
+  const reveal = bracketRevealTime(sectionId, schedule, leadMs);
+  if (reveal === null) return false;
+  return Date.parse(reveal) <= nowMs;
+}
+
+/**
+ * Should the live standings/bracket crawl run for this section right now
+ * (PHA-943)? The refresh window OPENS 24h before the stage's lock — so the
+ * opening matchups land before picks even close — and CLOSES at the end of its
+ * committed competition window (no point crawling a decided stage). This widens
+ * the old play-days-only gate (`isWithinMatchWindow`) earlier by the reveal lead.
+ *
+ * Fallbacks keep it safe by construction:
+ *   • no published lock (playoffs) → defer to `isWithinMatchWindow` (old behavior);
+ *   • revealed but no committed window end → keep refreshing (don't freeze an
+ *     undated stage); a malformed end likewise fails open.
+ * `nowMs` injected; pure.
+ */
+export function isWithinRefreshWindow(
+  sectionId: number,
+  nowMs: number,
+  schedule: LockSchedule = COLOGNE_LOCK_SCHEDULE,
+  windows: Readonly<Record<number, MatchWindow>> = COLOGNE_MATCH_WINDOWS,
+): boolean {
+  const reveal = bracketRevealTime(sectionId, schedule);
+  if (reveal === null) return isWithinMatchWindow(sectionId, nowMs, windows);
+  const startMs = Date.parse(reveal);
+  const w = windows[sectionId];
+  if (!w) return nowMs >= startMs; // revealed, no committed end — keep refreshing
+  const end = Date.parse(w.end);
+  if (Number.isNaN(end)) return nowMs >= startMs; // bad end — don't freeze
+  return nowMs >= startMs && nowMs <= end;
 }
 
 /**

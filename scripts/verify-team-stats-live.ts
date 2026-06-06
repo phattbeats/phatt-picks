@@ -126,9 +126,11 @@ const ms = (iso: string) => Date.parse(iso);
 // Inside a stage window → refresh allowed.
 check("window: inside Stage 1 (Jun 3) → any-window true", isWithinAnyMatchWindow(ms("2026-06-03T12:00:00Z")));
 check("window: inside Stage 2 (Jun 7) → any-window true", isWithinAnyMatchWindow(ms("2026-06-07T12:00:00Z")));
+check("window: inside Stage 3 (Jun 12) → any-window true", isWithinAnyMatchWindow(ms("2026-06-12T12:00:00Z")));
 // Off-days → no refresh.
 check("window: before the event (Jun 1) → any-window false", !isWithinAnyMatchWindow(ms("2026-06-01T12:00:00Z")));
-check("window: after Stage 2 (Jun 12) → any-window false", !isWithinAnyMatchWindow(ms("2026-06-12T12:00:00Z")));
+check("window: between Stage 2 and Stage 3 (Jun 10) → any-window false", !isWithinAnyMatchWindow(ms("2026-06-10T12:00:00Z")));
+check("window: after the event (Jun 16) → any-window false", !isWithinAnyMatchWindow(ms("2026-06-16T12:00:00Z")));
 // any-window is exactly the OR of the per-section windows it folds.
 {
   const t1 = ms("2026-06-07T12:00:00Z");

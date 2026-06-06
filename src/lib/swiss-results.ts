@@ -36,7 +36,7 @@ import {
   type RawSwissRound,
   type SwissRound,
 } from "./swiss-bracket-core";
-import { isWithinMatchWindow } from "./lock-schedule-core";
+import { isWithinRefreshWindow } from "./lock-schedule-core";
 
 // crawl4ai on the phattvip network. Same hostname resolves in the workspace and
 // in the deployed container; CRAWL4AI_URL overrides for other topologies.
@@ -220,11 +220,13 @@ async function ingestStandings(eventId: number, sectionId: number): Promise<numb
  * so a cold first paint that shows nothing fills in within a minute. Never
  * throws. No cron needed — and the ingest route is owner-gated anyway.
  *
- * Gated to the stage's committed competition window (PHA-902): the live data only
- * changes while games are being played, so off-days (before the stage, after it's
- * decided, between stages) serve the last cache and never crawl. Brandon: "hourly
- * refresh is also only needed on dates where games are being played." `nowMs` is
- * injected from the render so the gate shares the page's request clock.
+ * Gated to the stage's refresh window (PHA-902/PHA-943): the window OPENS 24h
+ * before the stage's lock — so the opening matchups land before picks even close
+ * (Brandon: "the bracket should go live 24 hours before the start of the stage,
+ * or whenever the first round of matches are announced") — and CLOSES at the end
+ * of its committed competition window; outside it (long before a stage, after it's
+ * decided) we serve the last cache and never crawl. `nowMs` is injected from the
+ * render so the gate shares the page's request clock.
  */
 export async function refreshStandingsOnRead(
   eventId: number,
@@ -232,7 +234,7 @@ export async function refreshStandingsOnRead(
   nowMs: number = Date.now(),
 ): Promise<void> {
   if (!hasStandingsSource(sectionId)) return; // nothing to refresh
-  if (!isWithinMatchWindow(sectionId, nowMs)) return; // off-day — serve cache, don't crawl
+  if (!isWithinRefreshWindow(sectionId, nowMs)) return; // outside the reveal→end window — serve cache
   if (!(await claimStandingsRefreshSlot())) return; // within floor or lost the race
   runDeferred(() => ingestStandings(eventId, sectionId));
 }
@@ -288,7 +290,7 @@ export async function warmStandings(
   nowMs: number = Date.now(),
 ): Promise<WarmResult> {
   if (!hasStandingsSource(sectionId)) return { section: sectionId, status: "no-source", rows: 0 };
-  if (!isWithinMatchWindow(sectionId, nowMs)) return { section: sectionId, status: "off-window", rows: 0 };
+  if (!isWithinRefreshWindow(sectionId, nowMs)) return { section: sectionId, status: "off-window", rows: 0 };
   const cold = !(await hasCachedSection(eventId, sectionId));
   // Warm cache → respect the ~1h floor (don't re-crawl on every poke). Cold
   // cache → always crawl, so a stamped-but-empty slot can't wedge it shut.

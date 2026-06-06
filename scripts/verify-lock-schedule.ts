@@ -18,6 +18,10 @@ import {
   lockTimeForSection,
   isLockTimePassed,
   isWithinMatchWindow,
+  isWithinRefreshWindow,
+  bracketRevealTime,
+  isBracketRevealed,
+  BRACKET_REVEAL_LEAD_MS,
   COLOGNE_LOCK_SCHEDULE,
   COLOGNE_MATCH_WINDOWS,
   type LockSchedule,
@@ -147,6 +151,38 @@ check("malformed window -> fail open", isWithinMatchWindow(1, 0, { 1: { start: "
 check("every committed window has valid start<=end ISO", Object.values(COLOGNE_MATCH_WINDOWS).every(
   (w) => !Number.isNaN(Date.parse(w.start)) && !Number.isNaN(Date.parse(w.end)) && Date.parse(w.start) <= Date.parse(w.end),
 ));
+check("Stage III window committed (Jun 11–14)", COLOGNE_MATCH_WINDOWS[107] !== undefined);
+
+console.log("\nlock-schedule - bracket reveals 24h before lock (PHA-943)");
+
+// Stage II locks Jun 6 10:30Z → reveal Jun 5 10:30Z.
+const s2Lock = D("2026-06-06T10:30:00Z");
+check("reveal lead is 24h", BRACKET_REVEAL_LEAD_MS === 24 * 60 * 60_000);
+check("Stage II reveal = lock − 24h", bracketRevealTime(106) === "2026-06-05T10:30:00.000Z");
+check("a dark playoff section has no reveal time", bracketRevealTime(108) === null);
+check("25h before lock -> not revealed yet", isBracketRevealed(106, s2Lock - 25 * 60 * 60_000) === false);
+check("exactly 24h before lock -> revealed (inclusive)", isBracketRevealed(106, s2Lock - 24 * 60 * 60_000) === true);
+check("12h before lock -> revealed", isBracketRevealed(106, s2Lock - 12 * 60 * 60_000) === true);
+check("after lock -> still revealed (bracket stays up)", isBracketRevealed(106, s2Lock + 60_000) === true);
+check("playoff section (no lock) -> never auto-reveals by clock", isBracketRevealed(108, s2Lock + 9_000_000_000) === false);
+
+console.log("\nlock-schedule - refresh window opens at reveal, closes at competition end (PHA-943)");
+
+// Stage II: reveal Jun 5 10:30Z, window end Jun 9 23:59:59Z.
+check("Jun 5 09:00 (before reveal) -> closed", isWithinRefreshWindow(106, D("2026-06-05T09:00:00Z")) === false);
+check("Jun 5 11:00 (after reveal, was off-day under old gate) -> OPEN", isWithinRefreshWindow(106, D("2026-06-05T11:00:00Z")) === true);
+check("Jun 6 12:00 (match day) -> open", isWithinRefreshWindow(106, D("2026-06-06T12:00:00Z")) === true);
+check("Jun 9 evening -> open", isWithinRefreshWindow(106, D("2026-06-09T19:00:00Z")) === true);
+check("Jun 10 (stage decided) -> closed", isWithinRefreshWindow(106, D("2026-06-10T12:00:00Z")) === false);
+// The widened gate is strictly earlier than the old play-days-only gate.
+check("reveal window is a superset of the old match window (Jun 6 noon)",
+  isWithinMatchWindow(106, D("2026-06-06T12:00:00Z")) === true && isWithinRefreshWindow(106, D("2026-06-06T12:00:00Z")) === true);
+check("Stage III refresh opens Jun 10 10:30Z (24h before its Jun 11 lock)",
+  isWithinRefreshWindow(107, D("2026-06-10T10:00:00Z")) === false && isWithinRefreshWindow(107, D("2026-06-10T11:00:00Z")) === true);
+check("section with no lock time -> falls back to match-window gate (open inside)",
+  isWithinRefreshWindow(1, D("2026-06-01T00:00:00Z"), {}, { 1: { start: "2026-06-01T00:00:00Z", end: "2026-06-01T23:59:59Z" } }) === true);
+check("section with no lock and no window -> fail open",
+  isWithinRefreshWindow(999, D("2026-06-01T00:00:00Z"), {}, {}) === true);
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);
