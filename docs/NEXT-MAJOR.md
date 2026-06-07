@@ -12,8 +12,11 @@ app *work* for the new event. The rest sharpens it.
 > matchWindows, sectionSources, sectionNames, fixtures, teamMaps }`, plus
 > `resolveActiveEvent()` / `getEventConfig(id)` / `ACTIVE_EVENT_ID`. Every page
 > and API route reads `ACTIVE_EVENT_ID` instead of a hardcoded `26`, so the
-> active event is flipped in **one place** (set the new entry's `status` to
-> `"live"` and the old one's to `"archived"`). The registry currently
+> active event is decided in **one place**. With the self-sustaining lifecycle
+> (PHA-950) you no longer flip `status` by hand on go-live day: stage the new
+> entry as `status: "upcoming"` with real `dates` + `lockSchedule` and it goes
+> live on its staging lead while the old one archives at its `dates.end` — see
+> `docs/ROADMAP-MULTI-MAJOR.md`. The registry currently
 > *references* the committed `COLOGNE_*` constants below rather than owning their
 > values — the full cutover (inverting the domain modules' default params to read
 > the active event's config) is a follow-up, deliberately deferred until after
