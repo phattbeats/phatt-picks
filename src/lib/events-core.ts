@@ -38,6 +38,7 @@ import {
   type LockSchedule,
   type MatchWindow,
 } from "./lock-schedule-core";
+import { isSwissSection } from "./swiss-bucket-core";
 
 /** Lifecycle of a Major in the registry. Exactly one entry is `live`. */
 export type EventStatus = "upcoming" | "live" | "archived";
@@ -218,6 +219,50 @@ export function validateEventRevealConfig(event: EventConfig): string[] {
     const reveal = bracketRevealTime(key, event.lockSchedule);
     if (reveal === null || !(Date.parse(reveal) < Date.parse(iso)))
       problems.push(`${tag}: section ${key} reveal time does not resolve strictly before its lock`);
+  }
+  return problems;
+}
+
+/**
+ * A section is a Swiss stage (interchangeable buckets, set-valued scoring) iff
+ * its display name reads "Stage <n>"; the playoff rounds (Quarterfinal /
+ * Semifinal / Grand Final) are per-match. This is the structural truth the
+ * registry declares via `sectionNames`. `isSwissSection` answers the same
+ * question from a hardcoded id set — the two MUST agree (see below).
+ */
+function isStructurallySwiss(sectionName: string): boolean {
+  return /^stage\b/i.test(sectionName.trim());
+}
+
+/**
+ * Future-proof guard for PHA-946 (compare/scoring bucket grain). Returns the
+ * list of sections where the structural Swiss-ness declared by the registry's
+ * `sectionNames` disagrees with `isSwissSection`'s hardcoded id set. Empty = OK.
+ *
+ * Why this matters across majors: the compare grid, the steal reel, scoring,
+ * the picks board and the consensus line ALL branch on `isSwissSection`. If a
+ * future major registers a Swiss stage whose id isn't in that set, every one of
+ * them silently reverts to strict per-slot matching — re-introducing the exact
+ * PHA-946 bug (a correct pick in a non-winner slot reads as a miss) AND breaking
+ * the score, with no divergence between them to catch it at runtime. This guard
+ * fails the build the moment a registered "Stage N" id isn't recognized as
+ * Swiss (or a playoff round wrongly is), so the misconfig can never ship.
+ *
+ * Pure; no I/O. The canonical long-term fix is to make `isSwissSection` read the
+ * active event's sections directly (the PHA-952 registry cutover); until then
+ * this keeps the hardcoded set honest against whatever event is live.
+ */
+export function validateSwissClassification(event: EventConfig): string[] {
+  const problems: string[] = [];
+  const tag = `event ${event.eventId} (${event.slug})`;
+  for (const [key, name] of Object.entries(event.sectionNames)) {
+    const id = Number(key);
+    const declaredSwiss = isStructurallySwiss(name);
+    const recognizedSwiss = isSwissSection(id);
+    if (declaredSwiss && !recognizedSwiss)
+      problems.push(`${tag}: section ${id} "${name}" is a Swiss stage but isSwissSection() does not recognize it — compare/scoring/picks would judge it per-slot (PHA-946 regression)`);
+    if (!declaredSwiss && recognizedSwiss)
+      problems.push(`${tag}: section ${id} "${name}" is a playoff round but isSwissSection() treats it as Swiss — interchangeable bucketing would be applied to per-match picks`);
   }
   return problems;
 }

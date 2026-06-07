@@ -28,6 +28,7 @@ import {
   ACTIVE_EVENT_ID,
   SECTION_SOURCES,
   validateEventRevealConfig,
+  validateSwissClassification,
   type EventConfig,
 } from "../src/lib/events-core.ts";
 import {
@@ -142,6 +143,39 @@ check(
     ...base,
     lockSchedule: { 200: "not-a-date" },
   }).some((p) => p.includes("not a valid ISO")),
+);
+
+// — future-major guard (PHA-946): the registry's structural Swiss-ness
+//   (sectionNames "Stage N") must agree with isSwissSection's hardcoded id set,
+//   for EVERY registered event. A new Major that registers a Swiss stage with an
+//   unrecognized id would silently revert compare/scoring/picks to per-slot
+//   matching (the PHA-946 bug). This fails the build instead. —
+for (const e of Object.values(EVENTS)) {
+  const problems = validateSwissClassification(e);
+  if (problems.length > 0) for (const p of problems) console.error(`    · ${p}`);
+  check(`Swiss classification consistent for event ${e.eventId} (${e.slug})`, problems.length === 0);
+}
+check("active event Swiss classification is consistent", validateSwissClassification(active).length === 0);
+
+// — anti-rigging: the guard fires on each direction of misconfiguration. —
+check(
+  "guard flags a Swiss-named stage with an unrecognized id (PHA-946 regression)",
+  validateSwissClassification({
+    ...active,
+    sectionNames: { ...active.sectionNames, 211: "Stage IV" },
+  }).some((p) => p.includes("does not recognize")),
+);
+check(
+  "guard flags a playoff round wrongly recognized as Swiss",
+  // 105 is a recognized Swiss id; naming it a playoff round must flag it.
+  validateSwissClassification({
+    ...active,
+    sectionNames: { ...active.sectionNames, 105: "Quarterfinals" },
+  }).some((p) => p.includes("treats it as Swiss")),
+);
+check(
+  "guard passes the real Cologne sectionNames unchanged",
+  validateSwissClassification(active).length === 0,
 );
 
 console.log(`\nverify-events: ${pass} passed, ${fail} failed`);
