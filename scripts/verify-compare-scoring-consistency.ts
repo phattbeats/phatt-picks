@@ -84,17 +84,46 @@ function gridHitCount(sec: Section, picks: PlayerPickMap[string], outcomes: Outc
   return hits;
 }
 
+/**
+ * Replicate the STEAL reel's grain (page lines ~316-336): count the resolved
+ * bucket winners THIS player picked (anywhere in the bucket). The reel credits a
+ * steal when one player holds a winner the other didn't, so per player this is
+ * the same set the grid lights as "hit". Locking it here means a future per-slot
+ * regression in the steal loop — the "haha I win you lose" surface Brandon flagged
+ * as crucial — fails the build too, not just the grid.
+ */
+function stealCreditCount(sec: Section, picks: PlayerPickMap[string], outcomes: OutcomeMap): number {
+  let credited = 0;
+  const isSwiss = isSwissSection(sec.sectionid);
+  for (const group of sec.groups) {
+    const groupPicks: SlotMap = picks[sec.sectionid]?.[group.groupid] ?? {};
+    const groupOutcomes: SlotMap = outcomes[sec.sectionid]?.[group.groupid] ?? {};
+    const buckets = isSwiss
+      ? bucketSwissSlots(group.picks.length)
+      : group.picks.map((p) => ({ label: "", slotIndexes: [p.index] }));
+    for (const bucket of buckets) {
+      const { winners } = resolveBucketWinners(bucket.slotIndexes, groupOutcomes);
+      if (winners.size === 0) continue;
+      const picked = new Set(bucket.slotIndexes.map((i) => groupPicks[i]).filter((x) => x && x !== 0));
+      for (const w of winners) if (picked.has(w)) credited++;
+    }
+  }
+  return credited;
+}
+
 /** scorePlayer's `correct` for a single-section synthetic layout. */
 function scoringCorrect(sec: Section, picks: PlayerPickMap[string], outcomes: OutcomeMap): number {
   const layout = { sections: [sec] } as unknown as Layout;
   return scorePlayer(layout, picks, outcomes).bySection[0].correct;
 }
 
-/** Assert the grid's hit count agrees with the score for one scenario. */
+/** Assert the grid, the steal reel, and the score all agree for one scenario. */
 function assertConsistent(label: string, sec: Section, picks: PlayerPickMap[string], outcomes: OutcomeMap, expectHits: number) {
   const grid = gridHitCount(sec, picks, outcomes);
+  const steal = stealCreditCount(sec, picks, outcomes);
   const score = scoringCorrect(sec, picks, outcomes);
   check(`${label}: grid hits (${grid}) == scoring correct (${score})`, grid === score);
+  check(`${label}: steal credits (${steal}) == grid hits (${grid})`, steal === grid);
   check(`${label}: hits == expected ${expectHits}`, grid === expectHits);
 }
 
