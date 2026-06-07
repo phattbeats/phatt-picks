@@ -42,7 +42,7 @@ import { isWithinRefreshWindow } from "./lock-schedule-core";
 // is now per-event config in the registry (PHA-948). For the active event
 // (Cologne) these are exactly the section ids/urls this module declared before.
 import { SECTION_SOURCES } from "./events-core";
-import { isEventArchivedById } from "./majors-core";
+import { isEventFrozenById } from "./event-freeze";
 
 // crawl4ai on the phattvip network. Same hostname resolves in the workspace and
 // in the deployed container; CRAWL4AI_URL overrides for other topologies.
@@ -224,7 +224,7 @@ export async function refreshStandingsOnRead(
   sectionId: number,
   nowMs: number = Date.now(),
 ): Promise<void> {
-  if (isEventArchivedById(eventId)) return; // PHA-949: archived Majors are frozen — never re-crawl
+  if (await isEventFrozenById(eventId, nowMs)) return; // PHA-949/954: frozen (effectively archived) Majors never re-crawl
   if (!hasStandingsSource(sectionId)) return; // nothing to refresh
   if (!isWithinRefreshWindow(sectionId, nowMs)) return; // outside the reveal→end window — serve cache
   if (!(await claimStandingsRefreshSlot())) return; // within floor or lost the race

@@ -27,6 +27,7 @@ import { getSwissRecords } from "@/lib/swiss-results";
 import { buildBucketConsensus, bucketShareFor } from "@/lib/consensus-core";
 import type { Section } from "@/lib/layout";
 import { ACTIVE_EVENT_ID } from "@/lib/events-core";
+import { isRevealForcedById } from "@/lib/event-freeze";
 
 const EVENT_ID = ACTIVE_EVENT_ID;
 function ordSuffix(n: number): string {
@@ -75,6 +76,10 @@ export default async function PlayerProfilePage({
   if (!player) notFound();
 
   const isSelf = session?.playerId === player.id;
+
+  // PHA-954: a finished (effectively archived) Major is public history — reveal
+  // every stage regardless of its per-stage lock. No-op while live (false).
+  const eventArchived = await isRevealForcedById(EVENT_ID, nowMs);
 
   const picks = await prisma.pick.findMany({
     where: { eventId: EVENT_ID, playerId: player.id },
@@ -284,6 +289,7 @@ export default async function PlayerProfilePage({
                 group,
                 groupHasOutcome.has(groupOutcomeKey(section.sectionid, group.groupid)),
                 isLockTimePassed(section.sectionid, nowMs),
+                eventArchived,
               );
             if (!revealed) {
               return (
@@ -330,6 +336,7 @@ export default async function PlayerProfilePage({
                   group,
                   groupHasOutcome.has(groupOutcomeKey(section.sectionid, group.groupid)),
                   isLockTimePassed(section.sectionid, nowMs),
+                  eventArchived,
                 );
                 const revealed = isSelf || lockRevealed;
                 const groupPicks = pickMap[section.sectionid]?.[group.groupid] ?? {};

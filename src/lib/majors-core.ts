@@ -26,7 +26,7 @@
  *    testable without a database.
  */
 
-import { getEventConfig, type EventStatus } from "./events-core";
+import { type EventStatus } from "./events-core";
 
 // ── Freeze predicates ──────────────────────────────────────────────────────
 
@@ -35,16 +35,13 @@ export function isEventArchived(status: EventStatus): boolean {
   return status === "archived";
 }
 
-/**
- * Convenience for the live drivers: is the event with this id an archived
- * (frozen) Major? Unregistered ids are treated as NOT archived so the guard
- * fails open — it can only ever stop a driver for an event the registry has
- * explicitly marked archived, never the live one.
- */
-export function isEventArchivedById(eventId: number): boolean {
-  const cfg = getEventConfig(eventId);
-  return cfg ? isEventArchived(cfg.status) : false;
-}
+// NOTE (PHA-954): the by-id convenience that used to live here keyed on the
+// registry's RAW baseline `status` field, so the freeze only fired once a human
+// flipped Cologne→archived — re-introducing the manual switch workstream C
+// removed. The by-id resolvers now live in `event-freeze.ts`, which feeds these
+// pure predicates the EFFECTIVE status (baseline advanced by the clock + the
+// real Grand-Final-resolved signal). These predicates stay the single source of
+// truth for the status→frozen MAPPING; event-freeze supplies the STATUS.
 
 /** The one Major currently being played. */
 export function isEventLive(status: EventStatus): boolean {

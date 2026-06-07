@@ -35,7 +35,7 @@ import {
 } from "./team-stats-sources";
 import { statsForPickid, type TeamStats } from "./team-stats-core";
 import { isWithinAnyMatchWindow } from "./lock-schedule-core";
-import { isEventArchivedById } from "./majors-core";
+import { isEventFrozenById } from "./event-freeze";
 
 // crawl4ai on the phattvip network — same hostname in workspace + deployed
 // container; CRAWL4AI_URL overrides for other topologies (mirrors swiss-results).
@@ -255,7 +255,7 @@ export async function refreshTeamStatsOnRead(
   eventId: number,
   nowMs: number = Date.now(),
 ): Promise<void> {
-  if (isEventArchivedById(eventId)) return; // PHA-949: archived Majors are frozen — never re-crawl
+  if (await isEventFrozenById(eventId, nowMs)) return; // PHA-949/954: frozen (effectively archived) Majors never re-crawl
   if (!isWithinAnyMatchWindow(nowMs)) return; // off-day — serve cache, don't crawl
   if (!(await claimRefreshSlot())) return; // within floor or lost the race
   runDeferred(() => ingestTeamStats(eventId));

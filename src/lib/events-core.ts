@@ -118,7 +118,15 @@ const COLOGNE_2026: EventConfig = {
   slug: "iem-cologne-2026",
   name: "IEM Cologne 2026 CS2 Major Championship",
   status: "live",
-  dates: { start: "2026-06-02T00:00:00Z", end: "2026-06-21T23:59:59Z" },
+  // `end` is the calendar BACKSTOP for the archive transition, not the real
+  // trigger — that is the Grand Final StageOutcome (PHA-954, via
+  // `grandFinalResolved`). It's set generously past the likely GF (~Jun 21) on
+  // purpose: a GF that finishes late on the 21st lands its outcome row ~1h+
+  // later (possibly Jun 22 UTC), and the live drivers must stay un-frozen long
+  // enough to INGEST that GF result. A tight Jun-21 ceiling could freeze the
+  // layout/outcome crawl right as the deciding game resolves; the buffer lets
+  // the GF signal — not the clock — fire the archive. See PHA-954.
+  dates: { start: "2026-06-02T00:00:00Z", end: "2026-06-24T23:59:59Z" },
   sectionNames: COLOGNE_SECTION_NAMES,
   lockSchedule: COLOGNE_LOCK_SCHEDULE,
   matchWindows: COLOGNE_MATCH_WINDOWS,
@@ -253,6 +261,26 @@ export function validateEventRevealConfig(event: EventConfig): string[] {
       problems.push(`${tag}: section ${key} reveal time does not resolve strictly before its lock`);
   }
   return problems;
+}
+
+/**
+ * The section id of a Major's Grand Final — the terminal playoff round whose
+ * resolution ends the event (PHA-954). Derived STRUCTURALLY from `sectionNames`
+ * (the section whose display name reads "Grand Final"), so it's correct for any
+ * registered Major with no hand-maintained id to keep in sync. This is the
+ * section the freeze watches: a StageOutcome row for it means the Grand Final
+ * resolved, which fires the live→archived transition on the REAL final rather
+ * than the `dates.end` calendar ceiling.
+ *
+ * Returns null when the event declares no "Grand Final" section (a format
+ * without one, or one not yet named); callers then fall back to the `dates.end`
+ * ceiling for the archive transition. Pure; no I/O.
+ */
+export function grandFinalSectionId(event: EventConfig): number | null {
+  for (const [key, name] of Object.entries(event.sectionNames)) {
+    if (/grand\s*final/i.test(name)) return Number(key);
+  }
+  return null;
 }
 
 /**
