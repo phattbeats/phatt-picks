@@ -25,7 +25,8 @@ import { validatePickAgainstLayout } from "@/lib/layout";
 import { getEffectiveLayout } from "@/lib/layout-state";
 import { isStageWritable } from "@/lib/reveal-core";
 import { isLockTimePassed } from "@/lib/lock-schedule-core";
-import { ACTIVE_EVENT_ID } from "@/lib/events-core";
+import { ACTIVE_EVENT_ID, getEventConfig } from "@/lib/events-core";
+import { isWriteFrozen } from "@/lib/majors-core";
 
 const EVENT_ID = ACTIVE_EVENT_ID;
 export async function GET(req: NextRequest) {
@@ -60,6 +61,14 @@ export async function POST(req: NextRequest) {
 
   const evtId = Number(eventId);
   const secId = Number(sectionId);
+
+  // PHA-949: an archived Major is frozen, read-only history — refuse every write
+  // up front, independent of the per-stage lock gate (its lock schedule may not
+  // even be in scope once another Major is live). No-op for the live event.
+  const evtCfg = getEventConfig(evtId);
+  if (evtCfg && isWriteFrozen(evtCfg.status)) {
+    return NextResponse.json({ error: "event_archived" }, { status: 409 });
+  }
 
   const layout = await getEffectiveLayout(evtId);
   const section = layout.sections.find((s) => s.sectionid === secId);
