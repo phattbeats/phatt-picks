@@ -24,7 +24,10 @@
  * Run: node scripts/verify-event-freeze.ts
  */
 
-import { resolveEffectiveStatus } from "../src/lib/event-lifecycle-core.ts";
+import {
+  resolveEffectiveStatus,
+  GRAND_FINAL_ARCHIVE_GRACE_MS,
+} from "../src/lib/event-lifecycle-core.ts";
 import {
   getEventConfig,
   grandFinalSectionId,
@@ -70,44 +73,66 @@ check(
 );
 
 // ── behind current behavior: NO freeze today ────────────────────────────────
-const effToday = resolveEffectiveStatus(cologne, TODAY, { grandFinalResolved: false });
+const effToday = resolveEffectiveStatus(cologne, TODAY, { grandFinalResolvedAtMs: null });
 check("Cologne is effectively LIVE today (no freeze)", effToday === "live");
 check("today: event NOT archived", isEventArchived(effToday) === false);
 check("today: writes NOT frozen", isWriteFrozen(effToday) === false);
 check("today: live drivers RUN", shouldRunLiveDriver(effToday) === true);
 check("today: reveal NOT forced (per-stage gate alone decides)", isRevealForced(effToday) === false);
 
-// ── the real Grand Final fires archive — before the dates.end ceiling ───────
-const effGfMidEvent = resolveEffectiveStatus(cologne, TODAY, { grandFinalResolved: true });
-check("GF resolved mid-event → archived immediately", effGfMidEvent === "archived");
-check("GF archived: writes frozen", isWriteFrozen(effGfMidEvent) === true);
-check("GF archived: live drivers SKIP", shouldRunLiveDriver(effGfMidEvent) === false);
-check("GF archived: reveal forced (public history)", isRevealForced(effGfMidEvent) === true);
+// ── the real Grand Final fires archive — but only AFTER the 48h grace ───────
+// Brandon's safety net (PHA-954): the trophy lifts, the site stays warm 48h
+// (news updates, pickems browsable, a re-ingest can settle), THEN it freezes.
+const gfResolvedAt = ms("2026-06-21T20:00:00Z"); // a plausible Cologne GF instant
+check("GRAND_FINAL_ARCHIVE_GRACE_MS is 48h", GRAND_FINAL_ARCHIVE_GRACE_MS === 48 * 60 * 60_000);
 
-// ── the widened dates.end protects the GF-ingest window ─────────────────────
-// The GF likely lands Jun 21; its StageOutcome can land ~1h+ later (Jun 22 UTC).
-// With the generous ceiling the event stays LIVE through that window so the
-// drivers can INGEST the GF result instead of freezing on a tight Jun-21 end.
+// Within the grace window: GF decided, but the Major is STILL LIVE.
+const justAfterGf = gfResolvedAt + 60 * 60_000; // +1h
+const effInGrace = resolveEffectiveStatus(cologne, justAfterGf, {
+  grandFinalResolvedAtMs: gfResolvedAt,
+});
+check("1h after GF → still LIVE (inside the 48h grace)", effInGrace === "live");
+check("in grace: writes NOT frozen (pickems still browsable/editable)", isWriteFrozen(effInGrace) === false);
+check("in grace: live drivers RUN (news keeps updating)", shouldRunLiveDriver(effInGrace) === true);
+
+const nearGraceEdge = gfResolvedAt + GRAND_FINAL_ARCHIVE_GRACE_MS - 60 * 60_000; // +47h
+check(
+  "47h after GF → still live (grace not yet elapsed)",
+  resolveEffectiveStatus(cologne, nearGraceEdge, { grandFinalResolvedAtMs: gfResolvedAt }) === "live",
+);
+
+// Once the grace elapses: archive fires (and freezes every surface).
+const pastGrace = gfResolvedAt + GRAND_FINAL_ARCHIVE_GRACE_MS + 60 * 60_000; // +49h
+const effPastGrace = resolveEffectiveStatus(cologne, pastGrace, {
+  grandFinalResolvedAtMs: gfResolvedAt,
+});
+check("49h after GF → archived (grace elapsed, the real trigger)", effPastGrace === "archived");
+check("post-grace archived: writes frozen", isWriteFrozen(effPastGrace) === true);
+check("post-grace archived: live drivers SKIP", shouldRunLiveDriver(effPastGrace) === false);
+check("post-grace archived: reveal forced (public history)", isRevealForced(effPastGrace) === true);
+
+// ── the widened dates.end protects the GF-ingest AND grace window ───────────
+// The GF likely lands Jun 21; with the 48h grace the freeze isn't due until
+// ~Jun 23. The generous `dates.end` (Jun 26) keeps the event LIVE across both
+// the ingest lag and the grace, so neither freezes the drivers prematurely.
 const lateJun21 = ms("2026-06-21T23:30:00Z");
 check(
   "late Jun 21, GF not yet ingested → still live (drivers un-frozen to ingest GF)",
-  resolveEffectiveStatus(cologne, lateJun21, { grandFinalResolved: false }) === "live",
+  resolveEffectiveStatus(cologne, lateJun21, { grandFinalResolvedAtMs: null }) === "live",
 );
 const earlyJun22 = ms("2026-06-22T00:30:00Z");
 check(
-  "early Jun 22, GF not yet ingested → still live (within the buffer)",
-  resolveEffectiveStatus(cologne, earlyJun22, { grandFinalResolved: false }) === "live",
-);
-check(
-  "early Jun 22, GF ingested → archived (the real trigger)",
-  resolveEffectiveStatus(cologne, earlyJun22, { grandFinalResolved: true }) === "archived",
+  "early Jun 22, GF ingested → STILL LIVE (inside the post-GF grace, not archived)",
+  resolveEffectiveStatus(cologne, earlyJun22, { grandFinalResolvedAtMs: gfResolvedAt }) === "live",
 );
 
 // ── the calendar backstop still archives a never-resolved event past `end` ──
-const pastEnd = ms("2026-06-25T12:00:00Z"); // beyond the generous dates.end
+// The backstop is a hard ceiling (no grace): it is the failsafe for a GF that
+// is never ingested, and is set generously past the likely GF for that reason.
+const pastEnd = ms("2026-06-27T12:00:00Z"); // beyond the generous dates.end (Jun 26)
 check(
   "past dates.end, even with no GF signal → archived (calendar backstop)",
-  resolveEffectiveStatus(cologne, pastEnd, { grandFinalResolved: false }) === "archived",
+  resolveEffectiveStatus(cologne, pastEnd, { grandFinalResolvedAtMs: null }) === "archived",
 );
 
 // ── the freeze composition (what event-freeze.ts does over the DB) ──────────

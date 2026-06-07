@@ -94,9 +94,12 @@ check("next Major flips to `live` at go-live — no human touched it", resolveEf
 check("next Major is `live` mid-run", resolveEffectiveStatus(nextMajor, ms("2026-09-05T00:00:00Z")) === "live");
 check("a far-future now leaves next Major upcoming earlier than lead", resolveEffectiveStatus(nextMajor, ms("2026-08-01T00:00:00Z")) === "upcoming");
 
-// — live → archived on Grand Final resolve (before dates.end) —
+// — live → archived on Grand Final resolve + its 48h grace (before dates.end) —
 const MIDRUN = ms("2026-06-15T00:00:00Z"); // within Cologne's window
-check("Grand Final resolved → archived immediately, even mid-window", resolveEffectiveStatus(cologne, MIDRUN, { grandFinalResolved: true }) === "archived");
+const GF_AT = ms("2026-06-12T00:00:00Z");  // GF resolved 3 days before MIDRUN
+check("GF resolved AND 48h grace elapsed → archived (before dates.end)", resolveEffectiveStatus(cologne, MIDRUN, { grandFinalResolvedAtMs: GF_AT }) === "archived");
+check("GF resolved but still inside the 48h grace → stays live", resolveEffectiveStatus(cologne, ms("2026-06-12T12:00:00Z"), { grandFinalResolvedAtMs: GF_AT }) === "live");
+check("postGrandFinalGraceMs: 0 → archives the instant the GF resolves", resolveEffectiveStatus(cologne, MIDRUN, { grandFinalResolvedAtMs: MIDRUN, postGrandFinalGraceMs: 0 }) === "archived");
 check("without the GF signal, mid-window stays live", resolveEffectiveStatus(cologne, MIDRUN) === "live");
 
 // — live → archived by the dates.end ceiling when no GF signal arrives —
@@ -112,7 +115,7 @@ const registry = [cologne, nextMajor];
 check("one live event mid-Cologne, before next is staged in", selectLiveEvents(registry, JUN6).length === 1);
 check("the live event mid-Cologne is Cologne", selectLiveEvents(registry, JUN6)[0]?.eventId === 26);
 check("zero live in the off-season gap (Cologne archived via GF, next not yet up)",
-  selectLiveEvents(registry, ms("2026-07-15T00:00:00Z"), (e) => (e.eventId === 26 ? { grandFinalResolved: true } : {})).length === 0);
+  selectLiveEvents(registry, ms("2026-07-15T00:00:00Z"), (e) => (e.eventId === 26 ? { grandFinalResolvedAtMs: ms("2026-06-11T00:00:00Z") } : {})).length === 0);
 // overlap: Cologne still within window (no GF signal) while next has crossed go-live
 const overlapNext: LifecycleEvent = { ...nextMajor, dates: { start: "2026-06-18T00:00:00Z", end: "2026-07-05T00:00:00Z" }, lockSchedule: { 205: "2026-06-18T10:30:00Z" } };
 check("brief overlap yields two live events", selectLiveEvents([cologne, overlapNext], ms("2026-06-19T00:00:00Z")).length === 2);
@@ -120,7 +123,7 @@ check("brief overlap yields two live events", selectLiveEvents([cologne, overlap
 // — selectCurrentEvent: always something sane to show —
 check("current event mid-Cologne is the live one", selectCurrentEvent(registry, JUN6)?.eventId === 26);
 check("in the gap, current event is the soonest upcoming (next Major)",
-  selectCurrentEvent(registry, ms("2026-07-15T00:00:00Z"), (e) => (e.eventId === 26 ? { grandFinalResolved: true } : {}))?.eventId === 27);
+  selectCurrentEvent(registry, ms("2026-07-15T00:00:00Z"), (e) => (e.eventId === 26 ? { grandFinalResolvedAtMs: ms("2026-06-11T00:00:00Z") } : {}))?.eventId === 27);
 check("with only an archived Major, current event is that archived one (off-season)",
   selectCurrentEvent([{ ...cologne, status: "archived" }], ms("2027-01-01T00:00:00Z"))?.eventId === 26);
 check("empty registry → null", selectCurrentEvent([], JUN6) === null);

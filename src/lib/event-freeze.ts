@@ -19,9 +19,9 @@
  * clock AND by the real Grand-Final-resolved signal — a StageOutcome row for the
  * event's Grand Final section. Every freeze decision (drivers, write guard,
  * forced reveal) derives from `resolveEffectiveStatusById` here, so each one
- * fires the moment a Major's GF resolves, with zero human flips. The pure
- * predicates stay the single source of truth for the *mapping* status→frozen;
- * this module only supplies the *status*.
+ * fires once a Major's GF resolves AND its 48h grace window elapses, with zero
+ * human flips. The pure predicates stay the single source of truth for the
+ * *mapping* status→frozen; this module only supplies the *status*.
  *
  * GRAND FINAL OVER THE CALENDAR. Archive is keyed on the real GF, not merely the
  * `dates.end` ceiling: a bracket that slips past its scheduled end therefore
@@ -29,6 +29,13 @@
  * lands). `resolveEffectiveStatus` keeps `dates.end` only as a backstop, and the
  * registry sets that end generously past the likely GF so the drivers stay
  * un-frozen long enough to INGEST the GF outcome (see COLOGNE_2026.dates).
+ *
+ * POST-GF GRACE (PHA-954, Brandon's safety net). Even after the GF resolves the
+ * event stays `live` for GRAND_FINAL_ARCHIVE_GRACE_MS (48h): the news/standings
+ * drivers keep updating, a re-ingested/corrected outcome can settle, and players
+ * can browse their pickems while the result is fresh — only then does it become
+ * read-only "old Major" history. The GF's `resolvedAt` (not a boolean) is what
+ * lets this module measure that window.
  *
  * Behind current behavior: Cologne is effective-`live` until its GF resolves /
  * its (generous) `dates.end`, so every function here is a no-op today.
@@ -50,29 +57,36 @@ import {
 } from "./majors-core";
 
 /**
- * Has the event's Grand Final resolved? True iff a StageOutcome row exists for
+ * WHEN did the event's Grand Final resolve? Returns the epoch-ms `resolvedAt` of
  * the event's Grand Final section (the terminal playoff round, located
- * structurally via `grandFinalSectionId`). This is the precise "live→archived"
- * trigger — archive fires on the REAL Grand Final, not the `dates.end` ceiling.
- * An event with no Grand Final section resolves false (it then archives only on
- * the calendar backstop). Cheap indexed count on (eventId, sectionId).
+ * structurally via `grandFinalSectionId`) — the earliest if it somehow has more
+ * than one row — or null while it hasn't resolved (or the format has no Grand
+ * Final). This timestamp, NOT a mere boolean, is what feeds the live→archived
+ * transition: the freeze fires the post-GF grace window AFTER the real final,
+ * not the moment it lands and not the `dates.end` ceiling. Cheap indexed lookup
+ * on (eventId, sectionId).
  */
-export async function isGrandFinalResolved(event: EventConfig): Promise<boolean> {
+export async function grandFinalResolvedAtMs(
+  event: EventConfig,
+): Promise<number | null> {
   const gfSection = grandFinalSectionId(event);
-  if (gfSection === null) return false;
-  const resolved = await prisma.stageOutcome.count({
+  if (gfSection === null) return null;
+  const row = await prisma.stageOutcome.findFirst({
     where: { eventId: event.eventId, sectionId: gfSection },
+    orderBy: { resolvedAt: "asc" },
+    select: { resolvedAt: true },
   });
-  return resolved > 0;
+  return row ? row.resolvedAt.getTime() : null;
 }
 
 /**
  * The EFFECTIVE status of the event with this id RIGHT NOW — the registry
- * baseline advanced by the wall clock and the Grand-Final-resolved signal. This
- * is THE reconciliation chokepoint: every freeze decision below derives from it.
- * null when the id isn't registered, so callers fail open (an unknown event is
- * never treated as frozen). `nowMs` is injectable so a render can share its
- * request clock.
+ * baseline advanced by the wall clock and the Grand-Final-resolved signal (which
+ * only archives 48h after the final, per the post-GF grace window). This is THE
+ * reconciliation chokepoint: every freeze decision below derives from it. null
+ * when the id isn't registered, so callers fail open (an unknown event is never
+ * treated as frozen). `nowMs` is injectable so a render can share its request
+ * clock.
  */
 export async function resolveEffectiveStatusById(
   eventId: number,
@@ -80,8 +94,10 @@ export async function resolveEffectiveStatusById(
 ): Promise<EventStatus | null> {
   const cfg = getEventConfig(eventId);
   if (!cfg) return null;
-  const grandFinalResolved = await isGrandFinalResolved(cfg);
-  return resolveEffectiveStatus(cfg, nowMs, { grandFinalResolved });
+  const resolvedAtMs = await grandFinalResolvedAtMs(cfg);
+  return resolveEffectiveStatus(cfg, nowMs, {
+    grandFinalResolvedAtMs: resolvedAtMs,
+  });
 }
 
 /**

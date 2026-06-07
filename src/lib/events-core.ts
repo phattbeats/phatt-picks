@@ -120,14 +120,16 @@ const COLOGNE_2026: EventConfig = {
   name: "IEM Cologne 2026 CS2 Major Championship",
   status: "live",
   // `end` is the calendar BACKSTOP for the archive transition, not the real
-  // trigger — that is the Grand Final StageOutcome (PHA-954, via
-  // `grandFinalResolved`). It's set generously past the likely GF (~Jun 21) on
-  // purpose: a GF that finishes late on the 21st lands its outcome row ~1h+
-  // later (possibly Jun 22 UTC), and the live drivers must stay un-frozen long
-  // enough to INGEST that GF result. A tight Jun-21 ceiling could freeze the
-  // layout/outcome crawl right as the deciding game resolves; the buffer lets
-  // the GF signal — not the clock — fire the archive. See PHA-954.
-  dates: { start: "2026-06-02T00:00:00Z", end: "2026-06-24T23:59:59Z" },
+  // trigger — that is the Grand Final StageOutcome resolving PLUS its 48h grace
+  // window (PHA-954, via `grandFinalResolvedAtMs` + GRAND_FINAL_ARCHIVE_GRACE_MS).
+  // It must sit comfortably past `GF + 48h` so the backstop never preempts the
+  // grace: the GF is scheduled ~Jun 21 and could slip a day, its outcome row
+  // lands ~1h+ late, then the site stays warm 48h (news settles, pickems
+  // browsable) before archiving. So the ceiling is set generously to Jun 26 —
+  // late enough that even a slipped GF gets its full grace, while still being a
+  // hard failsafe for a GF that is somehow NEVER ingested. The GF signal — not
+  // the clock — fires the real archive. See PHA-954.
+  dates: { start: "2026-06-02T00:00:00Z", end: "2026-06-26T23:59:59Z" },
   sectionNames: COLOGNE_SECTION_NAMES,
   lockSchedule: COLOGNE_LOCK_SCHEDULE,
   matchWindows: COLOGNE_MATCH_WINDOWS,
