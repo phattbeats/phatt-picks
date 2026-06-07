@@ -33,6 +33,8 @@ import {
   COLOGNE_LOCK_SCHEDULE,
   COLOGNE_MATCH_WINDOWS,
   COLOGNE_SECTION_NAMES,
+  lockTimeForSection,
+  bracketRevealTime,
   type LockSchedule,
   type MatchWindow,
 } from "./lock-schedule-core";
@@ -164,6 +166,60 @@ export function resolveActiveEvent(): EventConfig {
     );
   }
   return live[0];
+}
+
+/**
+ * Validate that an event's per-section reveal config is internally consistent —
+ * the guard that keeps the 24h bracket/standings reveal (PHA-943) working for
+ * FUTURE majors, not just Cologne. Returns human-readable problems (empty =
+ * healthy); verify-events.ts asserts it's empty for EVERY registered event
+ * (live, upcoming, or archived), so a half-filled config for the next Major
+ * fails loudly at CI time instead of silently never revealing — the exact class
+ * of slip that left Stage III's window unset.
+ *
+ * Invariants, all section-id keyed:
+ *   A. every crawled stage (`sectionSources`) has a `lockSchedule` entry — else
+ *      its data is fetched but the bracket never reveals pre-lock and the stage
+ *      never locks by time;
+ *   B. every crawled stage has a `matchWindows` entry — else the hourly crawl
+ *      never closes once the stage is decided;
+ *   C. every dated stage (`matchWindows`) has a `lockSchedule` entry — an
+ *      orphaned window with no lock is a config slip;
+ *   D. every `lockSchedule` value is a valid ISO whose reveal instant
+ *      (`lockAt − 24h`) resolves strictly before the lock.
+ *
+ * Note these flow only FROM sources→lock/window and window→lock: a Swiss stage
+ * with a lock+window but no source yet (Stage III today, source unpublished) and
+ * the playoff sections (no lock/window/source at all) are both legitimately
+ * silent and never flagged. Pure; no I/O.
+ */
+export function validateEventRevealConfig(event: EventConfig): string[] {
+  const problems: string[] = [];
+  const tag = `event ${event.eventId} (${event.slug})`;
+  const lockKeys = new Set(Object.keys(event.lockSchedule).map(Number));
+  const windowKeys = new Set(Object.keys(event.matchWindows).map(Number));
+
+  for (const key of Object.keys(event.sectionSources).map(Number)) {
+    if (!lockKeys.has(key))
+      problems.push(`${tag}: section ${key} has a Swiss source but no lockSchedule entry (bracket would never reveal / lock)`);
+    if (!windowKeys.has(key))
+      problems.push(`${tag}: section ${key} has a Swiss source but no matchWindows entry (crawl would never close)`);
+  }
+  for (const key of windowKeys) {
+    if (!lockKeys.has(key))
+      problems.push(`${tag}: section ${key} has a matchWindows entry but no lockSchedule entry (orphaned window)`);
+  }
+  for (const key of lockKeys) {
+    const iso = lockTimeForSection(key, event.lockSchedule);
+    if (iso === null) {
+      problems.push(`${tag}: section ${key} lockSchedule value is not a valid ISO instant`);
+      continue;
+    }
+    const reveal = bracketRevealTime(key, event.lockSchedule);
+    if (reveal === null || !(Date.parse(reveal) < Date.parse(iso)))
+      problems.push(`${tag}: section ${key} reveal time does not resolve strictly before its lock`);
+  }
+  return problems;
 }
 
 /**

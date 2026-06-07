@@ -27,6 +27,8 @@ import {
   resolveActiveEvent,
   ACTIVE_EVENT_ID,
   SECTION_SOURCES,
+  validateEventRevealConfig,
+  type EventConfig,
 } from "../src/lib/events-core.ts";
 import {
   COLOGNE_LOCK_SCHEDULE,
@@ -96,6 +98,50 @@ check("teamMaps record the owning modules", !!active.teamMaps.regions && !!activ
 check(
   "registry has no second live event (would break resolveActiveEvent)",
   Object.values(EVENTS).filter((e) => e.status === "live").length === 1,
+);
+
+// — future-major guard (PHA-943): every registered event's reveal config is
+//   internally consistent, so the next Major's half-filled config fails loudly
+//   here, not silently at runtime. Run over ALL events (an `upcoming` entry
+//   being prepped is validated before it ever goes live). —
+for (const e of Object.values(EVENTS)) {
+  const problems = validateEventRevealConfig(e);
+  if (problems.length > 0) for (const p of problems) console.error(`    · ${p}`);
+  check(`reveal config consistent for event ${e.eventId} (${e.slug})`, problems.length === 0);
+}
+check("active event's reveal config is consistent", validateEventRevealConfig(active).length === 0);
+
+// — anti-rigging: the guard actually FIRES on each broken shape (so a future
+//   green run means the config is right, not that the check is toothless). —
+const base: EventConfig = {
+  ...active,
+  lockSchedule: { 200: "2027-01-02T10:30:00Z" },
+  matchWindows: { 200: { start: "2027-01-02T00:00:00Z", end: "2027-01-05T23:59:59Z" } },
+  sectionSources: { 200: { url: "https://hltv.org/events/1/x", label: "HLTV" } },
+};
+check("guard passes a fully-consistent synthetic event", validateEventRevealConfig(base).length === 0);
+check(
+  "guard flags a source with no lockSchedule entry",
+  validateEventRevealConfig({ ...base, lockSchedule: {} }).some((p) => p.includes("no lockSchedule")),
+);
+check(
+  "guard flags a source with no matchWindows entry",
+  validateEventRevealConfig({ ...base, matchWindows: {} }).some((p) => p.includes("no matchWindows")),
+);
+check(
+  "guard flags an orphaned window (window but no lock)",
+  validateEventRevealConfig({
+    ...base,
+    lockSchedule: {},
+    sectionSources: {},
+  }).some((p) => p.includes("orphaned window")),
+);
+check(
+  "guard flags a malformed lock instant",
+  validateEventRevealConfig({
+    ...base,
+    lockSchedule: { 200: "not-a-date" },
+  }).some((p) => p.includes("not a valid ISO")),
 );
 
 console.log(`\nverify-events: ${pass} passed, ${fail} failed`);
