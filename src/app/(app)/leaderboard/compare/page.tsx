@@ -33,6 +33,7 @@ import {
 import { isBucketImpossibleByRecord } from "@/lib/swiss-standings-core";
 import { getSwissRecords } from "@/lib/swiss-results";
 import { ACTIVE_EVENT_ID } from "@/lib/events-core";
+import { isRevealForcedById } from "@/lib/event-freeze";
 
 const EVENT_ID = ACTIVE_EVENT_ID;
 export const dynamic = "force-dynamic";
@@ -207,6 +208,12 @@ export default async function ComparePage({
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now();
 
+  // PHA-954: once the Major is effectively archived (its real Grand Final
+  // resolved), every stage is public history regardless of its per-stage lock —
+  // the `eventArchived` reveal signal. No-op while the event is live (false), so
+  // the per-stage lock gate alone decides reveal, exactly as before.
+  const eventArchived = await isRevealForcedById(EVENT_ID, nowMs);
+
   const players: PlayerLite[] = await prisma.player.findMany({
     orderBy: { displayName: "asc" },
     select: { id: true, displayName: true, avatarUrl: true, isLocal: true, synced: true },
@@ -299,6 +306,7 @@ export default async function ComparePage({
         group,
         groupHasOutcome.has(groupOutcomeKey(section.sectionid, group.groupid)),
         isLockTimePassed(section.sectionid, nowMs),
+        eventArchived,
       );
       revealedByGroup.set(gKey, revealed);
       if (!revealed) continue;
