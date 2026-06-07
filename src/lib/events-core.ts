@@ -119,7 +119,17 @@ const COLOGNE_2026: EventConfig = {
   slug: "iem-cologne-2026",
   name: "IEM Cologne 2026 CS2 Major Championship",
   status: "live",
-  dates: { start: "2026-06-02T00:00:00Z", end: "2026-06-21T23:59:59Z" },
+  // `end` is the calendar BACKSTOP for the archive transition, not the real
+  // trigger — that is the Grand Final StageOutcome resolving PLUS its 48h grace
+  // window (PHA-954, via `grandFinalResolvedAtMs` + GRAND_FINAL_ARCHIVE_GRACE_MS).
+  // It must sit comfortably past `GF + 48h` so the backstop never preempts the
+  // grace: the GF is scheduled ~Jun 21 and could slip a day, its outcome row
+  // lands ~1h+ late, then the site stays warm 48h (news settles, pickems
+  // browsable) before archiving. So the ceiling is set generously to Jun 26 —
+  // late enough that even a slipped GF gets its full grace, while still being a
+  // hard failsafe for a GF that is somehow NEVER ingested. The GF signal — not
+  // the clock — fires the real archive. See PHA-954.
+  dates: { start: "2026-06-02T00:00:00Z", end: "2026-06-26T23:59:59Z" },
   sectionNames: COLOGNE_SECTION_NAMES,
   lockSchedule: COLOGNE_LOCK_SCHEDULE,
   matchWindows: COLOGNE_MATCH_WINDOWS,
@@ -298,6 +308,26 @@ export function validateSwissClassification(event: EventConfig): string[] {
       problems.push(`${tag}: section ${id} "${name}" is a playoff round but isSwissSection() treats it as Swiss — interchangeable bucketing would be applied to per-match picks`);
   }
   return problems;
+}
+
+/**
+ * The section id of a Major's Grand Final — the terminal playoff round whose
+ * resolution ends the event (PHA-954). Derived STRUCTURALLY from `sectionNames`
+ * (the section whose display name reads "Grand Final"), so it's correct for any
+ * registered Major with no hand-maintained id to keep in sync. This is the
+ * section the freeze watches: a StageOutcome row for it means the Grand Final
+ * resolved, which fires the live→archived transition on the REAL final rather
+ * than the `dates.end` calendar ceiling.
+ *
+ * Returns null when the event declares no "Grand Final" section (a format
+ * without one, or one not yet named); callers then fall back to the `dates.end`
+ * ceiling for the archive transition. Pure; no I/O.
+ */
+export function grandFinalSectionId(event: EventConfig): number | null {
+  for (const [key, name] of Object.entries(event.sectionNames)) {
+    if (/grand\s*final/i.test(name)) return Number(key);
+  }
+  return null;
 }
 
 /**

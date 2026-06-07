@@ -28,7 +28,7 @@ import {
 } from "./outcomes-core";
 import { fetchLiquipediaResults, LiquipediaThrottledError } from "./liquipedia";
 import { fetchTournamentLayout } from "./valve";
-import { isEventArchivedById } from "./majors-core";
+import { isEventFrozenById } from "./event-freeze";
 import { cacheLiveLayout } from "./layout-state";
 import { writeRankSnapshots } from "./rank-snapshot";
 import { getSwissStandings } from "./swiss-results";
@@ -271,7 +271,7 @@ async function claimOutcomesRefreshSlot(): Promise<boolean> {
  * timeout; rank snapshots + Stage Reveal refresh transitively inside it.
  */
 export async function refreshOutcomesOnRead(eventId: number): Promise<void> {
-  if (isEventArchivedById(eventId)) return; // PHA-949: archived Majors are frozen — never re-crawl
+  if (await isEventFrozenById(eventId)) return; // PHA-949/954: frozen (effectively archived) Majors never re-crawl
   if (!(await claimOutcomesRefreshSlot())) return; // within floor or lost the race — no-op
   runDeferred(async () => {
     // Valve / Liquipedia answer key (a no-op for the set-valued Swiss buckets it

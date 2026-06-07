@@ -73,16 +73,35 @@ export interface LifecycleEvent {
  */
 export const DEFAULT_GO_LIVE_LEAD_MS = 7 * 24 * 60 * 60_000;
 
+/**
+ * How long a Major lingers as `live` AFTER its Grand Final resolves before it
+ * archives into read-only "old Major" history — the post-final grace window
+ * (PHA-954, Brandon's safety net). The instant the trophy lifts is NOT the
+ * instant the site should go cold: for these 48 hours the news/standings drivers
+ * keep updating, a late-corrected or re-ingested outcome can settle, and players
+ * can still browse their pickems while the result is fresh. Only once the grace
+ * elapses does the freeze fire (writes 409, drivers stop, event enters "your
+ * Majors"). Override per call via `LifecycleOptions.postGrandFinalGraceMs`.
+ */
+export const GRAND_FINAL_ARCHIVE_GRACE_MS = 48 * 60 * 60_000;
+
 /** Tunables for the derivation; all optional with documented defaults. */
 export interface LifecycleOptions {
   /**
-   * True once the event's Grand Final has resolved (a winner is known). Injected
-   * by the caller that has outcome data — this module never fetches. When true
-   * the event is `archived` immediately, without waiting for `dates.end`; that
-   * is the precise "live → archived on Grand Final resolve" trigger. Defaults to
-   * false (fall back to the `dates.end` ceiling).
+   * Epoch-ms instant the event's Grand Final RESOLVED (a winner became known —
+   * the GF StageOutcome's `resolvedAt`), or null/undefined while it hasn't.
+   * Injected by the caller that has outcome data — this module never fetches.
+   * The event archives `postGrandFinalGraceMs` AFTER this instant, not the
+   * moment it resolves: that grace window is the precise "live → (48h later)
+   * archived" trigger. Defaults to null (fall back to the `dates.end` ceiling).
    */
-  grandFinalResolved?: boolean;
+  grandFinalResolvedAtMs?: number | null;
+  /**
+   * The post-Grand-Final grace before archiving; see
+   * GRAND_FINAL_ARCHIVE_GRACE_MS (the 48h default). Pass 0 to archive the instant
+   * the GF resolves (the pre-grace behaviour).
+   */
+  postGrandFinalGraceMs?: number;
   /** Staging lead before first lock; see DEFAULT_GO_LIVE_LEAD_MS. */
   goLiveLeadMs?: number;
 }
@@ -127,9 +146,11 @@ export function goLiveMs(
  * Derive the status the app should act on, from the baseline + the clock.
  *
  * Clock-only verdict:
- *   • `archived`  — the Grand Final resolved, OR now is past `dates.end`.
+ *   • `archived`  — the Grand Final resolved AND its grace window has elapsed,
+ *                   OR now is past `dates.end`.
  *   • `live`      — now is at/after the go-live instant and the event has not
- *                   concluded.
+ *                   concluded (this includes the post-GF grace window, when the
+ *                   final is decided but the site stays warm for 48h).
  *   • `upcoming`  — before the go-live instant.
  *
  * Then clamp forward to the baseline so the lifecycle never runs backward
@@ -142,12 +163,22 @@ export function resolveEffectiveStatus(
   nowMs: number,
   opts: LifecycleOptions = {},
 ): EventStatus {
-  const { grandFinalResolved = false, goLiveLeadMs = DEFAULT_GO_LIVE_LEAD_MS } =
-    opts;
+  const {
+    grandFinalResolvedAtMs = null,
+    postGrandFinalGraceMs = GRAND_FINAL_ARCHIVE_GRACE_MS,
+    goLiveLeadMs = DEFAULT_GO_LIVE_LEAD_MS,
+  } = opts;
 
+  // The Grand Final concludes the event only AFTER its grace window: the trophy
+  // lifts, the site stays warm 48h (news settles, pickems browsable), THEN it
+  // freezes. `dates.end` remains a hard backstop ceiling (no grace — it is set
+  // generously past the GF precisely as the failsafe for a never-ingested GF).
   const end = Date.parse(event.dates.end);
-  const concluded =
-    grandFinalResolved || (!Number.isNaN(end) && nowMs > end);
+  const archivedByGrandFinal =
+    grandFinalResolvedAtMs != null &&
+    nowMs >= grandFinalResolvedAtMs + postGrandFinalGraceMs;
+  const archivedByCalendar = !Number.isNaN(end) && nowMs > end;
+  const concluded = archivedByGrandFinal || archivedByCalendar;
 
   let clockVerdict: EventStatus;
   if (concluded) {
