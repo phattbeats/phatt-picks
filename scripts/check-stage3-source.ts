@@ -4,7 +4,8 @@
  *
  * PHA-926 (surfaced by the PHA-922 health-pass live-config audit): the lock
  * schedule already locks Stage III (section 107) at 2026-06-11T10:30:00Z, but
- * `SECTION_SOURCES` (src/lib/swiss-results.ts) and `COLOGNE_MATCH_WINDOWS`
+ * the active event's `sectionSources` (`COLOGNE_2026` in src/lib/events-core.ts,
+ * exported as `SECTION_SOURCES`) and `COLOGNE_MATCH_WINDOWS`
  * (src/lib/lock-schedule-core.ts) stop at 106. Until those gain a `107` entry,
  * Stage III locks the picker correctly but the HLTV→StageOutcome bridge has no
  * source, so Stage III never scores and its live standings/bracket panel is
@@ -17,7 +18,8 @@
  * 8301) via the in-network crawl4ai service, looks for a Stage 3 sub-event link
  * (`/events/<id>/iem-cologne-major-2026-stage-3`), and — when one appears —
  * crawls that event page to read its authoritative date span. It then prints the
- * exact `SECTION_SOURCES[107]` and `COLOGNE_MATCH_WINDOWS[107]` lines to paste.
+ * exact `COLOGNE_2026.sectionSources[107]` and `COLOGNE_MATCH_WINDOWS[107]` lines
+ * to paste.
  *
  *   Exit 0  → Stage 3 IS published; ready-to-apply config printed on stdout.
  *   Exit 3  → not yet published (the expected state until HLTV posts it).
@@ -112,7 +114,7 @@ async function main() {
 
   console.log(`\n✅ Stage 3 IS published: event ${found.id} (${found.slug})\n`);
   console.log(`Apply these two edits (PHA-926), then verify + warm:\n`);
-  console.log(`  src/lib/swiss-results.ts  →  SECTION_SOURCES:`);
+  console.log(`  src/lib/events-core.ts  →  COLOGNE_2026.sectionSources:`);
   console.log(`  ${STAGE3_SECTION}: {`);
   console.log(`    url: "${eventUrl}",`);
   console.log(`    label: "HLTV",`);
