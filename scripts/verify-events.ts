@@ -95,9 +95,12 @@ check("fixtures.layout names the committed fixture", active.fixtures.layout === 
 check("fixtures.logos names the committed manifest", active.fixtures.logos === "cologne-logos");
 check("teamMaps record the owning modules", !!active.teamMaps.regions && !!active.teamMaps.stats && !!active.teamMaps.sources);
 
-// — anti-rigging: the live-count invariant resolveActiveEvent() enforces —
+// — config-sanity invariant: at most one BASELINE-live event. (resolveActiveEvent
+//   is clock-derived since PHA-950 and no longer throws on multiples — it picks
+//   the soonest go-live — but two hand-set `live` baselines is still a config
+//   smell: which one is the canonical current Major is then ambiguous.) —
 check(
-  "registry has no second live event (would break resolveActiveEvent)",
+  "registry has no second baseline-live event",
   Object.values(EVENTS).filter((e) => e.status === "live").length === 1,
 );
 
