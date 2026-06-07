@@ -72,12 +72,25 @@ Two committed constants:
   Playoff sections (108/109/110) are intentionally left **dark** (no entry) — their
   per-round times are TBD; the bracket runs off the layout, not the clock.
 - **`COLOGNE_MATCH_WINDOWS`**: `sectionId → { start, end }`. The date span each stage is
-  *played*. The HLTV crawl only fires inside a window (`isWithinMatchWindow`), so the app
-  stays idle on off-days. **Fails open** for undated sections (better to refresh than to
-  go dark), so an unset window just means "always allowed", not "broken".
+  *played*. Together with the lock schedule this drives the crawl window
+  (`isWithinRefreshWindow`): it **opens 24h before the stage's lock** and **closes at the
+  window `end`**. So the live bracket + standings go live the day before a stage starts
+  (PHA-943: "the bracket should go live 24 hours before the start of the stage"), and stop
+  crawling once it's decided. **Fails open** for undated sections (revealed → keep
+  refreshing), so an unset window just means "no auto-close", not "broken".
 
   Rename this constant if you like, but keep the param name; everything passes it
   explicitly. Run `node --experimental-strip-types scripts/verify-lock-schedule.ts`.
+
+> **Three tables, one section id (the future-proofing rule).** For a Swiss stage's live
+> bracket+standings to work, the SAME section id must appear in **`lockSchedule`** (→ when
+> it reveals, `lockAt − 24h`, and when it locks), **`matchWindows`** (→ when the crawl
+> stops), and **`sectionSources`** (→ the HLTV page to crawl). A missing one fails
+> *silently* (e.g. a source with no lock never reveals). `validateEventRevealConfig()` in
+> `events-core.ts` enforces this for **every** registered event and `verify-events.ts`
+> asserts it — so a half-filled next-Major config fails loudly at CI, not live. A Swiss
+> stage may legitimately have lock+window but **no source yet** (source unpublished); add
+> the source when HLTV posts it and the boards fill automatically inside the 24h window.
 
 At this point the app renders the right teams, buckets correctly, locks on schedule,
 and reveals/scores against the Valve answer key. **This is the minimum viable re-point.**
@@ -149,6 +162,7 @@ Once live, each stage start is a small recurring routine:
 [ ] COLOGNE_LOCK_SCHEDULE      → each stage's first-match instant       (Phase 1b)
 [ ] COLOGNE_MATCH_WINDOWS      → each stage's played date-span          (Phase 1b)
 [ ] SECTION_SOURCES            → HLTV event URL per Swiss stage          (Phase 2a)
+[ ] verify-events.ts GREEN     → reveal config consistent (lock∩window⊇source) (PHA-943)
 [ ] cologne-logos.json         → re-run build-logos.ts                  (Phase 3)
 [ ] TEAM_REGIONS               → pickid → region                        (Phase 3)
 [ ] TEAM_STATS + AS_OF         → frozen HLTV snapshot                   (Phase 3)
