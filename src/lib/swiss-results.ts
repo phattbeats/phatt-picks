@@ -27,6 +27,9 @@ import {
   parseHltvSwissStandings,
   matchStandingsToLayout,
   recordsByPickId,
+  planStandingsCrawlPass,
+  STANDINGS_MAX_CRAWL_PASSES,
+  STANDINGS_RETRY_BACKOFF_MS,
   type RawStandingRow,
   type StandingRow,
   type MatchableTeam,
@@ -53,10 +56,14 @@ const CRAWL4AI_URL = (process.env.CRAWL4AI_URL ?? "http://crawl4ai:11235").repla
 const REFRESH_MIN_INTERVAL_MS = 60 * 60_000;
 const STANDINGS_REFRESH_SOURCE = "hltv-standings";
 
-// Bound the crawl so a hung render service can't wedge a refresh tick. crawl4ai
-// renders + bypasses Cloudflare, so it's slower than a bare fetch — give it room
-// but cap it; this runs deferred (off the render path) anyway.
-const CRAWL_TIMEOUT_MS = 45_000;
+// Per-attempt + total crawl budget now live in swiss-results-core
+// (STANDINGS_CRAWL_PASS_TIMEOUT_MS / _MAX_CRAWL_PASSES / _MAX_TOTAL_CRAWL_MS),
+// consumed via planStandingsCrawlPass below. A lone 45s shot used to lose the
+// crawl4ai queue race to the team-stats batch and freeze the table for an hour
+// (PHA-951); the bounded retry lands a later pass once the service drains.
+
+/** Pause helper for the inter-pass backoff (the crawl runs deferred, off the render path). */
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 /** The persisted blob shape (data column of SwissStandingsCache). */
 interface StandingsBlob {
@@ -140,13 +147,16 @@ async function stampStandingsRefreshSlot(): Promise<void> {
  * non-2xx / empty-body failure so the caller degrades to the last cache. Never
  * used on the render path directly — the driver defers it.
  */
-async function crawlPage(url: string): Promise<{ markdown: string; html: string }> {
+async function crawlPageOnce(
+  url: string,
+  timeoutMs: number,
+): Promise<{ markdown: string; html: string }> {
   const res = await fetch(`${CRAWL4AI_URL}/crawl`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ urls: [url], crawler_config: { cache_mode: "BYPASS" } }),
     cache: "no-store",
-    signal: AbortSignal.timeout(CRAWL_TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!res.ok) throw new Error(`crawl4ai returned ${res.status}`);
   const json = (await res.json()) as {
@@ -159,6 +169,36 @@ async function crawlPage(url: string): Promise<{ markdown: string; html: string 
   const html = r?.html ?? "";
   if (!markdown && !html) throw new Error("crawl4ai returned no content");
   return { markdown, html };
+}
+
+/**
+ * Crawl with a bounded retry over a total wall-clock budget (PHA-951). The
+ * standings ingest co-fires with the team-stats refresh, whose 32-profile batch
+ * can hold crawl4ai for over a minute; a single attempt loses that queue race and
+ * times out, freezing the W-L table for the whole hour. Retrying — with a brief
+ * backoff so the contended service can drain — lands a later pass once team-stats
+ * finishes. Per-attempt timeout + pass count + total budget come from
+ * `planStandingsCrawlPass` (pure, verify-covered). Throws the last error only if
+ * every pass fails (the caller then keeps the prior cache, never blanks it).
+ */
+async function crawlPage(url: string): Promise<{ markdown: string; html: string }> {
+  const start = Date.now();
+  let lastErr: unknown = new Error("crawl4ai: no attempt made");
+  for (let pass = 0; pass < STANDINGS_MAX_CRAWL_PASSES; pass++) {
+    const timeoutMs = planStandingsCrawlPass(pass, Date.now() - start);
+    if (timeoutMs == null) break; // budget exhausted
+    try {
+      return await crawlPageOnce(url, timeoutMs);
+    } catch (e) {
+      lastErr = e;
+      console.warn(
+        `[standings] crawl pass ${pass + 1}/${STANDINGS_MAX_CRAWL_PASSES} failed:`,
+        e instanceof Error ? e.message : e,
+      );
+      if (pass + 1 < STANDINGS_MAX_CRAWL_PASSES) await sleep(STANDINGS_RETRY_BACKOFF_MS);
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
 /**

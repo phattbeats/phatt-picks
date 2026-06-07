@@ -23,6 +23,10 @@ import {
   deriveStatus,
   summarizeStandings,
   recordsByPickId,
+  planStandingsCrawlPass,
+  STANDINGS_CRAWL_PASS_TIMEOUT_MS,
+  STANDINGS_MAX_CRAWL_PASSES,
+  STANDINGS_MAX_TOTAL_CRAWL_MS,
 } from "../src/lib/swiss-results-core.ts";
 import type { Layout, Section } from "../src/lib/layout.ts";
 
@@ -142,6 +146,44 @@ check("a row with no game played (0-0) is omitted", (() => {
   return recordsByPickId(zero).size === 0;
 })());
 check("unmatched rows (pickid null) are skipped", recordsByPickId([]).size === 0);
+
+console.log("\nswiss-results - crawl retry/timeout policy (PHA-951: survive team-stats contention)");
+
+check(
+  "pass 0 gets the full per-attempt timeout",
+  planStandingsCrawlPass(0, 0) === STANDINGS_CRAWL_PASS_TIMEOUT_MS,
+);
+check(
+  "MAX_CRAWL_PASSES passes are schedulable from a fresh budget",
+  Array.from({ length: STANDINGS_MAX_CRAWL_PASSES }, (_, i) => planStandingsCrawlPass(i, 0)).every(
+    (t) => t != null && t > 0,
+  ),
+);
+check(
+  "a pass beyond MAX_CRAWL_PASSES yields null (stop retrying)",
+  planStandingsCrawlPass(STANDINGS_MAX_CRAWL_PASSES, 0) === null,
+);
+check(
+  "an exhausted total budget yields null even on an early pass",
+  planStandingsCrawlPass(1, STANDINGS_MAX_TOTAL_CRAWL_MS) === null,
+);
+check(
+  "the final pass is clamped to the remaining budget, not the per-pass cap",
+  (() => {
+    // Leave only 20s of budget: the pass must be clamped to that, not 90s.
+    const left = 20_000;
+    const t = planStandingsCrawlPass(1, STANDINGS_MAX_TOTAL_CRAWL_MS - left);
+    return t === left && t < STANDINGS_CRAWL_PASS_TIMEOUT_MS;
+  })(),
+);
+check(
+  "a negative pass index is rejected (defensive)",
+  planStandingsCrawlPass(-1, 0) === null,
+);
+check(
+  "total budget covers at least two full per-attempt passes (real contention needs a real retry)",
+  STANDINGS_MAX_TOTAL_CRAWL_MS >= 2 * STANDINGS_CRAWL_PASS_TIMEOUT_MS,
+);
 
 console.log(`\nswiss-results: ${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);

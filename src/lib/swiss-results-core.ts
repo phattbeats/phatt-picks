@@ -197,3 +197,46 @@ export function summarizeStandings(rows: readonly StandingRow[]): StandingsSumma
     started: rows.some((r) => r.matches > 0),
   };
 }
+
+// --- Standings crawl retry/timeout policy (PHA-951 follow-up) ----------------
+//
+// The single HLTV event page renders in ~5s through crawl4ai when the service is
+// idle — but the standings ingest fires in the SAME deferred tick as the
+// team-stats refresh, which batches all 32 team profiles into ONE long crawl4ai
+// render (budgeted up to 240s; PHA-944). A lone standings request with a single
+// 45s shot queues BEHIND that batch and its window expires every hour, so the
+// ingest falls back to the stale cache — exactly Brandon's "updated the first two
+// days then stopped" / "is the hourly update running correctly?" symptom (the
+// 0-3 / 3-0 red-strike LOGIC is correct, but it was reading frozen W-L data).
+//
+// Fix: give the standings crawl the same shape team-stats already has — a bounded
+// retry over a total wall-clock budget, so a pass that loses the queue race lands
+// on a later pass once crawl4ai drains. This runs deferred (off the render path),
+// so a longer budget adds ZERO page latency. Constants + the pure pass-planner
+// live here so the verify harness can prove the policy without a live crawl.
+
+/** Per-attempt crawl timeout — generous enough to outlast a team-stats batch render. */
+export const STANDINGS_CRAWL_PASS_TIMEOUT_MS = 90_000;
+/** Max crawl attempts before giving up this tick (the next ~hourly read retries). */
+export const STANDINGS_MAX_CRAWL_PASSES = 3;
+/** Total wall-clock budget across all passes (caps the whole deferred ingest). */
+export const STANDINGS_MAX_TOTAL_CRAWL_MS = 240_000;
+/** Brief pause between a failed pass and the next, letting a contended crawl4ai drain. */
+export const STANDINGS_RETRY_BACKOFF_MS = 5_000;
+
+/**
+ * Plan one crawl pass: the per-attempt timeout for `passIndex` (0-based), bounded
+ * by the budget remaining after `elapsedMs`. Returns null when no passes or no
+ * budget remain — the caller stops retrying. Pure, so verify can assert the
+ * schedule (e.g. pass 0 gets the full per-pass timeout, the last pass is clamped
+ * to the remaining budget, an exhausted budget yields null) without crawling.
+ */
+export function planStandingsCrawlPass(
+  passIndex: number,
+  elapsedMs: number,
+): number | null {
+  if (passIndex < 0 || passIndex >= STANDINGS_MAX_CRAWL_PASSES) return null;
+  const remaining = STANDINGS_MAX_TOTAL_CRAWL_MS - elapsedMs;
+  if (remaining <= 0) return null;
+  return Math.min(STANDINGS_CRAWL_PASS_TIMEOUT_MS, remaining);
+}
