@@ -7,9 +7,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import Openid from "openid";
-import { SignJWT } from "jose";
 import { prisma } from "@/lib/db";
 import { attributeReferral } from "@/lib/invite";
+import { signSessionToken, sessionCookieOptions } from "@/lib/session-core";
 
 const { RelyingParty } = Openid;
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
@@ -18,10 +18,10 @@ const REALM = BASE_URL;
 
 const STEAM_ID_RE = /^https:\/\/steamcommunity\.com\/openid\/id\/(\d+)$/;
 
-function getSessionSecret(): Uint8Array {
+function requireSecret(): string {
   const secret = process.env.NEXTAUTH_SECRET;
   if (!secret) throw new Error("NEXTAUTH_SECRET not set");
-  return new TextEncoder().encode(secret);
+  return secret;
 }
 
 export async function GET(req: NextRequest) {
@@ -87,21 +87,21 @@ export async function GET(req: NextRequest) {
           }
         }
 
-        // Issue a session JWT (short-lived, HttpOnly, SameSite=Lax)
-        const token = await new SignJWT({ sub: player.id, steamId, displayName })
-          .setProtectedHeader({ alg: "HS256" })
-          .setIssuedAt()
-          .setExpirationTime("7d")
-          .sign(getSessionSecret());
+        // Issue a session JWT. PHA-982: 30-day TTL (was 7d) and sliding —
+        // the middleware re-stamps an active session, so a Steam user (who
+        // eats a 2FA prompt on every re-login) is effectively never bounced
+        // back through Steam while they keep using the app.
+        const token = await signSessionToken(
+          { sub: player.id, steamId, displayName },
+          requireSecret(),
+        );
 
         const response = NextResponse.redirect(new URL("/", BASE_URL));
-        response.cookies.set("phatt_session", token, {
-          httpOnly: true,
-          sameSite: "lax",
-          path: "/",
-          maxAge: 60 * 60 * 24 * 7,
-          secure: process.env.NODE_ENV === "production",
-        });
+        response.cookies.set(
+          "phatt_session",
+          token,
+          sessionCookieOptions(process.env.NODE_ENV === "production"),
+        );
         // Referral consumed (or no-op) — clear the capture cookie.
         response.cookies.set("hotline_ref", "", { path: "/", maxAge: 0 });
 
