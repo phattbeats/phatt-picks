@@ -240,7 +240,10 @@ function BrandLockup() {
         alt="IEM Cologne 2026 Major"
         width={1920}
         height={1013}
-        style={{ height: 34, width: "auto", opacity: 0.95 }}
+        // The source art is black + blue, so on the dark page the black intel /
+        // IEM / ESL marks vanish (only the blue "COLOGNE MAJOR 2026" survives).
+        // Whiten the whole lockup the same way the dashboard WATCH NOW band does.
+        style={{ height: 34, width: "auto", filter: "brightness(0) invert(1)", opacity: 0.95 }}
       />
       <span style={{ width: 1, height: 26, background: "var(--hair-2)" }} aria-hidden />
       <Image
