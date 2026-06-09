@@ -71,6 +71,30 @@ function findStage3(hubHtml: string): { id: string; slug: string } | null {
   return { id: m[1], slug: m[2] };
 }
 
+/** The hub itself + the already-known stage sub-events. */
+const KNOWN_SUBEVENT_IDS = new Set(["8301", "9028", "9029"]);
+
+/**
+ * Safety net for the final days before the lock: HLTV could publish the Stage 3
+ * play as a combined "…-playoffs" page (no "stage-3" in the slug), which the
+ * strict findStage3 detector above would miss — silently keeping us at exit 3
+ * past the deadline. This surfaces ANY new `iem-cologne-major-2026-*` sub-event
+ * id we don't already know about, so a human can eyeball whether it's the Stage
+ * 3 source. It never changes the exit code (the auto-apply path stays strict);
+ * it only adds a loud hint to the not-yet-published report.
+ */
+function findUnknownSubEvents(
+  hubHtml: string,
+): { id: string; slug: string }[] {
+  const out = new Map<string, string>();
+  for (const m of hubHtml.matchAll(
+    /\/events\/(\d+)\/(iem-cologne-major-2026[a-z0-9-]*)/gi,
+  )) {
+    if (!KNOWN_SUBEVENT_IDS.has(m[1])) out.set(m[1], m[2]);
+  }
+  return [...out].map(([id, slug]) => ({ id, slug }));
+}
+
 /** A loose UTC date pull from the event page's schedule block, best-effort. */
 function readEventDates(eventHtml: string): { start?: string; end?: string } {
   // HLTV stamps each match/day with a unix-ms data-unix attribute; the span of
@@ -97,6 +121,17 @@ async function main() {
       `[check-stage3-source] Stage 3 NOT yet published on HLTV hub 8301 ` +
         `(no /events/<id>/iem-cologne-major-2026-stage-3 link).`,
     );
+    const unknown = findUnknownSubEvents(hub);
+    if (unknown.length > 0) {
+      console.log(
+        `[check-stage3-source] ⚠️  but NEW unrecognized Cologne sub-event(s) ` +
+          `appeared on the hub — check by hand whether one is the Stage 3 ` +
+          `source (e.g. a combined "…-playoffs" page):`,
+      );
+      for (const u of unknown) {
+        console.log(`    https://www.hltv.org/events/${u.id}/${u.slug}`);
+      }
+    }
     console.log(`[check-stage3-source] Re-check before the Jun 11 lock.`);
     process.exit(3);
   }
