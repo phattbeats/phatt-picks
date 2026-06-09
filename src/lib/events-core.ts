@@ -142,6 +142,20 @@ const COLOGNE_2026: EventConfig = {
       url: "https://www.hltv.org/events/9029/iem-cologne-major-2026-stage-2",
       label: "HLTV",
     },
+    // Stage III (PHA-926). Unlike Stages I/II, HLTV did NOT mint a dedicated
+    // sub-event id for Stage 3 — it runs Stage 3 + Playoffs under the parent
+    // major hub (event 8301). Verified on the live hub (2026-06-09): its
+    // crawled markdown renders the active stage's `Group Swiss | … | Record`
+    // table, which during the Stage III window (Jun 11–14) is exactly the
+    // Stage 3 field — parseHltvSwissStandings pulls all 16 seeds from it, and
+    // the 8 round-1 `data-match-details-popup-json` blocks drive the bracket.
+    // So the hub IS the Stage III source; there is no `…-stage-3` page to wait
+    // for. The hourly crawl is match-window-gated, so it only reads the hub
+    // during Jun 11–14 when "current stage" == Stage 3.
+    107: {
+      url: "https://www.hltv.org/events/8301/iem-cologne-major-2026",
+      label: "HLTV",
+    },
   },
   fixtures: { layout: "cologne-layout", logos: "cologne-logos" },
   teamMaps: {
