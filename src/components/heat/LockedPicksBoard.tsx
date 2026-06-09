@@ -67,7 +67,7 @@ export function LockedPicksBoard({
 
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
         <span className="eyebrow-mono" style={{ color: "var(--heat)" }}>{title}</span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-low)" }}>
+        <span className="last-updated">
           {resolvedAtIso ? <LastUpdated iso={resolvedAtIso} /> : "Turns green / red as teams clinch"}
         </span>
       </div>

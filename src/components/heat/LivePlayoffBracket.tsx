@@ -103,7 +103,7 @@ export function LivePlayoffBracket({
         <span className="eyebrow-mono" style={{ color: "var(--heat)" }}>
           [ PLAYOFFS BRACKET ]
         </span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-low)" }}>
+        <span className="last-updated">
           {bracket.anyDecided && resolvedAtIso ? <LastUpdated iso={resolvedAtIso} /> : "Updates as matches finish"}
         </span>
       </div>

@@ -268,10 +268,10 @@ export default async function LeaderboardPage() {
       }}>
         <p style={{
           fontFamily: "var(--font-mono)",
-          fontSize: 10,
-          letterSpacing: "0.12em",
+          fontSize: 11,
+          letterSpacing: "0.1em",
           textTransform: "uppercase",
-          color: "var(--ink-low)",
+          color: "var(--ink-mid)",
           margin: 0,
         }}>
           {latestResolvedAt ? (
@@ -282,10 +282,10 @@ export default async function LeaderboardPage() {
         </p>
         <p style={{
           fontFamily: "var(--font-mono)",
-          color: "var(--ink-low)",
-          fontSize: 9,
+          color: "var(--ink-mid)",
+          fontSize: 10.5,
           margin: "6px 0 0",
-          letterSpacing: "0.1em",
+          letterSpacing: "0.08em",
         }}>
           Results:{" "}
           <a
