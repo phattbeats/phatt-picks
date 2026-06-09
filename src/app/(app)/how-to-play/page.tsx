@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export const metadata = { title: "How Pick'Em works · HOTLINE" };
 
@@ -120,6 +121,139 @@ function Bucket({ tag, color, label, blurb }: { tag: string; color: string; labe
   );
 }
 
+/**
+ * Italic that doesn't clip into the next word. A slanted glyph overhangs its
+ * right edge, so a following space/period reads as "stuck on" — a small right
+ * margin restores the gap (same fix used on the Steam auth-code page).
+ */
+function Em({ children }: { children: React.ReactNode }) {
+  return <em style={{ fontStyle: "italic", marginRight: "0.12em" }}>{children}</em>;
+}
+
+/** A single match result in the stage-flow mock — a win or a loss. */
+function ResultPill({ kind }: { kind: "W" | "L" }) {
+  const win = kind === "W";
+  return (
+    <span style={{
+      width: 22,
+      height: 22,
+      flexShrink: 0,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontFamily: "var(--font-mono)",
+      fontSize: 11,
+      fontWeight: 700,
+      color: "var(--void)",
+      background: win ? "#34d39a" : "var(--heat)",
+      clipPath: "polygon(0 3px, 3px 0, calc(100% - 3px) 0, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0 calc(100% - 3px))",
+    }}>
+      {kind}
+    </span>
+  );
+}
+
+/** One team's run through the stage: a sequence of results → a labeled outcome. */
+function FlowRow({ results, color, tag, label }: {
+  results: ("W" | "L")[];
+  color: string;
+  tag: string;
+  label: string;
+}) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 4 }}>
+        {results.map((r, i) => <ResultPill key={i} kind={r} />)}
+      </div>
+      <span style={{ color: "var(--ink-low)", flexShrink: 0 }}>→</span>
+      <span style={{
+        display: "inline-flex",
+        alignItems: "baseline",
+        gap: 7,
+        padding: "3px 9px",
+        border: `1px solid ${color}`,
+        borderLeft: `3px solid ${color}`,
+        background: "var(--surf-1)",
+      }}>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color }}>{tag}</span>
+        <span style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: 9.5,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: "var(--ink-mid)",
+        }}>
+          {label}
+        </span>
+      </span>
+    </div>
+  );
+}
+
+/**
+ * A small labeled mock of how one Swiss stage actually plays out: 16 teams,
+ * each playing until they hit 3 wins (advance) or 3 losses (out). The cleanest
+ * runs go 3-0; the roughest go 0-3 — which is exactly the three calls above.
+ */
+function StageFlow() {
+  return (
+    <div className="brk" style={{ ...card, background: "var(--surf-2)" }}>
+      <span className="br-tr" />
+      <span className="br-bl" />
+      <div className="panel-title" style={{ marginBottom: 4 }}>[ How a stage plays out ]</div>
+      <p style={{
+        fontFamily: "var(--font-mono)",
+        fontSize: 10.5,
+        letterSpacing: "0.06em",
+        color: "var(--ink-low)",
+        margin: "0 0 16px",
+        lineHeight: 1.5,
+      }}>
+        16 teams enter. Each plays on until <strong style={{ color: "#34d39a" }}>3 wins</strong> (advance)
+        or <strong style={{ color: "var(--heat)" }}>3 losses</strong> (out).
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <FlowRow results={["W", "W", "W"]} color="#34d39a" tag="3–0" label="Advances · perfect run" />
+        <FlowRow results={["W", "L", "W", "L", "W"]} color="var(--ink-hi)" tag="ADV" label="Advances · first to 3 wins" />
+        <FlowRow results={["L", "L", "L"]} color="var(--heat)" tag="0–3" label="Eliminated · winless" />
+      </div>
+      <p style={{ color: "var(--ink-low)", fontSize: 11.5, lineHeight: 1.5, margin: "16px 0 0" }}>
+        You call the two cleanest runs (3-0), everyone who advances, and the two that crash out (0-3) —
+        the rest fills in as the stage plays.
+      </p>
+    </div>
+  );
+}
+
+/** Co-branded lockup — the Major and the game this companion covers. */
+function BrandLockup() {
+  return (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 18,
+      flexWrap: "wrap",
+      padding: "14px 4px 2px",
+    }}>
+      <Image
+        src="/watch/iem-cologne.png"
+        alt="IEM Cologne 2026 Major"
+        width={1920}
+        height={1013}
+        style={{ height: 34, width: "auto", opacity: 0.95 }}
+      />
+      <span style={{ width: 1, height: 26, background: "var(--hair-2)" }} aria-hidden />
+      <Image
+        src="/watch/counter-strike.png"
+        alt="Counter-Strike"
+        width={639}
+        height={136}
+        style={{ height: 18, width: "auto", opacity: 0.82 }}
+      />
+    </div>
+  );
+}
+
 export default function HowToPlayPage() {
   return (
     <>
@@ -139,6 +273,7 @@ export default function HowToPlayPage() {
           Never done this before? You&apos;re in the right place. No CS2 deep-lore required —
           read this once and you&apos;ll know exactly what to do.
         </p>
+        <BrandLockup />
       </div>
 
       {/* What even is this */}
@@ -148,9 +283,13 @@ export default function HowToPlayPage() {
         <span className="br-bl" />
         <p style={{ ...lead, margin: 0, fontSize: 15 }}>
           A <strong style={{ color: "var(--ink-hi)" }}>Pick&apos;Em</strong> is calling how a tournament
-          plays out <em>before it&apos;s played</em>. You predict which teams win and which go home.
+          plays out <Em>before it&apos;s played</Em>. You predict which teams win and which go home.
           Get it right, score points, climb the board against everyone else who played.
-          That&apos;s the game.
+        </p>
+        <p style={{ ...lead, margin: "12px 0 0", fontSize: 14 }}>
+          Think of a <strong style={{ color: "var(--ink-hi)" }}>March Madness bracket</strong> — only
+          way better: instead of one weekend you call the whole event, and your score climbs live, stage
+          by stage, as the upsets land. <span aria-hidden>🙂</span>
         </p>
       </div>
 
@@ -207,9 +346,10 @@ export default function HowToPlayPage() {
         />
       </div>
       <p style={{ ...lead, marginTop: 2, fontSize: 13 }}>
-        Within a group, order doesn&apos;t matter — if you put the right team in the right bucket, that&apos;s
-        a hit. You&apos;re sorting teams into outcomes, not ranking them 1-through-10.
+        Within a group, order doesn&apos;t matter — put the right team in the right bucket and it counts.
       </p>
+
+      <StageFlow />
 
       {/* Steps */}
       <SectionTitle kicker="[ DO IT ]">Making your first picks</SectionTitle>
@@ -239,8 +379,8 @@ export default function HowToPlayPage() {
         <span className="br-tr" />
         <span className="br-bl" />
         <p style={{ ...lead, margin: 0 }}>
-          Every correct pick scores. Later Swiss stages are worth more per pick, and in the playoffs the
-          <em> early</em> rounds pay the most (calling all four quarterfinals is harder than calling one
+          Every correct pick scores. Later Swiss stages are worth more per pick, and in the playoffs the{" "}
+          <Em>early</Em> rounds pay the most (calling all four quarterfinals is harder than calling one
           Grand Final). A perfect tournament is <strong style={{ color: "var(--ink-hi)" }}>135 points</strong> —
           but you don&apos;t need perfect to win the board, you just need to beat the people next to you.
         </p>
@@ -274,8 +414,8 @@ export default function HowToPlayPage() {
           <p style={{ ...lead, margin: "0 0 0", fontSize: 13.5 }}>
             If you own the Viewer Pass and already made real picks in-game, connect your{" "}
             <Link href="/help/auth-code" style={{ color: "var(--heat)" }}>Steam auth code</Link>.
-            HOTLINE pulls in your <em>official</em> picks — including stages that already locked — and
-            backdates the points you earned. You made the calls in time; you just hadn&apos;t used the app yet.
+            HOTLINE pulls in your <Em>official</Em> picks — including stages that already locked — and
+            backdates the points you earned.
           </p>
         </div>
       </div>
