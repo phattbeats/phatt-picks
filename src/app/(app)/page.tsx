@@ -94,14 +94,6 @@ export default async function DashboardPage() {
     : 0;
   const selfPickComplete = activeSlotCount > 0 && selfFilledSlots >= activeSlotCount;
 
-  // First-timer signal (PHA-987): a signed-in player who hasn't filled a single
-  // slot anywhere is almost certainly new — surface the "how it works" guide up
-  // top. Drops away the moment they make their first pick.
-  const selfHasAnyPick = session
-    ? allPicks.some((p) => p.playerId === session.playerId)
-    : false;
-  const showNewcomerCard = !!session && !selfHasAnyPick;
-
   // Leaderboard top 4 + self rank.
   const outcomeMap: OutcomeMap = {};
   for (const o of outcomeRows) {
@@ -151,42 +143,6 @@ export default async function DashboardPage() {
           {layout.name.replace("CS2 ", "").replace("Major | ", " · ")} · <b>{eventLabel}</b>
         </span>
       </div>
-
-      {/* First-timer guide (PHA-987) — only until their first pick lands */}
-      {showNewcomerCard && (
-        <Link
-          href="/how-to-play"
-          className="brk"
-          style={{
-            position: "relative",
-            display: "flex",
-            alignItems: "center",
-            gap: 14,
-            background: "var(--surf-1)",
-            border: "1px solid var(--hair-2)",
-            borderLeft: "3px solid var(--heat)",
-            padding: "16px 18px",
-            textDecoration: "none",
-          }}
-        >
-          <span className="br-tr" />
-          <span className="br-bl" />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <span className="eyebrow-mono" style={{ display: "block", marginBottom: 6 }}>
-              [ NEW_HERE ]
-            </span>
-            <p style={{ margin: 0, color: "var(--ink-hi)", fontSize: 14, fontWeight: 600, lineHeight: 1.4 }}>
-              First Pick&apos;Em? Here&apos;s the 60-second rundown.
-            </p>
-            <p style={{ margin: "4px 0 0", color: "var(--ink-mid)", fontSize: 12.5, lineHeight: 1.5 }}>
-              What you&apos;re predicting, what 3-0 / advance / 0-3 mean, and how to make your first picks.
-            </p>
-          </div>
-          <svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="var(--heat)" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-        </Link>
-      )}
 
       {/* Stage briefing */}
       <section className="brk" style={{

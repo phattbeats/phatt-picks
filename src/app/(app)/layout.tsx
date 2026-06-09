@@ -1,5 +1,6 @@
 import { HeatHeader, type TopbarYouProps } from "@/components/heat/HeatHeader";
 import { HeatBottomNav } from "@/components/heat/HeatBottomNav";
+import { HowToPlayAnnounce } from "@/components/heat/HowToPlayAnnounce";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { resolveTopbarYou } from "@/lib/topbar-you-core";
@@ -26,7 +27,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <>
       <HeatHeader topbar={topbar} profileHref={profileHref} />
-      <main className="shell with-nav">{children}</main>
+      <main className="shell with-nav">
+        {session && <HowToPlayAnnounce />}
+        {children}
+      </main>
       <HeatBottomNav />
     </>
   );
