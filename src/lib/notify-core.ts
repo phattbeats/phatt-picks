@@ -23,6 +23,28 @@ export const DEFAULT_REMINDER_OFFSETS_MS: readonly number[] = [DAY_MS, HOUR_MS];
  */
 export const DEFAULT_FIRE_WINDOW_MS = 15 * MINUTE_MS;
 
+const TRUTHY_FLAGS: ReadonlySet<string> = new Set(["1", "true", "yes", "on"]);
+const FALSY_FLAGS: ReadonlySet<string> = new Set(["0", "false", "no", "off"]);
+
+/**
+ * Scheduler gate (PHA-996): default ON. The original opt-in env
+ * (PRELOCK_REMINDERS_ENABLED, PHA-929) lived only on the container, so an
+ * Unraid-template Force-Update recreated the container without it and the
+ * reminders died silently. Defaulting on in code removes the env dependency:
+ *  - PRELOCK_REMINDERS_DISABLED truthy  → off (the one supported opt-out)
+ *  - PRELOCK_REMINDERS_ENABLED falsy    → off (explicit legacy opt-out honored)
+ *  - anything else (incl. both unset)   → on
+ * Pure: callers pass the raw env values; this module stays env-free.
+ */
+export function prelockSchedulerEnabled(
+  enabledEnv: string | undefined,
+  disabledEnv: string | undefined,
+): boolean {
+  if (TRUTHY_FLAGS.has((disabledEnv ?? "").trim().toLowerCase())) return false;
+  if (FALSY_FLAGS.has((enabledEnv ?? "").trim().toLowerCase())) return false;
+  return true;
+}
+
 export interface ReminderTime {
   /** Offset before lock this reminder represents (e.g. DAY_MS). */
   offsetMs: number;
