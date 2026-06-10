@@ -11,20 +11,18 @@
  * runs in prod with zero extra infrastructure. This closes PHA-929: opt-in
  * worked, but nothing ever scheduled the send.
  *
- * GATING (owner decision): OFF unless PRELOCK_REMINDERS_ENABLED is truthy.
- * Standing up live reminders is Brandon's call, so merging this code is inert by
- * default — register() logs and returns without arming a timer. Flip
- * PRELOCK_REMINDERS_ENABLED=1 in the deploy env (docker-compose) + Force Update
- * to turn reminders on.
+ * GATING (PHA-996, was opt-in under PHA-929): ON by default. The opt-in env
+ * lived only on the live container, so an Unraid-template Force-Update silently
+ * dropped it and reminders died with no code change to catch it. The committed
+ * lock schedule + reminderFireKey dedup already make an armed scheduler safe,
+ * so the default flipped: set PRELOCK_REMINDERS_DISABLED=1 to opt out (an
+ * explicit PRELOCK_REMINDERS_ENABLED=0 is honored too). No env needed to be on.
  */
+
+import { prelockSchedulerEnabled } from "@/lib/notify-core";
 
 const TICK_MS = 5 * 60 * 1000; // every 5 min — notify-core's 15-min fire window makes this idempotent
 const FIRST_TICK_DELAY_MS = 30 * 1000; // let the server settle before the first scan
-
-function schedulerEnabled(): boolean {
-  const v = (process.env.PRELOCK_REMINDERS_ENABLED ?? "").trim().toLowerCase();
-  return v === "1" || v === "true" || v === "yes" || v === "on";
-}
 
 export async function register(): Promise<void> {
   // prisma + web-push only run in the Node.js server runtime (not edge/browser).
@@ -50,8 +48,15 @@ export async function register(): Promise<void> {
     }
   }
 
-  if (!schedulerEnabled()) {
-    console.log("[prelock] scheduler disabled — set PRELOCK_REMINDERS_ENABLED=1 to enable");
+  if (
+    !prelockSchedulerEnabled(
+      process.env.PRELOCK_REMINDERS_ENABLED,
+      process.env.PRELOCK_REMINDERS_DISABLED,
+    )
+  ) {
+    console.log(
+      "[prelock] scheduler disabled by env opt-out — unset PRELOCK_REMINDERS_DISABLED to re-enable",
+    );
     return;
   }
 

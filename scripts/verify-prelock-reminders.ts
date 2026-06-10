@@ -23,6 +23,7 @@ import {
   HOUR_MS,
   MINUTE_MS,
   dueReminders,
+  prelockSchedulerEnabled,
   reminderFireKey,
 } from "../src/lib/notify-core.ts";
 
@@ -84,6 +85,22 @@ const secondPass = dueReminders(at24 + 5 * MINUTE_MS, lock3).filter(
 );
 check("first tick inside window dispatches the 24h reminder", firstPass.some((r) => r.label === "24h"));
 check("next tick inside the same window does NOT re-dispatch it", !secondPass.some((r) => r.label === "24h"));
+
+console.log("\nscheduler gate (PHA-996) — default ON, env opt-out only");
+// The regression this guards: a template Force-Update that drops EVERY ad-hoc
+// container var must leave the scheduler armed.
+check("both vars unset (the Force-Update state) ⇒ armed", prelockSchedulerEnabled(undefined, undefined));
+check("empty strings ⇒ armed", prelockSchedulerEnabled("", ""));
+check("legacy opt-in PRELOCK_REMINDERS_ENABLED=1 still armed", prelockSchedulerEnabled("1", undefined));
+check("PRELOCK_REMINDERS_DISABLED=1 ⇒ off", !prelockSchedulerEnabled(undefined, "1"));
+check("PRELOCK_REMINDERS_DISABLED=true/yes/on ⇒ off",
+  !prelockSchedulerEnabled(undefined, "true") &&
+  !prelockSchedulerEnabled(undefined, "YES") &&
+  !prelockSchedulerEnabled(undefined, " on "));
+check("explicit legacy PRELOCK_REMINDERS_ENABLED=0/false ⇒ off (opt-out honored)",
+  !prelockSchedulerEnabled("0", undefined) && !prelockSchedulerEnabled("false", undefined));
+check("disable wins over enable when both set", !prelockSchedulerEnabled("1", "1"));
+check("garbage values don't disable — fail toward armed", prelockSchedulerEnabled("maybe", "nah"));
 
 console.log(`\nverify-prelock-reminders: ${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);
