@@ -23,12 +23,12 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { SignJWT } from "jose";
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { verifyTurnstile } from "@/lib/captcha";
 import { attributeReferral } from "@/lib/invite";
+import { signSessionToken, sessionCookieOptions } from "@/lib/session-core";
 import {
   decideLocalAuthAction,
   randomName,
@@ -37,14 +37,12 @@ import {
 } from "@/lib/local-auth-core";
 
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
-const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
-const SESSION_TTL = "30d";
 const IP_ACCOUNT_LIMIT = 5;
 
-function getSessionSecret(): Uint8Array {
+function requireSecret(): string {
   const secret = process.env.NEXTAUTH_SECRET;
   if (!secret) throw new Error("NEXTAUTH_SECRET not set");
-  return new TextEncoder().encode(secret);
+  return secret;
 }
 
 function getClientIp(req: NextRequest): string | null {
@@ -71,24 +69,17 @@ async function reuseLocalSession(playerId: string): Promise<NextResponse | null>
   });
   if (!player || !player.isLocal) return null;
 
-  const token = await new SignJWT({
-    sub: player.id,
-    displayName: player.displayName,
-    isLocal: true,
-  })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime(SESSION_TTL)
-    .sign(getSessionSecret());
+  const token = await signSessionToken(
+    { sub: player.id, displayName: player.displayName, isLocal: true },
+    requireSecret(),
+  );
 
   const response = NextResponse.redirect(new URL("/", BASE_URL));
-  response.cookies.set("phatt_session", token, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_TTL_SECONDS,
-    secure: process.env.NODE_ENV === "production",
-  });
+  response.cookies.set(
+    "phatt_session",
+    token,
+    sessionCookieOptions(process.env.NODE_ENV === "production"),
+  );
   return response;
 }
 
@@ -114,24 +105,17 @@ async function createLocalPlayer(
     console.error("Referral attribution error (local):", err);
   }
 
-  const token = await new SignJWT({
-    sub: player.id,
-    displayName,
-    isLocal: true,
-  })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime(SESSION_TTL)
-    .sign(getSessionSecret());
+  const token = await signSessionToken(
+    { sub: player.id, displayName, isLocal: true },
+    requireSecret(),
+  );
 
   const response = NextResponse.redirect(new URL("/", BASE_URL));
-  response.cookies.set("phatt_session", token, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_TTL_SECONDS,
-    secure: process.env.NODE_ENV === "production",
-  });
+  response.cookies.set(
+    "phatt_session",
+    token,
+    sessionCookieOptions(process.env.NODE_ENV === "production"),
+  );
   // Referral consumed (or no-op) — clear the capture cookie.
   response.cookies.set("hotline_ref", "", { path: "/", maxAge: 0 });
   return response;

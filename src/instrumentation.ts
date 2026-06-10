@@ -30,6 +30,26 @@ export async function register(): Promise<void> {
   // prisma + web-push only run in the Node.js server runtime (not edge/browser).
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
+  // PHA-982 — session-secret sanity at boot. A missing or placeholder
+  // NEXTAUTH_SECRET silently invalidates EVERY existing phatt_session cookie
+  // (the real mechanism behind "the container reset logged everyone out"): the
+  // cookie verifies against the secret, so a new/blank secret = a mass logout.
+  // Shout it here so a Force-Update that dropped the var from the Unraid
+  // template is caught at boot, not one confused re-login at a time.
+  {
+    const { isPlaceholderSecret } = await import("@/lib/session-core");
+    if (isPlaceholderSecret(process.env.NEXTAUTH_SECRET)) {
+      console.error(
+        "[session] WARNING: NEXTAUTH_SECRET is missing or a placeholder. Every " +
+          "existing login cookie will fail to verify and all users will be logged " +
+          "out. Set a fixed, high-entropy NEXTAUTH_SECRET in the Unraid template " +
+          "(NOT ad-hoc on the container — Force-Update drops ad-hoc vars).",
+      );
+    } else {
+      console.log("[session] NEXTAUTH_SECRET present — existing logins survive restart.");
+    }
+  }
+
   if (!schedulerEnabled()) {
     console.log("[prelock] scheduler disabled — set PRELOCK_REMINDERS_ENABLED=1 to enable");
     return;

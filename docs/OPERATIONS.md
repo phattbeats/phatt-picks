@@ -16,7 +16,7 @@ missing.
 |---|---|---|---|
 | `DATABASE_URL` | yes | Prisma | SQLite path. In-container default `file:/data/phatt-picks.db`. Must point at a real disk path (an Unraid cache/appdata bind), **not** a FUSE `/mnt/user` share — SQLite's WAL locking breaks on FUSE. |
 | `NEXTAUTH_URL` | yes | Steam OpenID callback, invite-link builder, session cookie scope | Public origin the app is reached at (`https://pickems.phatt.vip`). Must match the SWAG host exactly or Steam OpenID will reject the realm. |
-| `NEXTAUTH_SECRET` | yes | Session JWT signing | Any high-entropy string. Rotate any time with `openssl rand -base64 32` — existing sessions become invalid until users reload. |
+| `NEXTAUTH_SECRET` | yes | Session JWT signing | Any high-entropy string. **Must be a FIXED value stored in the Unraid template — never set ad-hoc on the running container.** A Force-Update recreates the container from the template; an ad-hoc-only var is dropped, the secret effectively rotates, and **every** existing `phatt_session` cookie fails verification → the entire user base is logged out on the next page load (PHA-982). The boot log prints `[session] NEXTAUTH_SECRET present …` when it's set and a loud `[session] WARNING …` when it's missing/placeholder. Rotating it on purpose (`openssl rand -base64 32`) still invalidates all sessions until users re-login — only do it when you mean to. |
 | `STEAM_API_KEY` | yes for live read/write | `src/lib/valve.ts` | Your Steam Web API key from <https://steamcommunity.com/dev/apikey>. Server-side only — never reaches the client. Without it the read pipeline can't pull predictions / items and the write path 401s. |
 | `AUTH_CODE_ENCRYPTION_KEY` | yes for Steam users | `src/lib/crypto.ts` | 32-byte hex (64 hex chars). Encrypts each user's Steam Pick'Em auth code at rest with AES-256-GCM. Rotating it invalidates every stored auth code — users have to repaste at `/help/auth-code`. |
 | `WRITE_ENABLED` | optional, default `false` | `src/lib/picks-write.ts` (`isWriteEnabled()`) | **DESTRUCTIVE if `true`.** Gates the Steam upload path. When `false`, every `Lock In to Steam` click skips with `Steam sync disabled by owner`; local picks still save. Set to `true` once you're ready to lock real picks on Valve's servers. |
@@ -36,6 +36,7 @@ missing.
 - **Enable real Steam writes** → set `WRITE_ENABLED=true` and restart. Watch `Lock In to Steam` pill flip from `Steam sync disabled by owner` to `Add your Steam auth code to sync` (or `Synced to Steam (N picks)` once code is stored).
 - **Disable push entirely** → unset `VAPID_PUBLIC_KEY`. UI hides the opt-in; existing subscriptions become dormant (no errors, just no deliveries).
 - **Move the DB** → change the `/data` Unraid bind, restart. Run `npx prisma db push` against the new path once.
+- **Session lifetime** → all `phatt_session` cookies are 30 days and **sliding** (PHA-982): the splash middleware re-stamps a session once it passes the halfway mark, so anyone who keeps using the app never gets logged out. Steam and local now share one lifetime (previously Steam was a non-sliding 7d, which forced a weekly Steam-2FA re-login that looked like "the container logged me out"). To force everyone to re-auth, rotate `NEXTAUTH_SECRET`. Tune the value in `src/lib/session-core.ts` (`SESSION_TTL_*`).
 
 ## HTTP routes
 
