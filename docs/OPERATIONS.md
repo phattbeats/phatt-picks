@@ -30,6 +30,7 @@ missing.
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | optional | `src/app/login/local/page.tsx` | Public Turnstile site key for the CAPTCHA widget. Name must match **exactly** (a misspelled var = silent no-widget — see GOTCHAS). |
 | `STAGE_LOCKS_JSON` | optional | `scripts/send-prelock-reminders.ts` | Per-section pick cutoffs for the pre-lock reminder job, e.g. `{"105":{"name":"Stage I","lockAt":"2026-06-02T10:30:00Z"}}`. |
 | `EVENT_ID` | optional, default `26` | `scripts/send-prelock-reminders.ts` | Valve tournament event id (the layout's internal id, **not** the HLTV event id). Only the reminder script reads it. |
+| `PRELOCK_REMINDERS_DISABLED` | optional, default off | `src/instrumentation.ts` | Set to `1` to turn OFF the in-process pre-lock reminder scheduler. Since PHA-996 the scheduler is **ON by default** with no env required — the old opt-in (`PRELOCK_REMINDERS_ENABLED=1`) lived only on the container and a template Force-Update silently dropped it. A leftover explicit `PRELOCK_REMINDERS_ENABLED=0` also disables. |
 
 ### Common tweaks
 
