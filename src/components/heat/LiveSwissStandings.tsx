@@ -58,7 +58,7 @@ export function LiveSwissStandings({
         <span className="eyebrow-mono" style={{ color: "var(--heat)" }}>
           [ LIVE STANDINGS ]
         </span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-low)" }}>
+        <span className="last-updated">
           <LastUpdated iso={fetchedAtIso} />
         </span>
       </div>

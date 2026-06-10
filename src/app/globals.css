@@ -15,7 +15,8 @@
 
   --ink-hi:#f5ead4;
   --ink-mid:#a89b80;
-  --ink-low:#5a4f3d;
+  --ink-low:#9b8e72;
+  --dim:#5a4f3d;   /* was --ink-low; retired as text color (PHA-991, fails AA). Decorative/semantic-dim only. */
 
   --heat:#f0a300;
   --heat-hot:#ff7a1a;
@@ -46,7 +47,7 @@
   --accent:var(--heat);
   --accent-2:var(--heat-hot);
   --correct:var(--tac-green);
-  --wrong:var(--ink-low);
+  --wrong:var(--dim);
   --closing-soon:var(--heat);
   --info:var(--heat);
   --space-1:4px;
@@ -174,6 +175,16 @@ body {
   color: var(--ink-mid);
 }
 .eyebrow b { color: var(--heat); font-weight: 500; }
+
+/* "Results as of …" freshness stamp. Was 10px / --ink-low (#5a4f3d on the
+   near-black panels ≈ 2.3:1 — illegible, PHA-991). Bumped to --ink-mid
+   (~6:1, clears WCAG AA) and a comfortable size. */
+.last-updated {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+  color: var(--ink-mid);
+}
 
 .live-tag {
   display: inline-flex; align-items: center; gap: 6px;
@@ -468,7 +479,7 @@ body {
   color: var(--ink-low);
   text-decoration: none;
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   position: relative;
@@ -675,11 +686,11 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 }
 .pickcard-icon { font-size: 11px; font-weight: 700; }
 .pickcard-icon.correct { color: var(--tac-green); }
-.pickcard-icon.wrong { color: var(--ink-low); }
+.pickcard-icon.wrong { color: var(--dim); }
 /* Consensus line (PHA-889) — how many players made this same pick.
    Plain counts over "% of field" jargon; the lone call gets the heat. */
 .pickcard-share {
-  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.06em;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em;
   text-transform: uppercase; color: var(--ink-low); text-align: center;
 }
 .pickcard-share b { color: var(--heat); font-weight: 600; }
@@ -724,7 +735,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 }
 .podium-pts {
   font-family: var(--font-mono);
-  font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase;
+  font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
   color: var(--ink-low);
 }
 
@@ -856,7 +867,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em;
   color: var(--ink-hi); outline: none; transition: border-color 150ms var(--ease);
 }
-.dir-input::placeholder { color: var(--ink-low); }
+.dir-input::placeholder { color: var(--dim); }
 .dir-input:focus { border-color: var(--heat); }
 .dir-filters { display: flex; gap: 6px; flex-wrap: wrap; }
 .dir-filter {
@@ -1016,14 +1027,14 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 }
 .tsd-match.win { border-left-color: var(--tac-green); }
 .tsd-match.loss { border-left-color: var(--ember); }
-.tsd-match.tie { border-left-color: var(--ink-low); }
+.tsd-match.tie { border-left-color: var(--dim); }
 .tsd-res { font-family: var(--font-display); font-weight: 800; font-size: 16px; text-align: center; }
 .tsd-match.win .tsd-res { color: var(--tac-green); }
 .tsd-match.loss .tsd-res { color: var(--ember); }
 .tsd-match.tie .tsd-res { color: var(--ink-mid); }
 .tsd-opp { font-size: 13px; color: var(--ink-hi); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tsd-score { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--ink-hi); }
-.tsd-date { font-family: var(--font-mono); font-size: 10px; color: var(--ink-low); }
+.tsd-date { font-family: var(--font-mono); font-size: 11px; color: var(--ink-low); }
 .tsd-empty { font-size: 13px; color: var(--ink-mid); margin: 14px 0 0; }
 .tsd-link {
   display: inline-flex; align-items: center; gap: 7px; margin-top: 16px;
@@ -1036,6 +1047,6 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .tsd-link:hover { border-color: var(--heat); background: rgba(240,163,0,0.12); }
 .tsd-link svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; }
 .tsd-foot {
-  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.06em; color: var(--ink-low);
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; color: var(--ink-low);
   margin: 18px 0 0; padding-top: 12px; border-top: 1px solid var(--hair);
 }

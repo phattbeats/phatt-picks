@@ -78,7 +78,7 @@ export function LiveSwissBracket({
         <span className="eyebrow-mono" style={{ color: "var(--heat)" }}>
           [ LIVE LINEUP ]
         </span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-low)" }}>
+        <span className="last-updated">
           {started && resolvedAtIso ? (
             <LastUpdated iso={resolvedAtIso} />
           ) : (
