@@ -980,6 +980,20 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   -ms-overflow-style: none; /* old Edge */
 }
 .tsd-panel::-webkit-scrollbar { width: 0; height: 0; display: none; } /* WebKit/Blink */
+/* PHA-992 follow-up: with the scrollbar chrome hidden and the roster now five
+   rows tall, "Last 5 matches" can clip below the fold with no hint it exists.
+   While more content sits below the visible edge (.tsd-more-below toggled by
+   the drawer), fade the bottom of the panel so the clipped row reads as
+   "keep scrolling" rather than "that's everything". */
+.tsd-panel::after {
+  content: "";
+  position: sticky; bottom: 0; display: block;
+  height: 36px; margin-top: -36px;
+  background: linear-gradient(to bottom, rgba(40,34,26,0), var(--surf-2) 80%);
+  opacity: 0; transition: opacity 200ms var(--ease);
+  pointer-events: none;
+}
+.tsd-panel.tsd-more-below::after { opacity: 1; }
 @media (min-width: 560px) {
   .tsd-backdrop { align-items: center; padding: 24px; }
   /* Centered dialog clears the safe area via backdrop padding — drop the extra. */
