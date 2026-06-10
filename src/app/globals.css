@@ -1004,10 +1004,33 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--heat); margin: 0 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--hair-2);
 }
-.tsd-roster { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 7px; }
-.tsd-roster li {
-  font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--ink-hi);
-  padding: 5px 11px; background: var(--surf-3); border: 1px solid var(--hair-2);
+.tsd-roster { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.tsd-player {
+  display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px;
+  padding: 8px 12px; background: var(--surf-3); border: 1px solid var(--hair-2);
+}
+.tsd-player-name {
+  display: inline-flex; align-items: center; gap: 5px; justify-self: start;
+  font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--ink-hi);
+  text-decoration: none; transition: color 150ms var(--ease);
+}
+.tsd-player-name:hover { color: var(--heat); }
+.tsd-player-ext { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 2; opacity: 0; transition: opacity 150ms var(--ease); }
+.tsd-player-name:hover .tsd-player-ext { opacity: 1; }
+.tsd-player-pos {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 3px 7px; border: 1px solid var(--hair-2);
+  color: var(--ink-mid); min-width: 54px; text-align: center;
+}
+.tsd-player-pos.pos-awp { color: var(--heat); border-color: var(--hair-3); background: rgba(240,163,0,0.07); }
+.tsd-player-pos.pos-igl { color: var(--tac-green); border-color: rgba(155,210,60,0.35); background: rgba(155,210,60,0.07); }
+.tsd-player-rating {
+  font-family: var(--font-display); font-weight: 800; font-size: 16px; color: var(--ink-hi);
+  min-width: 38px; text-align: right; font-variant-numeric: tabular-nums;
+}
+.tsd-roster-key {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.04em; color: var(--ink-mid);
+  margin: 9px 0 0;
 }
 .tsd-matches { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .tsd-match {

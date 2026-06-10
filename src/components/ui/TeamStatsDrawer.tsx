@@ -100,9 +100,30 @@ export function TeamStatsDrawer({ team, onClose, liveStats, liveAsOf }: Props) {
               <h4 className="tsd-sec-title">Roster</h4>
               <ul className="tsd-roster">
                 {stats.roster.map((p) => (
-                  <li key={p}>{p}</li>
+                  <li key={p.name} className="tsd-player">
+                    <a
+                      className="tsd-player-name"
+                      href={p.hltvUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {p.name}
+                      <svg className="tsd-player-ext" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M7 17 17 7M9 7h8v8" />
+                      </svg>
+                    </a>
+                    <span className={`tsd-player-pos pos-${p.position.toLowerCase()}`}>
+                      {p.position}
+                    </span>
+                    {p.rating != null && (
+                      <span className="tsd-player-rating" title="HLTV rating on this team">
+                        {p.rating.toFixed(2)}
+                      </span>
+                    )}
+                  </li>
                 ))}
               </ul>
+              <p className="tsd-roster-key">Click a name for their HLTV profile · rating = HLTV team average</p>
             </section>
 
             <section className="tsd-sec">
