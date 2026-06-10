@@ -47,7 +47,21 @@ for (const pid of FIELD) {
   check(`pickid ${pid}: roster has 5 players`, s.roster.length === 5);
   check(
     `pickid ${pid}: roster names non-empty`,
-    s.roster.every((p) => typeof p === "string" && p.trim().length > 0),
+    s.roster.every((p) => typeof p.name === "string" && p.name.trim().length > 0),
+  );
+  check(
+    `pickid ${pid}: roster positions are IGL/AWP/Rifler`,
+    s.roster.every((p) => ["IGL", "AWP", "Rifler"].includes(p.position)),
+  );
+  check(
+    `pickid ${pid}: roster ratings are sane (0–2) or null`,
+    s.roster.every(
+      (p) => p.rating === null || (typeof p.rating === "number" && p.rating >= 0 && p.rating <= 2),
+    ),
+  );
+  check(
+    `pickid ${pid}: roster links are HLTV player profiles`,
+    s.roster.every((p) => /^https:\/\/www\.hltv\.org\/player\/\d+\/[a-z0-9.-]+$/.test(p.hltvUrl)),
   );
   check(
     `pickid ${pid}: 1-5 recent matches`,
