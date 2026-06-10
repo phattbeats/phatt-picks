@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
@@ -55,6 +55,27 @@ export function TeamStatsDrawer({ team, onClose, liveStats, liveAsOf }: Props) {
   const stats = liveStats ?? statsForPickid(team.pickid);
   const asOf = (liveStats && liveAsOf) || TEAM_STATS_AS_OF;
 
+  // PHA-992 follow-up (Brandon: "where does the recent games section go now?"):
+  // the per-player roster rows made the dossier ~140px taller, and the panel's
+  // scrollbar chrome is hidden (PHA-897) — so on short viewports "Last 5 matches"
+  // slipped below the fold with no cue it exists. Track whether more content sits
+  // below the visible edge and show a fade cue (.tsd-more-below::after) while it does.
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [moreBelow, setMoreBelow] = useState(false);
+  useEffect(() => {
+    const el = panelRef.current;
+    if (!el) return;
+    const update = () =>
+      setMoreBelow(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      el.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [stats]);
+
   // Only ever rendered client-side (opened by a tap, so absent from SSR output);
   // bail if document is somehow unavailable rather than crash createPortal.
   if (typeof document === "undefined") return null;
@@ -67,7 +88,11 @@ export function TeamStatsDrawer({ team, onClose, liveStats, liveAsOf }: Props) {
       aria-label={`${team.name} statistics and standings`}
       onClick={onClose}
     >
-      <div className="tsd-panel panel brk" onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={panelRef}
+        className={`tsd-panel panel brk${moreBelow ? " tsd-more-below" : ""}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <span className="br-tr" />
         <span className="br-bl" />
 
