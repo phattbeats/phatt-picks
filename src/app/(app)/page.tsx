@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getCommittedLayout } from "@/lib/layout";
 import { prisma } from "@/lib/db";
-import { isStagePickable } from "@/lib/stage-gate-core";
+import { isStagePickable, selectBriefingIndex } from "@/lib/stage-gate-core";
 import { getSession } from "@/lib/session";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
 import { HeatMark } from "@/components/heat/HeatMark";
@@ -58,20 +58,20 @@ export default async function DashboardPage() {
     0,
   );
 
-  // First stage whose pick window is still open. If everything is locked we
-  // fall back to the most recent section.
+  // First stage whose pick window is still open; while nothing is open, the
+  // stage currently in progress — never a future stage that hasn't opened yet
+  // (PHA-1007: the hero spotlit the un-seeded Grand Final a week early).
   const stageStatuses = layout.sections.map((s) => ({
     section: s,
     pick: isStagePickable(layout, s.sectionid, {
       lockedByTime: isLockTimePassed(s.sectionid, now),
     }),
   }));
-  const activeIdx = stageStatuses.findIndex((s) => s.pick.pickable);
-  const active =
-    activeIdx >= 0 ? stageStatuses[activeIdx] : stageStatuses[stageStatuses.length - 1];
+  const activeIdx = selectBriefingIndex(stageStatuses.map((s) => s.pick));
+  const active = stageStatuses[activeIdx];
 
   const activeLabel = active.section.name.split(" | ")[0];
-  const activeNumber = activeIdx >= 0 ? activeIdx + 1 : layout.sections.length;
+  const activeNumber = activeIdx + 1;
 
   // How many of the active section's slots the signed-in player has already
   // locked. Without this the briefing always reads "you haven't called your
@@ -222,7 +222,9 @@ export default async function DashboardPage() {
                 href={`/picks?section=${active.section.sectionid}`}
                 className="btn-heat"
               >
-                View Stage
+                {active.pick.reason === "locked-time-passed" && session
+                  ? "Check Your Picks"
+                  : "View Stage"}
                 <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="9 18 15 12 9 6" />
                 </svg>
@@ -268,7 +270,12 @@ export default async function DashboardPage() {
               <div className="lbl">[ POINTS ]</div>
               <div className="val foil">{selfRow?.score ?? 0}</div>
               <div className="sub">
-                of {maxPoints} · {activeLabel} {active.pick.pickable ? "open" : "pending"}
+                of {maxPoints} · {activeLabel}{" "}
+                {active.pick.pickable
+                  ? "open"
+                  : active.pick.reason === "locked-time-passed"
+                    ? "live"
+                    : "pending"}
               </div>
             </div>
           </div>
@@ -411,7 +418,9 @@ function StageBody({
     : pickability.reason === "teams-not-set"
       ? `Teams for ${sectionName} aren't seeded yet. Picks open automatically once Valve sets the bracket.`
       : pickability.reason === "locked-time-passed"
-        ? `${sectionName} is underway — picks are locked. Open the stage to watch the live lineup and see how your teams are doing.`
+        ? signedIn
+          ? `${sectionName} is underway — picks are locked. Check how your picks are tracking on the live bracket, keep an eye on the leaderboard, and catch the matches below.`
+          : `${sectionName} is underway — picks are locked. Follow the live bracket, the leaderboard, and the matches below.`
         : pickability.reason === "locked-by-valve"
           ? `Valve has closed the pick window for ${sectionName}. Watch the wire for results.`
           : "This stage isn't available.";
