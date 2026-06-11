@@ -750,9 +750,10 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .coin-sticker.diamond { background: linear-gradient(135deg, #e8f8ff 0%, #7dd3fc 38%, #3b9fd4 65%, #b9f2ff 100%); box-shadow: 0 0 0 1px rgba(180,230,255,0.5); }
 
 /* Swiss bucket slots — tile grid at all viewport sizes (portrait, matches pool) */
+/* auto-fit (not auto-fill) collapses empty tracks — 2-slot outer buckets spread evenly */
 .bucket-cols.swiss .bucket {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   gap: 8px;
 }
 .bucket-cols.swiss .bucket-label { grid-column: 1 / -1; }
