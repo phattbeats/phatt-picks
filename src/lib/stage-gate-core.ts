@@ -71,6 +71,35 @@ export interface StageGateOpts {
   lockedByTime?: boolean;
 }
 
+/**
+ * Which section should the dashboard hero spotlight (PHA-1007)?
+ *
+ * Priority:
+ *   1. The first stage whose pick window is OPEN — real urgency, real countdown.
+ *   2. Otherwise the LATEST stage that has actually STARTED (its lock time
+ *      passed, or Valve closed it) — the stage in progress right now. Mid-event
+ *      the briefing should read "check your picks, watch the matches", not
+ *      manufacture urgency for a future stage.
+ *   3. Defensive fallback: the last section.
+ *
+ * Before this rule the fallback was always the LAST section, so the moment
+ * Stage III locked the hero jumped to the un-seeded Grand Final — a stage
+ * whose window doesn't open for another week.
+ */
+export function selectBriefingIndex(
+  statuses: ReadonlyArray<StagePickability>,
+): number {
+  const firstOpen = statuses.findIndex((s) => s.pickable);
+  if (firstOpen >= 0) return firstOpen;
+  for (let i = statuses.length - 1; i >= 0; i--) {
+    const reason = statuses[i].reason;
+    if (reason === "locked-time-passed" || reason === "locked-by-valve") {
+      return i;
+    }
+  }
+  return statuses.length - 1;
+}
+
 export function isStagePickable(
   layout: Layout,
   sectionId: number,
