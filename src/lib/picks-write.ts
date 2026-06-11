@@ -146,9 +146,13 @@ async function uploadAndReconcile(
       });
       synced++;
     } else if (!r.ok && firstFailure === null) {
+      const raw = r.errorBody?.trim() ?? "";
+      // Valve emits bare-shell bodies (e.g. "{\n\n}", "{}") on some 5xx responses.
+      // Suppress them so they don't surface as "({ })" in the status pill.
+      const isEmptyShell = !raw || /^\{[\s]*\}$/.test(raw);
       firstFailure = {
         status: r.status,
-        error: r.errorBody ? r.errorBody.slice(0, 200) : `HTTP ${r.status}`,
+        error: isEmptyShell ? `HTTP ${r.status}` : raw.slice(0, 200),
       };
     }
   }
