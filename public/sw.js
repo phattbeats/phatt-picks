@@ -1,5 +1,5 @@
 /*
- * phaTT Picks — service worker.
+ * HOTLINE — service worker.
  * Two jobs: (1) satisfy PWA installability (manifest + SW with a fetch handler),
  * required for iOS Web Push; (2) receive push events and show pre-lock reminders.
  * Deliberately cache-light: this is a live, server-rendered app, so we never want
@@ -31,7 +31,7 @@ self.addEventListener("push", (event) => {
     data = { body: event.data ? event.data.text() : "" };
   }
 
-  const title = data.title || "phaTT Picks";
+  const title = data.title || "HOTLINE";
   const options = {
     body: data.body || "",
     icon: "/icon-192.png",

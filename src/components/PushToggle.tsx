@@ -293,7 +293,7 @@ export function PushToggle() {
     return (
       <p style={{ color: "var(--text-low)", fontSize: "0.8125rem" }}>
         This browser can&apos;t do push reminders.
-        {isIos && !isStandalone && " On iPhone/iPad, add phaTT Picks to your Home Screen first, then open it from that icon."}
+        {isIos && !isStandalone && " On iPhone/iPad, add HOTLINE to your Home Screen first, then open it from that icon."}
       </p>
     );
   }

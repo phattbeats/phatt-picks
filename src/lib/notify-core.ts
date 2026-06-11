@@ -113,7 +113,7 @@ export function buildPreLockPayload(args: {
   const { stageName, lockAtMs, nowMs, url = "/picks" } = args;
   const eta = humanizeLockEta(lockAtMs - nowMs);
   return {
-    title: "phaTT Picks",
+    title: "HOTLINE",
     body: `${stageName} picks lock in ${eta} — set yours now.`,
     url,
     tag: `prelock-${stageName.toLowerCase().replace(/\s+/g, "-")}`,

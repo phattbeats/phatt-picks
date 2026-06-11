@@ -4,7 +4,7 @@ import { PwaRegister } from "@/components/PwaRegister";
 import { HeatBackground } from "@/components/heat/HeatBackground";
 
 export const metadata: Metadata = {
-  title: "HOTLINE — phaTT Picks",
+  title: "HOTLINE",
   description: "CS2 Major Pick'Em companion for IEM Cologne 2026",
   manifest: "/manifest.json",
   appleWebApp: {
