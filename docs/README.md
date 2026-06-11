@@ -1,4 +1,4 @@
-# phaTT Picks — Knowledge Base
+# HOTLINE — Knowledge Base
 
 > *"We've done a lot of good work here, and there will be more majors."*
 

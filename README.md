@@ -1,4 +1,4 @@
-# phaTT Picks
+# HOTLINE
 
 A CS2 Major Pick'Em companion for a small private group, targeting **IEM Cologne 2026**
 (June 2–21). Members log in with Steam (or play locally — no Steam needed), set/mirror their
@@ -43,11 +43,11 @@ See `.env.example`. Summary:
 
 ## PWA install & push reminders
 
-phaTT Picks is an installable PWA (`public/manifest.json` + `public/sw.js`). Installing is
+HOTLINE is an installable PWA (`public/manifest.json` + `public/sw.js`). Installing is
 **required for push on iOS** — opt-in pre-lock reminders (a 24-hour and a 1-hour warning before
 each stage locks) are delivered via Web Push.
 
-- **iPhone:** tap **Share → Add to Home Screen**, then open phaTT Picks from the new icon. iOS only
+- **iPhone:** tap **Share → Add to Home Screen**, then open HOTLINE from the new icon. iOS only
   delivers Web Push to an installed, home-screen-launched PWA — this step is mandatory there.
 - **Android / desktop:** use the browser's "Install app" / "Add to Home screen" option. Push works
   without installing, but installing is recommended.

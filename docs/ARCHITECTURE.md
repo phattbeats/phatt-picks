@@ -1,6 +1,6 @@
 # Architecture
 
-How phaTT Picks fits together. Read this before changing picks, scoring, brackets,
+How HOTLINE fits together. Read this before changing picks, scoring, brackets,
 or outcome resolution.
 
 ## Stack & topology

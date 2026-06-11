@@ -55,7 +55,7 @@ export default function AuthPage() {
         </p>
       </div>
 
-      {/* Note from phaTT — [ Notice ] (HEAT welcome mockup) */}
+      {/* [ Notice ] welcome block */}
       <div style={{
         position: "relative",
         width: "100%",
@@ -71,8 +71,7 @@ export default function AuthPage() {
         </span>
         <p style={{ fontSize: 14, lineHeight: 1.62, color: "var(--ink-mid)", margin: 0 }}>
           This is an early test build, and you&apos;re one of the first inside. Things will most likely
-          break, and I am grateful for your time. But rest assured, pick&apos;ems will be made.{" "}
-          <strong style={{ color: "var(--ink-hi)" }}>{"—"}phaTT</strong>
+          break, and we are grateful for your time. But rest assured, pick&apos;ems will be made.
         </p>
       </div>
 

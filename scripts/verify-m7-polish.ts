@@ -92,7 +92,7 @@ try {
   /* check below fails */
 }
 check("manifest.json parses", Object.keys(manifest).length > 0);
-check("manifest name set", manifest.name === "phaTT Picks");
+check("manifest name set", manifest.name === "HOTLINE");
 check("manifest display = standalone", manifest.display === "standalone");
 check("manifest start_url set", typeof manifest.start_url === "string" && (manifest.start_url as string).startsWith("/"));
 const icons = (manifest.icons as Array<{ src: string; sizes: string; purpose?: string }>) ?? [];
