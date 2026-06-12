@@ -1,0 +1,111 @@
+name: Build and push container
+
+# Publishes a multi-tag image to GitHub Container Registry (ghcr.io).
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }} # phattbeats/phatt-picks
+  # GitHub forces JS actions onto Node 24 on 2026-06-02. Opt in early so the
+  # forced cutover is a no-op for us. Verified green via workflow_dispatch (PHA-837).
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # main push        → :latest, :main, :sha-abc123
+          # v* tag push      → :vX.Y.Z, :X.Y, :latest, :sha-abc123
+          # The second :latest line covers tag pushes (is_default_branch is
+          # false for refs/tags/*) so Brandon can pin :vX.Y.Z and still have
+          # :latest mirror the most recent release.
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=sha,format=short
+            type=semver,pattern=v{{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Prove the published image actually boots: schema push + server start + health.
+  smoke-test:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run the image with throwaway config
+        run: |
+          docker run -d --name picks -p 3000:3000 \
+            -e DATABASE_URL="file:/data/smoke.db" \
+            -e NEXTAUTH_URL="http://localhost:3000" \
+            -e NEXTAUTH_SECRET="smoke-test-secret-not-real" \
+            -e STEAM_API_KEY="0000000000000000" \
+            -e AUTH_CODE_ENCRYPTION_KEY="$(openssl rand -hex 32)" \
+            -e VAPID_PUBLIC_KEY="smoke" \
+            -e VAPID_PRIVATE_KEY="smoke" \
+            -e VAPID_SUBJECT="mailto:smoke@phatt.tech" \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build-and-push.outputs.digest }}
+
+      - name: Wait for /api/health to report ok
+        run: |
+          for i in $(seq 1 40); do
+            body=$(curl -fsS http://localhost:3000/api/health 2>/dev/null || true)
+            echo "attempt $i: $body"
+            if echo "$body" | grep -q '"status":"ok"'; then
+              echo "Container booted and health is green."
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::Health never went green"; docker logs picks; exit 1
+
+      - name: Container logs (always)
+        if: always()
+        run: docker logs picks || true

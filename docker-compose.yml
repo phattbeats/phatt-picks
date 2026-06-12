@@ -1,0 +1,52 @@
+services:
+  phatt-picks:
+    # Pull the published image; override with `docker compose build` to build locally.
+    image: ghcr.io/phattbeats/phatt-picks:latest
+    build: .
+    container_name: phatt-picks
+    restart: unless-stopped
+    networks:
+      - phattvip
+    # SWAG on phattvip proxies to this container by name on port 3000, so no
+    # published port is needed in production. For direct/LAN testing without
+    # SWAG, uncomment to reach it at http://<unraid-ip>:3000.
+    # ports:
+    #   - "3000:3000"
+    volumes:
+      # SQLite on appdata mount — NOT a FUSE share
+      - /mnt/user/appdata/phatt-picks:/data
+    environment:
+      - DATABASE_URL=file:/data/phatt-picks.db
+      - NEXTAUTH_URL=https://pickems.phatt.vip
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - STEAM_API_KEY=${STEAM_API_KEY}
+      - AUTH_CODE_ENCRYPTION_KEY=${AUTH_CODE_ENCRYPTION_KEY}
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
+      - VAPID_SUBJECT=${VAPID_SUBJECT}
+      # Optional: enable destructive write-back to Valve, and per-stage pick locks
+      - WRITE_ENABLED=${WRITE_ENABLED:-false}
+      # STAGE_LOCKS_JSON is now an OPTIONAL override only (PHA-929): the pre-lock
+      # reminder job reads the committed COLOGNE_LOCK_SCHEDULE by default. Set
+      # this to override cutoffs for a future major / out-of-band sections.
+      - STAGE_LOCKS_JSON=${STAGE_LOCKS_JSON:-}
+      # Pre-lock push reminders — 24h + 1h before each stage locks (PHA-929).
+      # OFF by default (owner decision); set to 1 to arm the in-process scheduler.
+      - PRELOCK_REMINDERS_ENABLED=${PRELOCK_REMINDERS_ENABLED:-false}
+      # Live Swiss W-L standings (PHA-902) crawl the HLTV event page via crawl4ai,
+      # which sits on this same phattvip network — reachable by container name.
+      # Override only for a different topology; graceful-empty if unreachable.
+      - CRAWL4AI_URL=${CRAWL4AI_URL:-http://crawl4ai:11235}
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "com.unraid.docker.managed=true"
+
+networks:
+  phattvip:
+    external: true
