@@ -28,8 +28,8 @@ missing.
 | `CRAWL4AI_API_TOKEN` | optional | `src/lib/team-stats.ts:40`, `scripts/gather-team-stats.ts` | Bearer token for crawl4ai. Read by the gather tooling **and** the live on-read team-stats refresh (`/api/team-stats/refresh`). Both default to `Phatt-tech-2026` when unset. |
 | `TURNSTILE_SECRET_KEY` | optional | `src/lib/captcha.ts:22` | Cloudflare Turnstile secret for the local-signup CAPTCHA. When unset, CAPTCHA enforcement is **skipped** (signups still work, no challenge). |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | optional | `src/app/login/local/page.tsx` | Public Turnstile site key for the CAPTCHA widget. Name must match **exactly** (a misspelled var = silent no-widget — see GOTCHAS). |
-| `STAGE_LOCKS_JSON` | optional | `scripts/send-prelock-reminders.ts` | Per-section pick cutoffs for the pre-lock reminder job, e.g. `{"105":{"name":"Stage I","lockAt":"2026-06-02T10:30:00Z"}}`. |
-| `EVENT_ID` | optional, default `26` | `scripts/send-prelock-reminders.ts` | Valve tournament event id (the layout's internal id, **not** the HLTV event id). Only the reminder script reads it. |
+| `STAGE_LOCKS_JSON` | optional | `src/lib/prelock-reminders.ts` | Per-section pick cutoffs for the pre-lock reminder scheduler, e.g. `{"105":{"name":"Stage I","lockAt":"2026-06-02T10:30:00Z"}}`. When unset, uses the committed `COLOGNE_LOCK_SCHEDULE`. |
+| `EVENT_ID` | optional, default `26` | `src/lib/prelock-reminders.ts` | Valve tournament event id (the layout's internal id, **not** the HLTV event id). Read by the in-process reminder scheduler. |
 | `PRELOCK_REMINDERS_DISABLED` | optional, default off | `src/instrumentation.ts` | Set to `1` to turn OFF the in-process pre-lock reminder scheduler. Since PHA-996 the scheduler is **ON by default** with no env required — the old opt-in (`PRELOCK_REMINDERS_ENABLED=1`) lived only on the container and a template Force-Update silently dropped it. A leftover explicit `PRELOCK_REMINDERS_ENABLED=0` also disables. |
 
 ### Common tweaks
