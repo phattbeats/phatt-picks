@@ -77,6 +77,59 @@ export function hltvProfileUrl(s: TeamSource): string {
   return `https://www.hltv.org/team/${s.hltvId}/${s.slug}`;
 }
 
+/** The canonical HLTV player-profile url. */
+export function hltvPlayerUrl(playerId: number, slug: string): string {
+  return `https://www.hltv.org/player/${playerId}/${slug}`;
+}
+
+/** A roster player lifted off the team profile's "Players of X" table (PHA-992). */
+export interface ParsedRosterPlayer {
+  nick: string; // in-game nickname, as the profile link's text
+  hltvId: number; // HLTV player id
+  slug: string; // url slug
+  rating: number; // HLTV team-period rating from the table's Rating column
+}
+
+// The team profile's "Players of {team}" table is one row per player:
+//   | [flag nick](player/<id>/<slug>) | STATUS | time on team | maps | rating |
+// We read the STARTER rows (the active five). The status filter is applied by the
+// caller so a benched-but-committed player (a late lineup change) can still be
+// matched by nickname. Same deterministic-string-parse discipline as parseRecentResults.
+const PLAYER_ROW =
+  /([A-Za-z0-9_.\-]+)\s*\]\(https:\/\/www\.hltv\.org\/player\/(\d+)\/([a-z0-9.-]+)\)\s*\|\s*(STARTER|BENCHED|INACTIVE)\s*\|[^|]*\|\s*[0-9,]+\s*\|\s*([0-9.]+)/g;
+
+/**
+ * Parse the active-lineup players (name / id / slug / rating) from a team
+ * profile's markdown (PHA-992). Scans only the "Players of …" section so news
+ * tables elsewhere on the page can't leak in. `status` keeps STARTER rows by
+ * default; pass `false` to take every listed player (so a committed starter who
+ * HLTV currently lists as BENCHED — a late swap — is still found). Returns [] when
+ * the section or a parseable row is absent, so the caller keeps the prior data.
+ */
+export function parseRosterStarters(md: string, startersOnly = true): ParsedRosterPlayer[] {
+  const i = md.indexOf("Players of");
+  if (i < 0) return [];
+  // Bound the scan to this section: from the header to the next markdown heading
+  // (capped at 4000 chars), so a STARTER row in an unrelated table below can't leak
+  // in. `i` sits inside the "## Players of …" header, so start the next-heading
+  // search past it.
+  const rest = md.slice(i + 10);
+  const nextHeading = rest.indexOf("\n## ");
+  const end = nextHeading >= 0 ? Math.min(nextHeading + 10, 4000) : 4000;
+  const seg = md.slice(i, i + end);
+  const out: ParsedRosterPlayer[] = [];
+  for (const m of seg.matchAll(PLAYER_ROW)) {
+    if (startersOnly && m[4] !== "STARTER") continue;
+    out.push({
+      nick: m[1],
+      hltvId: Number(m[2]),
+      slug: m[3],
+      rating: Number(m[5]),
+    });
+  }
+  return out;
+}
+
 /** Every (pickid, url) pair to crawl — input to the batch refresh. */
 export function teamStatsCrawlTargets(): Array<{ pickid: number; url: string }> {
   return Object.entries(TEAM_SOURCES).map(([pid, s]) => ({
