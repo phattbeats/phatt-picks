@@ -22,9 +22,24 @@ export interface RecentMatch {
   result: MatchResult;
 }
 
+/**
+ * One active-lineup player (PHA-992). A bare screenname means nothing to a
+ * newcomer, so each player carries their on-server role, HLTV rating, and a link
+ * to their own HLTV profile. `position` is the player's primary real-world role
+ * (IGL / AWP / Rifler — hand-curated, since HLTV publishes no structured role).
+ * `rating` is HLTV's team-period rating off the team profile and `hltvUrl` their
+ * personal profile; both are refreshed alongside the dossier (gather-roster).
+ */
+export interface RosterPlayer {
+  name: string; // in-game nickname
+  position: string; // primary role: "IGL" | "AWP" | "Rifler"
+  rating: number | null; // HLTV rating on the current team, null if unrated
+  hltvUrl: string; // personal HLTV player profile
+}
+
 export interface TeamStats {
   worldRank: number | null; // HLTV world ranking position, null if unranked
-  roster: string[]; // active lineup nicknames
+  roster: RosterPlayer[]; // active lineup, five players
   recent: RecentMatch[]; // most-recent first, up to 5
   hltvUrl: string; // canonical HLTV team profile (the dossier's data source)
 }
@@ -34,7 +49,13 @@ export interface TeamStats {
 export const TEAM_STATS: Record<number, TeamStats> = {
   12: { // Natus Vincere
     worldRank: 2,
-    roster: ["Aleksib", "iM", "b1t", "w0nderful", "makazze"],
+    roster: [
+      { name: "Aleksib", position: "IGL", rating: 0.93, hltvUrl: "https://www.hltv.org/player/9816/aleksib" },
+      { name: "iM", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/14759/im" },
+      { name: "b1t", position: "Rifler", rating: 1.12, hltvUrl: "https://www.hltv.org/player/18987/b1t" },
+      { name: "w0nderful", position: "AWP", rating: 1.12, hltvUrl: "https://www.hltv.org/player/20127/w0nderful" },
+      { name: "makazze", position: "Rifler", rating: 1.13, hltvUrl: "https://www.hltv.org/player/22673/makazze" },
+    ],
     recent: [
       { date: "17/05/2026", opponent: "GamerLegion", score: "3-0", result: "W" },
       { date: "16/05/2026", opponent: "BetBoom", score: "2-0", result: "W" },
@@ -46,7 +67,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   48: { // Liquid
     worldRank: 25,
-    roster: ["NAF", "EliGE", "malbsMd", "siuhy", "ultimate"],
+    roster: [
+      { name: "NAF", position: "Rifler", rating: 1.14, hltvUrl: "https://www.hltv.org/player/8520/naf" },
+      { name: "EliGE", position: "Rifler", rating: 1.05, hltvUrl: "https://www.hltv.org/player/8738/elige" },
+      { name: "malbsMd", position: "Rifler", rating: 1.09, hltvUrl: "https://www.hltv.org/player/11617/malbsmd" },
+      { name: "siuhy", position: "IGL", rating: 0.88, hltvUrl: "https://www.hltv.org/player/16820/siuhy" },
+      { name: "ultimate", position: "AWP", rating: 1.02, hltvUrl: "https://www.hltv.org/player/21763/ultimate" },
+    ],
     recent: [
       { date: "03/06/2026", opponent: "MIBR", score: "10-13", result: "L" },
       { date: "02/06/2026", opponent: "BetBoom", score: "9-13", result: "L" },
@@ -58,7 +85,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   59: { // G2
     worldRank: 14,
-    roster: ["huNter-", "NertZ", "SunPayus", "HeavyGod", "MATYS"],
+    roster: [
+      { name: "huNter-", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/3972/hunter" },
+      { name: "NertZ", position: "Rifler", rating: 1.12, hltvUrl: "https://www.hltv.org/player/9436/nertz" },
+      { name: "SunPayus", position: "AWP", rating: 1.06, hltvUrl: "https://www.hltv.org/player/19164/sunpayus" },
+      { name: "HeavyGod", position: "Rifler", rating: 1.15, hltvUrl: "https://www.hltv.org/player/20447/heavygod" },
+      { name: "MATYS", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/21062/matys" },
+    ],
     recent: [
       { date: "15/05/2026", opponent: "Spirit", score: "0-2", result: "L" },
       { date: "13/05/2026", opponent: "Monte", score: "2-0", result: "W" },
@@ -70,7 +103,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   60: { // Astralis
     worldRank: 12,
-    roster: ["HooXi", "phzy", "jabbi", "Staehr", "ryu"],
+    roster: [
+      { name: "HooXi", position: "IGL", rating: 0.89, hltvUrl: "https://www.hltv.org/player/10096/hooxi" },
+      { name: "phzy", position: "Rifler", rating: 1.07, hltvUrl: "https://www.hltv.org/player/16726/phzy" },
+      { name: "jabbi", position: "Rifler", rating: 1.06, hltvUrl: "https://www.hltv.org/player/17956/jabbi" },
+      { name: "Staehr", position: "AWP", rating: 1.08, hltvUrl: "https://www.hltv.org/player/20304/staehr" },
+      { name: "ryu", position: "Rifler", rating: 1.01, hltvUrl: "https://www.hltv.org/player/21217/ryu" },
+    ],
     recent: [
       { date: "13/05/2026", opponent: "GamerLegion", score: "0-2", result: "L" },
       { date: "13/05/2026", opponent: "SINNERS", score: "2-0", result: "W" },
@@ -82,7 +121,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   69: { // BIG
     worldRank: 39,
-    roster: ["tabseN", "JDC", "faveN", "blameF", "gr1ks"],
+    roster: [
+      { name: "tabseN", position: "IGL", rating: 1.10, hltvUrl: "https://www.hltv.org/player/5794/tabsen" },
+      { name: "JDC", position: "AWP", rating: 1.10, hltvUrl: "https://www.hltv.org/player/14929/jdc" },
+      { name: "faveN", position: "Rifler", rating: 1.05, hltvUrl: "https://www.hltv.org/player/14932/faven" },
+      { name: "blameF", position: "Rifler", rating: 1.24, hltvUrl: "https://www.hltv.org/player/15165/blamef" },
+      { name: "gr1ks", position: "Rifler", rating: 1.15, hltvUrl: "https://www.hltv.org/player/22884/gr1ks" },
+    ],
     recent: [
       { date: "03/06/2026", opponent: "THUNDER dOWNUNDER", score: "13-7", result: "W" },
       { date: "02/06/2026", opponent: "Gaimin Gladiators", score: "13-1", result: "W" },
@@ -94,7 +139,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   74: { // TYLOO
     worldRank: 29,
-    roster: ["JamYoung", "Jee", "Mercury", "Moseyuh", "Zero"],
+    roster: [
+      { name: "JamYoung", position: "AWP", rating: 1.19, hltvUrl: "https://www.hltv.org/player/19645/jamyoung" },
+      { name: "Jee", position: "Rifler", rating: 1.11, hltvUrl: "https://www.hltv.org/player/20702/jee" },
+      { name: "Mercury", position: "IGL", rating: 1.08, hltvUrl: "https://www.hltv.org/player/20895/mercury" },
+      { name: "Moseyuh", position: "Rifler", rating: 1.11, hltvUrl: "https://www.hltv.org/player/21621/moseyuh" },
+      { name: "Zero", position: "Rifler", rating: 1.08, hltvUrl: "https://www.hltv.org/player/24857/zero" },
+    ],
     recent: [
       { date: "03/06/2026", opponent: "SINNERS", score: "2-0", result: "W" },
       { date: "02/06/2026", opponent: "MIBR", score: "14-16", result: "L" },
@@ -106,7 +157,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   80: { // MIBR
     worldRank: 19,
-    roster: ["LNZ", "brnz4n", "insani", "venomzera", "kl1m"],
+    roster: [
+      { name: "LNZ", position: "Rifler", rating: 1.02, hltvUrl: "https://www.hltv.org/player/19310/lnz" },
+      { name: "brnz4n", position: "IGL", rating: 1.08, hltvUrl: "https://www.hltv.org/player/20987/brnz4n" },
+      { name: "insani", position: "AWP", rating: 1.20, hltvUrl: "https://www.hltv.org/player/21037/insani" },
+      { name: "venomzera", position: "Rifler", rating: 1.06, hltvUrl: "https://www.hltv.org/player/21288/venomzera" },
+      { name: "kl1m", position: "Rifler", rating: 1.23, hltvUrl: "https://www.hltv.org/player/23192/kl1m" },
+    ],
     recent: [
       { date: "03/06/2026", opponent: "Liquid", score: "13-10", result: "W" },
       { date: "02/06/2026", opponent: "TYLOO", score: "16-14", result: "W" },
@@ -118,7 +175,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   81: { // Spirit
     worldRank: 3,
-    roster: ["sh1ro", "magixx", "tN1R", "zont1x", "donk"],
+    roster: [
+      { name: "sh1ro", position: "AWP", rating: 1.18, hltvUrl: "https://www.hltv.org/player/16920/sh1ro" },
+      { name: "magixx", position: "Rifler", rating: 1.05, hltvUrl: "https://www.hltv.org/player/18317/magixx" },
+      { name: "tN1R", position: "Rifler", rating: 1.04, hltvUrl: "https://www.hltv.org/player/19808/tn1r" },
+      { name: "zont1x", position: "Rifler", rating: 1.09, hltvUrl: "https://www.hltv.org/player/20423/zont1x" },
+      { name: "donk", position: "Rifler", rating: 1.40, hltvUrl: "https://www.hltv.org/player/21167/donk" },
+    ],
     recent: [
       { date: "17/05/2026", opponent: "Falcons", score: "3-0", result: "W" },
       { date: "16/05/2026", opponent: "MOUZ", score: "2-0", result: "W" },
@@ -130,7 +193,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   85: { // FURIA
     worldRank: 5,
-    roster: ["FalleN", "yuurih", "YEKINDAR", "KSCERATO", "molodoy"],
+    roster: [
+      { name: "FalleN", position: "IGL", rating: 0.98, hltvUrl: "https://www.hltv.org/player/2023/fallen" },
+      { name: "yuurih", position: "Rifler", rating: 1.15, hltvUrl: "https://www.hltv.org/player/12553/yuurih" },
+      { name: "YEKINDAR", position: "Rifler", rating: 1.08, hltvUrl: "https://www.hltv.org/player/13915/yekindar" },
+      { name: "KSCERATO", position: "Rifler", rating: 1.19, hltvUrl: "https://www.hltv.org/player/15631/kscerato" },
+      { name: "molodoy", position: "AWP", rating: 1.14, hltvUrl: "https://www.hltv.org/player/24144/molodoy" },
+    ],
     recent: [
       { date: "15/05/2026", opponent: "Falcons", score: "1-2", result: "L" },
       { date: "12/05/2026", opponent: "Gentle Mates", score: "2-1", result: "W" },
@@ -142,7 +211,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   87: { // NRG
     worldRank: 33,
-    roster: ["nitr0", "Sonic", "oSee", "Grim", "br0"],
+    roster: [
+      { name: "nitr0", position: "IGL", rating: 1.05, hltvUrl: "https://www.hltv.org/player/7687/nitr0" },
+      { name: "Sonic", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/8711/sonic" },
+      { name: "oSee", position: "AWP", rating: 1.11, hltvUrl: "https://www.hltv.org/player/13249/osee" },
+      { name: "Grim", position: "Rifler", rating: 1.05, hltvUrl: "https://www.hltv.org/player/13578/grim" },
+      { name: "br0", position: "Rifler", rating: 1.13, hltvUrl: "https://www.hltv.org/player/16717/br0" },
+    ],
     recent: [
       { date: "03/06/2026", opponent: "FlyQuest", score: "13-10", result: "W" },
       { date: "02/06/2026", opponent: "SINNERS", score: "13-6", result: "W" },
@@ -154,7 +229,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   89: { // Vitality
     worldRank: 1,
-    roster: ["apEX", "ropz", "ZywOo", "flameZ", "mezii"],
+    roster: [
+      { name: "apEX", position: "IGL", rating: 1.00, hltvUrl: "https://www.hltv.org/player/7322/apex" },
+      { name: "ropz", position: "Rifler", rating: 1.16, hltvUrl: "https://www.hltv.org/player/11816/ropz" },
+      { name: "ZywOo", position: "AWP", rating: 1.32, hltvUrl: "https://www.hltv.org/player/11893/zywoo" },
+      { name: "flameZ", position: "Rifler", rating: 1.14, hltvUrl: "https://www.hltv.org/player/16693/flamez" },
+      { name: "mezii", position: "Rifler", rating: 1.06, hltvUrl: "https://www.hltv.org/player/18462/mezii" },
+    ],
     recent: [
       { date: "15/05/2026", opponent: "Natus Vincere", score: "1-2", result: "L" },
       { date: "13/05/2026", opponent: "B8", score: "2-0", result: "W" },
@@ -166,7 +247,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   95: { // HEROIC
     worldRank: 27,
-    roster: ["xfl0ud", "nilo", "susp", "Chr1zN", "yxngstxr"],
+    roster: [
+      { name: "xfl0ud", position: "AWP", rating: 1.08, hltvUrl: "https://www.hltv.org/player/19187/xfl0ud" },
+      { name: "nilo", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/20119/nilo" },
+      { name: "susp", position: "Rifler", rating: 1.00, hltvUrl: "https://www.hltv.org/player/21163/susp" },
+      { name: "Chr1zN", position: "Rifler", rating: 0.95, hltvUrl: "https://www.hltv.org/player/21983/chr1zn" },
+      { name: "yxngstxr", position: "Rifler", rating: 0.99, hltvUrl: "https://www.hltv.org/player/22047/yxngstxr" },
+    ],
     recent: [
       { date: "03/06/2026", opponent: "Gaimin Gladiators", score: "2-0", result: "W" },
       { date: "02/06/2026", opponent: "Lynn Vision", score: "11-13", result: "L" },
@@ -178,7 +265,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   102: { // paiN
     worldRank: 18,
-    roster: ["vsm", "biguzera", "piriajr", "saffee", "snow"],
+    roster: [
+      { name: "vsm", position: "Rifler", rating: 1.00, hltvUrl: "https://www.hltv.org/player/16816/vsm" },
+      { name: "biguzera", position: "Rifler", rating: 1.12, hltvUrl: "https://www.hltv.org/player/18141/biguzera" },
+      { name: "piriajr", position: "Rifler", rating: 1.05, hltvUrl: "https://www.hltv.org/player/18714/piriajr" },
+      { name: "saffee", position: "AWP", rating: 1.03, hltvUrl: "https://www.hltv.org/player/18835/saffee" },
+      { name: "snow", position: "Rifler", rating: 1.01, hltvUrl: "https://www.hltv.org/player/20171/snow" },
+    ],
     recent: [
       { date: "22/05/2026", opponent: "MOUZ", score: "0-2", result: "L" },
       { date: "21/05/2026", opponent: "TYLOO", score: "2-1", result: "W" },
@@ -190,7 +283,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   104: { // Sharks
     worldRank: 35,
-    roster: ["gafolo", "koala", "maxxkor", "rdnzao", "doc"],
+    roster: [
+      { name: "gafolo", position: "Rifler", rating: 1.06, hltvUrl: "https://www.hltv.org/player/20558/gafolo" },
+      { name: "koala", position: "Rifler", rating: 1.14, hltvUrl: "https://www.hltv.org/player/21170/koala" },
+      { name: "maxxkor", position: "Rifler", rating: 1.07, hltvUrl: "https://www.hltv.org/player/21221/maxxkor" },
+      { name: "rdnzao", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/21921/rdnzao" },
+      { name: "doc", position: "Rifler", rating: 1.16, hltvUrl: "https://www.hltv.org/player/22911/doc" },
+    ],
     recent: [
       { date: "03/06/2026", opponent: "Lynn Vision", score: "5-13", result: "L" },
       { date: "02/06/2026", opponent: "M80", score: "6-13", result: "L" },
@@ -202,7 +301,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   106: { // MOUZ
     worldRank: 8,
-    roster: ["torzsi", "Spinx", "xertioN", "xelex", "Jimpphat"],
+    roster: [
+      { name: "torzsi", position: "AWP", rating: 1.12, hltvUrl: "https://www.hltv.org/player/18072/torzsi" },
+      { name: "Spinx", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/18221/spinx" },
+      { name: "xertioN", position: "Rifler", rating: 1.13, hltvUrl: "https://www.hltv.org/player/20312/xertion" },
+      { name: "xelex", position: "Rifler", rating: 1.09, hltvUrl: "https://www.hltv.org/player/24457/xelex" },
+      { name: "Jimpphat", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/18850/jimpphat" },
+    ],
     recent: [
       { date: "23/05/2026", opponent: "MIBR", score: "2-0", result: "W" },
       { date: "23/05/2026", opponent: "Falcons", score: "1-2", result: "L" },
@@ -214,7 +319,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   112: { // 9z
     worldRank: 20,
-    roster: ["max", "dgt", "meyern", "luchov", "HUASOPEEK"],
+    roster: [
+      { name: "max", position: "Rifler", rating: 1.07, hltvUrl: "https://www.hltv.org/player/12092/max" },
+      { name: "dgt", position: "AWP", rating: 1.18, hltvUrl: "https://www.hltv.org/player/14736/dgt" },
+      { name: "meyern", position: "Rifler", rating: 1.03, hltvUrl: "https://www.hltv.org/player/14737/meyern" },
+      { name: "luchov", position: "Rifler", rating: 1.18, hltvUrl: "https://www.hltv.org/player/20394/luchov" },
+      { name: "HUASOPEEK", position: "Rifler", rating: 1.09, hltvUrl: "https://www.hltv.org/player/22613/huasopeek" },
+    ],
     recent: [
       { date: "29/05/2026", opponent: "FaZe", score: "1-2", result: "L" },
       { date: "28/05/2026", opponent: "HEROIC", score: "2-1", result: "W" },
@@ -226,7 +337,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   115: { // GamerLegion
     worldRank: 10,
-    roster: ["Snax", "REZ", "Tauson", "PR", "hypex"],
+    roster: [
+      { name: "Snax", position: "IGL", rating: 0.89, hltvUrl: "https://www.hltv.org/player/2553/snax" },
+      { name: "REZ", position: "Rifler", rating: 1.12, hltvUrl: "https://www.hltv.org/player/9278/rez" },
+      { name: "Tauson", position: "AWP", rating: 1.03, hltvUrl: "https://www.hltv.org/player/20301/tauson" },
+      { name: "PR", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/22279/pr" },
+      { name: "hypex", position: "Rifler", rating: 1.02, hltvUrl: "https://www.hltv.org/player/23766/hypex" },
+    ],
     recent: [
       { date: "03/06/2026", opponent: "BetBoom", score: "0-2", result: "L" },
       { date: "02/06/2026", opponent: "FlyQuest", score: "13-11", result: "W" },
@@ -238,7 +355,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   119: { // Monte
     worldRank: 24,
-    roster: ["Rainwaker", "Bymas", "afro", "Gizmy", "AZUWU"],
+    roster: [
+      { name: "Rainwaker", position: "IGL", rating: 1.14, hltvUrl: "https://www.hltv.org/player/17145/rainwaker" },
+      { name: "Bymas", position: "Rifler", rating: 1.06, hltvUrl: "https://www.hltv.org/player/19015/bymas" },
+      { name: "afro", position: "Rifler", rating: 1.12, hltvUrl: "https://www.hltv.org/player/19926/afro" },
+      { name: "Gizmy", position: "Rifler", rating: 0.97, hltvUrl: "https://www.hltv.org/player/21816/gizmy" },
+      { name: "AZUWU", position: "Rifler", rating: 1.00, hltvUrl: "https://www.hltv.org/player/22106/azuwu" },
+    ],
     recent: [
       { date: "13/05/2026", opponent: "G2", score: "0-2", result: "L" },
       { date: "12/05/2026", opponent: "The Huns", score: "2-1", result: "W" },
@@ -250,7 +373,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   122: { // The MongolZ
     worldRank: 9,
-    roster: ["bLitz", "Techno", "mzinho", "910", "cobrazera"],
+    roster: [
+      { name: "bLitz", position: "IGL", rating: 1.08, hltvUrl: "https://www.hltv.org/player/20194/blitz" },
+      { name: "Techno", position: "Rifler", rating: 1.02, hltvUrl: "https://www.hltv.org/player/20275/techno" },
+      { name: "mzinho", position: "Rifler", rating: 1.05, hltvUrl: "https://www.hltv.org/player/21001/mzinho" },
+      { name: "910", position: "AWP", rating: 1.12, hltvUrl: "https://www.hltv.org/player/21809/910" },
+      { name: "cobrazera", position: "Rifler", rating: 1.02, hltvUrl: "https://www.hltv.org/player/23402/cobrazera" },
+    ],
     recent: [
       { date: "22/05/2026", opponent: "Legacy", score: "1-2", result: "L" },
       { date: "22/05/2026", opponent: "PARIVISION", score: "2-0", result: "W" },
@@ -262,7 +391,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   126: { // Legacy
     worldRank: 7,
-    roster: ["arT", "dumau", "latto", "n1ssim", "saadzin"],
+    roster: [
+      { name: "arT", position: "IGL", rating: 0.98, hltvUrl: "https://www.hltv.org/player/12521/art" },
+      { name: "dumau", position: "Rifler", rating: 1.20, hltvUrl: "https://www.hltv.org/player/15698/dumau" },
+      { name: "latto", position: "Rifler", rating: 1.18, hltvUrl: "https://www.hltv.org/player/19045/latto" },
+      { name: "n1ssim", position: "Rifler", rating: 1.03, hltvUrl: "https://www.hltv.org/player/19686/n1ssim" },
+      { name: "saadzin", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/22965/saadzin" },
+    ],
     recent: [
       { date: "24/05/2026", opponent: "Falcons", score: "3-1", result: "W" },
       { date: "23/05/2026", opponent: "MIBR", score: "2-0", result: "W" },
@@ -274,7 +409,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   127: { // Lynn Vision
     worldRank: 31,
-    roster: ["Westmelon", "z4KR", "Starry", "EmiliaQAQ", "C4LLM3SU3"],
+    roster: [
+      { name: "Westmelon", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/16551/westmelon" },
+      { name: "z4KR", position: "AWP", rating: 1.16, hltvUrl: "https://www.hltv.org/player/18744/z4kr" },
+      { name: "Starry", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/20254/starry" },
+      { name: "EmiliaQAQ", position: "Rifler", rating: 1.04, hltvUrl: "https://www.hltv.org/player/22922/emiliaqaq" },
+      { name: "C4LLM3SU3", position: "Rifler", rating: 1.00, hltvUrl: "https://www.hltv.org/player/23100/c4llm3su3" },
+    ],
     recent: [
       { date: "03/06/2026", opponent: "Sharks", score: "13-5", result: "W" },
       { date: "02/06/2026", opponent: "HEROIC", score: "13-11", result: "W" },
@@ -286,7 +427,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   132: { // FlyQuest
     worldRank: 81,
-    roster: ["jks", "INS", "Vexite", "nettik", "story"],
+    roster: [
+      { name: "jks", position: "Rifler", rating: 1.13, hltvUrl: "https://www.hltv.org/player/4679/jks" },
+      { name: "INS", position: "Rifler", rating: 1.08, hltvUrl: "https://www.hltv.org/player/11140/ins" },
+      { name: "Vexite", position: "AWP", rating: 1.08, hltvUrl: "https://www.hltv.org/player/17384/vexite" },
+      { name: "nettik", position: "Rifler", rating: 1.05, hltvUrl: "https://www.hltv.org/player/18214/nettik" },
+      { name: "story", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/20462/story" },
+    ],
     recent: [
       { date: "03/06/2026", opponent: "NRG", score: "10-13", result: "L" },
       { date: "02/06/2026", opponent: "GamerLegion", score: "11-13", result: "L" },
@@ -298,7 +445,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   134: { // Aurora
     worldRank: 6,
-    roster: ["MAJ3R", "XANTARES", "woxic", "soulfly", "Wicadia"],
+    roster: [
+      { name: "MAJ3R", position: "IGL", rating: 0.89, hltvUrl: "https://www.hltv.org/player/150/maj3r" },
+      { name: "XANTARES", position: "Rifler", rating: 1.16, hltvUrl: "https://www.hltv.org/player/7938/xantares" },
+      { name: "woxic", position: "AWP", rating: 1.05, hltvUrl: "https://www.hltv.org/player/8574/woxic" },
+      { name: "soulfly", position: "Rifler", rating: 1.01, hltvUrl: "https://www.hltv.org/player/20968/soulfly" },
+      { name: "Wicadia", position: "Rifler", rating: 1.12, hltvUrl: "https://www.hltv.org/player/21243/wicadia" },
+    ],
     recent: [
       { date: "15/05/2026", opponent: "MOUZ", score: "0-2", result: "L" },
       { date: "13/05/2026", opponent: "The MongolZ", score: "2-0", result: "W" },
@@ -310,7 +463,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   135: { // B8
     worldRank: 16,
-    roster: ["alex666", "npl", "kensizor", "esenthial", "s1zzi"],
+    roster: [
+      { name: "alex666", position: "Rifler", rating: 1.04, hltvUrl: "https://www.hltv.org/player/20112/alex666" },
+      { name: "npl", position: "IGL", rating: 1.16, hltvUrl: "https://www.hltv.org/player/21708/npl" },
+      { name: "kensizor", position: "AWP", rating: 1.03, hltvUrl: "https://www.hltv.org/player/22842/kensizor" },
+      { name: "esenthial", position: "Rifler", rating: 0.98, hltvUrl: "https://www.hltv.org/player/23643/esenthial" },
+      { name: "s1zzi", position: "Rifler", rating: 0.99, hltvUrl: "https://www.hltv.org/player/25619/s1zzi" },
+    ],
     recent: [
       { date: "03/06/2026", opponent: "M80", score: "2-0", result: "W" },
       { date: "02/06/2026", opponent: "THUNDER dOWNUNDER", score: "13-11", result: "W" },
@@ -322,7 +481,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   137: { // BetBoom
     worldRank: 21,
-    roster: ["Boombl4", "zorte", "S1ren", "d1Ledez", "Magnojez"],
+    roster: [
+      { name: "Boombl4", position: "IGL", rating: 0.98, hltvUrl: "https://www.hltv.org/player/11840/boombl4" },
+      { name: "zorte", position: "AWP", rating: 0.98, hltvUrl: "https://www.hltv.org/player/15662/zorte" },
+      { name: "S1ren", position: "Rifler", rating: 1.06, hltvUrl: "https://www.hltv.org/player/18506/s1ren" },
+      { name: "d1Ledez", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/20357/d1ledez" },
+      { name: "Magnojez", position: "Rifler", rating: 1.16, hltvUrl: "https://www.hltv.org/player/21667/magnojez" },
+    ],
     recent: [
       { date: "03/06/2026", opponent: "GamerLegion", score: "2-0", result: "W" },
       { date: "02/06/2026", opponent: "Liquid", score: "13-9", result: "W" },
@@ -334,7 +499,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   139: { // Falcons
     worldRank: 4,
-    roster: ["karrigan", "NiKo", "TeSeS", "m0NESY", "kyousuke"],
+    roster: [
+      { name: "karrigan", position: "IGL", rating: 0.73, hltvUrl: "https://www.hltv.org/player/429/karrigan" },
+      { name: "NiKo", position: "Rifler", rating: 1.13, hltvUrl: "https://www.hltv.org/player/3741/niko" },
+      { name: "TeSeS", position: "Rifler", rating: 1.03, hltvUrl: "https://www.hltv.org/player/12018/teses" },
+      { name: "m0NESY", position: "AWP", rating: 1.26, hltvUrl: "https://www.hltv.org/player/19230/m0nesy" },
+      { name: "kyousuke", position: "Rifler", rating: 1.17, hltvUrl: "https://www.hltv.org/player/24177/kyousuke" },
+    ],
     recent: [
       { date: "24/05/2026", opponent: "Legacy", score: "1-3", result: "L" },
       { date: "23/05/2026", opponent: "MOUZ", score: "2-1", result: "W" },
@@ -346,7 +517,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   140: { // M80
     worldRank: 28,
-    roster: ["slaxz-", "Swisher", "s1n", "JBa", "Lake"],
+    roster: [
+      { name: "slaxz-", position: "IGL", rating: 1.14, hltvUrl: "https://www.hltv.org/player/15370/slaxz" },
+      { name: "Swisher", position: "Rifler", rating: 1.12, hltvUrl: "https://www.hltv.org/player/16599/swisher" },
+      { name: "s1n", position: "Rifler", rating: 1.06, hltvUrl: "https://www.hltv.org/player/20104/s1n" },
+      { name: "JBa", position: "Rifler", rating: 1.04, hltvUrl: "https://www.hltv.org/player/21665/jba" },
+      { name: "Lake", position: "Rifler", rating: 1.15, hltvUrl: "https://www.hltv.org/player/22921/lake" },
+    ],
     recent: [
       { date: "03/06/2026", opponent: "B8", score: "0-2", result: "L" },
       { date: "02/06/2026", opponent: "Sharks", score: "13-6", result: "W" },
@@ -358,7 +535,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   142: { // PARIVISION
     worldRank: 11,
-    roster: ["Jame", "BELCHONOKK", "xiELO", "nota", "zweih"],
+    roster: [
+      { name: "Jame", position: "AWP", rating: 1.13, hltvUrl: "https://www.hltv.org/player/13776/jame" },
+      { name: "BELCHONOKK", position: "Rifler", rating: 1.07, hltvUrl: "https://www.hltv.org/player/19235/belchonokk" },
+      { name: "xiELO", position: "Rifler", rating: 1.06, hltvUrl: "https://www.hltv.org/player/22471/xielo" },
+      { name: "nota", position: "Rifler", rating: 1.04, hltvUrl: "https://www.hltv.org/player/22929/nota" },
+      { name: "zweih", position: "Rifler", rating: 1.09, hltvUrl: "https://www.hltv.org/player/23685/zweih" },
+    ],
     recent: [
       { date: "22/05/2026", opponent: "The MongolZ", score: "0-2", result: "L" },
       { date: "21/05/2026", opponent: "Lynn Vision", score: "2-0", result: "W" },
@@ -370,7 +553,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   145: { // FUT
     worldRank: 13,
-    roster: ["dem0n", "lauNX", "Krabeni", "cmtry", "dziugss"],
+    roster: [
+      { name: "dem0n", position: "AWP", rating: 1.12, hltvUrl: "https://www.hltv.org/player/20584/dem0n" },
+      { name: "lauNX", position: "Rifler", rating: 1.11, hltvUrl: "https://www.hltv.org/player/20761/launx" },
+      { name: "Krabeni", position: "Rifler", rating: 1.05, hltvUrl: "https://www.hltv.org/player/22203/krabeni" },
+      { name: "cmtry", position: "Rifler", rating: 1.03, hltvUrl: "https://www.hltv.org/player/22674/cmtry" },
+      { name: "dziugss", position: "Rifler", rating: 1.11, hltvUrl: "https://www.hltv.org/player/23553/dziugss" },
+    ],
     recent: [
       { date: "13/05/2026", opponent: "B8", score: "0-2", result: "L" },
       { date: "12/05/2026", opponent: "paiN", score: "1-2", result: "L" },
@@ -382,7 +571,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   146: { // Gaimin Gladiators
     worldRank: 142,
-    roster: ["fer", "HEN1", "NEKIZ", "Luken", "JOTA"],
+    roster: [
+      { name: "fer", position: "Rifler", rating: 0.86, hltvUrl: "https://www.hltv.org/player/8564/fer" },
+      { name: "HEN1", position: "AWP", rating: 1.04, hltvUrl: "https://www.hltv.org/player/8565/hen1" },
+      { name: "NEKIZ", position: "Rifler", rating: 0.91, hltvUrl: "https://www.hltv.org/player/9482/nekiz" },
+      { name: "Luken", position: "Rifler", rating: 1.19, hltvUrl: "https://www.hltv.org/player/15914/luken" },
+      { name: "JOTA", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/17861/jota" },
+    ],
     recent: [
       { date: "03/06/2026", opponent: "HEROIC", score: "0-2", result: "L" },
       { date: "02/06/2026", opponent: "BIG", score: "1-13", result: "L" },
@@ -394,7 +589,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   147: { // SINNERS
     worldRank: 30,
-    roster: ["beastik", "SHOCK", "MoDo", "kisserek", "stressarN"],
+    roster: [
+      { name: "beastik", position: "Rifler", rating: 0.99, hltvUrl: "https://www.hltv.org/player/11199/beastik" },
+      { name: "SHOCK", position: "Rifler", rating: 1.06, hltvUrl: "https://www.hltv.org/player/12810/shock" },
+      { name: "MoDo", position: "Rifler", rating: 1.09, hltvUrl: "https://www.hltv.org/player/21113/modo" },
+      { name: "kisserek", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/23295/kisserek" },
+      { name: "stressarN", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/23459/stressarn" },
+    ],
     recent: [
       { date: "03/06/2026", opponent: "TYLOO", score: "0-2", result: "L" },
       { date: "02/06/2026", opponent: "NRG", score: "6-13", result: "L" },
@@ -406,7 +607,13 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   },
   148: { // THUNDER dOWNUNDER
     worldRank: 69,
-    roster: ["dexter", "Liazz", "aliStair", "asap", "TjP"],
+    roster: [
+      { name: "dexter", position: "IGL", rating: 1.04, hltvUrl: "https://www.hltv.org/player/9115/dexter" },
+      { name: "Liazz", position: "Rifler", rating: 1.21, hltvUrl: "https://www.hltv.org/player/10588/liazz" },
+      { name: "aliStair", position: "Rifler", rating: 1.19, hltvUrl: "https://www.hltv.org/player/11139/alistair" },
+      { name: "asap", position: "Rifler", rating: 1.23, hltvUrl: "https://www.hltv.org/player/18545/asap" },
+      { name: "TjP", position: "Rifler", rating: 1.02, hltvUrl: "https://www.hltv.org/player/20527/tjp" },
+    ],
     recent: [
       { date: "03/06/2026", opponent: "BIG", score: "7-13", result: "L" },
       { date: "02/06/2026", opponent: "B8", score: "11-13", result: "L" },

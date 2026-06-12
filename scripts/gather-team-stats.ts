@@ -70,13 +70,16 @@ function parseRecent(md: string): Match[] {
   return parseRecentResults(md);
 }
 
-/** Pull existing worldRank + roster (kept as-is) out of the committed core. */
+/** Pull existing worldRank + roster (kept as-is) out of the committed core. The
+ * roster is a structured, hand-curated block (name/position/rating/hltvUrl —
+ * PHA-992) that this results-only refresh must preserve verbatim, so it's
+ * captured as the whole `[ … ]` block (multi-line) and re-emitted unchanged. */
 function readExisting(src: string): Record<number, { name: string; rank: string; roster: string }> {
   const re =
-    /(\d+):\s*\{\s*\/\/\s*([^\n]+)\n\s*worldRank:\s*(null|\d+),\s*\n\s*roster:\s*\[([^\]]*)\],/g;
+    /(\d+):\s*\{\s*\/\/\s*([^\n]+)\n\s*worldRank:\s*(null|\d+),\s*\n\s*roster:\s*(\[[\s\S]*?\n {4}\]),/g;
   const out: Record<number, { name: string; rank: string; roster: string }> = {};
   for (const m of src.matchAll(re)) {
-    out[Number(m[1])] = { name: m[2].trim(), rank: m[3], roster: m[4].trim() };
+    out[Number(m[1])] = { name: m[2].trim(), rank: m[3], roster: m[4] };
   }
   return out;
 }
@@ -119,9 +122,24 @@ export interface RecentMatch {
   result: MatchResult;
 }
 
+/**
+ * One active-lineup player (PHA-992). A bare screenname means nothing to a
+ * newcomer, so each player carries their on-server role, HLTV rating, and a link
+ * to their own HLTV profile. \`position\` is the player's primary real-world role
+ * (IGL / AWP / Rifler — hand-curated, since HLTV publishes no structured role).
+ * \`rating\` is HLTV's team-period rating off the team profile and \`hltvUrl\` their
+ * personal profile; both are refreshed alongside the dossier (gather-roster).
+ */
+export interface RosterPlayer {
+  name: string; // in-game nickname
+  position: string; // primary role: "IGL" | "AWP" | "Rifler"
+  rating: number | null; // HLTV rating on the current team, null if unrated
+  hltvUrl: string; // personal HLTV player profile
+}
+
 export interface TeamStats {
   worldRank: number | null; // HLTV world ranking position, null if unranked
-  roster: string[]; // active lineup nicknames
+  roster: RosterPlayer[]; // active lineup, five players
   recent: RecentMatch[]; // most-recent first, up to 5
   hltvUrl: string; // canonical HLTV team profile (the dossier's data source)
 }
@@ -140,7 +158,7 @@ export const TEAM_STATS: Record<number, TeamStats> = {`;
     if (!ex) throw new Error(`pickid ${pid} missing from existing core`);
     lines.push(`  ${pid}: { // ${ex.name}`);
     lines.push(`    worldRank: ${ex.rank},`);
-    lines.push(`    roster: [${ex.roster}],`);
+    lines.push(`    roster: ${ex.roster},`); // structured block, preserved verbatim (PHA-992)
     lines.push(`    recent: [`);
     for (const m of recent) {
       const opp = m.opponent.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
