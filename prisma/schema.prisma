@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Players: both local and Steam-synced
+model Player {
+  id            String   @id @default(cuid())
+  displayName   String
+  avatarUrl     String?
+  steamId       String?  @unique  // 17-digit SteamID64, stored as string
+  authCode      String?           // encrypted per-user auth code for Valve API
+  isLocal       Boolean  @default(true)
+  hasViewerPass Boolean  @default(false)
+  hasValveCoin  Boolean  @default(false)
+  coinTier      String?           // "bronze" | "silver" | "gold" | "diamond" — null unless hasValveCoin
+  synced        Boolean  @default(false) // true when picks confirmed synced from Valve
+  inviteCode    String?  @unique
+  invitedById   String?           // referral attribution: the player whose invite link onboarded this one
+  createdFromIp String?           // captured at local-account creation for IP rate-limit enforcement
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  invitedBy         Player?  @relation("Referral", fields: [invitedById], references: [id], onDelete: SetNull)
+  referrals         Player[] @relation("Referral")
+  picks             Pick[]
+  pushSubscriptions PushSubscription[]
+  rankSnapshots     RankSnapshot[]
+}
+
+// Individual slot picks — one row per (player, event, section, group, slotIndex)
+// itemId stored as string — bigint (17+ digits) cannot be safely represented as JS number
+model Pick {
+  id        String   @id @default(cuid())
+  playerId  String
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  eventId   Int      // always keyed — multi-event from day one
+  sectionId Int
+  groupId   Int
+  slotIndex Int
+  pickId    Int      // team pickid from layout; 0 = TBD/unset
+  itemId    String   // bigint stored as string ("17293822569790899385")
+  isLocal   Boolean  @default(true) // false when confirmed written to Valve
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([playerId, eventId, sectionId, groupId, slotIndex])
+  @@index([eventId, sectionId])
+}
+
+// Stage outcomes (what actually happened) — used for scoring
+// Source: "valve" (oracle API) or "liquipedia" (MediaWiki API fallback)
+model StageOutcome {
+  id         String   @id @default(cuid())
+  eventId    Int
+  sectionId  Int
+  groupId    Int
+  slotIndex  Int
+  winnerPickId Int    // team pickid that won
+  source     String   // "valve" | "liquipedia"
+  resolvedAt DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([eventId, sectionId, groupId, slotIndex])
+  @@index([eventId])
+}
+
+// Frozen standings at each stage resolution (PHA-858). One row per
+// (player, event, section): the player's CUMULATIVE rank + points over every
+// resolved outcome through that section, captured when the section resolved.
+// Drives the leaderboard rank-delta arrows (mockup-04) and the Stage Reveal
+// screen (mockup-08). Written by writeRankSnapshots() in the outcomes ingest
+// path; only sections that already have resolved outcomes are snapshotted, so a
+// snapshot can never disagree with the live leaderboard. Idempotent upsert —
+// re-running ingest recomputes the same standings and self-heals if an outcome
+// is corrected later.
+model RankSnapshot {
+  id         String   @id @default(cuid())
+  playerId   String
+  player     Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  eventId    Int
+  sectionId  Int
+  rank       Int
+  score      Int      // cumulative points through this section (ranking metric)
+  resolvedAt DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([playerId, eventId, sectionId])
+  @@index([eventId, sectionId])
+}
+
+// Cached layout/predictions from Valve API — refreshed periodically during event
+model LayoutCache {
+  id        String   @id @default(cuid())
+  eventId   Int      @unique
+  data      String   // JSON string — bigints serialized as strings before storage
+  fetchedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Per-source state for outcome ingestion — persisted throttle (PHA-844).
+// The in-process min-interval gate in liquipedia.ts resets every container
+// restart, so a restart-loop pre-event could still hammer the API. This row
+// records the wall-clock timestamp of the last successful (or attempted)
+// source call; the gate consults it before any new request.
+model SourceState {
+  id           String   @id @default(cuid())
+  source       String   @unique // "liquipedia" | "valve" | "hltv"
+  lastCallAt   DateTime
+  updatedAt    DateTime @updatedAt
+}
+
+// Wire / news headlines (PHA-857). Source-agnostic: rows arrive either from a
+// committed curated seed (the Beta default) or, later, an automated pull (RSS /
+// HLTV) through the same ingestion path. `externalId` is the per-source dedup
+// key so re-running ingestion is idempotent. Empty table + empty seed renders
+// the honest "No signal yet" empty state — we never fabricate a headline.
+model NewsItem {
+  id          String   @id @default(cuid())
+  externalId  String   @unique // stable per-source key (url hash / guid / seed slug)
+  source      String   // "phatt" (curated) | "hltv" | "liquipedia" | ...
+  sourceUrl   String?  // canonical link out to the story
+  headline    String
+  summary     String?
+  imageUrl    String?  // mockup-17 image slot; null renders the framed placeholder
+  publishedAt DateTime // story timestamp (drives "time-ago" + sort)
+  pinned      Boolean  @default(false) // curated items that should lead the wire
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([publishedAt])
+}
+
+// Live HLTV/BLAST-style Swiss W-L standings (PHA-902). One JSON-blob row per
+// (event, section): the parsed standings table (each team's running win-loss
+// record, rounds for/against, status) cached from the external source (HLTV
+// event page via crawl4ai). Refreshed on an ~hourly floor by the on-read driver
+// (refreshStandingsOnRead, mirroring the wire/outcomes SourceState claim) — no
+// cron. The Valve answer key carries no running record, so this is the only
+// source of mid-stage W-L; a source outage degrades to the last cached blob (or
+// empty), never a fabricated record. Single-row-per-section blob (like
+// LayoutCache) keeps writes atomic and avoids 16-row churn each refresh.
+model SwissStandingsCache {
+  id        String   @id @default(cuid())
+  eventId   Int
+  sectionId Int
+  data      String   // JSON: { rows: RawStandingRow[], source, sourceUrl, fetchedAt }
+  fetchedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, sectionId])
+  @@index([eventId])
+}
+
+// Live team-dossier recent results (PHA-921). One JSON-blob row per event: each
+// team's last-5 matches parsed from its HLTV PROFILE via crawl4ai, cached so the
+// dossier's "Last 5 matches" updates per stage without a manual gather/commit.
+// The dossier is keyed by team profile (global across stages), not by section,
+// so unlike SwissStandingsCache this is ONE row per event, not per section.
+// Refreshed on an ~hourly floor by the on-read driver (refreshTeamStatsOnRead,
+// the same SourceState claim the standings/outcomes drivers use) — no cron, gated
+// to match windows. Roster + world rank stay in the committed snapshot; only
+// recent[] is live. A source outage degrades to the last blob, then to the frozen
+// snapshot — never empty, never a fabricated result.
+model TeamStatsCache {
+  id        String   @id @default(cuid())
+  eventId   Int      @unique
+  data      String   // JSON: { recentByPickid: Record<pickid, ParsedMatch[]>, source, fetchedAt }
+  fetchedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// PWA push subscriptions
+model PushSubscription {
+  id       String   @id @default(cuid())
+  playerId String
+  player   Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  endpoint String   @unique
+  keys     String   // JSON {p256dh, auth}
+  createdAt DateTime @default(now())
+
+  @@index([playerId])
+}
