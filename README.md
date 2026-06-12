@@ -56,10 +56,10 @@ each stage locks) are delivered via Web Push.
 Enable reminders under **You → Pick-lock reminders**, then **Send a test reminder** to confirm.
 
 The real 24h/1h reminders are fired by an **in-process scheduler** (`src/instrumentation.ts`, a
-~5-min tick) — **no external cron/sidecar**. Enable it by setting `PRELOCK_REMINDERS_ENABLED=1` in
-the deploy env (PHA-929). Cutoffs come from the committed `COLOGNE_LOCK_SCHEDULE`; `STAGE_LOCKS_JSON`
-is only an optional override. The `scripts/send-prelock-reminders.ts` CLI shares the same code path
-(`src/lib/prelock-reminders.ts`); pure scheduling logic is in `src/lib/notify-core.ts`.
+~5-min tick) — **no external cron/sidecar**. The scheduler is ON by default (PHA-996); set
+`PRELOCK_REMINDERS_DISABLED=1` to turn it off. Cutoffs come from the committed
+`COLOGNE_LOCK_SCHEDULE`; `STAGE_LOCKS_JSON` is an optional override. Pure scheduling logic
+is in `src/lib/prelock-reminders.ts` and `src/lib/notify-core.ts`.
 
 ## Inviting friends
 
