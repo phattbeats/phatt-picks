@@ -271,7 +271,7 @@ function proveMultiGroupSkipUnchanged(): void {
     swiss.alreadySynced[0].slotIndex === 0);
 }
 
-console.log("=== phaTT Picks M5 write-path verification ===");
+console.log("=== HOTLINE M5 write-path verification ===");
 proveItemidCarry();
 proveSinglePickShape();
 provePlayoffOrder();

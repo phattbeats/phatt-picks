@@ -156,7 +156,7 @@ function proveNormalization(): void {
   check("CC-BY-SA attribution constant present", /CC-BY-SA/.test(LIQUIPEDIA_ATTRIBUTION), LIQUIPEDIA_ATTRIBUTION);
 }
 
-console.log("=== phaTT Picks M4 leaderboard/scoring verification ===");
+console.log("=== HOTLINE M4 leaderboard/scoring verification ===");
 proveWeights();
 proveKnownCase();
 proveFlatValue();

@@ -25,7 +25,7 @@ import type { RawResolvedSlot } from "./outcomes-core";
 const API_BASE = "https://liquipedia.net/counterstrike/api.php";
 
 // Liquipedia requires a descriptive UA naming the app + a contact.
-const USER_AGENT = "phaTT-Picks/1.0 (Cologne pickem companion; contact: brandon@phatt.tech)";
+const USER_AGENT = "HOTLINE/1.0 (CS2 Major Pick'Em companion; contact: admin@phatt.vip)";
 
 // Min interval between parse calls (their stricter bucket).
 const PARSE_MIN_INTERVAL_MS = 30_000;

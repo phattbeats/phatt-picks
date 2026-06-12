@@ -36,7 +36,7 @@ const VAPID_PUBLIC_KEY_RE = /^[A-Za-z0-9_-]{80,90}$/;
 function configured(): { subject: string; publicKey: string; privateKey: string } | null {
   const publicKey = clean(process.env.VAPID_PUBLIC_KEY);
   const privateKey = clean(process.env.VAPID_PRIVATE_KEY);
-  const subject = clean(process.env.VAPID_SUBJECT) || "mailto:admin@phatt.tech";
+  const subject = clean(process.env.VAPID_SUBJECT) || "mailto:admin@phatt.vip";
   if (PLACEHOLDERS.has(publicKey) || PLACEHOLDERS.has(privateKey)) return null;
   // A malformed public key can't produce a working subscription; surface it as
   // "not configured" (UI hides the opt-in) instead of handing the client a key

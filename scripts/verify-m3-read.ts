@@ -141,7 +141,7 @@ function provePlaceholderDrop(): void {
   check("clean envelope: nothing dropped", cleanOut.length === 1);
 }
 
-console.log("=== phaTT Picks M3 read-pipeline verification ===");
+console.log("=== HOTLINE M3 read-pipeline verification ===");
 proveItemidPrecision();
 proveWeights();
 provePredictionsSnapshot();

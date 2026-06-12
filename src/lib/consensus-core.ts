@@ -3,7 +3,7 @@
  *
  * Companion pick'em sites surface a consensus signal — "X% of players picked
  * this team to go 3-0 / advance / 0-3" — which drives engagement and orients
- * newcomers. phaTT already stores every Pick row, so this is pure read-side
+ * newcomers. The app already stores every Pick row, so this is pure read-side
  * aggregation: count picks per (sectionId, groupId, slotIndex, pickId) over the
  * field that actually picked the slot, expressed as a percentage share.
  *

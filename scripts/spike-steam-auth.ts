@@ -98,7 +98,7 @@ function proveCrypto(): void {
 }
 
 (async () => {
-  console.log("=== phaTT Picks M2 spike: Steam OpenID 2.0 path ===");
+  console.log("=== HOTLINE M2 spike: Steam OpenID 2.0 path ===");
   const prisma = new PrismaClient();
   try {
     await proveInitiation();

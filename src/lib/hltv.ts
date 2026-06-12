@@ -32,7 +32,7 @@ const FEED_URL = "https://www.hltv.org/rss/news";
 // Descriptive UA naming the app + a contact, same courtesy as the Liquipedia
 // client. Generic UAs are exactly what gets challenged.
 const USER_AGENT =
-  "phaTT-Picks/1.0 (Cologne pickem companion; contact: brandon@phatt.tech)";
+  "HOTLINE/1.0 (CS2 Major Pick'Em companion; contact: admin@phatt.vip)";
 
 /**
  * Persisted refresh floor. The feed updates a few times an hour at most during

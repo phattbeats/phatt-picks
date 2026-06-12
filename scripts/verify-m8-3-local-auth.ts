@@ -67,7 +67,7 @@ check("default rng produces non-empty names", samples.every((n) => n.length > 0)
 
 console.log("\nlocal-auth-core - sanitizeDisplayName");
 const FB = "Fallback123";
-check("trims surrounding whitespace", sanitizeDisplayName("  phaTT  ", FB) === "phaTT");
+check("trims surrounding whitespace", sanitizeDisplayName("  Alpha  ", FB) === "Alpha");
 check("collapses internal whitespace", sanitizeDisplayName("foo   bar", FB) === "foo bar");
 check("accepts unicode letters", sanitizeDisplayName("Omega", FB) === "Omega");
 check("accepts digits, underscore, dash, dot", sanitizeDisplayName("a_b-c.1", FB) === "a_b-c.1");
