@@ -271,12 +271,38 @@ function proveMultiGroupSkipUnchanged(): void {
     swiss.alreadySynced[0].slotIndex === 0);
 }
 
-console.log("=== HOTLINE M5 write-path verification ===");
+// [7] empty-shell body normalization (PHA-1005).
+//
+// Valve's UploadTournamentPredictions occasionally returns HTTP 500 with body
+// "{\n\n}" — an empty-shell JSON object. picks-write.ts normalises these to
+// "HTTP ${status}" so they don't surface as "({ })" in the status pill.
+// This section proves the regex that drives that normalisation.
+function proveEmptyShellBodyNorm(): void {
+  console.log("\n[7] EMPTY-SHELL BODY NORM (PHA-1005) — Valve bare-body 5xx must not leak as '({ })' in pill");
+
+  // Mirror the exact check from picks-write.ts uploadAndReconcile.
+  const isEmptyShell = (raw: string) => !raw || /^\{[\s]*\}$/.test(raw);
+
+  check("'{\\n\\n}' (Valve live 500 body) detected as empty shell", isEmptyShell("{\n\n}"));
+  check("'{}' detected as empty shell", isEmptyShell("{}"));
+  check("'{ }' detected as empty shell", isEmptyShell("{ }"));
+  check("empty string treated as empty shell", isEmptyShell(""));
+  check("'{\"error\":\"…\"}' NOT an empty shell", !isEmptyShell('{"error":"bad request"}'));
+  check("plain text NOT an empty shell", !isEmptyShell("Steam error: stage not open"));
+  // When shell, fallback to "HTTP <status>" — the pill shows "(HTTP 500)" not "({ })".
+  const body = "{\n\n}";
+  const raw = body.trim();
+  const error = isEmptyShell(raw) ? "HTTP 500" : raw.slice(0, 200);
+  check("shell body falls back to 'HTTP 500' (no '({ })' leak)", error === "HTTP 500", error);
+}
+
+console.log("=== phaTT Picks M5 write-path verification ===");
 proveItemidCarry();
 proveSinglePickShape();
 provePlayoffOrder();
 proveFailureClassification();
 proveResolveGuards();
 proveMultiGroupSkipUnchanged();
+proveEmptyShellBodyNorm();
 console.log(`\n${failures === 0 ? "M5 WRITE CHECKS PASSED" : `M5 WRITE CHECKS FAILED — ${failures} failure(s)`}`);
 process.exit(failures === 0 ? 0 : 1);
