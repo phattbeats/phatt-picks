@@ -95,6 +95,32 @@ check("fixtures.layout names the committed fixture", active.fixtures.layout === 
 check("fixtures.logos names the committed manifest", active.fixtures.logos === "cologne-logos");
 check("teamMaps record the owning modules", !!active.teamMaps.regions && !!active.teamMaps.stats && !!active.teamMaps.sources);
 
+// — PHA-1055: the next Major (PGL Singapore 2026) is pre-seeded as `upcoming`,
+//   fully gated (no section-keyed config yet) so it has zero impact on live
+//   Cologne and both CI guards pass on an empty config. —
+const singapore = getEventConfig(27);
+check("Singapore 2026 is registered (eventId 27)", singapore !== null);
+check("Singapore is staged as upcoming", singapore?.status === "upcoming");
+check("Singapore slug is pgl-singapore-2026", singapore?.slug === "pgl-singapore-2026");
+check("Singapore dates parse and end after start",
+  !!singapore &&
+  !Number.isNaN(Date.parse(singapore.dates.start)) &&
+  Date.parse(singapore.dates.end) > Date.parse(singapore.dates.start));
+check("Singapore start is Nov 25 2026 (main event opener)",
+  singapore?.dates.start === "2026-11-25T00:00:00Z");
+check("Singapore section-keyed config is gated (empty until HLTV publishes)",
+  !!singapore &&
+  Object.keys(singapore.sectionNames).length === 0 &&
+  Object.keys(singapore.lockSchedule).length === 0 &&
+  Object.keys(singapore.matchWindows).length === 0 &&
+  Object.keys(singapore.sectionSources).length === 0);
+check("Singapore records its fixture/teamMap bindings for the re-point",
+  !!singapore && !!singapore.fixtures.layout && !!singapore.fixtures.logos &&
+  !!singapore.teamMaps.regions && !!singapore.teamMaps.stats && !!singapore.teamMaps.sources);
+check("seeding Singapore did not disturb the single live event (Cologne)",
+  Object.values(EVENTS).filter((e) => e.status === "live").length === 1 &&
+  resolveActiveEvent().eventId === 26);
+
 // — config-sanity invariant: at most one BASELINE-live event. (resolveActiveEvent
 //   is clock-derived since PHA-950 and no longer throws on multiples — it picks
 //   the soonest go-live — but two hand-set `live` baselines is still a config
