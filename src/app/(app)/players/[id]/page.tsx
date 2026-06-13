@@ -7,6 +7,7 @@
  * themselves (no lock gate against yourself), matching the /picks page.
  */
 
+import { LockIcon } from "@/components/ui/LockIcon";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -298,7 +299,7 @@ export default async function PlayerProfilePage({
                     <span className="pickgroup-name" style={{ fontSize: 14 }}>{stageLabel}</span>
                   </div>
                   <div style={{ padding: 20, textAlign: "center", color: "var(--ink-low)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                    🔒 Hidden until this stage locks
+                    <LockIcon size={11} /> Hidden until this stage locks
                   </div>
                 </div>
               );
@@ -359,7 +360,7 @@ export default async function PlayerProfilePage({
 
                     {!revealed ? (
                       <div style={{ padding: 20, textAlign: "center", color: "var(--ink-low)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                        🔒 Hidden until this stage locks
+                        <LockIcon size={11} /> Hidden until this stage locks
                       </div>
                     ) : (
                       <div style={{ padding: 14 }}>
