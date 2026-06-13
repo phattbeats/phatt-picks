@@ -10,15 +10,22 @@
  * Node server = one shared view).
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { isPushConfigured, sendTestPreLockPush } from "@/lib/notify";
 import { createCooldownStore, checkCooldown } from "@/lib/security-core";
+import { isSameOrigin } from "@/lib/csrf";
 
 const PUSH_TEST_COOLDOWN_MS = 30_000;
 const cooldown = createCooldownStore();
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+  // CSRF: this is a simple POST (no JSON preflight to shield it), so a cross-site
+  // form could fire a victim's own test push. Require our own origin.
+  if (!isSameOrigin(req)) {
+    return NextResponse.json({ error: "Bad origin" }, { status: 403 });
+  }
+
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 

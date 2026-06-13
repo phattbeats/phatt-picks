@@ -10,19 +10,12 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { isAllowedOrigin, parseAllowedOrigins } from "@/lib/security-core";
+import { isSameOrigin } from "@/lib/csrf";
 
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 
 export async function POST(req: NextRequest) {
-  const allowed = parseAllowedOrigins(req.nextUrl.origin, BASE_URL);
-  if (
-    !isAllowedOrigin(
-      req.headers.get("origin"),
-      req.headers.get("referer"),
-      allowed,
-    )
-  ) {
+  if (!isSameOrigin(req)) {
     return NextResponse.json({ error: "Bad origin" }, { status: 403 });
   }
 
