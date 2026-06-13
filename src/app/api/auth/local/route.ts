@@ -29,6 +29,7 @@ import { getSession } from "@/lib/session";
 import { verifyTurnstile } from "@/lib/captcha";
 import { attributeReferral } from "@/lib/invite";
 import { signSessionToken, sessionCookieOptions } from "@/lib/session-core";
+import { clientIpFromForwarded } from "@/lib/security-core";
 import {
   decideLocalAuthAction,
   randomName,
@@ -39,6 +40,20 @@ import {
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 const IP_ACCOUNT_LIMIT = 5;
 
+// PHA-1045: how many reverse proxies sit in front of us. The right-most
+// X-Forwarded-For entries are the only ones added by infrastructure we control;
+// the left-most is client-settable and would let an attacker spoof a fresh IP
+// to dodge the per-IP account cap. Default 1 (our single Unraid proxy).
+const TRUSTED_PROXY_HOPS = (() => {
+  // Treat unset OR set-but-blank (a Force-Update drift outcome) as the default,
+  // and reject negatives — Number("") is 0, which would silently disable XFF
+  // trust, so guard the raw string before coercing.
+  const raw = process.env.TRUSTED_PROXY_HOPS?.trim();
+  if (!raw) return 1;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : 1;
+})();
+
 function requireSecret(): string {
   const secret = process.env.NEXTAUTH_SECRET;
   if (!secret) throw new Error("NEXTAUTH_SECRET not set");
@@ -46,12 +61,11 @@ function requireSecret(): string {
 }
 
 function getClientIp(req: NextRequest): string | null {
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) {
-    const ip = forwarded.split(",")[0].trim();
-    if (ip) return ip;
-  }
-  return req.headers.get("x-real-ip");
+  return clientIpFromForwarded(
+    req.headers.get("x-forwarded-for"),
+    req.headers.get("x-real-ip"),
+    TRUSTED_PROXY_HOPS,
+  );
 }
 
 async function currentSessionView(): Promise<LocalSessionView> {

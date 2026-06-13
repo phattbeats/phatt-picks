@@ -278,6 +278,7 @@ export function PushToggle() {
       const data = (await res.json()) as { ok: boolean; sent?: number; reason?: string };
       if (data.ok && (data.sent ?? 0) > 0) setNote("Test reminder sent — check your notifications.");
       else if (data.reason === "push-not-configured") setNote("Push isn't configured on the server.");
+      else if (data.reason === "rate-limited") setNote("Easy — wait a moment before sending another test.");
       else setNote("No active device to send to. Re-enable reminders and try again.");
     } catch {
       setNote("Couldn't send the test reminder.");
