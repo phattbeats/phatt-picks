@@ -752,9 +752,10 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 /* Swiss bucket slots — tile grid at all viewport sizes (portrait, matches pool) */
 /* auto-fit (not auto-fill) collapses empty tracks — 2-slot outer buckets spread evenly */
 /* PHA-1004 — cap the 1fr max at 120px (a hair wider than pool tiles) so the
- * outer buckets don't balloon to fill the full column width. Without the cap,
- * 1- and 2-slot buckets stretch edge-to-edge inside their column and the
- * three columns read as wildly different widths (left gap ≠ right gap). */
+ * outer buckets don't balloon to fill the full column width, keeping every logo
+ * the same size as the middle bucket and the pool. The 120px cap leaves slack
+ * inside each 1fr column; we use that slack below to align the outer buckets to
+ * their own edges so the three categories read as mirror-symmetric. */
 .bucket-cols.swiss .bucket {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(100px, 120px));
@@ -766,6 +767,14 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 @media (min-width: 768px) {
   /* 3-column ADVANCE|SURVIVE|ELIMINATE layout on tablet+ */
   .bucket-cols.swiss { grid-template-columns: repeat(3, 1fr); align-items: start; }
+  /* PHA-1004 — mirror symmetry across the three categories. Centering alone
+   * leaves the outer buckets left-biased (auto-fit collapses the empty trailing
+   * track, so the 2 tiles sit in the left half of a 3-track column). Instead
+   * pin 3:0 to the left edge and 0:3 to the right edge so the gap from each
+   * outer category to its frame edge matches, and the two inner gaps are equal. */
+  .bucket-cols.swiss .bucket:first-child { justify-content: start; }
+  .bucket-cols.swiss .bucket:last-child { justify-content: end; }
+  .bucket-cols.swiss .bucket:last-child .bucket-label { justify-content: flex-end; }
 }
 
 /* ── PROFILE STATS (mockup 06) ─────────────────────────────────────────── */
