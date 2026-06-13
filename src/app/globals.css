@@ -981,6 +981,19 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   color: var(--heat); border-color: var(--heat);
   background: rgba(240,163,0,0.1); outline: none;
 }
+/* Playoffs (PHA-1043): the dossier badge becomes a lit spotlight star. */
+.ptile-info.ptile-spotlight {
+  font-style: normal; font-size: 12px;
+  /* Wears the team's accent (set inline) so the badge matches the modal it
+     opens; falls back to the house orange when a team has no mapped color. */
+  --sa: var(--team-accent, var(--heat));
+  color: var(--sa); border-color: var(--hair-3);
+  background: color-mix(in srgb, var(--sa) 12%, transparent);
+}
+.ptile-info.ptile-spotlight:hover, .ptile-info.ptile-spotlight:focus-visible {
+  border-color: var(--sa); background: color-mix(in srgb, var(--sa) 22%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--sa) 35%, transparent);
+}
 
 .tsd-backdrop {
   position: fixed; inset: 0; z-index: 200;
@@ -1110,4 +1123,188 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .tsd-foot {
   font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; color: var(--ink-low);
   margin: 18px 0 0; padding-top: 12px; border-top: 1px solid var(--hair);
+}
+
+/* ---------------------------------------------------------------------------
+   Spotlight (PHA-1043) playoff-grade team modal. Reuses the .tsd-panel
+   bottom-sheet shell; adds a cinematic hero, the before/after narrative, a
+   tap-to-play event highlight, and a live market line above the dossier "tape".
+   --------------------------------------------------------------------------- */
+/* Each spotlight wears the team's own color: --team-accent is set inline per
+   team (PHA-1043 follow-up), and every accent below keys off --sa, which falls
+   back to the house --heat for teams without a mapped color. The scoped
+   .spot-panel overrides retint the shared .tsd-* dossier classes too, so the
+   whole modal (hero, narrative, highlight, odds, roster) reads in one color. */
+.spot-panel {
+  max-width: 480px;
+  --sa: var(--team-accent, var(--heat));
+}
+.spot-panel .tsd-sec-title,
+.spot-panel .tsd-rank-num,
+.spot-panel .tsd-player-pos.pos-awp { color: var(--sa); }
+.spot-panel .tsd-rank { background: color-mix(in srgb, var(--sa) 8%, transparent); }
+.spot-panel .tsd-player-name:hover { color: var(--sa); }
+.spot-panel .tsd-player-pos.pos-awp { background: color-mix(in srgb, var(--sa) 9%, transparent); }
+.spot-panel .tsd-close:hover { color: var(--sa); border-color: var(--sa); }
+.spot-panel .tsd-link {
+  color: var(--sa); background: color-mix(in srgb, var(--sa) 7%, transparent);
+}
+.spot-panel .tsd-link:hover {
+  border-color: var(--sa); background: color-mix(in srgb, var(--sa) 13%, transparent);
+}
+/* The decorative corner brackets are part of the accent too. */
+.spot-panel.brk::before, .spot-panel.brk::after,
+.spot-panel.brk .br-tr, .spot-panel.brk .br-bl { border-color: var(--sa); }
+
+/* Roster rows in the Spotlight carry a player head-shot (PHA-1043). The avatar
+   is a Spotlight-only column, so the grid override is scoped here; the shared
+   TeamStatsDrawer roster keeps its three-column layout. */
+.spot-panel .tsd-player { grid-template-columns: auto 1fr auto auto; }
+.tsd-player-av {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  object-fit: cover; background: var(--surf-1);
+  border: 1px solid var(--hair-2);
+}
+.tsd-player-av.is-fallback {
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 700; font-size: 14px;
+  color: var(--ink-mid); text-transform: uppercase;
+}
+.spot-hero {
+  display: flex; align-items: center; gap: 14px; padding-right: 30px;
+  position: relative;
+}
+.spot-hero-logo {
+  display: flex; align-items: center; justify-content: center;
+  width: 64px; height: 64px; flex-shrink: 0;
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--sa) 18%, transparent), transparent 70%);
+  border: 1px solid var(--hair-3);
+}
+.spot-hero-text { flex: 1; min-width: 0; }
+.spot-eyebrow { display: block; margin-bottom: 4px; color: var(--sa); }
+.spot-name {
+  margin: 0; font-weight: 800; font-size: 28px;
+  text-transform: uppercase; letter-spacing: 0.01em;
+  color: var(--ink-hi); line-height: 0.95;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.spot-seed {
+  margin: 5px 0 0; font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.04em; color: var(--ink-mid);
+}
+.spot-sec { margin-top: 20px; }
+
+/* Narrative: two beats, who they were and what this run made them. */
+.spot-story { display: flex; flex-direction: column; gap: 14px; }
+.spot-beat {
+  position: relative; padding-left: 14px;
+  border-left: 2px solid var(--hair-3);
+}
+.spot-beat.now, .spot-beat:last-child { /* the "this event" beat lights up */ }
+.spot-beat-tag {
+  display: inline-block; margin-bottom: 6px;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.16em; color: var(--ink-low);
+}
+.spot-beat-tag.now { color: var(--sa); }
+.spot-beat:has(.now) { border-left-color: var(--sa); }
+.spot-beat p {
+  margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink-hi);
+}
+
+/* Highlight: 16:9 tap-to-play. */
+.spot-clip {
+  position: relative; width: 100%; aspect-ratio: 16 / 9;
+  background: var(--surf-3); border: 1px solid var(--hair-2); overflow: hidden;
+}
+.spot-clip-frame { width: 100%; height: 100%; border: 0; display: block; }
+.spot-clip-poster {
+  width: 100%; height: 100%; border: 0; cursor: pointer; padding: 0;
+  background-color: var(--surf-3); background-size: cover; background-position: center;
+  display: flex; align-items: center; justify-content: center;
+  transition: filter 200ms var(--ease);
+}
+.spot-clip-poster:hover { filter: brightness(1.08); }
+.spot-clip-play {
+  display: flex; align-items: center; justify-content: center;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: color-mix(in srgb, var(--sa) 92%, transparent);
+  /* A ring keeps the affordance visible even when the accent is a light
+     near-white (e.g. FURIA) against a bright poster frame. */
+  border: 2px solid rgba(10,8,5,0.55);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  transition: transform 160ms var(--ease);
+}
+.spot-clip-poster:hover .spot-clip-play { transform: scale(1.08); }
+.spot-clip-play svg { width: 26px; height: 26px; fill: var(--void); margin-left: 3px; }
+.spot-clip-cap {
+  margin: 9px 0 0; font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.02em; color: var(--ink-mid); line-height: 1.4;
+}
+
+/* Market line: implied win % bar, refreshed hourly. */
+.spot-odds {
+  background: var(--surf-3); border: 1px solid var(--hair-2); padding: 13px 14px;
+}
+.spot-odds-row {
+  display: flex; align-items: baseline; justify-content: space-between;
+}
+.spot-odds-row.dim { margin-top: 9px; }
+.spot-odds-team {
+  font-size: 13px; font-weight: 600; color: var(--ink-hi);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.spot-odds-row.dim .spot-odds-team { color: var(--ink-mid); font-weight: 500; }
+.spot-odds-pct {
+  font-family: var(--font-display); font-weight: 800; font-size: 22px;
+  color: var(--ink-mid); font-variant-numeric: tabular-nums; line-height: 1;
+}
+.spot-odds-pct.heat { color: var(--sa); }
+.spot-odds-bar {
+  height: 6px; margin: 7px 0; background: var(--surf-1);
+  border: 1px solid var(--hair); overflow: hidden;
+}
+.spot-odds-fill {
+  display: block; height: 100%; background: var(--sa);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--sa) 35%, transparent);
+}
+.spot-odds-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-top: 9px; font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.04em; color: var(--ink-low);
+}
+.spot-odds-foot a {
+  display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
+  color: var(--sa); text-decoration: none; text-transform: uppercase;
+  letter-spacing: 0.08em; font-weight: 600;
+}
+.spot-odds-foot a svg { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+/* Odds "coming soon": shown until a playoff team has an opponent (no line yet).
+   Keyed to the team accent, and matches the live .spot-odds padding so the two
+   mutually-exclusive states carry the same visual weight in the slot. */
+.spot-odds-soon { text-align: center; }
+.spot-soon-dot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--sa); box-shadow: 0 0 8px color-mix(in srgb, var(--sa) 45%, transparent);
+  margin-bottom: 9px; animation: live-blink 1.6s steps(2, end) infinite;
+}
+/* Respect reduced-motion: hold the dot steady rather than blink. */
+@media (prefers-reduced-motion: reduce) {
+  .spot-soon-dot { animation: none; }
+}
+.spot-soon-title {
+  margin: 0; font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-hi);
+}
+.spot-soon-sub {
+  margin: 5px 0 0; font-size: 12px; line-height: 1.45; color: var(--ink-mid);
+}
+
+/* Narrow phones: the 28px hero name plus the rank badge and close button can
+   crush a multi-word team name (e.g. "Natus Vincere"). Shrink the name and let
+   the odds footer stack rather than squeeze. */
+@media (max-width: 380px) {
+  .spot-name { font-size: 22px; }
+  .spot-odds-foot { flex-direction: column; align-items: flex-start; gap: 8px; }
 }

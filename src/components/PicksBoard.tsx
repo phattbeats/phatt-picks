@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { TeamStatsDrawer } from "@/components/ui/TeamStatsDrawer";
+import { SpotlightModal } from "@/components/ui/SpotlightModal";
 import { RegionBadge } from "@/components/ui/RegionBadge";
 import { resolveLogoTiers } from "@/lib/logos";
+import { teamAccent } from "@/lib/playoff-spotlights";
 import type { Section, TeamDef } from "@/lib/layout";
 import type { TeamStats } from "@/lib/team-stats-core";
 import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
@@ -377,10 +379,19 @@ export function PicksBoard({
                         {/* Sibling, not a child — stays clickable when the tile
                             is `used` (pointer-events:none) or the stage is locked. */}
                         <span
-                          className="ptile-info"
+                          className={`ptile-info${isPlayoffSection(section.sectionid) ? " ptile-spotlight" : ""}`}
+                          style={
+                            isPlayoffSection(section.sectionid) && teamAccent(t)
+                              ? ({ "--team-accent": teamAccent(t) } as CSSProperties)
+                              : undefined
+                          }
                           role="button"
                           tabIndex={0}
-                          aria-label={`${t.name} stats and standings`}
+                          aria-label={
+                            isPlayoffSection(section.sectionid)
+                              ? `${t.name} spotlight`
+                              : `${t.name} stats and standings`
+                          }
                           onClick={(e) => {
                             e.stopPropagation();
                             setStatsTeam(t);
@@ -392,7 +403,7 @@ export function PicksBoard({
                             }
                           }}
                         >
-                          i
+                          {isPlayoffSection(section.sectionid) ? "★" : "i"}
                         </span>
                       </div>
                     );
@@ -412,14 +423,25 @@ export function PicksBoard({
         />
       )}
 
-      {statsTeam && (
-        <TeamStatsDrawer
-          team={statsTeam}
-          onClose={() => setStatsTeam(null)}
-          liveStats={liveTeamStats?.[statsTeam.pickid]}
-          liveAsOf={liveStatsAsOf}
-        />
-      )}
+      {/* Playoffs (PHA-1043): the eight survivors get a Spotlight — narrative +
+          event highlight + live market line — instead of the clinical dossier.
+          Swiss stages keep the lean dossier. */}
+      {statsTeam &&
+        (isPlayoffSection(section.sectionid) ? (
+          <SpotlightModal
+            team={statsTeam}
+            onClose={() => setStatsTeam(null)}
+            liveStats={liveTeamStats?.[statsTeam.pickid]}
+            liveAsOf={liveStatsAsOf}
+          />
+        ) : (
+          <TeamStatsDrawer
+            team={statsTeam}
+            onClose={() => setStatsTeam(null)}
+            liveStats={liveTeamStats?.[statsTeam.pickid]}
+            liveAsOf={liveStatsAsOf}
+          />
+        ))}
     </div>
   );
 }
