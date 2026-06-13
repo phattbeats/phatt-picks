@@ -13,7 +13,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { isPushConfigured, sendTestPreLockPush } from "@/lib/notify";
-import { createCooldownStore, checkCooldown } from "@/lib/security-core";
+import { createCooldownStore, checkCooldown, clearCooldown } from "@/lib/security-core";
 import { isSameOrigin } from "@/lib/csrf";
 
 const PUSH_TEST_COOLDOWN_MS = 30_000;
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   // CSRF: this is a simple POST (no JSON preflight to shield it), so a cross-site
   // form could fire a victim's own test push. Require our own origin.
   if (!isSameOrigin(req)) {
-    return NextResponse.json({ error: "Bad origin" }, { status: 403 });
+    return NextResponse.json({ ok: false, reason: "bad-origin", sent: 0 }, { status: 403 });
   }
 
   const session = await getSession();
@@ -42,5 +42,9 @@ export async function POST(req: NextRequest) {
   }
 
   const outcome = await sendTestPreLockPush(session.playerId);
+  // Only a delivered push is throttle-worthy. If nothing was sent (no active
+  // device / all pruned), refund the window so the user isn't locked out of a
+  // retry after re-enabling reminders — there was no amplification to throttle.
+  if (!(outcome.sent > 0)) clearCooldown(cooldown, session.playerId);
   return NextResponse.json({ ok: true, ...outcome });
 }

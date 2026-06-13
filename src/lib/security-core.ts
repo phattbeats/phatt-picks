@@ -102,6 +102,11 @@ export function clientIpFromForwarded(
  * single standalone Node server, so a module-level store is the whole fleet's
  * view. Pure given an injected `now`, so the verify harness can prove the
  * window deterministically.
+ *
+ * The Map is unbounded by design but bounded in practice: keys are player ids,
+ * so cardinality tops out at the player count and resets on every container
+ * restart. Do NOT reuse this store for an unbounded key space (raw IPs, request
+ * paths) without adding a sweep.
  */
 export interface CooldownStore {
   hits: Map<string, number>;
@@ -112,9 +117,11 @@ export function createCooldownStore(): CooldownStore {
 }
 
 /**
- * Returns whether `key` may act now. On allow, records the hit. On deny,
- * reports the remaining cooldown in ms (does NOT slide the window — a denied
- * request can't extend its own lockout).
+ * Returns whether `key` may act now. On allow, records the hit (reserves the
+ * window). On deny, reports the remaining cooldown in ms (does NOT slide the
+ * window — a denied request can't extend its own lockout). Reserve on allow so
+ * concurrent requests can't both pass; call clearCooldown to refund a reserved
+ * window when the guarded action turned out to be a no-op.
  */
 export function checkCooldown(
   store: CooldownStore,
@@ -128,4 +135,13 @@ export function checkCooldown(
   }
   store.hits.set(key, now);
   return { allowed: true, retryAfterMs: 0 };
+}
+
+/**
+ * Refund a previously-reserved window so `key` may act again immediately. Use
+ * when the rate-limited action was a no-op (e.g. a test push that reached zero
+ * devices) — only real, throttle-worthy actions should hold the window.
+ */
+export function clearCooldown(store: CooldownStore, key: string): void {
+  store.hits.delete(key);
 }

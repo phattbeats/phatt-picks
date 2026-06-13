@@ -75,7 +75,7 @@ missing.
 | `GET` | `/api/auth/steam/callback` | open | OpenID callback. Verifies assertion, upserts Player, issues session cookie. Bigint-safe SteamID64 handling (rule #2). |
 | `POST` | `/api/auth/steam/authcode` | session | Capture + AES-256-GCM-encrypt the player's per-user Steam Pick'Em auth code. Body `{ authCode }`. Never echoed back. |
 | `GET` / `POST` | `/api/auth/local` | open (POST creates session) | Local-player onboarding. PHA-839 dedup rules in `src/lib/local-auth-core.ts`. |
-| `GET` | `/api/auth/logout` | open | Clear session cookie, redirect to `/login`. |
+| `POST` | `/api/auth/logout` | same-origin | Clear session cookie, 303 redirect to `/login`. POST-only + Origin/Referer guard (PHA-1045 CSRF); a cross-site GET can no longer force a logout. |
 | `GET` | `/api/invite` | session | Mint/return the session player's stable invite code + absolute `/join` URL. |
 | `GET` | `/api/picks?sectionId=…` | session | List the session player's stored picks. |
 | `POST` | `/api/picks` | session | Upsert a batch of picks for one section. Auto-rejects writes to a stage whose `picks_allowed` flipped off or whose outcomes resolved (409 `stage_locked`). Per-pick layout validation via `validatePickAgainstLayout` (400 with reason). |
