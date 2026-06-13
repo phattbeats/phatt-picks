@@ -45,8 +45,13 @@ const IP_ACCOUNT_LIMIT = 5;
 // the left-most is client-settable and would let an attacker spoof a fresh IP
 // to dodge the per-IP account cap. Default 1 (our single Unraid proxy).
 const TRUSTED_PROXY_HOPS = (() => {
-  const n = Number(process.env.TRUSTED_PROXY_HOPS);
-  return Number.isFinite(n) ? n : 1;
+  // Treat unset OR set-but-blank (a Force-Update drift outcome) as the default,
+  // and reject negatives — Number("") is 0, which would silently disable XFF
+  // trust, so guard the raw string before coercing.
+  const raw = process.env.TRUSTED_PROXY_HOPS?.trim();
+  if (!raw) return 1;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : 1;
 })();
 
 function requireSecret(): string {
