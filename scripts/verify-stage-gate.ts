@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url";
 import {
   buildResolvedKeys,
   isStagePickable,
-  selectBriefingIndex,
+  selectCurrentStageIndex,
 } from "../src/lib/stage-gate-core.ts";
 import type { Layout } from "../src/lib/layout.ts";
 
@@ -164,7 +164,7 @@ check(
   unknown.pickable === false && unknown.reason === "unknown-section",
 );
 
-console.log("\nstage-gate - dashboard briefing selection (PHA-1007)");
+console.log("\nstage-gate - current-stage selection: dashboard hero + picks-nav default (PHA-1007 / PHA-1050)");
 
 // Statuses below mirror layout.sections order: I, II, III, QF, SF, GF.
 const open = { pickable: true, reason: "open" } as const;
@@ -174,31 +174,31 @@ const tbd = { pickable: false, reason: "teams-not-set" } as const;
 
 check(
   "pre-event: first open stage wins (Stage I)",
-  selectBriefingIndex([open, open, open, tbd, tbd, tbd]) === 0,
+  selectCurrentStageIndex([open, open, open, tbd, tbd, tbd]) === 0,
 );
 check(
   "Stage I underway: next open window wins (Stage II)",
-  selectBriefingIndex([began, open, open, tbd, tbd, tbd]) === 1,
+  selectCurrentStageIndex([began, open, open, tbd, tbd, tbd]) === 1,
 );
 check(
   "REGRESSION: all Swiss locked + playoffs unseeded -> Stage III in progress, NOT the Grand Final",
-  selectBriefingIndex([began, began, began, tbd, tbd, tbd]) === 2,
+  selectCurrentStageIndex([began, began, began, tbd, tbd, tbd]) === 2,
 );
 check(
   "playoffs seeded mid-Stage-III: the genuinely open QF window wins",
-  selectBriefingIndex([began, began, began, open, tbd, tbd]) === 3,
+  selectCurrentStageIndex([began, began, began, open, tbd, tbd]) === 3,
 );
 check(
   "locked-by-valve also counts as in progress (latest wins)",
-  selectBriefingIndex([valve, valve, began, tbd, tbd, tbd]) === 2,
+  selectCurrentStageIndex([valve, valve, began, tbd, tbd, tbd]) === 2,
 );
 check(
   "post-event, everything closed: latest started stage (Grand Final)",
-  selectBriefingIndex([began, began, began, began, began, began]) === 5,
+  selectCurrentStageIndex([began, began, began, began, began, began]) === 5,
 );
 check(
   "defensive: nothing open or started -> last section",
-  selectBriefingIndex([tbd, tbd, tbd, tbd, tbd, tbd]) === 5,
+  selectCurrentStageIndex([tbd, tbd, tbd, tbd, tbd, tbd]) === 5,
 );
 
 console.log("\nstage-gate - buildResolvedKeys round-trip");
