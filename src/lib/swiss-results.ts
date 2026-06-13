@@ -154,7 +154,18 @@ async function crawlPageOnce(
   const res = await fetch(`${CRAWL4AI_URL}/crawl`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ urls: [url], crawler_config: { cache_mode: "BYPASS" } }),
+    body: JSON.stringify({
+      urls: [url],
+      // domcontentloaded + a tight page_timeout stop the ~50s networkidle hang
+      // that never settles behind Cloudflare and burns a core (PHA-1036). The
+      // Swiss bracket's match scores ride in server-rendered popup-json attrs, so
+      // they're present at DOM-ready — no need to wait for network to idle.
+      crawler_config: {
+        cache_mode: "BYPASS",
+        wait_until: "domcontentloaded",
+        page_timeout: 25_000,
+      },
+    }),
     cache: "no-store",
     signal: AbortSignal.timeout(timeoutMs),
   });
