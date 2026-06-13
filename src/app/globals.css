@@ -1111,3 +1111,110 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; color: var(--ink-low);
   margin: 18px 0 0; padding-top: 12px; border-top: 1px solid var(--hair);
 }
+
+/* ──────────────────────────────────────────────────────────────────
+   Stage Wrapped (PHA-1052) — click-through recap deck. Reuses the
+   .tsd-backdrop/.tsd-panel bottom-sheet + .tsd-close from TeamStatsDrawer;
+   adds the slide stage, progress dots, nav controls and entrance anim.
+   ────────────────────────────────────────────────────────────────── */
+.sw-panel {
+  max-width: 440px;
+  display: flex; flex-direction: column;
+  /* A recap is a takeover, not a scroll — fix the height so the slide stage
+     owns the middle and the controls pin to the foot. */
+  min-height: 60vh;
+  overflow: hidden;
+}
+@media (min-width: 560px) {
+  .sw-panel { min-height: 0; height: auto; max-height: 80vh; }
+}
+
+/* Progress dots */
+.sw-dots {
+  display: flex; gap: 7px; justify-content: center;
+  padding: 4px 30px 0; margin-bottom: 4px;
+}
+.sw-dot {
+  flex: 1; max-width: 44px; height: 4px; padding: 0;
+  background: var(--hair-2); border: none; cursor: pointer;
+  transition: background 200ms var(--ease);
+}
+.sw-dot.past { background: var(--heat-deep); }
+.sw-dot.on { background: var(--heat); box-shadow: 0 0 8px var(--heat-glow); }
+
+/* Slide stage — flexes to fill, centers the card */
+.sw-stage {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 26px 6px; min-height: 0;
+}
+.sw-slide { width: 100%; text-align: center; }
+.sw-eyebrow { display: block; margin-bottom: 14px; color: var(--heat); }
+.sw-figure {
+  font-size: clamp(46px, 16vw, 72px); line-height: 1; font-weight: 800;
+  color: var(--ink-hi); letter-spacing: -0.02em; margin-bottom: 6px;
+  background: linear-gradient(180deg, var(--ink-hi), var(--heat));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.sw-figcap {
+  margin: 0 auto 16px; max-width: 30ch;
+  font-size: 12px; color: var(--ink-mid); line-height: 1.45;
+}
+.sw-headline {
+  font-size: clamp(20px, 6vw, 27px); line-height: 1.18; color: var(--ink-hi);
+  margin: 0 auto; max-width: 18ch; letter-spacing: -0.01em;
+}
+.sw-body {
+  margin: 12px auto 0; max-width: 32ch;
+  font-size: 14px; line-height: 1.5; color: var(--ink-mid);
+}
+
+/* Footer nav */
+.sw-controls {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding-top: 14px; border-top: 1px solid var(--hair);
+}
+.sw-nav {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-mid); background: transparent;
+  border: 1px solid var(--hair-2); padding: 9px 14px; cursor: pointer;
+  transition: all 150ms var(--ease);
+}
+.sw-nav:hover:not(:disabled) { color: var(--heat); border-color: var(--heat); }
+.sw-nav:disabled { opacity: 0.35; cursor: default; }
+.sw-nav.primary {
+  color: var(--surf-1); background: var(--heat); border-color: var(--heat);
+}
+.sw-nav.primary:hover:not(:disabled) { background: var(--heat-hot); color: var(--surf-1); }
+.sw-nav svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.sw-count {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em;
+  color: var(--ink-low);
+}
+
+/* Entrance animation — fade + lift, re-fires per slide via React remount key */
+@keyframes sw-slide-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.sw-enter { animation: sw-slide-in 360ms var(--ease) both; }
+.sw-enter .sw-figure { animation: sw-slide-in 460ms var(--ease) both; animation-delay: 70ms; }
+.sw-enter .sw-headline { animation: sw-slide-in 460ms var(--ease) both; animation-delay: 110ms; }
+.sw-enter .sw-body { animation: sw-slide-in 460ms var(--ease) both; animation-delay: 160ms; }
+
+/* Loading skeleton */
+.sw-skeleton { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.sw-sk-line { display: block; background: var(--hair-2); border-radius: 2px; animation: sw-pulse 1.3s ease-in-out infinite; }
+.sw-sk-eyebrow { width: 120px; height: 11px; }
+.sw-sk-fig { width: 130px; height: 56px; margin: 6px 0; }
+.sw-sk-head { width: 70%; height: 22px; }
+.sw-sk-body { width: 80%; height: 13px; }
+.sw-sk-body.short { width: 55%; }
+@keyframes sw-pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 0.8; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sw-enter, .sw-enter .sw-figure, .sw-enter .sw-headline, .sw-enter .sw-body { animation: none; }
+  .sw-sk-line { animation: none; opacity: 0.5; }
+}
