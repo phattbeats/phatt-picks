@@ -4,7 +4,6 @@
  * nothing is hardcoded here.
  */
 
-import { parseSafeJson } from "./bigint";
 import layoutFixture from "@/fixtures/cologne-layout.json";
 
 export interface TeamSlot {
@@ -75,11 +74,6 @@ export function buildSectionByGroup(layout: Layout): Map<number, Section> {
     }
   }
   return m;
-}
-
-/** Parse a raw JSON string from the Valve API, preserving bigints. */
-export function parseLayoutJson(raw: string): LayoutEnvelope {
-  return parseSafeJson(raw) as LayoutEnvelope;
 }
 
 // Pure layout-shape helpers (no fixture/bigint deps) live in ./layout-core
