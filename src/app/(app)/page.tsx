@@ -11,12 +11,16 @@ import { WireFeed } from "@/components/heat/WireFeed";
 import { getWireItems } from "@/lib/news";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { WatchNow } from "@/components/watch/WatchNow";
-import { ACTIVE_EVENT_ID } from "@/lib/events-core";
+import { currentEventId } from "@/lib/events-core";
 
-const EVENT_ID = ACTIVE_EVENT_ID;
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  // Resolve the active event PER REQUEST (PHA-1046): this RSC is force-dynamic, so
+  // when one Major archives and the next goes live the dashboard follows the clock
+  // without a redeploy. (A module-level `ACTIVE_EVENT_ID` would pin the value for
+  // the whole process lifetime and serve the stale event.)
+  const EVENT_ID = currentEventId();
   const layout = getCommittedLayout();
   const session = await getSession();
 

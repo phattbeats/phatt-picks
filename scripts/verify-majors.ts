@@ -96,7 +96,7 @@ check("computeFinish: last=3", computeFinish("carol", field) === 3);
 check("computeFinish: absent player → null", computeFinish("dave", field) === null);
 
 const row = (slug: string, start: string, status: EventStatus = "archived"): MajorHistoryRow => ({
-  eventId: slug.length, slug, name: slug, status, start, score: 0, finish: null, fieldSize: 0, pickCount: 0,
+  eventId: slug.length, slug, name: slug, status, start, scored: true, score: 0, finish: null, fieldSize: 0, pickCount: 0,
 });
 const ordered = buildMajorsHistory([
   row("a", "2026-01-01T00:00:00Z"),

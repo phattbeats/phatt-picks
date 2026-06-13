@@ -31,9 +31,8 @@ import { refreshStandingsOnRead, getSwissStandings, getSwissBracket } from "@/li
 import { recordsByPickId } from "@/lib/swiss-results-core";
 import { refreshTeamStatsOnRead, getLiveTeamStats } from "@/lib/team-stats";
 import { AutoRefresh } from "@/components/AutoRefresh";
-import { ACTIVE_EVENT_ID } from "@/lib/events-core";
+import { currentEventId } from "@/lib/events-core";
 
-const EVENT_ID = ACTIVE_EVENT_ID;
 export const dynamic = "force-dynamic";
 
 export default async function PicksPage({
@@ -41,6 +40,8 @@ export default async function PicksPage({
 }: {
   searchParams: Promise<{ section?: string }>;
 }) {
+  // Per-request active event (PHA-1046) — force-dynamic, follows the clock across Majors.
+  const EVENT_ID = currentEventId();
   const params = await searchParams;
   await refreshLayoutOnRead(EVENT_ID); // live driver — throttled, deferred past render
   const layout = await getEffectiveLayout(EVENT_ID);

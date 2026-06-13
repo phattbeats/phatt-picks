@@ -3,16 +3,16 @@
  *
  * The registry is the backbone of multi-major support. This proves:
  *   • exactly one event is `live`, and resolveActiveEvent() returns it;
- *   • ACTIVE_EVENT_ID equals that event's id (the value the ~15 pages/routes
- *     used to hardcode as `26`) — i.e. the refactor is behind current behavior;
+ *   • currentEventId() equals that event's id (the value the ~15 pages/routes
+ *     resolve PER REQUEST since PHA-1046 — no module-load-bound ACTIVE_EVENT_ID);
  *   • getEventConfig() round-trips by id and is null for an unregistered id;
  *   • the active event's identity matches the committed layout fixture
  *     (eventId === result.event, name === result.name) — the registry can't
  *     drift from the fixture it indexes;
  *   • the per-event config the registry references IS the committed
  *     lock-schedule constants (no duplicate, no drift);
- *   • SECTION_SOURCES (what swiss-results.ts now imports) equals the active
- *     event's sectionSources and still maps the Cologne Swiss stages.
+ *   • the active event's sectionSources (what swiss-results.ts now resolves via
+ *     getEventConfig(eventId)) still maps the Cologne Swiss stages.
  *
  * Run: node scripts/verify-events.ts
  */
@@ -26,8 +26,7 @@ import {
   getEventConfig,
   resolveActiveEvent,
   currentEvent,
-  ACTIVE_EVENT_ID,
-  SECTION_SOURCES,
+  currentEventId,
   validateEventRevealConfig,
   validateSwissClassification,
   type EventConfig,
@@ -65,8 +64,8 @@ check("exactly one live event in the registry", liveEntries.length === 1);
 const active = resolveActiveEvent();
 check("resolveActiveEvent() returns the live event", active.status === "live");
 check("active event id is 26 (Cologne — current behavior)", active.eventId === 26);
-check("ACTIVE_EVENT_ID === active.eventId", ACTIVE_EVENT_ID === active.eventId);
-check("ACTIVE_EVENT_ID === 26 (the value pages hardcoded before)", ACTIVE_EVENT_ID === 26);
+check("currentEventId() === active.eventId (per-request, PHA-1046)", currentEventId() === active.eventId);
+check("currentEventId() === 26 (the value pages resolve per request)", currentEventId() === 26);
 
 // — getEventConfig round-trips and is honest about misses —
 check("getEventConfig(26) returns the active event", getEventConfig(26) === active);
@@ -83,11 +82,11 @@ check("lockSchedule IS COLOGNE_LOCK_SCHEDULE", active.lockSchedule === COLOGNE_L
 check("matchWindows IS COLOGNE_MATCH_WINDOWS", active.matchWindows === COLOGNE_MATCH_WINDOWS);
 check("sectionNames IS COLOGNE_SECTION_NAMES", active.sectionNames === COLOGNE_SECTION_NAMES);
 
-// — sectionSources / SECTION_SOURCES (consumed by swiss-results) —
-check("SECTION_SOURCES === active.sectionSources", SECTION_SOURCES === active.sectionSources);
-check("Stage I (105) maps to HLTV event 9028", SECTION_SOURCES[105]?.url.includes("/9028/") === true);
-check("Stage II (106) maps to HLTV event 9029", SECTION_SOURCES[106]?.url.includes("/9029/") === true);
-check("every section source has a label", Object.values(SECTION_SOURCES).every((s) => !!s.label));
+// — sectionSources (resolved per-event by swiss-results via getEventConfig) —
+const sources = active.sectionSources;
+check("Stage I (105) maps to HLTV event 9028", sources[105]?.url.includes("/9028/") === true);
+check("Stage II (106) maps to HLTV event 9029", sources[106]?.url.includes("/9029/") === true);
+check("every section source has a label", Object.values(sources).every((s) => !!s.label));
 
 // — dates + resource bindings are present and well-formed —
 check("dates.start parses", !Number.isNaN(Date.parse(active.dates.start)));
@@ -190,6 +189,36 @@ check(
     ...base,
     lockSchedule: { 200: "not-a-date" },
   }).some((p) => p.includes("not a valid ISO")),
+);
+// — invariant E (PHA-1046): the event's own span must parse, or the clock-derived
+//   lifecycle can't place it (unparseable start → goLiveMs +Infinity → never live). —
+check(
+  "guard flags an unparseable dates.start (would never go live)",
+  validateEventRevealConfig({
+    ...base,
+    dates: { start: "not-a-date", end: "2027-02-01T00:00:00Z" },
+  }).some((p) => p.includes("dates.start") && p.includes("never go live")),
+);
+check(
+  "guard flags an unparseable dates.end (no archive backstop)",
+  validateEventRevealConfig({
+    ...base,
+    dates: { start: "2027-01-01T00:00:00Z", end: "garbage" },
+  }).some((p) => p.includes("dates.end")),
+);
+check(
+  "guard flags start after end",
+  validateEventRevealConfig({
+    ...base,
+    dates: { start: "2027-03-01T00:00:00Z", end: "2027-01-01T00:00:00Z" },
+  }).some((p) => p.includes("after dates.end")),
+);
+check(
+  "guard passes a well-formed span",
+  !validateEventRevealConfig({
+    ...base,
+    dates: { start: "2027-01-01T00:00:00Z", end: "2027-02-01T00:00:00Z" },
+  }).some((p) => p.includes("dates.")),
 );
 
 // — future-major guard (PHA-946): the registry's structural Swiss-ness
