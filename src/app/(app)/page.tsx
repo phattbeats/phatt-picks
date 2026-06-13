@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getCommittedLayout } from "@/lib/layout";
 import { prisma } from "@/lib/db";
-import { isStagePickable, selectBriefingIndex } from "@/lib/stage-gate-core";
+import { isStagePickable, selectCurrentStageIndex } from "@/lib/stage-gate-core";
 import { getSession } from "@/lib/session";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
 import { HeatMark } from "@/components/heat/HeatMark";
@@ -67,7 +67,7 @@ export default async function DashboardPage() {
       lockedByTime: isLockTimePassed(s.sectionid, now),
     }),
   }));
-  const activeIdx = selectBriefingIndex(stageStatuses.map((s) => s.pick));
+  const activeIdx = selectCurrentStageIndex(stageStatuses.map((s) => s.pick));
   const active = stageStatuses[activeIdx];
 
   const activeLabel = active.section.name.split(" | ")[0];
