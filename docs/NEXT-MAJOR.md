@@ -102,11 +102,18 @@ and reveals/scores against the Valve answer key. **This is the minimum viable re
 
 ## Phase 2 — the live boards (HLTV scrape)
 
-### 2a. Section → HLTV event URL — `src/lib/swiss-results.ts`
-`SECTION_SOURCES` maps each Swiss section to its **HLTV event page**:
+### 2a. Section → HLTV event URL — `src/lib/events-core.ts` (registry)
+After PHA-948, `SECTION_SOURCES` lives in the event registry (`events-core.ts →
+EventConfig.sectionSources`), not in `swiss-results.ts` — `swiss-results.ts` now
+imports `SECTION_SOURCES` from the registry via `getEventConfig(ACTIVE_EVENT_ID)`. Add
+each Swiss section's URL to the registry entry for the new event:
 ```ts
-105: { url: "https://www.hltv.org/events/9028/iem-cologne-major-2026-stage-1", label: "..." },
-106: { url: "https://www.hltv.org/events/9029/iem-cologne-major-2026-stage-2", label: "..." },
+sectionSources: {
+  105: { url: "https://www.hltv.org/events/9028/iem-cologne-major-2026-stage-1", label: "HLTV" },
+  106: { url: "https://www.hltv.org/events/9029/iem-cologne-major-2026-stage-2", label: "HLTV" },
+  // Stage III: if HLTV creates a dedicated sub-event, add it; if not, the hub URL
+  // works (see the IEM Cologne 2026 Stage III note in events-core.ts comments).
+},
 ```
 Only map sections that have a live HLTV event up; add later stages as HLTV publishes
 them. Direct fetch is **403 Cloudflare** — the app goes through `crawl4ai:11235`
@@ -149,7 +156,7 @@ Once live, each stage start is a small recurring routine:
 1. **Stage opens** → confirm Valve has seeded the next section's `picks_allowed` and the
    answer key resolves (the on-read outcome driver + Valve oracle handle this; watch a
    `/leaderboard` load to confirm `StageOutcome` rows appear).
-2. **Add the stage's HLTV URL** to `SECTION_SOURCES` if not already mapped.
+2. **Add the stage's HLTV URL** to `sectionSources` in the event registry entry (`events-core.ts`) if not already mapped.
 3. **Warm the caches** after any deploy during the stage — `GET /api/standings/refresh`
    (standings + outcome resolve) **and** `GET /api/team-stats/refresh` (dossier Last-5).
 4. **Re-gather team stats** only for **roster/world-rank** moves (`TEAM_STATS_AS_OF` bump);
@@ -166,7 +173,7 @@ Once live, each stage start is a small recurring routine:
 [ ] cologne-items/predictions  → refreshed from same capture           (Phase 1a)
 [ ] COLOGNE_LOCK_SCHEDULE      → each stage's first-match instant       (Phase 1b)
 [ ] COLOGNE_MATCH_WINDOWS      → each stage's played date-span          (Phase 1b)
-[ ] SECTION_SOURCES            → HLTV event URL per Swiss stage          (Phase 2a)
+[ ] sectionSources (events-core.ts registry) → HLTV event URL per Swiss stage (Phase 2a)
 [ ] verify-events.ts GREEN     → reveal config consistent (lock∩window⊇source) (PHA-943)
 [ ] cologne-logos.json         → re-run build-logos.ts                  (Phase 3)
 [ ] TEAM_REGIONS               → pickid → region                        (Phase 3)

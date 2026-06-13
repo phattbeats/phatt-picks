@@ -133,8 +133,8 @@ frozen snapshot is what renders until the first live crawl lands.
 |---|---|---|---|---|
 | Stage I (Swiss) | 9028 | 105 | Jun 2–5 | 2026-06-02 10:30Z |
 | Stage II (Swiss) | 9029 | 106 | Jun 6–9 | 2026-06-06 10:30Z |
-| Stage III (Swiss) | _tbd_ | 107 | Jun 11– | 2026-06-11 10:30Z |
-| Playoffs (QF/SF/GF) | _tbd_ | 108/109/110 | Jun 18–21 | _per-round tbd_ |
+| Stage III (Swiss) | hub 8301 (no dedicated sub-event) | 107 | Jun 11–14 | 2026-06-11 10:30Z |
+| Playoffs (QF/SF/GF) | n/a (bracket from layout + StageOutcome) | 108/109/110 | Jun 18–21 | _per-round tbd_ |
 
 The 32 pickid → HLTV id mapping lives in `scripts/gather-team-stats.ts`
 (`TEAM_SOURCES`).
