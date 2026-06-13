@@ -1254,3 +1254,19 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   letter-spacing: 0.08em; font-weight: 600;
 }
 .spot-odds-foot a svg { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+/* Odds "coming soon" — shown until a playoff team has an opponent (no line yet).
+   Keyed to the team accent like the rest of the panel. */
+.spot-odds-soon { text-align: center; padding: 18px 16px; }
+.spot-soon-dot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--sa); box-shadow: 0 0 8px color-mix(in srgb, var(--sa) 45%, transparent);
+  margin-bottom: 9px; animation: live-blink 1.6s steps(2, end) infinite;
+}
+.spot-soon-title {
+  margin: 0; font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-hi);
+}
+.spot-soon-sub {
+  margin: 5px 0 0; font-size: 12px; line-height: 1.45; color: var(--ink-mid);
+}

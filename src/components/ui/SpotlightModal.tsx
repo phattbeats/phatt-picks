@@ -191,38 +191,50 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
           </section>
         )}
 
-        {/* Market line */}
-        {market && (
-          <section className="spot-sec">
-            <h4 className="tsd-sec-title">Odds</h4>
-            <div className="spot-odds">
-              <div className="spot-odds-row">
-                <span className="spot-odds-team">{market.teamName}</span>
-                <span className="spot-odds-pct heat">{Math.round(market.teamPct)}%</span>
+        {/* Odds. A playoff team has no opponent until the bracket seeds, so the
+            live line can't exist yet; show a "coming soon" state rather than
+            hide the section, so the slot reads as intentional (Brandon). */}
+        <section className="spot-sec">
+          <h4 className="tsd-sec-title">Odds</h4>
+          {market ? (
+            <>
+              <div className="spot-odds">
+                <div className="spot-odds-row">
+                  <span className="spot-odds-team">{market.teamName}</span>
+                  <span className="spot-odds-pct heat">{Math.round(market.teamPct)}%</span>
+                </div>
+                <div className="spot-odds-bar" aria-hidden="true">
+                  <span className="spot-odds-fill" style={{ width: `${market.teamPct}%` }} />
+                </div>
+                <div className="spot-odds-row dim">
+                  <span className="spot-odds-team">{market.oppName}</span>
+                  <span className="spot-odds-pct">{Math.round(market.oppPct)}%</span>
+                </div>
               </div>
-              <div className="spot-odds-bar" aria-hidden="true">
-                <span className="spot-odds-fill" style={{ width: `${market.teamPct}%` }} />
+              <div className="spot-odds-foot">
+                <span>
+                  {market.sourceLabel} · updated {market.updatedLabel}
+                </span>
+                {market.hltvMatchUrl && (
+                  <a href={market.hltvMatchUrl} target="_blank" rel="noopener noreferrer">
+                    HLTV match
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M7 17 17 7M9 7h8v8" />
+                    </svg>
+                  </a>
+                )}
               </div>
-              <div className="spot-odds-row dim">
-                <span className="spot-odds-team">{market.oppName}</span>
-                <span className="spot-odds-pct">{Math.round(market.oppPct)}%</span>
-              </div>
+            </>
+          ) : (
+            <div className="spot-odds spot-odds-soon">
+              <span className="spot-soon-dot" aria-hidden="true" />
+              <p className="spot-soon-title">Market predictions coming soon</p>
+              <p className="spot-soon-sub">
+                Live win odds open once the playoff matchup is set, then refresh hourly.
+              </p>
             </div>
-            <div className="spot-odds-foot">
-              <span>
-                {market.sourceLabel} · updated {market.updatedLabel}
-              </span>
-              {market.hltvMatchUrl && (
-                <a href={market.hltvMatchUrl} target="_blank" rel="noopener noreferrer">
-                  HLTV match
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M7 17 17 7M9 7h8v8" />
-                  </svg>
-                </a>
-              )}
-            </div>
-          </section>
-        )}
+          )}
+        </section>
 
         {/* The tape — roster + last 5 (the old dossier, kept for scouts) */}
         {stats && (
