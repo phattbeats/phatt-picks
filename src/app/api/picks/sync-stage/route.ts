@@ -15,10 +15,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { syncStageToValve, syncPlayoffBracketToValve } from "@/lib/picks-write";
-import { ACTIVE_EVENT_ID } from "@/lib/events-core";
+import { currentEventId } from "@/lib/events-core";
 
-const EVENT_ID = ACTIVE_EVENT_ID;
 export async function POST(req: NextRequest) {
+  const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 

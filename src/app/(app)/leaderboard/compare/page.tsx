@@ -33,10 +33,9 @@ import {
 } from "@/lib/swiss-bucket-core";
 import { isBucketImpossibleByRecord } from "@/lib/swiss-standings-core";
 import { getSwissRecords } from "@/lib/swiss-results";
-import { ACTIVE_EVENT_ID } from "@/lib/events-core";
+import { currentEventId } from "@/lib/events-core";
 import { isRevealForcedById } from "@/lib/event-freeze";
 
-const EVENT_ID = ACTIVE_EVENT_ID;
 export const dynamic = "force-dynamic";
 
 type PlayerLite = {
@@ -184,6 +183,7 @@ export default async function ComparePage({
 }: {
   searchParams: Promise<{ a?: string; b?: string }>;
 }) {
+  const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
   const params = await searchParams;
   const layout = getCommittedLayout();
   const teamMap = buildTeamMap(layout);

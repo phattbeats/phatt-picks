@@ -27,10 +27,9 @@ import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { getSwissRecords } from "@/lib/swiss-results";
 import { buildBucketConsensus, bucketShareFor } from "@/lib/consensus-core";
 import type { Section } from "@/lib/layout";
-import { ACTIVE_EVENT_ID } from "@/lib/events-core";
+import { currentEventId } from "@/lib/events-core";
 import { isRevealForcedById } from "@/lib/event-freeze";
 
-const EVENT_ID = ACTIVE_EVENT_ID;
 function ordSuffix(n: number): string {
   const v = n % 100;
   if (v >= 11 && v <= 13) return "th";
@@ -62,6 +61,7 @@ export default async function PlayerProfilePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
   const { id } = await params;
   const layout = getCommittedLayout();
   const teamMap = buildTeamMap(layout);

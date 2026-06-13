@@ -30,9 +30,8 @@ import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { buildConsensus, consensusKey } from "@/lib/consensus-core";
 import { ConsensusBar } from "@/components/heat/ConsensusBar";
 import type { Section } from "@/lib/layout";
-import { ACTIVE_EVENT_ID } from "@/lib/events-core";
+import { currentEventId } from "@/lib/events-core";
 
-const EVENT_ID = ACTIVE_EVENT_ID;
 function ordSuffix(n: number): string {
   const v = n % 100;
   if (v >= 11 && v <= 13) return "th";
@@ -58,6 +57,7 @@ export default async function StageRevealPage({
 }: {
   params: Promise<{ section: string }>;
 }) {
+  const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
   const { section: sectionParam } = await params;
   const sectionId = Number(sectionParam);
   if (!Number.isInteger(sectionId)) notFound();
