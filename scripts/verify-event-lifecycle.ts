@@ -26,6 +26,7 @@ import {
   selectLiveEvents,
   selectCurrentEvent,
   DEFAULT_GO_LIVE_LEAD_MS,
+  ANTICIPATION_LEAD_MS,
   type LifecycleEvent,
 } from "../src/lib/event-lifecycle-core.ts";
 import {
@@ -122,7 +123,7 @@ check("brief overlap yields two live events", selectLiveEvents([cologne, overlap
 
 // — selectCurrentEvent: always something sane to show —
 check("current event mid-Cologne is the live one", selectCurrentEvent(registry, JUN6)?.eventId === 26);
-check("in the gap, current event is the soonest upcoming (next Major)",
+check("in the gap, once the next Major is WITHIN its anticipation window, it is current",
   selectCurrentEvent(registry, ms("2026-07-15T00:00:00Z"), (e) => (e.eventId === 26 ? { grandFinalResolvedAtMs: ms("2026-06-11T00:00:00Z") } : {}))?.eventId === 27);
 check("with only an archived Major, current event is that archived one (off-season)",
   selectCurrentEvent([{ ...cologne, status: "archived" }], ms("2027-01-01T00:00:00Z"))?.eventId === 26);
@@ -135,6 +136,24 @@ check("among two archived, current picks the most-recently-concluded",
     ],
     ms("2027-01-01T00:00:00Z"),
   )?.eventId === 27);
+
+// — anticipation window (PHA-1048): a far-future upcoming Major must NOT hijack
+//   the site the instant the prior one archives; the last Major stays the face
+//   until the next is within ANTICIPATION_LEAD_MS of go-live. nextMajor's go-live
+//   is 2026-08-25 (start Sep 1, firstLock-lead earlier), so its window opens ~Jul 11.
+const nextGoLiveAnchor = goLiveMs(nextMajor);
+check("FAR-OUT next Major does not preempt the just-archived one (off-season holds on the last Major)",
+  // 2026-07-01 is before the window opens AND past Cologne's dates.end (Jun 21) → Cologne archived → it stays current.
+  selectCurrentEvent(registry, ms("2026-07-01T00:00:00Z"))?.eventId === 26);
+check("once INSIDE the anticipation window, the next Major takes over (still pre-go-live)",
+  // 2026-08-01: inside the window, nextMajor still `upcoming` (go-live Aug 25), Cologne long archived.
+  selectCurrentEvent(registry, ms("2026-08-01T00:00:00Z"))?.eventId === 27);
+check("window edge is inclusive: exactly ANTICIPATION_LEAD_MS before go-live → next Major is current",
+  selectCurrentEvent([{ ...cologne, status: "archived" }, nextMajor], nextGoLiveAnchor - ANTICIPATION_LEAD_MS)?.eventId === 27);
+check("one ms before the window opens → still the archived Major",
+  selectCurrentEvent([{ ...cologne, status: "archived" }, nextMajor], nextGoLiveAnchor - ANTICIPATION_LEAD_MS - 1)?.eventId === 26);
+check("brand-new site (only a far-future upcoming, nothing archived) still shows it — no blank page",
+  selectCurrentEvent([nextMajor], ms("2026-07-01T00:00:00Z"))?.eventId === 27);
 
 // — events-core is now CLOCK-DERIVED but lands behind current behaviour —
 // (the live registry holds only Cologne, so these hold whenever verify runs).
