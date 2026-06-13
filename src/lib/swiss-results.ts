@@ -304,17 +304,6 @@ export async function refreshStandingsOnRead(
   runDeferred(() => ingestStandings(eventId, sectionId));
 }
 
-/**
- * Force a synchronous refresh, bypassing the floor — the owner-triggered entry
- * point (an ingest route / deploy smoke). Stamps the floor so the read path
- * backs off afterward. Best-effort; returns rows written.
- */
-export async function ingestStandingsNow(eventId: number, sectionId: number): Promise<number> {
-  const n = await ingestStandings(eventId, sectionId);
-  await stampStandingsRefreshSlot();
-  return n;
-}
-
 /** Is there already a cached standings blob for this section? (cheap existence check) */
 async function hasCachedSection(eventId: number, sectionId: number): Promise<boolean> {
   try {
