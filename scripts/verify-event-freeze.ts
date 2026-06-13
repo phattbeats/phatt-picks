@@ -31,7 +31,7 @@ import {
 import {
   getEventConfig,
   grandFinalSectionId,
-  ACTIVE_EVENT_ID,
+  currentEventId,
   type EventConfig,
 } from "../src/lib/events-core.ts";
 import {
@@ -55,7 +55,7 @@ function check(name: string, cond: boolean) {
 const ms = (iso: string) => Date.parse(iso);
 const TODAY = ms("2026-06-06T12:00:00Z"); // mid Stage I — the live event today
 
-const cologne = getEventConfig(ACTIVE_EVENT_ID) as EventConfig;
+const cologne = getEventConfig(currentEventId()) as EventConfig;
 check("registry resolves the active event", cologne != null);
 
 // ── grandFinalSectionId: structural Grand Final pick ────────────────────────

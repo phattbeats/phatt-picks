@@ -34,7 +34,6 @@ import {
   currentEvent,
   currentEventId,
   resolveActiveEvent,
-  ACTIVE_EVENT_ID,
 } from "../src/lib/events-core.ts";
 
 let pass = 0;
@@ -155,13 +154,48 @@ check("one ms before the window opens → still the archived Major",
 check("brand-new site (only a far-future upcoming, nothing archived) still shows it — no blank page",
   selectCurrentEvent([nextMajor], ms("2026-07-01T00:00:00Z"))?.eventId === 27);
 
+// — PHA-1046: upcoming countdown ranks by GENUINE start, not lead-adjusted
+//   go-live. A genuinely-sooner Major (sooner dates.start) must win even when a
+//   later one's match-day lock schedule pulls ITS go-live earlier via the 7d
+//   staging lead. sooner = eventId 30 (starts Aug 10, no lock published yet);
+//   later = eventId 31 (starts Aug 14, but a match-day first lock makes its
+//   go-live Aug 07 — earlier than 30's). The OLD by-go-live sort picked 31. —
+const sooner: LifecycleEvent = {
+  eventId: 30, status: "upcoming",
+  dates: { start: "2026-08-10T00:00:00Z", end: "2026-08-28T23:59:59Z" },
+  lockSchedule: {},
+};
+const later: LifecycleEvent = {
+  eventId: 31, status: "upcoming",
+  dates: { start: "2026-08-14T00:00:00Z", end: "2026-09-01T23:59:59Z" },
+  lockSchedule: { 300: "2026-08-14T12:00:00Z" },
+};
+const beforeBoth = ms("2026-08-01T00:00:00Z");
+check("the later Major's lead-adjusted go-live IS earlier (the trap)",
+  goLiveMs(later) < goLiveMs(sooner));
+check("upcoming countdown picks the genuinely-sooner-STARTING Major (not the earlier go-live)",
+  selectCurrentEvent([later, sooner], beforeBoth)?.eventId === 30);
+check("ordering is independent of input order",
+  selectCurrentEvent([sooner, later], beforeBoth)?.eventId === 30);
+// an unparseable start sorts LAST so it never hijacks the countdown:
+const badStart: LifecycleEvent = {
+  eventId: 32, status: "upcoming",
+  dates: { start: "garbage", end: "2026-08-05T00:00:00Z" },
+  lockSchedule: {},
+};
+check("an event with an unparseable start never wins the upcoming slot",
+  selectCurrentEvent([badStart, sooner], beforeBoth)?.eventId === 30);
+
 // — events-core is now CLOCK-DERIVED but lands behind current behaviour —
 // (the live registry holds only Cologne, so these hold whenever verify runs).
 check("liveEvents(Jun6) is exactly [Cologne]", liveEvents(JUN6).length === 1 && liveEvents(JUN6)[0]?.eventId === 26);
 check("currentEvent(Jun6) is Cologne and effectively live", currentEvent(JUN6).eventId === 26 && currentEvent(JUN6).status === "live");
 check("currentEventId(Jun6) === 26", currentEventId(JUN6) === 26);
 check("resolveActiveEvent(Jun6) === 26 (clock-derived, same as before)", resolveActiveEvent(JUN6).eventId === 26);
-check("ACTIVE_EVENT_ID is still 26 (the value pages read)", ACTIVE_EVENT_ID === 26);
+// PHA-1046: pages/routes now resolve the event PER REQUEST via currentEventId(),
+// not a module-load-bound ACTIVE_EVENT_ID — so a between-Majors transition is
+// followed without a redeploy. currentEventId(now) is the value they read.
+check("currentEventId(Jun6) is 26 (the value pages read, per-request)", currentEventId(JUN6) === 26);
 // the reminder driver reads each live event's OWN schedule from the registry:
 check("live event exposes its own lockSchedule (drives reminders)", Object.keys(liveEvents(JUN6)[0]?.lockSchedule ?? {}).length >= 3);
 // pre-go-live: a far-earlier clock still serves Cologne (it never demotes below its live baseline)
