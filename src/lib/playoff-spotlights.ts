@@ -27,6 +27,13 @@ export interface SpotlightHighlight {
   src: string;
   /** Optional start offset in seconds (YouTube), to land on the play itself. */
   start?: number;
+  /**
+   * Optional end offset in seconds (YouTube). Paired with `start`, this trims a
+   * full ESL match-highlights reel down to a single 30-60s run WITHOUT
+   * re-hosting anything — the iframe just stops at `end`. This is how we get a
+   * "30s-1m clip" out of a licensed source for free (Brandon, PHA-1043).
+   */
+  end?: number;
   /** Poster/thumbnail shown before tap (keeps the modal light on mobile). */
   poster?: string;
   /** One line under the clip: what you're watching + where in the run. */
@@ -57,6 +64,36 @@ export interface TeamSpotlight {
  * can fill in as the bracket seeds without shipping placeholder prose.
  */
 const SPOTLIGHTS: Record<number, TeamSpotlight> = {
+  // FURIA — pickid 85. FIRST REAL ENTRY (Brandon, 2026-06-13: "first team is
+  // FURIA. good practice."). Narrative + highlight are sourced from this event,
+  // not sample prose. FURIA clinched playoffs with a clean 3-0 Stage 3 Swiss run
+  // (beat B8, MOUZ, then BB Team) — verified via HLTV + the ESL highlight feed.
+  85: {
+    pickid: 85,
+    narrative: {
+      tag: "3-0 AND THROUGH",
+      seedLine: "Advanced 3-0 from Stage 3 · B8, MOUZ, BB Team",
+      before:
+        "FalleN's veteran-led Brazilian side walked in with the oldest question in CS hanging over them — whether a legend's experience could still translate into a deep Major run, or whether the legs were finally gone.",
+      during:
+        "Emphatically yes. FURIA ran the table 3-0 in Stage 3 — past B8, a statement win over MOUZ, then closing BB Team to punch into the playoffs without dropping a series. No team looked more in control on the way in.",
+    },
+    // The official ESL per-match highlights reel for the clinch (BB Team vs
+    // FURIA, "WINNER TO PLAYOFFS"), trimmed to a ~55s window so the modal plays
+    // a short clip, not a 6-minute VOD. start/end do the "stripping" for free —
+    // no re-hosting, licensed source. Editor can nudge the window to the exact
+    // round; the reel is wall-to-wall action so any window lands on a play.
+    highlight: {
+      kind: "youtube",
+      src: "-VGUL80yL00", // @ESLCSHighlights — verified via oEmbed 2026-06-13
+      start: 8, // skip the branded intro card
+      end: 63, // ~55s clip
+      caption: "FURIA close BB Team to advance 3-0 — Stage 3 (ESL highlights)",
+    },
+  },
+  // — Below: SAMPLE narratives for two likely qualifiers, kept to exercise the
+  // design while the rest of the eight seed (~Jun 16). No highlight is attached
+  // (we don't ship a fabricated clip); FURIA above is the wired reference. —
   // Na'Vi — pickid 12
   12: {
     pickid: 12,
@@ -67,11 +104,6 @@ const SPOTLIGHTS: Record<number, TeamSpotlight> = {
         "World #2 on paper, but a roster still answering the question of whether makazze and w0nderful could carry a Major when it mattered. The pedigree was never in doubt; the nerve was.",
       during:
         "Answered it. A clean Swiss run with w0nderful posting top-3 AWP numbers of the event turned 'dangerous' into 'feared.' This is the version of Na'Vi the bracket was scared of.",
-    },
-    highlight: {
-      kind: "youtube",
-      src: "dQw4w9WgXcQ", // DRAFT placeholder id — swap for the real event reel
-      caption: "w0nderful 1v3 to close the half vs MOUZ — Stage 2 (sample clip)",
     },
   },
   // Liquid — pickid 48
@@ -84,11 +116,6 @@ const SPOTLIGHTS: Record<number, TeamSpotlight> = {
         "World #25 and written off — a NA core that hadn't troubled a top side in months. Nobody's bracket had Liquid past Stage 1.",
       during:
         "The story of the tournament. Fought up from the 0-1 pool, knocked out two seeded Europeans, and dragged a 'rebuild year' all the way to the playoff eight. The room they're not supposed to be in.",
-    },
-    highlight: {
-      kind: "youtube",
-      src: "dQw4w9WgXcQ", // DRAFT placeholder id
-      caption: "ultimate's last-round AWP hold to advance — Stage 1 decider (sample clip)",
     },
   },
 };
@@ -155,6 +182,8 @@ export function youtubeEmbedUrl(h: SpotlightHighlight): string | null {
     playsinline: "1",
   });
   if (h.start) params.set("start", String(h.start));
+  // `end` trims the reel to a short clip (the iframe stops playing at `end`).
+  if (h.end) params.set("end", String(h.end));
   return `https://www.youtube-nocookie.com/embed/${h.src}?${params.toString()}`;
 }
 
