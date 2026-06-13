@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
@@ -8,6 +8,7 @@ import type { TeamDef } from "@/lib/layout";
 import { statsForPickid, TEAM_STATS_AS_OF, type TeamStats } from "@/lib/team-stats-core";
 import {
   spotlightForPickid,
+  teamAccent,
   youtubeEmbedUrl,
   youtubePoster,
 } from "@/lib/playoff-spotlights";
@@ -64,6 +65,13 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
   const stats = liveStats ?? statsForPickid(team.pickid);
   const asOf = (liveStats && liveAsOf) || TEAM_STATS_AS_OF;
 
+  // Each spotlight wears the team's own color (PHA-1043 follow-up). The whole
+  // panel keys off `--team-accent`; unset → the .spot CSS falls back to --heat.
+  const accent = teamAccent(team);
+  const accentStyle = accent
+    ? ({ "--team-accent": accent } as CSSProperties)
+    : undefined;
+
   // Highlight is tap-to-play: poster first (keeps the modal light on mobile),
   // iframe only mounts on tap — full-match ESL reels are heavy otherwise.
   const [playing, setPlaying] = useState(false);
@@ -101,6 +109,7 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
       <div
         ref={panelRef}
         className={`tsd-panel spot-panel panel brk${moreBelow ? " tsd-more-below" : ""}`}
+        style={accentStyle}
         onClick={(e) => e.stopPropagation()}
       >
         <span className="br-tr" />
@@ -119,9 +128,9 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
             <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={56} />
           </div>
           <div className="spot-hero-text">
-            <span className="eyebrow-mono spot-eyebrow">
-              [ SPOTLIGHT{spot ? ` · ${spot.narrative.tag}` : ""} ]
-            </span>
+            {spot && (
+              <span className="eyebrow-mono spot-eyebrow">{spot.narrative.tag}</span>
+            )}
             <h3 className="spot-name font-display">{team.name}</h3>
             {spot && <p className="spot-seed">{spot.narrative.seedLine}</p>}
           </div>
@@ -142,7 +151,7 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
                 <p>{spot.narrative.before}</p>
               </div>
               <div className="spot-beat">
-                <span className="spot-beat-tag now">THIS EVENT</span>
+                <span className="spot-beat-tag now">NOW</span>
                 <p>{spot.narrative.during}</p>
               </div>
             </div>
@@ -152,7 +161,7 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
         {/* Highlight */}
         {highlight && embedUrl && (
           <section className="spot-sec">
-            <h4 className="tsd-sec-title">Highlight · this event</h4>
+            <h4 className="tsd-sec-title">Highlight</h4>
             <div className="spot-clip">
               {playing ? (
                 <iframe
@@ -185,7 +194,7 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
         {/* Market line */}
         {market && (
           <section className="spot-sec">
-            <h4 className="tsd-sec-title">Market line · refreshed hourly</h4>
+            <h4 className="tsd-sec-title">Odds</h4>
             <div className="spot-odds">
               <div className="spot-odds-row">
                 <span className="spot-odds-team">{market.teamName}</span>
@@ -219,7 +228,7 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
         {stats && (
           <>
             <section className="tsd-sec">
-              <h4 className="tsd-sec-title">The tape · roster</h4>
+              <h4 className="tsd-sec-title">Roster</h4>
               <ul className="tsd-roster">
                 {stats.roster.map((p) => (
                   <li key={p.name} className="tsd-player">
@@ -248,7 +257,7 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
             </section>
 
             <section className="tsd-sec">
-              <h4 className="tsd-sec-title">Last 5 matches</h4>
+              <h4 className="tsd-sec-title">Last 5</h4>
               {stats.recent.length === 0 ? (
                 <p className="tsd-empty">No recent matches on file.</p>
               ) : (
@@ -276,19 +285,14 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
 
         {stats?.hltvUrl && (
           <a className="tsd-link" href={stats.hltvUrl} target="_blank" rel="noopener noreferrer">
-            Full profile on HLTV
+            HLTV profile
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M7 17 17 7M9 7h8v8" />
             </svg>
           </a>
         )}
 
-        <p className="tsd-foot">
-          {spot
-            ? "Spotlight narrative + event highlight · stats via HLTV"
-            : "World ranking & results via HLTV"}{" "}
-          · snapshot {asOf}
-        </p>
+        <p className="tsd-foot">Stats via HLTV · {asOf}</p>
       </div>
     </div>,
     document.body,
