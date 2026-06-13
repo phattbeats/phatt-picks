@@ -36,14 +36,14 @@
 import { NextResponse } from "next/server";
 import { warmStandings, standingsSectionIds } from "@/lib/swiss-results";
 import { bridgeSwissOutcomes } from "@/lib/outcomes";
-import { ACTIVE_EVENT_ID } from "@/lib/events-core";
+import { currentEventId } from "@/lib/events-core";
 
-const EVENT_ID = ACTIVE_EVENT_ID;
 export const dynamic = "force-dynamic";
 
 async function warmAll() {
+  const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
   const results = [];
-  for (const section of standingsSectionIds()) {
+  for (const section of standingsSectionIds(EVENT_ID)) {
     results.push(await warmStandings(EVENT_ID, section));
   }
   // Resolve outcomes from the now-warm cache so a headless poke also keeps the
