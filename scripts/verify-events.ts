@@ -25,6 +25,7 @@ import {
   EVENTS,
   getEventConfig,
   resolveActiveEvent,
+  currentEvent,
   ACTIVE_EVENT_ID,
   SECTION_SOURCES,
   validateEventRevealConfig,
@@ -120,6 +121,23 @@ check("Singapore records its fixture/teamMap bindings for the re-point",
 check("seeding Singapore did not disturb the single live event (Cologne)",
   Object.values(EVENTS).filter((e) => e.status === "live").length === 1 &&
   resolveActiveEvent().eventId === 26);
+
+// — PHA-1048: the off-season HANDOFF on the REAL registry. Singapore is seeded
+//   ~5 months before it opens with EMPTY section-keyed config. Without the
+//   anticipation window (event-lifecycle-core), it would become the site's
+//   identity the instant Cologne archives (its dates.end ceiling, Jun 26) and
+//   sit there all summer — a "Singapore" banner over the still-static Cologne
+//   fixtures, no live boards. The gate holds the just-archived Major as the face
+//   until the next is within ~45 days of go-live (Singapore go-live = its
+//   dates.start Nov 25, no lock schedule → window opens ~Oct 11). These pin the
+//   real EVENTS through that arc so the imminent transition can't regress. —
+const offSeason = Date.parse("2026-08-01T00:00:00Z"); // Cologne archived, Singapore far out
+check("off-season: the site still serves archived Cologne, not the empty-config upcoming Singapore",
+  currentEvent(offSeason).eventId === 26);
+check("off-season served event is a real configured Major (non-empty sectionNames), never a gated upcoming",
+  Object.keys(currentEvent(offSeason).sectionNames).length > 0);
+check("hand-off: once inside Singapore's anticipation window it becomes current, still pre-go-live upcoming",
+  currentEvent(Date.parse("2026-11-01T00:00:00Z")).eventId === 27);
 
 // — config-sanity invariant: at most one BASELINE-live event. (resolveActiveEvent
 //   is clock-derived since PHA-950 and no longer throws on multiples — it picks

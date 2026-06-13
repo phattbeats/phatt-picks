@@ -16,7 +16,12 @@ app *work* for the new event. The rest sharpens it.
 > (PHA-950) you no longer flip `status` by hand on go-live day: stage the new
 > entry as `status: "upcoming"` with real `dates` + `lockSchedule` and it goes
 > live on its staging lead while the old one archives at its `dates.end` — see
-> `docs/ROADMAP-MULTI-MAJOR.md`. The registry currently
+> `docs/ROADMAP-MULTI-MAJOR.md`. **Seed the next Major as early as you like** —
+> the off-season *anticipation window* (`ANTICIPATION_LEAD_MS` ≈ 45 days,
+> PHA-1048) keeps the just-archived Major as the face of the site until the new
+> one is near go-live, so a registry entry staged 5 months out doesn't blank the
+> site with an empty countdown the instant the prior Major ends; the hand-over to
+> the countdown happens on its own ~6 weeks before the new event. The registry currently
 > *references* the committed `COLOGNE_*` constants below rather than owning their
 > values — the full cutover (inverting the domain modules' default params to read
 > the active event's config) is a follow-up, deliberately deferred until after
