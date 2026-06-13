@@ -16,6 +16,7 @@ import {
   TEAM_SOURCES,
   teamStatsCrawlTargets,
   hltvProfileUrl,
+  hltvTeamIdFromUrl,
   parseRecentResults,
   mergeLiveStats,
   accumulateRecentAcrossPasses,
@@ -73,6 +74,27 @@ check("crawl targets cover all 32 sources", targets.length === 32);
 check(
   "crawl targets all carry a pickid + HLTV url",
   targets.every((t) => FIELD.includes(t.pickid) && t.url.startsWith("https://www.hltv.org/team/")),
+);
+
+// ── Result → team matching by HLTV id (PHA-1044) ───────────────────────────────
+// The chunk crawl matches a crawl4ai result back to the team we asked for by the
+// stable `/team/<id>/` segment in the result url, NOT by submitted-url equality or
+// position — so a redirect-normalised / reordered result can't hand one team's
+// last-5 to another team's pickid. The pure id-extractor is the seam.
+check("id from canonical profile url", hltvTeamIdFromUrl("https://www.hltv.org/team/7020/spirit") === 7020);
+check("id survives a trailing slash", hltvTeamIdFromUrl("https://www.hltv.org/team/4608/natus-vincere/") === 4608);
+check("id survives http (no s) + query", hltvTeamIdFromUrl("http://www.hltv.org/team/5995/g2?ref=x") === 5995);
+check("id survives a redirect-normalised host", hltvTeamIdFromUrl("https://hltv.org/team/4494/mouz") === 4494);
+check("no id when the url isn't a team page", hltvTeamIdFromUrl("https://www.hltv.org/matches/123/foo") === null);
+check("no id on empty / nullish url", hltvTeamIdFromUrl("") === null && hltvTeamIdFromUrl(undefined) === null);
+check(
+  "every crawl target's url round-trips to its source hltvId",
+  teamStatsCrawlTargets().every((t) => hltvTeamIdFromUrl(t.url) === TEAM_SOURCES[t.pickid].hltvId),
+);
+// Distinctness guard: the id→pickid map the chunk builds can't collide.
+check(
+  "all 32 source ids are distinct (id-keyed matching is unambiguous)",
+  new Set(Object.values(TEAM_SOURCES).map((s) => s.hltvId)).size === 32,
 );
 
 // ── Recent-results parser ──────────────────────────────────────────────────────
