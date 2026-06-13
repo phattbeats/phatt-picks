@@ -100,7 +100,7 @@ async function stampPersistedThrottle(): Promise<void> {
  * LiquipediaThrottledError if the DB gate blocks the call, or
  * LiquipediaApiError on non-200.
  */
-export async function liquipediaParse(page: string): Promise<string> {
+async function liquipediaParse(page: string): Promise<string> {
   await checkPersistedThrottle();
   await throttleParse();
   await stampPersistedThrottle();

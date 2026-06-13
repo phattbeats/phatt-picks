@@ -18,11 +18,6 @@ export { selfHostUrl, monogramLabel } from "./logos-core";
 
 const LOGOS: LogoMap = (manifest as { logos: LogoMap }).logos;
 
-/** ByMykel image URL for a pickid, or undefined if the manifest has no entry. */
-export function byMykelUrl(pickid: number): string | undefined {
-  return LOGOS[String(pickid)]?.image;
-}
-
 /** Ordered logo candidates for a team, against the committed manifest. */
 export function resolveLogoTiers(team: ResolvableTeam): LogoTier[] {
   return resolveLogoTiersCore(team, LOGOS);
