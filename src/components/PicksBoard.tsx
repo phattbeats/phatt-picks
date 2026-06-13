@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { TeamStatsDrawer } from "@/components/ui/TeamStatsDrawer";
 import { SpotlightModal } from "@/components/ui/SpotlightModal";
 import { RegionBadge } from "@/components/ui/RegionBadge";
 import { resolveLogoTiers } from "@/lib/logos";
+import { teamAccent } from "@/lib/playoff-spotlights";
 import type { Section, TeamDef } from "@/lib/layout";
 import type { TeamStats } from "@/lib/team-stats-core";
 import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
@@ -379,6 +380,11 @@ export function PicksBoard({
                             is `used` (pointer-events:none) or the stage is locked. */}
                         <span
                           className={`ptile-info${isPlayoffSection(section.sectionid) ? " ptile-spotlight" : ""}`}
+                          style={
+                            isPlayoffSection(section.sectionid) && teamAccent(t)
+                              ? ({ "--team-accent": teamAccent(t) } as CSSProperties)
+                              : undefined
+                          }
                           role="button"
                           tabIndex={0}
                           aria-label={

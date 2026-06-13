@@ -42,10 +42,10 @@ interface Props {
 }
 
 /**
- * Spotlight (PHA-1043) — the playoff-grade replacement for the [i] dossier. Once
+ * Spotlight (PHA-1043), the playoff-grade replacement for the [i] dossier. Once
  * the field narrows to eight, a team is a narrative, not a stat line: who they
  * were before Cologne, what this run made them, an event highlight, and a live
- * market line — with the roster/last-5 "tape" kept one scroll below for the
+ * market line, with the roster/last-5 "tape" kept one scroll below for the
  * scouts. Falls back gracefully to tape-only when no narrative is authored yet
  * (TBD slots, un-seeded bracket).
  *
@@ -73,7 +73,7 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
     : undefined;
 
   // Highlight is tap-to-play: poster first (keeps the modal light on mobile),
-  // iframe only mounts on tap — full-match ESL reels are heavy otherwise.
+  // iframe only mounts on tap, full-match ESL reels are heavy otherwise.
   const [playing, setPlaying] = useState(false);
   const highlight = spot?.highlight;
   const embedUrl = highlight ? youtubeEmbedUrl(highlight) : null;
@@ -96,6 +96,41 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
     };
   }, [stats, playing]);
 
+  // Focus management (WCAG 2.4.3): move focus into the dialog on open, trap Tab
+  // inside it, and return focus to whatever opened it on close.
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    const panel = panelRef.current;
+    const focusables = () =>
+      panel
+        ? Array.from(
+            panel.querySelectorAll<HTMLElement>(
+              'a[href], button:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])',
+            ),
+          ).filter((el) => el.offsetParent !== null)
+        : [];
+    focusables()[0]?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const items = focusables();
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    panel?.addEventListener("keydown", onKey);
+    return () => {
+      panel?.removeEventListener("keydown", onKey);
+      opener?.focus?.();
+    };
+  }, []);
+
   if (typeof document === "undefined") return null;
 
   return createPortal(
@@ -112,8 +147,8 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
         style={accentStyle}
         onClick={(e) => e.stopPropagation()}
       >
-        <span className="br-tr" />
-        <span className="br-bl" />
+        <span className="br-tr" aria-hidden="true" />
+        <span className="br-bl" aria-hidden="true" />
 
         <button className="tsd-close" type="button" aria-label="Close" onClick={onClose}>
           <svg viewBox="0 0 24 24">
@@ -236,7 +271,7 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
           )}
         </section>
 
-        {/* The tape — roster + last 5 (the old dossier, kept for scouts) */}
+        {/* The tape, roster + last 5 (the old dossier, kept for scouts) */}
         {stats && (
           <>
             <section className="tsd-sec">

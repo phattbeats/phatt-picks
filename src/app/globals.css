@@ -984,12 +984,15 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 /* Playoffs (PHA-1043): the dossier badge becomes a lit spotlight star. */
 .ptile-info.ptile-spotlight {
   font-style: normal; font-size: 12px;
-  color: var(--heat); border-color: var(--hair-3);
-  background: rgba(240,163,0,0.12);
+  /* Wears the team's accent (set inline) so the badge matches the modal it
+     opens; falls back to the house orange when a team has no mapped color. */
+  --sa: var(--team-accent, var(--heat));
+  color: var(--sa); border-color: var(--hair-3);
+  background: color-mix(in srgb, var(--sa) 12%, transparent);
 }
 .ptile-info.ptile-spotlight:hover, .ptile-info.ptile-spotlight:focus-visible {
-  border-color: var(--heat); background: rgba(240,163,0,0.22);
-  box-shadow: 0 0 8px var(--heat-glow);
+  border-color: var(--sa); background: color-mix(in srgb, var(--sa) 22%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--sa) 35%, transparent);
 }
 
 .tsd-backdrop {
@@ -1123,7 +1126,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 }
 
 /* ---------------------------------------------------------------------------
-   Spotlight (PHA-1043) — playoff-grade team modal. Reuses the .tsd-panel
+   Spotlight (PHA-1043) playoff-grade team modal. Reuses the .tsd-panel
    bottom-sheet shell; adds a cinematic hero, the before/after narrative, a
    tap-to-play event highlight, and a live market line above the dossier "tape".
    --------------------------------------------------------------------------- */
@@ -1131,7 +1134,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
    team (PHA-1043 follow-up), and every accent below keys off --sa, which falls
    back to the house --heat for teams without a mapped color. The scoped
    .spot-panel overrides retint the shared .tsd-* dossier classes too, so the
-   whole modal — hero, narrative, highlight, odds, roster — reads in one color. */
+   whole modal (hero, narrative, highlight, odds, roster) reads in one color. */
 .spot-panel {
   max-width: 480px;
   --sa: var(--team-accent, var(--heat));
@@ -1149,6 +1152,9 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .spot-panel .tsd-link:hover {
   border-color: var(--sa); background: color-mix(in srgb, var(--sa) 13%, transparent);
 }
+/* The decorative corner brackets are part of the accent too. */
+.spot-panel.brk::before, .spot-panel.brk::after,
+.spot-panel.brk .br-tr, .spot-panel.brk .br-bl { border-color: var(--sa); }
 .spot-hero {
   display: flex; align-items: center; gap: 14px; padding-right: 30px;
   position: relative;
@@ -1173,7 +1179,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 }
 .spot-sec { margin-top: 20px; }
 
-/* Narrative — two beats: who they were, what this run made them. */
+/* Narrative: two beats, who they were and what this run made them. */
 .spot-story { display: flex; flex-direction: column; gap: 14px; }
 .spot-beat {
   position: relative; padding-left: 14px;
@@ -1191,7 +1197,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink-hi);
 }
 
-/* Highlight — 16:9 tap-to-play. */
+/* Highlight: 16:9 tap-to-play. */
 .spot-clip {
   position: relative; width: 100%; aspect-ratio: 16 / 9;
   background: var(--surf-3); border: 1px solid var(--hair-2); overflow: hidden;
@@ -1207,17 +1213,21 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .spot-clip-play {
   display: flex; align-items: center; justify-content: center;
   width: 56px; height: 56px; border-radius: 50%;
-  background: color-mix(in srgb, var(--sa) 92%, transparent); box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  background: color-mix(in srgb, var(--sa) 92%, transparent);
+  /* A ring keeps the affordance visible even when the accent is a light
+     near-white (e.g. FURIA) against a bright poster frame. */
+  border: 2px solid rgba(10,8,5,0.55);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
   transition: transform 160ms var(--ease);
 }
 .spot-clip-poster:hover .spot-clip-play { transform: scale(1.08); }
-.spot-clip-play svg { width: 26px; height: 26px; fill: #1a1206; margin-left: 3px; }
+.spot-clip-play svg { width: 26px; height: 26px; fill: var(--void); margin-left: 3px; }
 .spot-clip-cap {
   margin: 9px 0 0; font-family: var(--font-mono); font-size: 11px;
   letter-spacing: 0.02em; color: var(--ink-mid); line-height: 1.4;
 }
 
-/* Market line — implied win % bar, refreshed hourly. */
+/* Market line: implied win % bar, refreshed hourly. */
 .spot-odds {
   background: var(--surf-3); border: 1px solid var(--hair-2); padding: 13px 14px;
 }
@@ -1255,13 +1265,18 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 }
 .spot-odds-foot a svg { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 2; }
 
-/* Odds "coming soon" — shown until a playoff team has an opponent (no line yet).
-   Keyed to the team accent like the rest of the panel. */
-.spot-odds-soon { text-align: center; padding: 18px 16px; }
+/* Odds "coming soon": shown until a playoff team has an opponent (no line yet).
+   Keyed to the team accent, and matches the live .spot-odds padding so the two
+   mutually-exclusive states carry the same visual weight in the slot. */
+.spot-odds-soon { text-align: center; }
 .spot-soon-dot {
   display: inline-block; width: 7px; height: 7px; border-radius: 50%;
   background: var(--sa); box-shadow: 0 0 8px color-mix(in srgb, var(--sa) 45%, transparent);
   margin-bottom: 9px; animation: live-blink 1.6s steps(2, end) infinite;
+}
+/* Respect reduced-motion: hold the dot steady rather than blink. */
+@media (prefers-reduced-motion: reduce) {
+  .spot-soon-dot { animation: none; }
 }
 .spot-soon-title {
   margin: 0; font-family: var(--font-mono); font-size: 12px; font-weight: 700;
@@ -1269,4 +1284,12 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 }
 .spot-soon-sub {
   margin: 5px 0 0; font-size: 12px; line-height: 1.45; color: var(--ink-mid);
+}
+
+/* Narrow phones: the 28px hero name plus the rank badge and close button can
+   crush a multi-word team name (e.g. "Natus Vincere"). Shrink the name and let
+   the odds footer stack rather than squeeze. */
+@media (max-width: 380px) {
+  .spot-name { font-size: 22px; }
+  .spot-odds-foot { flex-direction: column; align-items: flex-start; gap: 8px; }
 }
