@@ -21,70 +21,45 @@ It's deliberately grounded in what already exists — this is an *evolution*, no
   reminder scheduler (PHA-929), and the Stage-3 source watcher (PHA-926). The app needs no LLM
   at runtime (see ARCHITECTURE → "Does HOTLINE need an LLM / agent?").
 
-## What's missing (the gaps to close)
+## What was missing (now closed)
 
-1. **No "active event" — `EVENT_ID = 26` is hardcoded in ~15 files** (every page + every API
-   route) and the per-Major config is Cologne-specific singletons (`COLOGNE_LOCK_SCHEDULE`,
-   `cologne-layout.json`, `SECTION_SOURCES`, `TEAM_*`, …) spread across ~10 modules. Adding the
-   next Major today means hand-editing all of that. There is no single source of truth for
-   "which event is live."
-2. **No archive / history surface.** Past-event data exists in the DB but nothing lets a user
-   *see* it — the leaderboard, compare, and profile all implicitly render "event 26." There's
-   no event switcher and no "your picks across every Major" view.
-3. **No event lifecycle.** Nothing transitions an event `upcoming → live → archived`; a human
-   decides when a Major is "over." Truly self-sustaining means the app does this itself.
+*Updated 2026-06-12 — all three workstreams shipped during Cologne 2026.*
+
+1. ~~**No "active event" — `EVENT_ID = 26` hardcoded in ~15 files.**~~ **Done — PHA-948.**
+   `src/lib/events-core.ts` is the committed registry: `EVENTS[id]`, `resolveActiveEvent()`,
+   `getEventConfig(id)`, `ACTIVE_EVENT_ID`. The singleton `COLOGNE_*` constants remain in
+   their files but are referenced by the registry, not scattered. Adding the next Major is a
+   new registry entry.
+2. ~~**No archive / history surface.**~~ **Done — PHA-949.** `/majors` route shows "Your Majors" —
+   every event you played, your score, your finish, linked into that event's full profile.
+   Data was already persisted per `eventId`; this was a read + UI problem.
+3. ~~**No event lifecycle.**~~ **Done — PHA-950 + PHA-954.** Clock-derived
+   `upcoming → live → archived` transitions run from the event registry dates + the Grand
+   Final resolve signal. Archive fires at `grandFinalResolvedAt + 48h` grace (PHA-954 safety
+   net). Drivers skip non-live events; reminders/watchers iterate from the registry.
+
+**Remaining — PHA-952 (cutover):** the full inversion of domain-module defaults — so every
+page/API reads `getEventConfig(ACTIVE_EVENT_ID)` instead of its local `COLOGNE_*` constant.
+Deliberately deferred until after Cologne's Grand Final (Jun 21). That cutover makes adding the
+next Major truly turnkey: drop in a registry entry and all surfaces update automatically.
+Cologne becomes event #1 in the archive the moment it ends.
 
 ## The plan — three workstreams
 
-### A. Event registry & "active event" *(the backbone — unblocks B and C)*
-Replace the 16 hardcoded `EVENT_ID = 26` and the `COLOGNE_*` singletons with **one committed
-registry**:
+### A. Event registry & "active event" — **DONE (PHA-948)**
+The registry (`events-core.ts`) is the single source of truth. `resolveActiveEvent()` /
+`getEventConfig(id)` / `ACTIVE_EVENT_ID` replace the old hardcoded `= 26`. Adding a Major is
+one new registry entry. Full domain-module cutover deferred to PHA-952 post-GF.
 
-```
-EVENTS = {
-  26: { slug, name, status: 'upcoming'|'live'|'archived',
-        layoutFixture, lockSchedule, matchWindows, sectionSources, teamMaps, dates },
-  …   // the next Major is one more entry
-}
-resolveActiveEvent()   // the single source of truth pages/routes call instead of `= 26`
-getEventConfig(id)     // per-event lock schedule / sources / maps
-```
+### B. Historic scores & "look back" — **DONE (PHA-949)**
+`/majors` route: every event you played, your score and finish, linked into its full profile.
+Read view over already-persisted `eventId`-scoped rows — no schema change, no crawl.
 
-Adding a Major becomes: **drop in one registry entry + flip `status` to `live`.** This is the
-turnkey "ready for every Major" piece, and it's mostly mechanical — the data layer already
-takes `eventId`, so this is plumbing the *active id* + per-event config, not changing storage.
-Keep the per-Major seam files (NEXT-MAJOR runbook) but index them by event in the registry.
+### C. Self-sustaining event lifecycle — **DONE (PHA-950 + PHA-954)**
+Clock-derived status transitions, registry-driven drivers/reminders, 48h GF grace arc.
+The running app handles `upcoming → live → archived` without any human flip.
 
-### B. Historic scores & "look back" *(the headline feature)*
-With the registry's `status` field, archived events are read-only views over data that's
-already persisted:
-- An **event switcher** on `/leaderboard`, `/leaderboard/compare`, and `/players/[id]`.
-- A **"your Majors" history** view — every event you played, your picks, your score, your
-  finish — so you can look back across all of them.
-- **Freeze archived events:** no writes (`picks` 409), no crawls (drivers skip non-live), reveal
-  always on. Mostly read + UI because the rows are already there.
-
-### C. Self-sustaining event lifecycle
-- Auto-transition `upcoming → live` (first lock approaches) and `live → archived` (the Grand
-  Final resolves) so no human flips a switch.
-- Make the watchers/reminders/drivers **registry-driven** (iterate live events, not a constant).
-- The next Major's config can even be staged as `upcoming` and goes live on schedule.
-
-**Dependencies:** A is the foundation; B and C both build on the registry. Suggested order:
-A → (B ∥ C).
-
-## The one decision that gates *when*, not *what*
-
-The registry refactor touches ~15 files + core config **while Cologne is live** (Stage III Jun 11,
-playoffs Jun 18–21). Two safe options:
-- **Stage it:** land the registry groundwork now behind the current behavior (active event still
-  resolves to 26), but **hold the cutover + history UI until after Cologne's Grand Final** — zero
-  risk to the live event, and Cologne becomes the first archived Major the day it ends.
-- **Build now:** do it all immediately, accepting more regression surface during a live tournament.
-
-Recommendation: **stage it** — groundwork now, cutover + history right after the Grand Final, so
-Cologne is the first entry in "look back at your picks throughout every Major."
+**Dependencies:** A → (B ∥ C). All three shipped; remaining work is the PHA-952 cutover.
 
 ## Tracking
-Workstreams A/B/C are tracked as child issues of PHA-922 (see the issue thread). This doc is their
-shared spec; keep it updated as they land.
+PHA-948/949/950/952/954 are the child issues. This doc is their shared spec.
