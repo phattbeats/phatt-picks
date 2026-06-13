@@ -20,7 +20,7 @@ import { visibleCoinTier } from "@/lib/coin-core";
 import { getSession } from "@/lib/session";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
-import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
+import { bucketSwissSlots, isSwissSection, resolveBucketWinners } from "@/lib/swiss-bucket-core";
 import { buildSwissStandings, type SlotPickMap } from "@/lib/swiss-standings-core";
 import { LockedPicksBoard } from "@/components/heat/LockedPicksBoard";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
@@ -153,17 +153,28 @@ export default async function PlayerProfilePage({
   );
 
   // Accuracy — correct picks over resolved picks (only counts decided slots).
+  // Swiss buckets are interchangeable: a pick is correct if its team landed
+  // ANYWHERE in the bucket, not at its exact slot (PHA-946/918). Per-slot
+  // comparison here under-counts correct Swiss picks and disagrees with the
+  // set-based scorer that drives Points/Rank. Playoffs stay per-slot. (PHA-1015)
   let resolved = 0;
   let correct = 0;
   for (const section of layout.sections) {
+    const swiss = isSwissSection(section.sectionid);
     for (const group of section.groups) {
       const gOut = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
       const gPick = pickMap[section.sectionid]?.[group.groupid] ?? {};
+      const groupBuckets = swiss ? bucketSwissSlots(group.picks.length) : null;
       for (const slot of group.picks) {
         const winner = gOut[slot.index];
         if (winner === undefined) continue;
         resolved += 1;
-        if (gPick[slot.index] === winner) correct += 1;
+        const pick = gPick[slot.index];
+        const bucket = groupBuckets?.find((b) => b.slotIndexes.includes(slot.index)) ?? null;
+        const hit = bucket
+          ? pick != null && resolveBucketWinners(bucket.slotIndexes, gOut).winners.has(pick)
+          : pick === winner;
+        if (hit) correct += 1;
       }
     }
   }

@@ -23,7 +23,7 @@ import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring"
 import { getSession } from "@/lib/session";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
-import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
+import { bucketSwissSlots, isSwissSection, resolveBucketWinners } from "@/lib/swiss-bucket-core";
 import { rankMapForSection, snapshotSectionIds } from "@/lib/rank-snapshot";
 import { previousResolvedSection, rankDelta } from "@/lib/rank-snapshot-core";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
@@ -237,14 +237,27 @@ export default async function StageRevealPage({
       {/* Per-pick breakdown */}
       <div className="section-label" style={sectionLabel}>How Your Picks Landed · {correct}/{resolvedSlots}</div>
       <div className="reveal-picks">
-        {sectionDef.groups.flatMap((group) =>
-          group.picks.map((slot) => {
+        {sectionDef.groups.flatMap((group) => {
+          // Swiss buckets are interchangeable: a pick is correct if its team
+          // landed ANYWHERE in the bucket, not at its exact slot (PHA-946/918).
+          // The clinch resolver fills winner rows in layout order, not pick
+          // order, so per-slot comparison strikes correct picks as misses and
+          // contradicts the set-based scorer in the header. Playoffs stay
+          // per-slot. (PHA-1015)
+          const gOut = outcomeMap[sectionId]?.[group.groupid] ?? {};
+          const buckets = isSwissSection(sectionId) ? bucketSwissSlots(group.picks.length) : null;
+          return group.picks.map((slot) => {
             const pickId = subjectPickMap[sectionId]?.[group.groupid]?.[slot.index];
-            const winner = outcomeMap[sectionId]?.[group.groupid]?.[slot.index];
+            const winner = gOut[slot.index];
             const team = pickId != null ? teamMap.get(pickId) : undefined;
             const tag = bucketLabelFor(sectionId, group, slot.index);
             const resolved = winner !== undefined;
-            const isCorrect = resolved && pickId != null && pickId === winner;
+            const bucket = buckets?.find((b) => b.slotIndexes.includes(slot.index)) ?? null;
+            const isCorrect = resolved && pickId != null && (
+              bucket
+                ? resolveBucketWinners(bucket.slotIndexes, gOut).winners.has(pickId)
+                : pickId === winner
+            );
             return (
               <div key={`${group.groupid}:${slot.index}`} style={{ display: "flex", flexDirection: "column" }}>
                 <div
@@ -280,8 +293,8 @@ export default async function StageRevealPage({
                 />
               </div>
             );
-          }),
-        )}
+          });
+        })}
       </div>
 
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 20 }}>
