@@ -166,12 +166,68 @@ const COLOGNE_2026: EventConfig = {
 };
 
 /**
+ * PGL Major Singapore 2026 — the NEXT Major, pre-seeded as `upcoming` (PHA-1055,
+ * leaning on the multi-major backbone PHA-948/949/950). It resolves `upcoming`
+ * purely from the clock today and has ZERO impact on live Cologne:
+ * `selectCurrentEvent` prefers the effectively-live event, so Cologne stays the
+ * served Major until it archives, after which the site counts down to this one.
+ *
+ * Confirmed facts (PHA-1048 research): PGL · Singapore Indoor Stadium · 32 teams
+ * · $1.25M prize pool · BO5 Grand Final. Main event runs Nov 25 – Dec 13 2026,
+ * playoffs/finals Dec 10–13. These descriptive facts (org/prize/format/venue)
+ * have no field on `EventConfig` and intentionally live in this doc comment —
+ * the registry indexes *config*, and adding consumer-less fields would be scope
+ * creep. They're the seed record for the re-point runbook (docs/NEXT-MAJOR.md).
+ *
+ * GATED until ~Oct/Nov 2026 — left deliberately EMPTY so both CI guards pass
+ * (an empty config has nothing to validate) and nothing renders half-built:
+ *   • `sectionNames` — empty. Declaring "Stage N" names before their section ids
+ *     are wired into `isSwissSection` would trip `validateSwissClassification`
+ *     (the PHA-946 regression guard). Fill when the layout fixture lands.
+ *   • `lockSchedule` / `matchWindows` — empty. Only the overall window + the
+ *     Dec 10–13 finals are dated today; precise stage day-splits are unpublished.
+ *   • `sectionSources` — empty. HLTV mints per-stage event ids (mirror Cologne's
+ *     9028/9029 + the 8301 hub) only once stage pages exist (~Oct/Nov). The
+ *     PHA-926-style watcher pulls them the moment they publish.
+ *
+ * `eventId: 27` is PROVISIONAL — Valve's tournament id for this Major isn't
+ * published yet (Cologne is 26; 27 is the natural next). It's only a unique
+ * registry key today (no fixture asserts it while the event is `upcoming`);
+ * Phase 1a of the runbook replaces it with the real id when the layout lands.
+ * Likewise `fixtures`/`teamMaps` name the files/modules the re-point will fill.
+ */
+const SINGAPORE_2026: EventConfig = {
+  eventId: 27,
+  slug: "pgl-singapore-2026",
+  name: "PGL Major Singapore 2026",
+  status: "upcoming",
+  // Main event Nov 25 – Dec 13 2026 (playoffs/finals Dec 10–13, Singapore Indoor
+  // Stadium). `end` is the calendar BACKSTOP for the archive transition, set a
+  // touch past the Dec 13 finals so it sits comfortably beyond GF + the 48h grace
+  // (PHA-954) — the real archive fires on the Grand Final resolving, not this
+  // ceiling (mirrors Cologne's reasoning). Refine both dates when stage day-
+  // splits publish.
+  dates: { start: "2026-11-25T00:00:00Z", end: "2026-12-15T23:59:59Z" },
+  sectionNames: {},
+  lockSchedule: {},
+  matchWindows: {},
+  sectionSources: {},
+  fixtures: { layout: "pgl-singapore-2026-layout", logos: "pgl-singapore-2026-logos" },
+  teamMaps: {
+    regions: "regions-core",
+    stats: "team-stats-core",
+    sources: "team-stats-sources",
+  },
+};
+
+/**
  * The committed event registry, keyed by Valve event id. Adding a Major is a
  * new entry here (plus the per-fixture swaps in NEXT-MAJOR.md); going live is
  * flipping its `status` to "live" and the previous event's to "archived".
  */
 export const EVENTS: Readonly<Record<number, EventConfig>> = {
   [COLOGNE_2026.eventId]: COLOGNE_2026,
+  [SINGAPORE_2026.eventId]: SINGAPORE_2026,
 };
 
 /** Look up an event's config by Valve event id; null when not registered. */
