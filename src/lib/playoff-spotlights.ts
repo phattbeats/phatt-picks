@@ -6,12 +6,24 @@
  * live market line — while the roster / last-5 "tape" stays one tap below.
  *
  * DRAFT STATUS (2026-06-13): the real eight aren't seeded until Valve publishes
- * the bracket (~Jun 16, see PHA-993). So narratives + highlight ids here are
- * authored samples for likely qualifiers, enough to prove the design. Once the
- * field is locked, this file is the single place an editor fills per team:
- *   narrative (before/during), one event-highlight clip id, a short tag.
- * Odds are NOT committed here — they're fetched live (1h refresh) per matchup;
- * see `market-odds-core` / `market-odds`.
+ * the bracket (~Jun 16, see PHA-993). FURIA (pickid 85) is the first real entry,
+ * authored the moment they clinched 3-0; the others below are samples until each
+ * team locks. This file is the single place an editor fills per team.
+ *
+ * HOW EACH OF THE EIGHT IS WRITTEN (the authoring template, Brandon asked):
+ *   1. TRIGGER. A team is written the moment it clinches a playoff berth, using
+ *      what actually happened at THIS event. No prophecy, no fabricated prose
+ *      for un-clinched teams (they stay dossier-only until then).
+ *   2. SOURCES. before/during come from the team's real run: HLTV results +
+ *      ranking (already in team-stats-core) and the ESL highlight feed. tag and
+ *      seedLine restate the verifiable record (e.g. "Advanced 3-0 from Stage 3").
+ *   3. VOICE. Two short beats that read on a phone: BEFORE = who they were
+ *      walking in (the question over them), NOW = what this run answered. Tight,
+ *      factual, no hype words we can't back up. No em dashes (use ".", ",", ":").
+ *   4. HIGHLIGHT. One official @ESLCSHighlights match reel for that team, trimmed
+ *      to a 30-60s window via start/end (no re-hosting). Caption says what + when.
+ *   5. ODDS are NOT committed here. They're fetched live (1h refresh) per matchup
+ *      once the opponent is set; until then the modal shows "coming soon".
  */
 
 /** A single viewable highlight from THIS event. */
@@ -74,9 +86,9 @@ const SPOTLIGHTS: Record<number, TeamSpotlight> = {
       tag: "3-0 AND THROUGH",
       seedLine: "Advanced 3-0 from Stage 3 · B8, MOUZ, BB Team",
       before:
-        "FalleN's veteran-led Brazilian side walked in with the oldest question in CS hanging over them — whether a legend's experience could still translate into a deep Major run, or whether the legs were finally gone.",
+        "FalleN's veteran-led Brazilian side walked in with the oldest question in CS hanging over them: whether a legend's experience could still translate into a deep Major run, or whether the legs were finally gone.",
       during:
-        "Emphatically yes. FURIA ran the table 3-0 in Stage 3 — past B8, a statement win over MOUZ, then closing BB Team to punch into the playoffs without dropping a series. No team looked more in control on the way in.",
+        "Emphatically yes. FURIA ran the table 3-0 in Stage 3, past B8, a statement win over MOUZ, then closing BB Team to punch into the playoffs without dropping a series. No team looked more in control on the way in.",
     },
     // The official ESL per-match highlights reel for the clinch (BB Team vs
     // FURIA, "WINNER TO PLAYOFFS"), trimmed to a ~55s window so the modal plays
@@ -88,7 +100,7 @@ const SPOTLIGHTS: Record<number, TeamSpotlight> = {
       src: "-VGUL80yL00", // @ESLCSHighlights — verified via oEmbed 2026-06-13
       start: 8, // skip the branded intro card
       end: 63, // ~55s clip
-      caption: "FURIA close BB Team to advance 3-0 — Stage 3 (ESL highlights)",
+      caption: "FURIA close BB Team to advance 3-0, Stage 3 (ESL highlights)",
     },
   },
   // — Below: SAMPLE narratives for two likely qualifiers, kept to exercise the
@@ -113,7 +125,7 @@ const SPOTLIGHTS: Record<number, TeamSpotlight> = {
       tag: "THE LONG ROAD",
       seedLine: "Sample draft · narrative fills when seeded",
       before:
-        "World #25 and written off — a NA core that hadn't troubled a top side in months. Nobody's bracket had Liquid past Stage 1.",
+        "World #25 and written off. A NA core that hadn't troubled a top side in months, and nobody's bracket had Liquid past Stage 1.",
       during:
         "The story of the tournament. Fought up from the 0-1 pool, knocked out two seeded Europeans, and dragged a 'rebuild year' all the way to the playoff eight. The room they're not supposed to be in.",
     },
