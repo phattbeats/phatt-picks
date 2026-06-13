@@ -176,6 +176,21 @@ model TeamStatsCache {
   updatedAt DateTime @updatedAt
 }
 
+// Live playoff Spotlight market odds (PHA-1066). One JSON-blob row per event:
+// pickid → SpotlightMarketLine (Polymarket implied win %). Fetched on the same
+// ~hourly floor by the on-read driver (refreshSpotlightOddsOnRead) from the
+// public gamma-api — a direct fetch, no crawl, no auth. Gated to match windows
+// and to a non-empty authored matchup registry (PLAYOFF_MARKET_SLUGS), so it's
+// inert until Valve seeds the bracket. A source outage degrades to the last
+// blob; an unmatched/empty cache renders the modal's "coming soon" state.
+model SpotlightOddsCache {
+  id        String   @id @default(cuid())
+  eventId   Int      @unique
+  data      String   // JSON: { byPickid: Record<pickid, SpotlightMarketLine>, fetchedAt }
+  fetchedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // PWA push subscriptions
 model PushSubscription {
   id       String   @id @default(cuid())
