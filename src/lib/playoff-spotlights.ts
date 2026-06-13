@@ -103,33 +103,10 @@ const SPOTLIGHTS: Record<number, TeamSpotlight> = {
       caption: "FURIA close BB Team to advance 3-0, Stage 3 (ESL highlights)",
     },
   },
-  // Below: SAMPLE narratives for two likely qualifiers, kept to exercise the
-  // design while the rest of the eight seed (~Jun 16). No highlight is attached
-  // (we don't ship a fabricated clip); FURIA above is the wired reference.
-  // Na'Vi, pickid 12
-  12: {
-    pickid: 12,
-    narrative: {
-      tag: "THE COMEBACK ARC",
-      seedLine: "Sample draft · narrative fills when seeded",
-      before:
-        "World #2 on paper, but a roster still answering the question of whether makazze and w0nderful could carry a Major when it mattered. The pedigree was never in doubt; the nerve was.",
-      during:
-        "Answered it. A clean Swiss run with w0nderful posting top-3 AWP numbers of the event turned 'dangerous' into 'feared.' This is the version of Na'Vi the bracket was scared of.",
-    },
-  },
-  // Liquid, pickid 48
-  48: {
-    pickid: 48,
-    narrative: {
-      tag: "THE LONG ROAD",
-      seedLine: "Sample draft · narrative fills when seeded",
-      before:
-        "World #25 and written off. A NA core that hadn't troubled a top side in months, and nobody's bracket had Liquid past Stage 1.",
-      during:
-        "The story of the tournament. Fought up from the 0-1 pool, knocked out two seeded Europeans, and dragged a 'rebuild year' all the way to the playoff eight. The room they're not supposed to be in.",
-    },
-  },
+  // The other seven fill in here as each team clinches (PHA-1065), authored from
+  // their real run per the template above. Until then a playoff team with no
+  // entry renders the dossier-only fallback (roster + last 5), never a
+  // placeholder story, so nothing fabricated can ship.
 };
 
 /** The team's spotlight draft, or null if none authored (→ dossier fallback). */
