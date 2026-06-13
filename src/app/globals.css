@@ -981,6 +981,16 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   color: var(--heat); border-color: var(--heat);
   background: rgba(240,163,0,0.1); outline: none;
 }
+/* Playoffs (PHA-1043): the dossier badge becomes a lit spotlight star. */
+.ptile-info.ptile-spotlight {
+  font-style: normal; font-size: 12px;
+  color: var(--heat); border-color: var(--hair-3);
+  background: rgba(240,163,0,0.12);
+}
+.ptile-info.ptile-spotlight:hover, .ptile-info.ptile-spotlight:focus-visible {
+  border-color: var(--heat); background: rgba(240,163,0,0.22);
+  box-shadow: 0 0 8px var(--heat-glow);
+}
 
 .tsd-backdrop {
   position: fixed; inset: 0; z-index: 200;
@@ -1111,3 +1121,115 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; color: var(--ink-low);
   margin: 18px 0 0; padding-top: 12px; border-top: 1px solid var(--hair);
 }
+
+/* ---------------------------------------------------------------------------
+   Spotlight (PHA-1043) — playoff-grade team modal. Reuses the .tsd-panel
+   bottom-sheet shell; adds a cinematic hero, the before/after narrative, a
+   tap-to-play event highlight, and a live market line above the dossier "tape".
+   --------------------------------------------------------------------------- */
+.spot-panel { max-width: 480px; }
+.spot-hero {
+  display: flex; align-items: center; gap: 14px; padding-right: 30px;
+  position: relative;
+}
+.spot-hero-logo {
+  display: flex; align-items: center; justify-content: center;
+  width: 64px; height: 64px; flex-shrink: 0;
+  background: radial-gradient(circle at 50% 40%, rgba(240,163,0,0.16), transparent 70%);
+  border: 1px solid var(--hair-3);
+}
+.spot-hero-text { flex: 1; min-width: 0; }
+.spot-eyebrow { display: block; margin-bottom: 4px; }
+.spot-name {
+  margin: 0; font-weight: 800; font-size: 28px;
+  text-transform: uppercase; letter-spacing: 0.01em;
+  color: var(--ink-hi); line-height: 0.95;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.spot-seed {
+  margin: 5px 0 0; font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.04em; color: var(--ink-mid);
+}
+.spot-sec { margin-top: 20px; }
+
+/* Narrative — two beats: who they were, what this run made them. */
+.spot-story { display: flex; flex-direction: column; gap: 14px; }
+.spot-beat {
+  position: relative; padding-left: 14px;
+  border-left: 2px solid var(--hair-3);
+}
+.spot-beat.now, .spot-beat:last-child { /* the "this event" beat lights up */ }
+.spot-beat-tag {
+  display: inline-block; margin-bottom: 6px;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.16em; color: var(--ink-low);
+}
+.spot-beat-tag.now { color: var(--heat); }
+.spot-beat:has(.now) { border-left-color: var(--heat); }
+.spot-beat p {
+  margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink-hi);
+}
+
+/* Highlight — 16:9 tap-to-play. */
+.spot-clip {
+  position: relative; width: 100%; aspect-ratio: 16 / 9;
+  background: var(--surf-3); border: 1px solid var(--hair-2); overflow: hidden;
+}
+.spot-clip-frame { width: 100%; height: 100%; border: 0; display: block; }
+.spot-clip-poster {
+  width: 100%; height: 100%; border: 0; cursor: pointer; padding: 0;
+  background-color: var(--surf-3); background-size: cover; background-position: center;
+  display: flex; align-items: center; justify-content: center;
+  transition: filter 200ms var(--ease);
+}
+.spot-clip-poster:hover { filter: brightness(1.08); }
+.spot-clip-play {
+  display: flex; align-items: center; justify-content: center;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(240,163,0,0.92); box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  transition: transform 160ms var(--ease);
+}
+.spot-clip-poster:hover .spot-clip-play { transform: scale(1.08); }
+.spot-clip-play svg { width: 26px; height: 26px; fill: #1a1206; margin-left: 3px; }
+.spot-clip-cap {
+  margin: 9px 0 0; font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.02em; color: var(--ink-mid); line-height: 1.4;
+}
+
+/* Market line — implied win % bar, refreshed hourly. */
+.spot-odds {
+  background: var(--surf-3); border: 1px solid var(--hair-2); padding: 13px 14px;
+}
+.spot-odds-row {
+  display: flex; align-items: baseline; justify-content: space-between;
+}
+.spot-odds-row.dim { margin-top: 9px; }
+.spot-odds-team {
+  font-size: 13px; font-weight: 600; color: var(--ink-hi);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.spot-odds-row.dim .spot-odds-team { color: var(--ink-mid); font-weight: 500; }
+.spot-odds-pct {
+  font-family: var(--font-display); font-weight: 800; font-size: 22px;
+  color: var(--ink-mid); font-variant-numeric: tabular-nums; line-height: 1;
+}
+.spot-odds-pct.heat { color: var(--heat); }
+.spot-odds-bar {
+  height: 6px; margin: 7px 0; background: var(--surf-1);
+  border: 1px solid var(--hair); overflow: hidden;
+}
+.spot-odds-fill {
+  display: block; height: 100%; background: var(--heat);
+  box-shadow: 0 0 10px var(--heat-glow);
+}
+.spot-odds-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-top: 9px; font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.04em; color: var(--ink-low);
+}
+.spot-odds-foot a {
+  display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
+  color: var(--heat); text-decoration: none; text-transform: uppercase;
+  letter-spacing: 0.08em; font-weight: 600;
+}
+.spot-odds-foot a svg { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 2; }
