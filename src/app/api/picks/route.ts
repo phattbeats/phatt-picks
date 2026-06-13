@@ -25,11 +25,11 @@ import { validatePickAgainstLayout } from "@/lib/layout";
 import { getEffectiveLayout } from "@/lib/layout-state";
 import { isStageWritable } from "@/lib/reveal-core";
 import { isLockTimePassed } from "@/lib/lock-schedule-core";
-import { ACTIVE_EVENT_ID } from "@/lib/events-core";
+import { currentEventId } from "@/lib/events-core";
 import { isWriteFrozenById } from "@/lib/event-freeze";
 
-const EVENT_ID = ACTIVE_EVENT_ID;
 export async function GET(req: NextRequest) {
+  const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
@@ -49,6 +49,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
