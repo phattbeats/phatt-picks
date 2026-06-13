@@ -252,10 +252,12 @@ export function liveEvents(nowMs: number = Date.now()): EventConfig[] {
 
 /**
  * The single event the picker / pages should serve right now — robust across
- * the gaps a self-sustaining multi-Major site has (live › soonest-upcoming ›
- * most-recently-archived, so the off-season still shows the last Major rather
- * than a blank site). Throws only if the registry is empty, which is a build
- * error, never a runtime state. Clock-derived; Cologne today.
+ * the gaps a self-sustaining multi-Major site has (live › soonest-upcoming
+ * once it's within its anticipation window › most-recently-archived, so the
+ * off-season keeps showing the last Major's results until the next one is near
+ * rather than flipping to a barely-seeded future event — PHA-1048). Throws only
+ * if the registry is empty, which is a build error, never a runtime state.
+ * Clock-derived; Cologne today.
  */
 export function currentEvent(nowMs: number = Date.now()): EventConfig {
   const e = selectCurrentEvent(Object.values(EVENTS), nowMs) as EventConfig | null;
