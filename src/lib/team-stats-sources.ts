@@ -193,6 +193,23 @@ export const CRAWL_PASS_TIMEOUT_MS = 240_000;
 // task. `remaining` shrinks monotonically, so this is a ceiling, not a thrash.
 export const MAX_TOTAL_CRAWL_MS = 300_000;
 
+// ── Crawl blast-radius caps (PHA-1036) ─────────────────────────────────────────
+// Handing crawl4ai all 32 URLs in one request lets ITS dispatcher render them all
+// at once — on an uncapped container that lights every core (~460% CPU spike,
+// froze the box). We instead split the field into small sub-batches sent as
+// SEQUENTIAL crawl4ai requests, so the renderer never holds more than
+// CRAWL_CHUNK_SIZE Chromium contexts at a time. Bonus: fewer simultaneous HLTV
+// hits also trips Cloudflare less, the original reason this was a single request.
+export const CRAWL_CHUNK_SIZE = 4;
+// Per-sub-batch timeout ceiling (still bounded by the per-pass / total budget).
+// With domcontentloaded + a tight page_timeout, a 4-page chunk renders in well
+// under this; the ceiling just keeps one stuck chunk from eating a whole pass.
+export const CRAWL_CHUNK_TIMEOUT_MS = 60_000;
+// Per-page render cap handed to crawl4ai (page_timeout). The freeze came from
+// ~50s/page waits on networkidle that never settles behind Cloudflare; cap the
+// wait so a wedged page fails fast instead of burning a core for a minute.
+export const CRAWL_PAGE_TIMEOUT_MS = 20_000;
+
 /** Injected crawl: a set of (pickid,url) targets → pickid → page markdown. */
 export type CrawlProfilesFn = (
   targets: ReadonlyArray<{ pickid: number; url: string }>,

@@ -31,6 +31,9 @@ import {
   mergeLiveStats,
   accumulateRecentAcrossPasses,
   CRAWL_PASS_TIMEOUT_MS,
+  CRAWL_CHUNK_SIZE,
+  CRAWL_CHUNK_TIMEOUT_MS,
+  CRAWL_PAGE_TIMEOUT_MS,
   type ParsedMatch,
 } from "./team-stats-sources";
 import { statsForPickid, type TeamStats } from "./team-stats-core";
@@ -128,17 +131,16 @@ function resultMarkdown(r: Crawl4aiResult | undefined): string {
 }
 
 /**
- * Crawl a set of team profiles in ONE crawl4ai request (it renders + bypasses the
- * Cloudflare gate that 403s a direct fetch). Returns pickid → markdown, matched
- * back by result url (crawl4ai may not preserve input order). Deliberately a
- * single sequential request, NOT parallel: a burst of concurrent requests trips
- * HLTV's Cloudflare challenge and most come back blocked. Best-effort: throws on a
- * network / non-2xx / empty-body failure so the caller can fall back. Never used
- * directly on the render path — the driver defers it.
+ * Crawl ONE sub-batch of profiles in a single crawl4ai request (renders + bypasses
+ * the Cloudflare gate that 403s a direct fetch). Returns pickid → markdown, matched
+ * back by result url (crawl4ai may not preserve input order). Lighter page settings
+ * (domcontentloaded + a tight page_timeout) stop the ~50s/page networkidle hangs
+ * that burned a core each; semaphore_count belt-and-suspenders the dispatcher.
+ * Throws on a network / non-2xx / empty-body failure so the caller can fall back.
  */
-async function crawlProfiles(
+async function crawlChunk(
   targets: ReadonlyArray<{ pickid: number; url: string }>,
-  timeoutMs: number = CRAWL_PASS_TIMEOUT_MS,
+  timeoutMs: number,
 ): Promise<Record<number, string>> {
   const urlToPickid = new Map(targets.map((t) => [t.url, t.pickid]));
   const res = await fetch(`${CRAWL4AI_URL}/crawl`, {
@@ -149,7 +151,12 @@ async function crawlProfiles(
     },
     body: JSON.stringify({
       urls: targets.map((t) => t.url),
-      crawler_config: { cache_mode: "BYPASS" },
+      crawler_config: {
+        cache_mode: "BYPASS",
+        wait_until: "domcontentloaded",
+        page_timeout: CRAWL_PAGE_TIMEOUT_MS,
+        semaphore_count: targets.length,
+      },
     }),
     cache: "no-store",
     signal: AbortSignal.timeout(timeoutMs),
@@ -167,6 +174,47 @@ async function crawlProfiles(
     const md = resultMarkdown(r);
     if (md) out[pickid] = md;
   });
+  return out;
+}
+
+/**
+ * Crawl the whole set of team profiles in SMALL SEQUENTIAL sub-batches (PHA-1036).
+ * Handing crawl4ai all 32 URLs at once let its memory-adaptive dispatcher render
+ * every page concurrently — on the uncapped container that lit all 12 threads and
+ * froze the box (~460% CPU). Chunking by CRAWL_CHUNK_SIZE and awaiting each chunk
+ * means the renderer never holds more than that many Chromium contexts at a time,
+ * and fewer simultaneous HLTV hits also trips Cloudflare less (the original reason
+ * this was a single request). `timeoutMs` is the budget for the WHOLE pass, sliced
+ * across chunks; a chunk that fails is logged and skipped (its teams get retried on
+ * the next pass / hourly tick), so partial coverage still lands. Throws only when
+ * EVERY chunk failed, preserving the caller's "total outage → keep prior cache"
+ * fallback. Never used directly on the render path — the driver defers it.
+ */
+async function crawlProfiles(
+  targets: ReadonlyArray<{ pickid: number; url: string }>,
+  timeoutMs: number = CRAWL_PASS_TIMEOUT_MS,
+): Promise<Record<number, string>> {
+  const out: Record<number, string> = {};
+  const start = Date.now();
+  let lastErr: unknown = null;
+  for (let i = 0; i < targets.length; i += CRAWL_CHUNK_SIZE) {
+    const elapsed = Date.now() - start;
+    const remaining = timeoutMs - elapsed;
+    if (remaining <= 0) break; // pass budget spent — missing teams retried next pass
+    const chunk = targets.slice(i, i + CRAWL_CHUNK_SIZE);
+    try {
+      Object.assign(out, await crawlChunk(chunk, Math.min(CRAWL_CHUNK_TIMEOUT_MS, remaining)));
+    } catch (e) {
+      lastErr = e;
+      console.warn(
+        `[team-stats] chunk ${Math.floor(i / CRAWL_CHUNK_SIZE) + 1} crawl failed; skipping ${chunk.length} team(s):`,
+        e instanceof Error ? e.message : e,
+      );
+    }
+  }
+  if (Object.keys(out).length === 0) {
+    throw lastErr instanceof Error ? lastErr : new Error("crawl4ai returned no content");
+  }
   return out;
 }
 
