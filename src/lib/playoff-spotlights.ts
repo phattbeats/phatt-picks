@@ -98,6 +98,54 @@ export function spotlightForPickid(pickid: number): TeamSpotlight | null {
   return SPOTLIGHTS[pickid] ?? null;
 }
 
+/**
+ * Per-team accent color (PHA-1043 follow-up — Brandon: each spotlight wears the
+ * team's own color, not the house orange). Keyed by logo slug so it resolves for
+ * every playoff team whether or not a narrative is authored yet. Each hue is
+ * picked to read as a bright accent against the dark panel; monochrome orgs get
+ * their nearest recognizable brand hue. Unknown slug → null → the modal keeps
+ * the house `--heat`.
+ */
+const TEAM_ACCENT: Record<string, string> = {
+  navi: "#f4d11e",
+  liq: "#1f7ae0",
+  g2: "#aeb4bd",
+  astr: "#e4002b",
+  big: "#1763b5",
+  tyl: "#d11f26",
+  mibr: "#f2c200",
+  spir: "#e21f26",
+  furi: "#d9d9d9",
+  nrg: "#e23b3b",
+  vita: "#f2c511",
+  hero: "#d8232a",
+  pain: "#e0202a",
+  shrk: "#1f9be0",
+  mouz: "#ed1c24",
+  nine: "#15d3a8",
+  gl: "#3ca34a",
+  mont: "#d12b2b",
+  mngz: "#2f80ed",
+  lgcy: "#2ec26a",
+  lynn: "#e23636",
+  fq: "#1faf5a",
+  aura: "#7b5cff",
+  b8: "#f2c500",
+  bb: "#ffd400",
+  fal: "#16c172",
+  m80: "#2f80ed",
+  pari: "#f2841f",
+  fut: "#e23636",
+  gaim: "#7c3aed",
+  sinn: "#c0392b",
+  thun: "#f2c500",
+};
+
+/** The team's accent color (hex), or null to fall back to the house `--heat`. */
+export function teamAccent(team: { logo: string }): string | null {
+  return TEAM_ACCENT[team.logo] ?? null;
+}
+
 /** Build the YouTube privacy-enhanced embed URL for a highlight. */
 export function youtubeEmbedUrl(h: SpotlightHighlight): string | null {
   if (h.kind !== "youtube") return null;
