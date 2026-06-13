@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
+import { isSameOrigin } from "@/lib/csrf";
 
 // ~64 KB of data-URL string. A 160px JPEG at q0.82 is ~10 KB, so this is a
 // generous ceiling that still rejects anything that skipped the client resize.
@@ -18,6 +19,12 @@ const MAX_LEN = 64 * 1024;
 const DATA_URL_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/;
 
 export async function POST(req: NextRequest) {
+  // CSRF defense-in-depth: a same-origin guard alongside the JSON-body CORS
+  // preflight that already shields this route.
+  if (!isSameOrigin(req)) {
+    return NextResponse.json({ error: "Bad origin" }, { status: 403 });
+  }
+
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
