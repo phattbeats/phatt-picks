@@ -23,12 +23,12 @@
 
 import { NextResponse } from "next/server";
 import { warmTeamStats } from "@/lib/team-stats";
-import { ACTIVE_EVENT_ID } from "@/lib/events-core";
+import { currentEventId } from "@/lib/events-core";
 
-const EVENT_ID = ACTIVE_EVENT_ID;
 export const dynamic = "force-dynamic";
 
 async function warm() {
+  const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
   const result = await warmTeamStats(EVENT_ID);
   return NextResponse.json({ ok: true, eventId: EVENT_ID, ...result });
 }
