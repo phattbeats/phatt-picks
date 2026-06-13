@@ -8,6 +8,7 @@ import { mirrorPlayerPredictionsThrottled } from "@/lib/predictions-sync";
 import { PicksBoard } from "@/components/PicksBoard";
 import {
   isStagePickable,
+  selectCurrentStageIndex,
   type StagePickability,
 } from "@/lib/stage-gate-core";
 import { LockCountdown } from "@/components/heat/LockCountdown";
@@ -72,26 +73,36 @@ export default async function PicksPage({
     ? !(await hasAuthCode(session.playerId))
     : false;
 
-  const activeSectionId = params.section
-    ? parseInt(params.section, 10)
-    : layout.sections[0].sectionid;
-
-  const section = layout.sections.find((s) => s.sectionid === activeSectionId);
-
   // Scheduled hard lock (PHA-886/898): once a stage's first match starts, its
   // pick window is closed — even though the committed layout still says
   // picks_allowed and an outcome row hasn't landed yet. The published schedule
   // is the truthful signal; the gate surfaces `locked-time-passed` (friendlier
   // copy that introduces the live lineup below) and POST /api/picks mirrors the
-  // same lock. Playoffs have no published time (null) → unaffected.
-  const sectionPickability: Map<number, StagePickability> = new Map(
-    layout.sections.map((s) => [
-      s.sectionid,
-      isStagePickable(layout, s.sectionid, {
-        lockedByTime: isLockTimePassed(s.sectionid, nowMs),
-      }),
-    ]),
+  // same lock. Playoffs have no published time (null) → unaffected. Computed
+  // once in layout order, then keyed by id for the tab/lock rendering below.
+  const orderedPickability = layout.sections.map((s) =>
+    isStagePickable(layout, s.sectionid, {
+      lockedByTime: isLockTimePassed(s.sectionid, nowMs),
+    }),
   );
+  const sectionPickability: Map<number, StagePickability> = new Map(
+    layout.sections.map((s, i) => [s.sectionid, orderedPickability[i]]),
+  );
+
+  // PHA-1050: clicking "Picks" with no ?section lands on the event's CURRENT
+  // stage — the one open for picks, else the latest stage underway — instead of
+  // always Stage I. Same "current stage" rule the dashboard hero uses, so the
+  // nav and the briefing always agree on what "now" is. An explicit ?section
+  // (a tab click, a deep link) still wins.
+  const defaultSectionId =
+    layout.sections[selectCurrentStageIndex(orderedPickability)]?.sectionid ??
+    layout.sections[0].sectionid;
+
+  const activeSectionId = params.section
+    ? parseInt(params.section, 10)
+    : defaultSectionId;
+
+  const section = layout.sections.find((s) => s.sectionid === activeSectionId);
   const activePickability =
     sectionPickability.get(activeSectionId) ??
     ({ pickable: false, reason: "unknown-section" } as StagePickability);
