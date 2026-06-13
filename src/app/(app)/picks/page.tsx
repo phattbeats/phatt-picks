@@ -17,8 +17,10 @@ import { isSwissSection, bucketSwissSlots } from "@/lib/swiss-bucket-core";
 import {
   isPlayoffSection,
   buildPlayoffBracket,
+  playoffRoundForSection,
   PLAYOFF_ROUNDS,
 } from "@/lib/playoff-bracket-core";
+import { LockIcon } from "@/components/ui/LockIcon";
 import { LivePlayoffBracket } from "@/components/heat/LivePlayoffBracket";
 import { buildSwissStandings, type SlotPickMap } from "@/lib/swiss-standings-core";
 import { LockedPicksBoard } from "@/components/heat/LockedPicksBoard";
@@ -94,6 +96,19 @@ export default async function PicksPage({
     sectionPickability.get(activeSectionId) ??
     ({ pickable: false, reason: "unknown-section" } as StagePickability);
 
+  // PHA-1016: the playoffs are ONE pick'em stage — quarters, semis and the
+  // Grand Final all open and lock together when Valve seeds the bracket. The
+  // UI matches that truth: a single "Playoffs" tab covering all three layout
+  // sections, with the round pickers stacked above the full bracket.
+  const playoffSectionIds = PLAYOFF_ROUNDS.map((r) => r.sectionId);
+  const playoffSections = layout.sections.filter((s) =>
+    playoffSectionIds.includes(s.sectionid),
+  );
+  const playoffActive = isPlayoffSection(activeSectionId);
+  const anyPlayoffPickable = playoffSections.some(
+    (s) => sectionPickability.get(s.sectionid)?.pickable,
+  );
+
   const myPicks: Record<number, Record<number, number>> = {};
   if (session) {
     const picks = await prisma.pick.findMany({
@@ -168,9 +183,10 @@ export default async function PicksPage({
   // is open, matching Brandon's reference. Built only when viewing a playoff tab.
   let playoffBracket: ReturnType<typeof buildPlayoffBracket> | null = null;
   let playoffResolvedAtIso: string | null = null;
-  if (isPlayoffSection(activeSectionId)) {
-    const playoffSectionIds = PLAYOFF_ROUNDS.map((r) => r.sectionId);
-    const playoffSections = layout.sections.filter((s) => playoffSectionIds.includes(s.sectionid));
+  // Viewer's saved picks per playoff section, in the PicksBoard shape — feeds
+  // the stacked round pickers on the consolidated Playoffs tab (PHA-1016).
+  const playoffPicksBySection: Record<number, Record<number, Record<number, number>>> = {};
+  if (playoffActive) {
     // Viewer's call per match (one pick slot per match group, slot 0).
     const userPickByGroup = new Map<number, number>();
     if (session) {
@@ -178,6 +194,8 @@ export default async function PicksPage({
         where: { playerId: session.playerId, eventId: EVENT_ID, sectionId: { in: playoffSectionIds } },
       });
       for (const p of myPlayoffPicks) {
+        const bySection = (playoffPicksBySection[p.sectionId] ??= {});
+        (bySection[p.groupId] ??= {})[p.slotIndex] = p.pickId;
         if (p.slotIndex === 0 && p.pickId !== 0) userPickByGroup.set(p.groupId, p.pickId);
       }
     }
@@ -200,10 +218,20 @@ export default async function PicksPage({
   // the picker is actually shown; the merged map overrides each team's recent[]
   // with live results while keeping roster/rank frozen, and is null off-window /
   // cold (the drawer then uses the committed snapshot).
-  const liveTeamStats = activePickability.pickable ? await getLiveTeamStats(EVENT_ID) : null;
+  const liveTeamStats =
+    activePickability.pickable || (playoffActive && anyPlayoffPickable)
+      ? await getLiveTeamStats(EVENT_ID)
+      : null;
 
-  const activeIdx = layout.sections.findIndex((s) => s.sectionid === activeSectionId);
-  const activeLabel = section?.name.split(" | ")[0] ?? "Picks";
+  // Header: the consolidated Playoffs tab reads as one stage regardless of
+  // which playoff section id is in the URL; Swiss stages keep their number.
+  const firstPlayoffIdx = layout.sections.findIndex((s) => isPlayoffSection(s.sectionid));
+  const activeIdx = playoffActive
+    ? firstPlayoffIdx
+    : layout.sections.findIndex((s) => s.sectionid === activeSectionId);
+  const activeLabel = playoffActive
+    ? "Playoffs"
+    : section?.name.split(" | ")[0] ?? "Picks";
   const activeNumber = activeIdx >= 0 ? activeIdx + 1 : 1;
 
   return (
@@ -219,8 +247,10 @@ export default async function PicksPage({
         }}>
           {activeLabel}
         </h1>
-        {activePickability.pickable && (
-          <LockCountdown lockAt={lockTimeForSection(activeSectionId)} />
+        {(playoffActive ? anyPlayoffPickable : activePickability.pickable) && (
+          <LockCountdown
+            lockAt={lockTimeForSection(playoffActive ? playoffSectionIds[0] : activeSectionId)}
+          />
         )}
       </div>
 
@@ -238,13 +268,11 @@ export default async function PicksPage({
           marginBottom: 4,
         }}
       >
-        {layout.sections.map((s) => {
-          const active = s.sectionid === activeSectionId;
-          const label = s.name.split(" | ")[0];
-          const pick = sectionPickability.get(s.sectionid)!;
-          const locked = !pick.pickable;
-
-          const lockTitle =
+        {(() => {
+          // Tab model (PHA-1016): one chip per Swiss stage, then a single
+          // PLAYOFFS chip — quarters/semis/finals open and lock together as
+          // one pick'em stage, so they tab as one.
+          const lockTitleFor = (pick: StagePickability) =>
             pick.pickable
               ? undefined
               : pick.reason === "teams-not-set"
@@ -253,7 +281,36 @@ export default async function PicksPage({
                   ? "Locked by Valve"
                   : "Locked";
 
-          const baseStyle: React.CSSProperties = {
+          const tabs = layout.sections
+            .filter((s) => !isPlayoffSection(s.sectionid))
+            .map((s) => {
+              const pick = sectionPickability.get(s.sectionid)!;
+              return {
+                key: String(s.sectionid),
+                href: `/picks?section=${s.sectionid}`,
+                label: s.name.split(" | ")[0],
+                active: !playoffActive && s.sectionid === activeSectionId,
+                locked: !pick.pickable,
+                lockTitle: lockTitleFor(pick),
+              };
+            });
+          if (playoffSections.length > 0) {
+            const repPick =
+              sectionPickability.get(playoffSections[0].sectionid) ??
+              ({ pickable: false, reason: "unknown-section" } as StagePickability);
+            tabs.push({
+              key: "playoffs",
+              href: `/picks?section=${playoffSections[0].sectionid}`,
+              label: "Playoffs",
+              active: playoffActive,
+              locked: !anyPlayoffPickable,
+              lockTitle: anyPlayoffPickable ? undefined : lockTitleFor(repPick),
+            });
+          }
+          return tabs.map((t) => {
+            const { active, locked } = t;
+
+            const baseStyle: React.CSSProperties = {
             flexShrink: 0,
             padding: "10px 16px",
             fontFamily: "var(--font-mono)",
@@ -285,30 +342,77 @@ export default async function PicksPage({
             boxShadow: active ? "0 0 0 0px var(--heat)" : "none",
           };
 
-          // Every tab is navigable — a locked stage is "can't pick", not "can't
-          // look": clicking it shows that stage's content (its live lineup /
-          // your build, or a "teams not set" card). Previously a locked,
-          // non-active tab rendered as a disabled span, so once you left Stage I
-          // you couldn't click back to view it (Brandon, 2026-06-03). The 🔒
-          // still flags that picks are closed.
-          return (
-            <Link
-              key={s.sectionid}
-              href={`/picks?section=${s.sectionid}`}
-              title={lockTitle}
-              aria-current={active ? "page" : undefined}
-              style={baseStyle}
-            >
-              {locked && <span aria-hidden="true">🔒</span>}
-              {label}
-            </Link>
-          );
-        })}
+            // Every tab is navigable — a locked stage is "can't pick", not
+            // "can't look": clicking it shows that stage's content (its live
+            // lineup / your build, or a "teams not set" card). Previously a
+            // locked, non-active tab rendered as a disabled span, so once you
+            // left Stage I you couldn't click back to view it (Brandon,
+            // 2026-06-03). The small padlock still flags that picks are closed.
+            return (
+              <Link
+                key={t.key}
+                href={t.href}
+                title={t.lockTitle}
+                aria-current={active ? "page" : undefined}
+                style={baseStyle}
+              >
+                {locked && (
+                  <span aria-hidden="true" style={{ opacity: 0.65, display: "inline-flex" }}>
+                    <LockIcon size={10} />
+                  </span>
+                )}
+                {t.label}
+              </Link>
+            );
+          });
+        })()}
       </div>
 
       {/* Stage content */}
       {!section ? (
         <p style={{ color: "var(--ink-mid)" }}>Section not found.</p>
+      ) : playoffActive ? (
+        // Consolidated Playoffs view (PHA-1016): one stage, one tab. When
+        // Valve seeds + opens the bracket the three round pickers stack here
+        // (they all lock together); until then an honest status strip. The
+        // full QF → SF → GF tree renders beneath either way.
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          {anyPlayoffPickable ? (
+            playoffSections
+              .filter((s) => sectionPickability.get(s.sectionid)?.pickable)
+              .map((s) => (
+                <section
+                  key={s.sectionid}
+                  style={{ display: "flex", flexDirection: "column", gap: 10 }}
+                >
+                  <span className="eyebrow-mono" style={{ color: "var(--heat)" }}>
+                    [ {playoffRoundForSection(s.sectionid)?.label ?? s.name.split(" | ")[0].toUpperCase()} ]
+                  </span>
+                  <PicksBoard
+                    section={s}
+                    teams={layout.teams}
+                    initialPicks={playoffPicksBySection[s.sectionid] ?? {}}
+                    enabled={!!session}
+                    eventId={EVENT_ID}
+                    steamLinked={!!session?.steamId}
+                    liveTeamStats={liveTeamStats?.byPickid}
+                    liveStatsAsOf={liveTeamStats?.asOf}
+                  />
+                </section>
+              ))
+          ) : (
+            <LockedStageCard pickability={activePickability} compact />
+          )}
+          {playoffBracket && (
+            <LivePlayoffBracket
+              bracket={playoffBracket}
+              teamMap={buildTeamMap(layout)}
+              signedIn={!!session}
+              resolvedAtIso={playoffResolvedAtIso}
+            />
+          )}
+          <AutoRefresh intervalMs={60_000} />
+        </div>
       ) : activePickability.pickable ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <PicksBoard
@@ -397,21 +501,6 @@ export default async function PicksPage({
           )}
           {/* Poll the answer key + standings while the stage is live so the
               lineup updates without a manual reload (PHA-898 / PHA-902). */}
-          <AutoRefresh intervalMs={60_000} />
-        </div>
-      ) : playoffBracket ? (
-        // Playoffs view (PHA-903): the locked/unseeded playoff stage shows the
-        // single-elim QF → SF → GF tree (honest TBD until Stage 3 seeds it) in
-        // place of a bare locked card. Once Valve opens + seeds it, the branch
-        // above (activePickability.pickable) renders the picker instead.
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <LockedStageCard pickability={activePickability} compact />
-          <LivePlayoffBracket
-            bracket={playoffBracket}
-            teamMap={buildTeamMap(layout)}
-            signedIn={!!session}
-            resolvedAtIso={playoffResolvedAtIso}
-          />
           <AutoRefresh intervalMs={60_000} />
         </div>
       ) : (
@@ -547,42 +636,60 @@ function LockedStageCard({
             ? "Valve closed the pick window for this stage. Results will appear here as matches complete."
             : "This stage isn't available.";
 
+  // PHA-1016: the lock state is a status strip, not a billboard — left-aligned
+  // mono tag + one line of plain copy, small stroke padlock instead of the
+  // emoji shout. Same information, lower volume.
+  const tag =
+    !pickability.pickable && pickability.reason === "teams-not-set"
+      ? "AWAITING SEEDING"
+      : "PICKS LOCKED";
+
   return (
     <div
-      className="panel brk"
-      style={{ textAlign: "center", padding: compact ? "20px 22px" : "40px 24px" }}
+      className="panel"
+      style={{
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 14,
+        padding: compact ? "16px 18px" : "22px 20px",
+        borderLeft: "2px solid var(--heat)",
+      }}
     >
-      <span className="br-tr" />
-      <span className="br-bl" />
-      <div aria-hidden="true" style={{
-        fontSize: compact ? "1.25rem" : "1.75rem",
-        marginBottom: compact ? 8 : 12,
-        color: "var(--heat)",
-      }}>
-        🔒
-      </div>
-      <h2 className="font-display" style={{
-        fontWeight: 800,
-        fontSize: compact ? 18 : 22,
-        textTransform: "uppercase",
-        letterSpacing: 0,
-        color: "var(--ink-hi)",
-        margin: "0 0 8px",
-      }}>
-        {heading}
-      </h2>
-      {subline && (
-        <p style={{
-          color: "var(--ink-mid)",
-          fontSize: compact ? 13 : 14,
-          margin: 0,
-          maxWidth: 420,
-          marginInline: "auto",
-          lineHeight: 1.5,
-        }}>
-          {subline}
+      <span aria-hidden="true" style={{ color: "var(--heat)", marginTop: 1, display: "inline-flex" }}>
+        <LockIcon size={15} />
+      </span>
+      <div style={{ minWidth: 0 }}>
+        <span className="eyebrow-mono" style={{ color: "var(--heat)", display: "block" }}>
+          [ {tag} ]
+        </span>
+        <p
+          className="font-display"
+          style={{
+            fontWeight: 800,
+            fontSize: compact ? 15 : 17,
+            textTransform: "uppercase",
+            letterSpacing: "0.01em",
+            color: "var(--ink-hi)",
+            margin: "7px 0 0",
+            lineHeight: 1.15,
+          }}
+        >
+          {heading}
         </p>
-      )}
+        {subline && (
+          <p
+            style={{
+              color: "var(--ink-mid)",
+              fontSize: 13,
+              margin: "5px 0 0",
+              maxWidth: 520,
+              lineHeight: 1.5,
+            }}
+          >
+            {subline}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
