@@ -750,12 +750,8 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .coin-sticker.diamond { background: linear-gradient(135deg, #e8f8ff 0%, #7dd3fc 38%, #3b9fd4 65%, #b9f2ff 100%); box-shadow: 0 0 0 1px rgba(180,230,255,0.5); }
 
 /* Swiss bucket slots — tile grid at all viewport sizes (portrait, matches pool) */
-/* auto-fit (not auto-fill) collapses empty tracks — 2-slot outer buckets spread evenly */
-/* PHA-1004 — cap the 1fr max at 120px (a hair wider than pool tiles) so the
- * outer buckets don't balloon to fill the full column width, keeping every logo
- * the same size as the middle bucket and the pool. The 120px cap leaves slack
- * inside each 1fr column; we use that slack below to align the outer buckets to
- * their own edges so the three categories read as mirror-symmetric. */
+/* Cap each tile at 120px so every logo is the same size as the middle bucket and
+ * the pool (mobile single-column + tablet thin-3-column both keep this grid). */
 .bucket-cols.swiss .bucket {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(100px, 120px));
@@ -765,15 +761,28 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .bucket-cols.swiss .bucket-label { grid-column: 1 / -1; }
 
 @media (min-width: 768px) {
-  /* 3-column ADVANCE|SURVIVE|ELIMINATE layout on tablet+ */
+  /* 3-column ADVANCE|SURVIVE|ELIMINATE layout on tablet */
   .bucket-cols.swiss { grid-template-columns: repeat(3, 1fr); align-items: start; }
-  /* PHA-1004 — mirror symmetry across the three categories. Centering alone
-   * leaves the outer buckets left-biased (auto-fit collapses the empty trailing
-   * track, so the 2 tiles sit in the left half of a 3-track column). Instead
-   * pin 3:0 to the left edge and 0:3 to the right edge so the gap from each
-   * outer category to its frame edge matches, and the two inner gaps are equal. */
-  .bucket-cols.swiss .bucket:first-child { justify-content: start; }
-  .bucket-cols.swiss .bucket:last-child { justify-content: end; }
+}
+
+/* PHA-1004 — desktop: lay the three categories out mirror-symmetrically.
+ * Equal-1fr thirds stranded 0:3 mid-row with a big right gutter on wide screens,
+ * and justify-content can't pin it because auto-fit collapses the empty trailing
+ * track. Switch to a flex row with space-between so 3:0 sits flush against the
+ * left edge, 0:3 flush against the right edge, and the middle is centered with
+ * two equal gaps. Fixed column counts (outer 2-wide, middle 3-wide) keep the
+ * middle a stable 3+3 instead of reflowing to 4+2 / 5+1 as the screen widens.
+ * Gated at 1024px so the three fixed-width buckets always fit the row; below
+ * that the tablet 3-column grid and the mobile stack are unchanged. */
+@media (min-width: 1024px) {
+  .bucket-cols.swiss {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .bucket-cols.swiss .bucket { grid-template-columns: repeat(2, 120px); }
+  .bucket-cols.swiss .bucket:nth-child(2) { grid-template-columns: repeat(3, 120px); }
   .bucket-cols.swiss .bucket:last-child .bucket-label { justify-content: flex-end; }
 }
 
