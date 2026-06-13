@@ -23,6 +23,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  // PHA-1045: cap the body BEFORE buffering/parsing it. A declared
+  // Content-Length over the ceiling is rejected without reading the attacker's
+  // payload into memory at all.
+  const declaredLen = Number(req.headers.get("content-length"));
+  if (Number.isFinite(declaredLen) && declaredLen > MAX_LEN) {
+    return NextResponse.json({ error: "Image too large — resize first" }, { status: 413 });
+  }
+
   let dataUrl: unknown;
   try {
     ({ dataUrl } = await req.json());
@@ -30,11 +38,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
-  if (typeof dataUrl !== "string" || !DATA_URL_RE.test(dataUrl)) {
+  if (typeof dataUrl !== "string") {
     return NextResponse.json({ error: "Expected a JPEG/PNG/WebP image data URL" }, { status: 400 });
   }
+  // PHA-1045: length BEFORE the regex — never run the pattern over an oversized
+  // string (a chunked request without Content-Length still lands here).
   if (dataUrl.length > MAX_LEN) {
     return NextResponse.json({ error: "Image too large — resize first" }, { status: 413 });
+  }
+  if (!DATA_URL_RE.test(dataUrl)) {
+    return NextResponse.json({ error: "Expected a JPEG/PNG/WebP image data URL" }, { status: 400 });
   }
 
   try {
