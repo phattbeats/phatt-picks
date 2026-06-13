@@ -88,7 +88,7 @@ export async function grandFinalResolvedAtMs(
  * treated as frozen). `nowMs` is injectable so a render can share its request
  * clock.
  */
-export async function resolveEffectiveStatusById(
+async function resolveEffectiveStatusById(
   eventId: number,
   nowMs: number = Date.now(),
 ): Promise<EventStatus | null> {

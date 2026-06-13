@@ -20,15 +20,7 @@
  */
 
 import type { Section } from "./layout";
-import type { SwissBucket } from "./swiss-bucket-core";
-
-/**
- * Slot-bucketing function — injected (not imported) so this stays a leaf module
- * with type-only deps and loads directly under the verify harness, matching the
- * other pure cores. Callers pass `bucketSwissSlots` from swiss-bucket-core, the
- * single source of the 3:0 / advance / 0:3 convention.
- */
-export type BucketsForSlotCount = (slotCount: number) => SwissBucket[];
+import type { BucketsForSlotCount } from "./swiss-bucket-core";
 
 export type SwissTeamStatus =
   /** Clinched a 3:0 run (top advance bucket). */
