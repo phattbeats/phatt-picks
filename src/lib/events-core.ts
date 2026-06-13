@@ -45,10 +45,15 @@ import { isSwissSection } from "./swiss-bucket-core";
 import {
   isEffectivelyLive,
   selectCurrentEvent,
+  type EventStatus,
 } from "./event-lifecycle-core";
 
-/** Lifecycle of a Major in the registry. Exactly one entry is `live`. */
-export type EventStatus = "upcoming" | "live" | "archived";
+/**
+ * Lifecycle of a Major in the registry. Exactly one entry is `live`. Defined in
+ * the zero-dependency `event-lifecycle-core` leaf and re-exported here so the
+ * registry and its consumers share one canonical definition.
+ */
+export type { EventStatus };
 
 /** Which HLTV event page carries the live Swiss table for a section. */
 export interface SectionSource {
