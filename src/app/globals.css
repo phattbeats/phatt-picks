@@ -751,10 +751,15 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 
 /* Swiss bucket slots — tile grid at all viewport sizes (portrait, matches pool) */
 /* auto-fit (not auto-fill) collapses empty tracks — 2-slot outer buckets spread evenly */
+/* PHA-1004 — cap the 1fr max at 120px (a hair wider than pool tiles) so the
+ * outer buckets don't balloon to fill the full column width. Without the cap,
+ * 1- and 2-slot buckets stretch edge-to-edge inside their column and the
+ * three columns read as wildly different widths (left gap ≠ right gap). */
 .bucket-cols.swiss .bucket {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(100px, 120px));
   gap: 8px;
+  justify-content: center;
 }
 .bucket-cols.swiss .bucket-label { grid-column: 1 / -1; }
 
