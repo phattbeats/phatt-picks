@@ -31,7 +31,8 @@ import { fetchTournamentLayout } from "./valve";
 import { isEventFrozenById } from "./event-freeze";
 import { cacheLiveLayout } from "./layout-state";
 import { writeRankSnapshots } from "./rank-snapshot";
-import { getSwissStandings } from "./swiss-results";
+import { getSwissStandings, getSwissBracket } from "./swiss-results";
+import { bracketTerminalRecords } from "./swiss-bracket-core";
 import { deriveClinchedSlots } from "./swiss-clinch-core";
 import { bucketSwissSlots, isSwissSection } from "./swiss-bucket-core";
 import { isLockTimePassed } from "./lock-schedule-core";
@@ -322,11 +323,28 @@ export async function bridgeSwissOutcomes(
       console.error("[outcomes] HLTV bridge read failed (non-fatal):", e);
       continue;
     }
-    if (!live || live.rows.length === 0) continue;
 
-    const standings = live.rows
-      .filter((r) => r.pickid != null)
-      .map((r) => ({ pickid: r.pickid as number, wins: r.wins, losses: r.losses }));
+    let standings: Array<{ pickid: number; wins: number; losses: number }>;
+    if (live && live.rows.length > 0) {
+      standings = live.rows
+        .filter((r) => r.pickid != null)
+        .map((r) => ({ pickid: r.pickid as number, wins: r.wins, losses: r.losses }));
+    } else {
+      // The W-L table parsed nothing (e.g. HLTV reformatted its header) — fall back
+      // to the SAME cached crawl's bracket, whose terminal columns carry each
+      // clinched team's exact record. Without this the leaderboard silently stops
+      // resolving Swiss clinches whenever the table format drifts (PHA-1044).
+      let bracket;
+      try {
+        bracket = await getSwissBracket(eventId, section.sectionid, matchTeams);
+      } catch (e) {
+        console.error("[outcomes] HLTV bridge bracket read failed (non-fatal):", e);
+        continue;
+      }
+      if (!bracket || bracket.rounds.length === 0) continue;
+      standings = bracketTerminalRecords(bracket.rounds);
+    }
+    if (standings.length === 0) continue;
 
     const existing = await prisma.stageOutcome.findMany({
       where: { eventId, sectionId: section.sectionid },
