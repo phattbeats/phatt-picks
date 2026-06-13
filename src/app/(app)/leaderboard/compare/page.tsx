@@ -13,6 +13,7 @@
  * stage's secret pick across a reused groupid.
  */
 
+import { LockIcon } from "@/components/ui/LockIcon";
 import Image from "next/image";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
@@ -546,7 +547,7 @@ export default async function ComparePage({
 
                     {!revealed ? (
                       <div style={{ padding: "var(--space-4)", textAlign: "center", color: "var(--text-low)", fontSize: 13 }}>
-                        🔒 Both players&apos; picks unlock when this stage starts
+                        <LockIcon size={11} /> Both players&apos; picks unlock when this stage starts
                       </div>
                     ) : (
                       <div style={{ padding: "var(--space-2) var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
