@@ -29,6 +29,7 @@ import { LiveSwissBracketBoard } from "@/components/heat/LiveSwissBracketBoard";
 import { refreshStandingsOnRead, getSwissStandings, getSwissBracket } from "@/lib/swiss-results";
 import { recordsByPickId } from "@/lib/swiss-results-core";
 import { refreshTeamStatsOnRead, getLiveTeamStats } from "@/lib/team-stats";
+import { refreshSpotlightOddsOnRead, getSpotlightMarket } from "@/lib/spotlight-odds";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { ACTIVE_EVENT_ID } from "@/lib/events-core";
 
@@ -64,6 +65,12 @@ export default async function PicksPage({
   // off-days no-op. The merged read below feeds the [i] dossier; off-window /
   // cold start falls back to the committed frozen snapshot (never empty).
   await refreshTeamStatsOnRead(EVENT_ID, nowMs);
+
+  // Live playoff Spotlight odds refresh (PHA-1066): same on-read, ~1h-claimed,
+  // deferred pattern as the dossier, but the source is Polymarket's gamma-api.
+  // Gated to an authored matchup registry (empty until Valve seeds the bracket),
+  // so this is a no-op until a real playoff matchup exists to target.
+  await refreshSpotlightOddsOnRead(EVENT_ID, nowMs);
 
   // Signed in via Steam but no auth code yet: picks save in HOTLINE, but we
   // can't push them to the official in-game CS2 Pick'Em until they connect a
@@ -222,6 +229,11 @@ export default async function PicksPage({
     activePickability.pickable || (playoffActive && anyPlayoffPickable)
       ? await getLiveTeamStats(EVENT_ID)
       : null;
+
+  // Live market lines for the playoff Spotlight (PHA-1066). Playoff-only — the
+  // Spotlight modal is the only place that renders a market bar. Empty {} until a
+  // matchup is authored, in which case the modal shows its "coming soon" state.
+  const spotlightMarket = playoffActive ? await getSpotlightMarket(EVENT_ID, nowMs) : undefined;
 
   // Header: the consolidated Playoffs tab reads as one stage regardless of
   // which playoff section id is in the URL; Swiss stages keep their number.
@@ -397,6 +409,7 @@ export default async function PicksPage({
                     steamLinked={!!session?.steamId}
                     liveTeamStats={liveTeamStats?.byPickid}
                     liveStatsAsOf={liveTeamStats?.asOf}
+                    spotlightMarket={spotlightMarket}
                   />
                 </section>
               ))
