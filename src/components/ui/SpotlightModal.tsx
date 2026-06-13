@@ -279,6 +279,21 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
               <ul className="tsd-roster">
                 {stats.roster.map((p) => (
                   <li key={p.name} className="tsd-player">
+                    {p.photo ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- signed HLTV CDN URL, plain img avoids the remotePatterns allowlist
+                      <img
+                        className="tsd-player-av"
+                        src={p.photo}
+                        alt=""
+                        loading="lazy"
+                        width={30}
+                        height={30}
+                      />
+                    ) : (
+                      <span className="tsd-player-av is-fallback" aria-hidden="true">
+                        {p.name.slice(0, 1)}
+                      </span>
+                    )}
                     <a
                       className="tsd-player-name"
                       href={p.hltvUrl}

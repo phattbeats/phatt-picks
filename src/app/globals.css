@@ -1155,6 +1155,21 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 /* The decorative corner brackets are part of the accent too. */
 .spot-panel.brk::before, .spot-panel.brk::after,
 .spot-panel.brk .br-tr, .spot-panel.brk .br-bl { border-color: var(--sa); }
+
+/* Roster rows in the Spotlight carry a player head-shot (PHA-1043). The avatar
+   is a Spotlight-only column, so the grid override is scoped here; the shared
+   TeamStatsDrawer roster keeps its three-column layout. */
+.spot-panel .tsd-player { grid-template-columns: auto 1fr auto auto; }
+.tsd-player-av {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  object-fit: cover; background: var(--surf-1);
+  border: 1px solid var(--hair-2);
+}
+.tsd-player-av.is-fallback {
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 700; font-size: 14px;
+  color: var(--ink-mid); text-transform: uppercase;
+}
 .spot-hero {
   display: flex; align-items: center; gap: 14px; padding-right: 30px;
   position: relative;
