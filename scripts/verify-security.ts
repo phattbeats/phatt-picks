@@ -15,6 +15,7 @@ import {
   clientIpFromForwarded,
   createCooldownStore,
   checkCooldown,
+  clearCooldown,
 } from "../src/lib/security-core.ts";
 
 let pass = 0;
@@ -132,6 +133,19 @@ const other = checkCooldown(store, "p2", COOL, 5_000);
 check("different key independent", other.allowed === true);
 const afterWindow = checkCooldown(store, "p1", COOL, 1_000 + COOL);
 check("allowed again exactly at window edge", afterWindow.allowed === true);
+
+// clearCooldown refunds a reserved window (no-op action → retry immediately).
+const refundStore = createCooldownStore();
+checkCooldown(refundStore, "p1", COOL, 1_000);
+clearCooldown(refundStore, "p1");
+check(
+  "cleared key may act again within the window",
+  checkCooldown(refundStore, "p1", COOL, 1_500).allowed === true,
+);
+check("clearCooldown on absent key is a no-op", (() => {
+  clearCooldown(refundStore, "never-seen");
+  return true;
+})());
 
 console.log(`\nsecurity: ${pass} passed, ${fail} failed\n`);
 if (fail > 0) process.exit(1);
