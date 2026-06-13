@@ -34,11 +34,32 @@ import {
 
 // Fixed bracket geometry (px). The gap doubles each round so the SF sits centered
 // against its QF pair and the GF against its SF pair (see playoff-bracket-core).
-const MH = 70; // match cell height
-const G0 = 18; // base gap between first-round matches
-const COLW = 188; // column width
-const CW = 34; // connector lane width between columns
-const HH = 30; // column header height
+// Two scales (PHA-1016): the compact tree for narrow screens, and a roughly 2×
+// desktop tree where the logos get room to breathe — this is the cathedral
+// design, it carries the page. CSS media query picks which one renders.
+interface BracketGeo {
+  mh: number; // match cell height
+  g0: number; // base gap between first-round matches
+  colw: number; // column width
+  cw: number; // connector lane width between columns
+  hh: number; // column header height
+  logo: number; // team logo size
+  nameFs: number; // team name font size
+  scoreFs: number; // score / ✓ font size
+  tagFs: number; // "Your call" tag font size
+  headFs: number; // column header font size
+  rowPad: string; // side-row padding
+}
+
+const GEO_COMPACT: BracketGeo = {
+  mh: 70, g0: 18, colw: 188, cw: 34, hh: 30,
+  logo: 20, nameFs: 12, scoreFs: 13, tagFs: 7, headFs: 9, rowPad: "6px 7px",
+};
+
+const GEO_DESKTOP: BracketGeo = {
+  mh: 132, g0: 30, colw: 372, cw: 72, hh: 42,
+  logo: 42, nameFs: 16, scoreFs: 17, tagFs: 9, headFs: 11, rowPad: "11px 14px",
+};
 
 const GREEN = "var(--tac-green, #9bd23c)";
 
@@ -58,40 +79,6 @@ export function LivePlayoffBracket({
 
   const summary = summarizePlayoffPicks(bracket);
   const champ = bracket.championPickid != null ? teamMap.get(bracket.championPickid) : undefined;
-
-  // Per-round vertical geometry.
-  const unit = MH + G0;
-  const gapFor = (r: number) => unit * 2 ** r - MH;
-  const offsetFor = (r: number) => (unit * (2 ** r - 1)) / 2;
-  const centerY = (r: number, i: number) => HH + offsetFor(r) + i * (MH + gapFor(r)) + MH / 2;
-
-  const tallest = Math.max(
-    ...rounds.map((rd, r) => offsetFor(r) + rd.matches.length * MH + (rd.matches.length - 1) * gapFor(r)),
-  );
-  const svgH = HH + tallest;
-  const svgW = rounds.length * COLW + (rounds.length - 1) * CW;
-  const colLeft = (r: number) => r * (COLW + CW);
-
-  // Connector segments — only between rounds where the next has exactly half the
-  // matches (a clean single-elim feed). Degrades to no lines otherwise.
-  const lines: Array<[number, number, number, number]> = [];
-  for (let r = 0; r < rounds.length - 1; r++) {
-    const cur = rounds[r].matches.length;
-    const next = rounds[r + 1].matches.length;
-    if (next * 2 !== cur) continue;
-    const xRight = colLeft(r) + COLW;
-    const xJunction = xRight + CW / 2;
-    const xNextLeft = colLeft(r + 1);
-    for (let j = 0; j < next; j++) {
-      const yTop = centerY(r, 2 * j);
-      const yBot = centerY(r, 2 * j + 1);
-      const yMid = centerY(r + 1, j);
-      lines.push([xRight, yTop, xJunction, yTop]); // stub from top match
-      lines.push([xRight, yBot, xJunction, yBot]); // stub from bottom match
-      lines.push([xJunction, yTop, xJunction, yBot]); // vertical join
-      lines.push([xJunction, yMid, xNextLeft, yMid]); // into next match
-    }
-  }
 
   return (
     <div className="panel brk" style={{ padding: "20px 18px 22px" }}>
@@ -160,65 +147,134 @@ export function LivePlayoffBracket({
         </p>
       )}
 
-      {/* Horizontal-scroll bracket */}
-      <div className="po-scroll" style={{ marginTop: 16 }}>
-        <div className="po-stage" style={{ width: svgW, minWidth: svgW, height: svgH, position: "relative" }}>
-          {/* Connector overlay */}
-          {lines.length > 0 && (
-            <svg
-              width={svgW}
-              height={svgH}
-              viewBox={`0 0 ${svgW} ${svgH}`}
-              aria-hidden="true"
-              style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
-            >
-              {lines.map(([x1, y1, x2, y2], i) => (
-                <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--hair)" strokeWidth={1.5} />
-              ))}
-            </svg>
-          )}
-
-          {/* Round columns */}
-          {rounds.map((round, r) => (
-            <div
-              key={round.key}
-              style={{ position: "absolute", top: 0, left: colLeft(r), width: COLW }}
-            >
-              <div
-                className="po-colhead"
-                style={{ height: HH, display: "flex", alignItems: "center", gap: 6 }}
-              >
-                <span style={{ color: "var(--ink-hi)", fontWeight: 700 }}>{round.short}</span>
-                <span style={{ color: "var(--ink-low)" }}>{round.label}</span>
-              </div>
-              {round.matches.map((m, i) => (
-                <div
-                  key={m.groupId}
-                  style={{
-                    position: "absolute",
-                    top: centerY(r, i) - MH / 2,
-                    left: 0,
-                    width: COLW,
-                    height: MH,
-                  }}
-                >
-                  <MatchCell match={m} teamMap={teamMap} />
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
+      {/* Horizontal-scroll bracket — compact tree on narrow screens, the 2×
+          cathedral tree from 1024px up. One renders at a time (CSS toggle). */}
+      <div className="po-tree-compact">
+        <BracketTree rounds={rounds} teamMap={teamMap} geo={GEO_COMPACT} />
+      </div>
+      <div className="po-tree-desktop">
+        <BracketTree rounds={rounds} teamMap={teamMap} geo={GEO_DESKTOP} />
       </div>
 
       <style>{`
         .po-scroll { overflow-x: auto; overflow-y: hidden; margin: 0 -4px; padding: 0 4px 6px; -webkit-overflow-scrolling: touch; }
-        .po-colhead { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; padding: 0 2px; }
+        .po-colhead { font-family: var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; padding: 0 2px; }
+        .po-tree-desktop { display: none; }
+        @media (min-width: 1024px) {
+          .po-tree-compact { display: none; }
+          .po-tree-desktop { display: block; }
+        }
       `}</style>
     </div>
   );
 }
 
-function MatchCell({ match, teamMap }: { match: PlayoffMatch; teamMap: Map<number, TeamDef> }) {
+function BracketTree({
+  rounds,
+  teamMap,
+  geo,
+}: {
+  rounds: PlayoffBracket["rounds"];
+  teamMap: Map<number, TeamDef>;
+  geo: BracketGeo;
+}) {
+  const { mh, g0, colw, cw, hh } = geo;
+
+  // Per-round vertical geometry.
+  const unit = mh + g0;
+  const gapFor = (r: number) => unit * 2 ** r - mh;
+  const offsetFor = (r: number) => (unit * (2 ** r - 1)) / 2;
+  const centerY = (r: number, i: number) => hh + offsetFor(r) + i * (mh + gapFor(r)) + mh / 2;
+
+  const tallest = Math.max(
+    ...rounds.map((rd, r) => offsetFor(r) + rd.matches.length * mh + (rd.matches.length - 1) * gapFor(r)),
+  );
+  const svgH = hh + tallest;
+  const svgW = rounds.length * colw + (rounds.length - 1) * cw;
+  const colLeft = (r: number) => r * (colw + cw);
+
+  // Connector segments — only between rounds where the next has exactly half the
+  // matches (a clean single-elim feed). Degrades to no lines otherwise.
+  const lines: Array<[number, number, number, number]> = [];
+  for (let r = 0; r < rounds.length - 1; r++) {
+    const cur = rounds[r].matches.length;
+    const next = rounds[r + 1].matches.length;
+    if (next * 2 !== cur) continue;
+    const xRight = colLeft(r) + colw;
+    const xJunction = xRight + cw / 2;
+    const xNextLeft = colLeft(r + 1);
+    for (let j = 0; j < next; j++) {
+      const yTop = centerY(r, 2 * j);
+      const yBot = centerY(r, 2 * j + 1);
+      const yMid = centerY(r + 1, j);
+      lines.push([xRight, yTop, xJunction, yTop]); // stub from top match
+      lines.push([xRight, yBot, xJunction, yBot]); // stub from bottom match
+      lines.push([xJunction, yTop, xJunction, yBot]); // vertical join
+      lines.push([xJunction, yMid, xNextLeft, yMid]); // into next match
+    }
+  }
+
+  return (
+    <div className="po-scroll" style={{ marginTop: 16 }}>
+      <div className="po-stage" style={{ width: svgW, minWidth: svgW, height: svgH, position: "relative" }}>
+        {/* Connector overlay */}
+        {lines.length > 0 && (
+          <svg
+            width={svgW}
+            height={svgH}
+            viewBox={`0 0 ${svgW} ${svgH}`}
+            aria-hidden="true"
+            style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+          >
+            {lines.map(([x1, y1, x2, y2], i) => (
+              <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--hair)" strokeWidth={1.5} />
+            ))}
+          </svg>
+        )}
+
+        {/* Round columns */}
+        {rounds.map((round, r) => (
+          <div
+            key={round.key}
+            style={{ position: "absolute", top: 0, left: colLeft(r), width: colw }}
+          >
+            <div
+              className="po-colhead"
+              style={{ height: hh, display: "flex", alignItems: "center", gap: 6, fontSize: geo.headFs }}
+            >
+              <span style={{ color: "var(--ink-hi)", fontWeight: 700 }}>{round.short}</span>
+              <span style={{ color: "var(--ink-low)" }}>{round.label}</span>
+            </div>
+            {round.matches.map((m, i) => (
+              <div
+                key={m.groupId}
+                style={{
+                  position: "absolute",
+                  top: centerY(r, i) - mh / 2,
+                  left: 0,
+                  width: colw,
+                  height: mh,
+                }}
+              >
+                <MatchCell match={m} teamMap={teamMap} geo={geo} />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MatchCell({
+  match,
+  teamMap,
+  geo,
+}: {
+  match: PlayoffMatch;
+  teamMap: Map<number, TeamDef>;
+  geo: BracketGeo;
+}) {
   // A decided match gets its winner's branch tinted; an open/seeded one is neutral.
   const accent = match.decided ? "var(--hair-3)" : "var(--hair)";
   return (
@@ -233,9 +289,9 @@ function MatchCell({ match, teamMap }: { match: PlayoffMatch; teamMap: Map<numbe
         justifyContent: "center",
       }}
     >
-      <SideRow side={match.team1} played={match.decided} teamMap={teamMap} />
+      <SideRow side={match.team1} played={match.decided} teamMap={teamMap} geo={geo} />
       <div style={{ height: 1, background: "var(--hair)", margin: "0 7px" }} />
-      <SideRow side={match.team2} played={match.decided} teamMap={teamMap} />
+      <SideRow side={match.team2} played={match.decided} teamMap={teamMap} geo={geo} />
     </div>
   );
 }
@@ -244,10 +300,12 @@ function SideRow({
   side,
   played,
   teamMap,
+  geo,
 }: {
   side: PlayoffSide;
   played: boolean;
   teamMap: Map<number, TeamDef>;
+  geo: BracketGeo;
 }) {
   const team = side.pickid != null ? teamMap.get(side.pickid) : undefined;
   const tbd = side.pickid == null;
@@ -258,35 +316,36 @@ function SideRow({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 7,
-        padding: "6px 7px",
+        gap: Math.round(geo.logo * 0.4),
+        padding: geo.rowPad,
         background: side.userPicked ? "rgba(240,163,0,0.10)" : "transparent",
         opacity: lost ? 0.5 : 1,
         position: "relative",
       }}
     >
       {team ? (
-        <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={20} />
+        <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={geo.logo} />
       ) : (
-        <span aria-hidden="true" style={monogramStyle}>?</span>
+        <span aria-hidden="true" style={{ ...monogramStyle, width: geo.logo, height: geo.logo, fontSize: Math.round(geo.logo * 0.45) }}>?</span>
       )}
       <span style={{ minWidth: 0, flex: 1 }}>
         <span
           style={{
             ...nameStyle,
+            fontSize: geo.nameFs,
             color: tbd ? "var(--ink-low)" : side.winner && played ? "var(--ink-hi)" : "var(--ink-mid)",
             fontStyle: tbd ? "italic" : "normal",
           }}
         >
           {team?.name ?? "TBD"}
         </span>
-        {side.userPicked && <span style={pickTagStyle}>Your call</span>}
+        {side.userPicked && <span style={{ ...pickTagStyle, fontSize: geo.tagFs }}>Your call</span>}
       </span>
       {/* score (only when a live overlay provided one) */}
       <span
         style={{
           fontFamily: "var(--font-mono)",
-          fontSize: 13,
+          fontSize: geo.scoreFs,
           fontWeight: 700,
           color: side.winner && played ? GREEN : "var(--ink-low)",
           minWidth: 14,
@@ -301,7 +360,6 @@ function SideRow({
 
 const nameStyle: CSSProperties = {
   display: "block",
-  fontSize: 12,
   fontWeight: 500,
   overflow: "hidden",
   textOverflow: "ellipsis",
@@ -311,7 +369,6 @@ const nameStyle: CSSProperties = {
 const pickTagStyle: CSSProperties = {
   display: "block",
   fontFamily: "var(--font-mono)",
-  fontSize: 7,
   letterSpacing: "0.1em",
   textTransform: "uppercase",
   color: "var(--heat)",
@@ -321,11 +378,8 @@ const monogramStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  width: 20,
-  height: 20,
   flexShrink: 0,
   fontFamily: "var(--font-mono)",
-  fontSize: 9,
   fontWeight: 700,
   color: "var(--ink-low)",
   background: "var(--surf-2, rgba(255,255,255,0.04))",
