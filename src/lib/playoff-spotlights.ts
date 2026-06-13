@@ -1,9 +1,9 @@
 /**
- * Playoff Spotlights (PHA-1043) — the eight teams that survive Swiss are no
+ * Playoff Spotlights (PHA-1043), the eight teams that survive Swiss are no
  * longer a row of stats. They're a narrative: who they were before Cologne and
  * what they became across Stage 1 → 3. The Spotlight replaces the clinical [i]
  * dossier on the *playoffs* picks page with a story, an event highlight, and a
- * live market line — while the roster / last-5 "tape" stays one tap below.
+ * live market line, while the roster / last-5 "tape" stays one tap below.
  *
  * DRAFT STATUS (2026-06-13): the real eight aren't seeded until Valve publishes
  * the bracket (~Jun 16, see PHA-993). FURIA (pickid 85) is the first real entry,
@@ -29,7 +29,7 @@
 /** A single viewable highlight from THIS event. */
 export interface SpotlightHighlight {
   /**
-   * Embed strategy. `youtube` is the default — ESL/IEM post per-match highlight
+   * Embed strategy. `youtube` is the default, ESL/IEM post per-match highlight
    * reels on YouTube during the event; an iframe (lazy, poster-first) is the one
    * reliable, zero-storage, mobile-clean option. `gif`/`mp4` left open for a
    * self-hosted short loop if we ever cut our own.
@@ -42,7 +42,7 @@ export interface SpotlightHighlight {
   /**
    * Optional end offset in seconds (YouTube). Paired with `start`, this trims a
    * full ESL match-highlights reel down to a single 30-60s run WITHOUT
-   * re-hosting anything — the iframe just stops at `end`. This is how we get a
+   * re-hosting anything, the iframe just stops at `end`. This is how we get a
    * "30s-1m clip" out of a licensed source for free (Brandon, PHA-1043).
    */
   end?: number;
@@ -52,7 +52,7 @@ export interface SpotlightHighlight {
   caption: string;
 }
 
-/** The story. Short — this reads on a phone, mid-pick. */
+/** The story. Short, this reads on a phone, mid-pick. */
 export interface SpotlightNarrative {
   /** All-caps hook, ~2-4 words. e.g. "THE FRENCH JUGGERNAUT". */
   tag: string;
@@ -76,10 +76,10 @@ export interface TeamSpotlight {
  * can fill in as the bracket seeds without shipping placeholder prose.
  */
 const SPOTLIGHTS: Record<number, TeamSpotlight> = {
-  // FURIA — pickid 85. FIRST REAL ENTRY (Brandon, 2026-06-13: "first team is
+  // FURIA, pickid 85. FIRST REAL ENTRY (Brandon, 2026-06-13: "first team is
   // FURIA. good practice."). Narrative + highlight are sourced from this event,
   // not sample prose. FURIA clinched playoffs with a clean 3-0 Stage 3 Swiss run
-  // (beat B8, MOUZ, then BB Team) — verified via HLTV + the ESL highlight feed.
+  // (beat B8, MOUZ, then BB Team), verified via HLTV + the ESL highlight feed.
   85: {
     pickid: 85,
     narrative: {
@@ -92,21 +92,21 @@ const SPOTLIGHTS: Record<number, TeamSpotlight> = {
     },
     // The official ESL per-match highlights reel for the clinch (BB Team vs
     // FURIA, "WINNER TO PLAYOFFS"), trimmed to a ~55s window so the modal plays
-    // a short clip, not a 6-minute VOD. start/end do the "stripping" for free —
+    // a short clip, not a 6-minute VOD. start/end do the "stripping" for free,
     // no re-hosting, licensed source. Editor can nudge the window to the exact
     // round; the reel is wall-to-wall action so any window lands on a play.
     highlight: {
       kind: "youtube",
-      src: "-VGUL80yL00", // @ESLCSHighlights — verified via oEmbed 2026-06-13
+      src: "-VGUL80yL00", // @ESLCSHighlights, verified via oEmbed 2026-06-13
       start: 8, // skip the branded intro card
       end: 63, // ~55s clip
       caption: "FURIA close BB Team to advance 3-0, Stage 3 (ESL highlights)",
     },
   },
-  // — Below: SAMPLE narratives for two likely qualifiers, kept to exercise the
+  // Below: SAMPLE narratives for two likely qualifiers, kept to exercise the
   // design while the rest of the eight seed (~Jun 16). No highlight is attached
-  // (we don't ship a fabricated clip); FURIA above is the wired reference. —
-  // Na'Vi — pickid 12
+  // (we don't ship a fabricated clip); FURIA above is the wired reference.
+  // Na'Vi, pickid 12
   12: {
     pickid: 12,
     narrative: {
@@ -118,7 +118,7 @@ const SPOTLIGHTS: Record<number, TeamSpotlight> = {
         "Answered it. A clean Swiss run with w0nderful posting top-3 AWP numbers of the event turned 'dangerous' into 'feared.' This is the version of Na'Vi the bracket was scared of.",
     },
   },
-  // Liquid — pickid 48
+  // Liquid, pickid 48
   48: {
     pickid: 48,
     narrative: {
@@ -138,46 +138,48 @@ export function spotlightForPickid(pickid: number): TeamSpotlight | null {
 }
 
 /**
- * Per-team accent color (PHA-1043 follow-up — Brandon: each spotlight wears the
+ * Per-team accent color (PHA-1043 follow-up, Brandon: each spotlight wears the
  * team's own color, not the house orange). Keyed by logo slug so it resolves for
- * every playoff team whether or not a narrative is authored yet. Each hue is
- * picked to read as a bright accent against the dark panel; monochrome orgs get
- * their nearest recognizable brand hue. Unknown slug → null → the modal keeps
- * the house `--heat`.
+ * every playoff team whether or not a narrative is authored yet. Each hue keeps
+ * the team's recognizable color but is tuned to clear WCAG AA (>= 4.5:1) as text
+ * against the lightest panel surface (`--surf-3` #35291f), since the accent is
+ * used for readable text, not just fills. verify-team-accent enforces this so a
+ * future color cannot regress contrast. Monochrome orgs (g2, furi) get a light
+ * neutral. Unknown slug yields null, and the modal keeps the house `--heat`.
  */
 const TEAM_ACCENT: Record<string, string> = {
   navi: "#f4d11e",
-  liq: "#1f7ae0",
+  liq: "#4c95e6",
   g2: "#aeb4bd",
-  astr: "#e4002b",
-  big: "#1763b5",
-  tyl: "#d11f26",
+  astr: "#ff5575",
+  big: "#4a96e8",
+  tyl: "#e96d72",
   mibr: "#f2c200",
-  spir: "#e21f26",
+  spir: "#ec6c70",
   furi: "#d9d9d9",
-  nrg: "#e23b3b",
+  nrg: "#e96c6c",
   vita: "#f2c511",
-  hero: "#d8232a",
-  pain: "#e0202a",
+  hero: "#e76b70",
+  pain: "#ea686e",
   shrk: "#1f9be0",
-  mouz: "#ed1c24",
+  mouz: "#f36368",
   nine: "#15d3a8",
-  gl: "#3ca34a",
-  mont: "#d12b2b",
-  mngz: "#2f80ed",
+  gl: "#3da74c",
+  mont: "#e27171",
+  mngz: "#5094f0",
   lgcy: "#2ec26a",
-  lynn: "#e23636",
+  lynn: "#ea6b6b",
   fq: "#1faf5a",
-  aura: "#7b5cff",
+  aura: "#9880ff",
   b8: "#f2c500",
   bb: "#ffd400",
   fal: "#16c172",
-  m80: "#2f80ed",
+  m80: "#5798f1",
   pari: "#f2841f",
-  fut: "#e23636",
-  gaim: "#7c3aed",
-  sinn: "#c0392b",
-  thun: "#f2c500",
+  fut: "#eb7272",
+  gaim: "#a87bf3",
+  sinn: "#dd7469",
+  thun: "#facb00",
 };
 
 /** The team's accent color (hex), or null to fall back to the house `--heat`. */
