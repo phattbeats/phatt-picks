@@ -50,6 +50,11 @@ import { isEventFrozenById } from "./event-freeze";
 // crawl4ai on the phattvip network. Same hostname resolves in the workspace and
 // in the deployed container; CRAWL4AI_URL overrides for other topologies.
 const CRAWL4AI_URL = (process.env.CRAWL4AI_URL ?? "http://crawl4ai:11235").replace(/\/+$/, "");
+// Same token the team-stats crawl sends (PHA-1044). Both crawls hit the same
+// crawl4ai instance, so they must present the same auth — otherwise, the day the
+// service starts requiring the token, the user-visible standings crawl 401s while
+// team-stats keeps working and the W-L table silently freezes.
+const CRAWL4AI_TOKEN = process.env.CRAWL4AI_API_TOKEN ?? "Phatt-tech-2026";
 
 // ~Hourly refresh floor (Brandon: "refreshing every hour"). The driver attempts
 // at most one pull per hour across the whole cluster.
@@ -153,7 +158,10 @@ async function crawlPageOnce(
 ): Promise<{ markdown: string; html: string }> {
   const res = await fetch(`${CRAWL4AI_URL}/crawl`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${CRAWL4AI_TOKEN}`,
+    },
     body: JSON.stringify({
       urls: [url],
       // domcontentloaded + a tight page_timeout stop the ~50s networkidle hang

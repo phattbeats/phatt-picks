@@ -21,6 +21,7 @@ import {
   matchBracketToLayout,
   bracketRoundKind,
   bracketSummary,
+  bracketTerminalRecords,
 } from "../src/lib/swiss-bracket-core.ts";
 import type { Layout, Section } from "../src/lib/layout.ts";
 
@@ -171,6 +172,41 @@ check("summary counts settled teams (1 advanced, 1 eliminated)", (() => {
   const s = bracketSummary(term);
   return s.advanced === 1 && s.eliminated === 1;
 })());
+
+console.log("\nswiss-bracket - terminal records as the outcome-bridge fallback (PHA-1044)");
+
+// When HLTV reformats the W-L TABLE header (parseHltvSwissStandings → []) but the
+// BRACKET still parses, the leaderboard bridge derives each clinched team's exact
+// record from the terminal columns instead of silently freezing.
+{
+  const recs = bracketTerminalRecords(term);
+  check("derives a record per settled (pickid-resolved) terminal team", recs.length === 2);
+  check("3:0 column → wins 3 / losses 0 for the advanced team", (() => {
+    const adv = term.find((r) => r.label === "3:0")!.teams[0];
+    const rec = recs.find((x) => x.pickid === adv.pickid);
+    return !!rec && rec.wins === 3 && rec.losses === 0;
+  })());
+  check("0:3 column → wins 0 / losses 3 for the eliminated team", (() => {
+    const elim = term.find((r) => r.label === "0:3")!.teams[0];
+    const rec = recs.find((x) => x.pickid === elim.pickid);
+    return !!rec && rec.wins === 0 && rec.losses === 3;
+  })());
+}
+// The exact label is preserved so the clinch logic can bucket 3:0 vs 3:1/3:2.
+{
+  const html31 = `
+<div class="swiss-visual-matchups-title">3:1</div>
+<div class="swiss-matchups-team-wrapper">
+  <div class="swiss-visual-team "><img class="swiss-visual-team-logo" title="Liquid"></div>
+</div>`;
+  const recs = bracketTerminalRecords(matchBracketToLayout(parseSwissBracket(html31), stageTeams));
+  check("a 3:1 advance keeps its non-zero loss (record is 3-1, not 3-0)",
+    recs.length === 1 && recs[0].wins === 3 && recs[0].losses === 1);
+}
+// Contention-only bracket (nobody clinched yet) → no records (bridge no-ops).
+check("a contention-only bracket yields zero terminal records",
+  bracketTerminalRecords(matched).length === 0);
+check("empty bracket → zero records (graceful)", bracketTerminalRecords([]).length === 0);
 check("an all-placeholder terminal column yields no teams (stays hidden)", (() => {
   const ph = `<div class="swiss-visual-matchups-title">3:0</div><div class="swiss-matchups-team-wrapper"><div class="swiss-visual-team "><img class="swiss-visual-team-logo" title="?"></div></div>`;
   return parseSwissBracket(ph).length === 0;
