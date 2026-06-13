@@ -35,6 +35,11 @@ export interface RosterPlayer {
   position: string; // primary role: "IGL" | "AWP" | "Rifler"
   rating: number | null; // HLTV rating on the current team, null if unrated
   hltvUrl: string; // personal HLTV player profile
+  // Optional head-shot (PHA-1043). The Spotlight roster shows a player's face
+  // next to their nick; the Swiss dossier ignores it. Source is HLTV's
+  // `playerbodyshot` CDN (a signed, square-cropped w=100 URL lifted from the
+  // team page), so it must be stored verbatim. Absent -> a monogram fallback.
+  photo?: string;
 }
 
 export interface TeamStats {
@@ -194,11 +199,11 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   85: { // FURIA
     worldRank: 5,
     roster: [
-      { name: "FalleN", position: "IGL", rating: 0.98, hltvUrl: "https://www.hltv.org/player/2023/fallen" },
-      { name: "yuurih", position: "Rifler", rating: 1.15, hltvUrl: "https://www.hltv.org/player/12553/yuurih" },
-      { name: "YEKINDAR", position: "Rifler", rating: 1.08, hltvUrl: "https://www.hltv.org/player/13915/yekindar" },
-      { name: "KSCERATO", position: "Rifler", rating: 1.19, hltvUrl: "https://www.hltv.org/player/15631/kscerato" },
-      { name: "molodoy", position: "AWP", rating: 1.14, hltvUrl: "https://www.hltv.org/player/24144/molodoy" },
+      { name: "FalleN", position: "IGL", rating: 0.98, hltvUrl: "https://www.hltv.org/player/2023/fallen", photo: "https://img-cdn.hltv.org/playerbodyshot/gQbb4I0TeHmxx7bYBOtd7T.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=117%2C8%2C467%2C467&w=100&s=fa88889550d37c1d6431b46de4ebd346" },
+      { name: "yuurih", position: "Rifler", rating: 1.15, hltvUrl: "https://www.hltv.org/player/12553/yuurih", photo: "https://img-cdn.hltv.org/playerbodyshot/ZapU9KMKIlH1bDpSlV6MO1.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=124%2C8%2C467%2C467&w=100&s=a45761d0d76e3ba73ce9259495c269f6" },
+      { name: "YEKINDAR", position: "Rifler", rating: 1.08, hltvUrl: "https://www.hltv.org/player/13915/yekindar", photo: "https://img-cdn.hltv.org/playerbodyshot/IO3vEa2fT2qFPRlrPid7hf.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C8%2C467%2C467&w=100&s=da2b1266b74e6038851bb304e5679172" },
+      { name: "KSCERATO", position: "Rifler", rating: 1.19, hltvUrl: "https://www.hltv.org/player/15631/kscerato", photo: "https://img-cdn.hltv.org/playerbodyshot/z0vT0V815B0MdeeKhcf44Y.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C8%2C467%2C467&w=100&s=b27fcd6631f29d7931e43b0dea521094" },
+      { name: "molodoy", position: "AWP", rating: 1.14, hltvUrl: "https://www.hltv.org/player/24144/molodoy", photo: "https://img-cdn.hltv.org/playerbodyshot/oPoWLYFq87cIs2cYDo8id7.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C8%2C467%2C467&w=100&s=a5a4830a878f1952a90ed9f942daa4f5" },
     ],
     recent: [
       { date: "15/05/2026", opponent: "Falcons", score: "1-2", result: "L" },
