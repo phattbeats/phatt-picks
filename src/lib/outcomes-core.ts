@@ -169,6 +169,19 @@ export function normalizeOutcomes(
     index.set(section.sectionid, byGroup);
   }
 
+  // Global team roster (every team in the event). The HLTV bridge derives Swiss
+  // clinches from the LIVE tournament field, which can legitimately be larger than
+  // a section's committed per-group roster — e.g. Cologne Stage III: the pick'em
+  // layout group carries 8 teams, but the live HLTV Swiss runs 16, so a real 0:3
+  // (B8) / 3:0 (Spirit) clinch would otherwise be rejected "not eligible for group"
+  // and never score (PHA-1109). For an HLTV-sourced winner we trust the live field
+  // and validate against the global roster instead of the partial per-group one;
+  // the slot/section/group existence checks still apply, and the winner is always a
+  // real team the standings parser mapped to a layout pickid. Valve / Liquipedia
+  // outcomes keep the stricter per-group check (they're validated against their own
+  // structured data, where an out-of-group team IS a parse error).
+  const globalTeams = new Set(layout.teams.map((t) => t.pickid).filter((id) => id !== 0));
+
   for (const slot of raw) {
     const group = index.get(slot.sectionId)?.get(slot.groupId);
     if (!group) {
@@ -183,7 +196,10 @@ export function normalizeOutcomes(
       rejected.push({ slot, reason: "no winner (0/TBD) — not yet resolved" });
       continue;
     }
-    if (!group.teams.has(slot.winnerPickId)) {
+    const eligible =
+      group.teams.has(slot.winnerPickId) ||
+      (source === "hltv" && globalTeams.has(slot.winnerPickId));
+    if (!eligible) {
       rejected.push({ slot, reason: `winner ${slot.winnerPickId} not eligible for group` });
       continue;
     }
