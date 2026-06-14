@@ -27,10 +27,14 @@ import { bucketSwissSlots, isSwissSection, resolveBucketWinners } from "@/lib/sw
 import { rankMapForSection, snapshotSectionIds } from "@/lib/rank-snapshot";
 import { previousResolvedSection, rankDelta } from "@/lib/rank-snapshot-core";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
-import { buildConsensus, consensusKey } from "@/lib/consensus-core";
+import { buildConsensus, consensusKey, shareFor } from "@/lib/consensus-core";
 import { ConsensusBar } from "@/components/heat/ConsensusBar";
 import type { Section } from "@/lib/layout";
 import { currentEventId } from "@/lib/events-core";
+import { StageWrappedAnnounce } from "@/components/heat/StageWrapped";
+import { StageWrappedReplay } from "@/components/heat/StageWrappedReplay";
+import { stageWrappedKey } from "@/lib/stage-wrapped-core";
+import { buildStageWrappedDeck, stageWrappedHasContent, type StageWrappedBestCall } from "@/lib/stage-wrapped-content";
 
 function ordSuffix(n: number): string {
   const v = n % 100;
@@ -160,6 +164,17 @@ export default async function StageRevealPage({
     const leader = leaderId ? await prisma.player.findUnique({ where: { id: leaderId } }) : null;
     return (
       <>
+        {/* Stage Wrapped recap (PHA-1054) — auto-opens once per stage. Signed-out
+            visitors get the stage's moments + a sign-in outro, no personal slides.
+            Reached only on a resolved stage (we returned above when unresolved). */}
+        <StageWrappedAnnounce
+          stageKey={stageWrappedKey(EVENT_ID, sectionId)}
+          eventId={EVENT_ID}
+          sectionId={sectionId}
+          slides={buildStageWrappedDeck(sectionId, stageLabel, null)}
+          title={stageLabel}
+          resolved
+        />
         <RevealEyebrow stageIdx={stageIdx} />
         <h1 className="font-display" style={heroTitle}>{stageLabel}</h1>
         <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "4px 0 0" }}>Stage Reveal · {afterMap.size} ranked</p>
@@ -213,8 +228,62 @@ export default async function StageRevealPage({
   const rankBefore = beforeMap.get(subject.id) ?? null;
   const delta = rankAfter != null ? rankDelta(rankAfter, rankBefore) : null;
 
+  // Stage Wrapped "best call" (PHA-1054): among the viewer's CORRECT picks this
+  // stage, the one the fewest of the field also nailed (their boldest right
+  // read). Reuses the same bucket-correctness + slot-consensus the reveal grid
+  // below already renders, so the recap agrees with the per-pick breakdown.
+  let bestCall: StageWrappedBestCall | null = null;
+  for (const group of sectionDef.groups) {
+    const gOut = outcomeMap[sectionId]?.[group.groupid] ?? {};
+    const buckets = isSwissSection(sectionId) ? bucketSwissSlots(group.picks.length) : null;
+    for (const slot of group.picks) {
+      const pickId = subjectPickMap[sectionId]?.[group.groupid]?.[slot.index];
+      if (pickId == null || pickId === 0) continue;
+      const winner = gOut[slot.index];
+      if (winner === undefined) continue;
+      const bucket = buckets?.find((b) => b.slotIndexes.includes(slot.index)) ?? null;
+      const isCorrect = bucket
+        ? resolveBucketWinners(bucket.slotIndexes, gOut).winners.has(pickId)
+        : pickId === winner;
+      if (!isCorrect) continue;
+      const share = shareFor(slotConsensus, sectionId, group.groupid, slot.index, pickId);
+      const pct = share?.pct ?? 0;
+      const count = share?.count ?? 0;
+      const total = slotConsensus.get(consensusKey(sectionId, group.groupid, slot.index))?.total ?? 0;
+      if (bestCall === null || pct < bestCall.pct) {
+        bestCall = {
+          teamName: teamMap.get(pickId)?.name ?? `#${pickId}`,
+          tag: bucketLabelFor(sectionId, group, slot.index),
+          pct,
+          count,
+          total,
+        };
+      }
+    }
+  }
+
   return (
     <>
+      {/* Stage Wrapped recap (PHA-1054) — auto-opens once per stage from the
+          resolved-stage reveal, reusing the score / rank-move / best-call data
+          computed above. Gated by `resolved` so it never leaks before lock. */}
+      <StageWrappedAnnounce
+        stageKey={stageWrappedKey(EVENT_ID, sectionId)}
+        eventId={EVENT_ID}
+        sectionId={sectionId}
+        slides={buildStageWrappedDeck(sectionId, stageLabel, {
+          displayName: subject.displayName,
+          stagePoints,
+          correct,
+          resolvedSlots,
+          totalPoints,
+          rankAfter,
+          rankMove: delta,
+          bestCall,
+        })}
+        title={stageLabel}
+        resolved
+      />
       <RevealEyebrow stageIdx={stageIdx} />
       <h1 className="font-display" style={heroTitle}>{stageLabel}</h1>
       <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "4px 0 0" }}>
@@ -303,6 +372,9 @@ export default async function StageRevealPage({
           <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
         </Link>
         <Link href={`/players/${encodeURIComponent(subject.id)}`} className="btn-ghost">Full profile</Link>
+        {stageWrappedHasContent(sectionId) && (
+          <StageWrappedReplay stageKey={stageWrappedKey(EVENT_ID, sectionId)} />
+        )}
       </div>
 
       <style>{`
