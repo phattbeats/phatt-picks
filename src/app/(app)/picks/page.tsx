@@ -23,6 +23,7 @@ import {
 } from "@/lib/playoff-bracket-core";
 import { LockIcon } from "@/components/ui/LockIcon";
 import { LivePlayoffBracket } from "@/components/heat/LivePlayoffBracket";
+import { QualifiedStrip } from "@/components/ui/QualifiedStrip";
 import { buildSwissStandings, type SlotPickMap } from "@/lib/swiss-standings-core";
 import { LockedPicksBoard } from "@/components/heat/LockedPicksBoard";
 import { LiveSwissStandings } from "@/components/heat/LiveSwissStandings";
@@ -426,7 +427,17 @@ export default async function PicksPage({
                 </section>
               ))
           ) : (
-            <LockedStageCard pickability={activePickability} compact />
+            <>
+              {/* PHA-1043: before Valve seeds, the picker tiles are empty, so a
+                  "Qualified for Playoffs" strip surfaces clinched + authored
+                  teams' Spotlights to build anticipation as the field is named. */}
+              <QualifiedStrip
+                teams={layout.teams}
+                liveTeamStats={liveTeamStats?.byPickid}
+                liveStatsAsOf={liveTeamStats?.asOf}
+              />
+              <LockedStageCard pickability={activePickability} compact />
+            </>
           )}
           {playoffBracket && (
             <LivePlayoffBracket
