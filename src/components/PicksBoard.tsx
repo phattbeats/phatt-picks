@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { TeamStatsDrawer } from "@/components/ui/TeamStatsDrawer";
-import { SpotlightModal } from "@/components/ui/SpotlightModal";
+import { SpotlightModal, type SpotlightMarketLine } from "@/components/ui/SpotlightModal";
 import { RegionBadge } from "@/components/ui/RegionBadge";
 import { resolveLogoTiers } from "@/lib/logos";
 import { teamAccent } from "@/lib/playoff-spotlights";
@@ -34,6 +34,12 @@ interface Props {
   liveTeamStats?: Record<number, TeamStats>;
   /** Snapshot date of the live dossier crawl (YYYY-MM-DD), for the drawer footer. */
   liveStatsAsOf?: string;
+  /**
+   * Live playoff market lines (PHA-1066), pickid → Polymarket implied win %.
+   * Optional: empty/undefined until a matchup is authored + seeded, in which case
+   * the Spotlight modal shows its "coming soon" odds state.
+   */
+  spotlightMarket?: Record<number, SpotlightMarketLine>;
 }
 
 const SAVED_FLASH_MS = 1200;
@@ -53,6 +59,7 @@ export function PicksBoard({
   steamLinked,
   liveTeamStats,
   liveStatsAsOf,
+  spotlightMarket,
 }: Props) {
   const teamMap = useMemo(() => new Map(teams.map((t) => [t.pickid, t])), [teams]);
 
@@ -433,6 +440,7 @@ export function PicksBoard({
             onClose={() => setStatsTeam(null)}
             liveStats={liveTeamStats?.[statsTeam.pickid]}
             liveAsOf={liveStatsAsOf}
+            market={spotlightMarket?.[statsTeam.pickid]}
           />
         ) : (
           <TeamStatsDrawer
