@@ -126,9 +126,7 @@ export default async function StageRevealPage({
       <>
         <RevealEyebrow stageIdx={stageIdx} />
         <h1 className="font-display" style={heroTitle}>{stageLabel}</h1>
-        <div className="panel brk" style={{ textAlign: "center", padding: "40px 24px", marginTop: 16 }}>
-          <span className="br-tr" />
-          <span className="br-bl" />
+        <div style={{ ...v3Card, textAlign: "center", padding: "40px 24px", marginTop: 16 }}>
           <p className="font-display" style={{ fontWeight: 700, fontSize: 20, textTransform: "uppercase", color: "var(--ink-hi)", margin: "0 0 6px" }}>
             Stage not resolved yet
           </p>
@@ -191,19 +189,15 @@ export default async function StageRevealPage({
         <h1 className="font-display" style={heroTitle}>{stageLabel}</h1>
         <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "4px 0 0" }}>Stage Reveal · {afterMap.size} ranked</p>
         {leader && (
-          <div className="panel brk" style={{ marginTop: 16 }}>
-            <span className="br-tr" />
-            <span className="br-bl" />
-            <div className="panel-title">[ Stage Leader ]</div>
-            <Link href={`/players/${encodeURIComponent(leader.id)}`} style={{ fontSize: 18, fontWeight: 600, color: "var(--ink-hi)", textDecoration: "none" }}>
+          <div style={{ ...v3Card, marginTop: 16 }}>
+            <div style={{ ...v3CardLabel, color: "var(--ink-mid)" }}>Stage Leader</div>
+            <Link href={`/players/${encodeURIComponent(leader.id)}`} className="font-display" style={{ fontSize: 24, fontWeight: 800, textTransform: "uppercase", color: "var(--ink-hi)", textDecoration: "none" }}>
               {leader.displayName}
             </Link>
           </div>
         )}
         <ConsensusPanel consensus={consensus} bold={bold} teamMap={teamMap} />
-        <div className="panel brk" style={{ marginTop: 14, background: "rgba(240,163,0,0.04)", borderColor: "var(--hair-3)" }}>
-          <span className="br-tr" />
-          <span className="br-bl" />
+        <div style={{ ...v3Card, marginTop: 14 }}>
           <p style={{ color: "var(--ink-mid)", fontSize: 14, margin: 0 }}>
             <Link href="/login/auth" style={{ color: "var(--heat)" }}>Sign in</Link> to see your personal Stage Reveal — your score, rank move, and how every pick landed.
           </p>
@@ -312,19 +306,22 @@ export default async function StageRevealPage({
 
       {/* Score moment (mockup-08): this stage, rank move, cumulative total */}
       <div className="reveal-moment" style={{ marginTop: 16 }}>
-        <MomentCard label="[ This Stage ]" value={`+${stagePoints}`} unit="pts" foil />
+        <MomentCard label="This Stage" value={`+${stagePoints}`} unit="pts" foil />
         <MomentCard
-          label="[ Rank Move ]"
+          label="Rank Move"
           custom={<RankMove delta={delta} rankAfter={rankAfter} rankBefore={rankBefore} />}
         />
-        <MomentCard label="[ Total ]" value={String(totalPoints)} unit="pts" />
+        <MomentCard label="Total" value={String(totalPoints)} unit="pts" />
       </div>
 
       {/* Consensus / bold calls */}
       <ConsensusPanel consensus={consensus} bold={bold} teamMap={teamMap} />
 
       {/* Per-pick breakdown */}
-      <div className="section-label" style={sectionLabel}>How Your Picks Landed · {correct}/{resolvedSlots}</div>
+      <div style={sectionHeader}>
+        <span>How Your Picks Landed</span>
+        <span style={{ color: "var(--heat)" }}>{correct}/{resolvedSlots}</span>
+      </div>
       <div className="reveal-picks">
         {sectionDef.groups.flatMap((group) => {
           // Swiss buckets are interchangeable: a pick is correct if its team
@@ -349,29 +346,27 @@ export default async function StageRevealPage({
             );
             return (
               <div key={`${group.groupid}:${slot.index}`} style={{ display: "flex", flexDirection: "column" }}>
-                <div
-                  className="pickcard brk"
-                  style={{
-                    borderColor: resolved ? (isCorrect ? "var(--hair-3)" : "var(--hair-2)") : "var(--hair)",
-                    background: resolved && isCorrect ? "rgba(240,163,0,0.06)" : "var(--surf-1)",
-                  }}
-                >
-                  {team && team.pickid !== 0 ? (
-                    <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={40} />
-                  ) : (
-                    <div style={{ width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-low)", fontFamily: "var(--font-mono)" }}>?</div>
-                  )}
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink-hi)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {team?.name ?? "No pick"}
-                    </div>
-                    {tag && <div style={tagStyle}>{tag}</div>}
-                  </div>
+                <div className={`pickcard${resolved && isCorrect ? " is-correct" : ""}${resolved && !isCorrect ? " is-miss" : ""}`}>
                   {resolved && (
-                    <span style={{ fontSize: 16, fontWeight: 700, color: isCorrect ? "var(--tac-green, #9bd23c)" : "var(--ember, #d8351c)" }}>
+                    <span
+                      className="pickcard-verdict"
+                      style={{ color: isCorrect ? "var(--tac-green, #9bd23c)" : "var(--ember, #d8351c)" }}
+                      aria-label={isCorrect ? "correct" : "missed"}
+                    >
                       {isCorrect ? "✓" : "✗"}
                     </span>
                   )}
+                  <div className="pickcard-logo">
+                    {team && team.pickid !== 0 ? (
+                      <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={80} />
+                    ) : (
+                      <div style={{ width: 80, height: 80, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-low)", fontFamily: "var(--font-mono)", fontSize: 30 }}>?</div>
+                    )}
+                  </div>
+                  <div className="font-display pickcard-name" style={{ color: "var(--ink-hi)" }}>
+                    {team?.name ?? "No pick"}
+                  </div>
+                  {tag && <div style={tagStyle}>{tag}</div>}
                 </div>
                 <ConsensusBar
                   consensus={slotConsensus.get(consensusKey(sectionId, group.groupid, slot.index))}
@@ -398,11 +393,38 @@ export default async function StageRevealPage({
       </div>
 
       <style>{`
-        .reveal-moment { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--hair-2); border: 1px solid var(--hair-2); }
-        .reveal-moment > div { background: var(--surf-1); }
-        .reveal-picks { display: grid; grid-template-columns: 1fr; gap: 8px; }
-        @media (min-width: 640px) { .reveal-picks { grid-template-columns: 1fr 1fr; } }
-        .pickcard { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--hair); position: relative; }
+        /* v3 "Arcade → Broadcast" (PHA-1007): rounded surfaces with a single
+           top keyline instead of four corner brackets, hairline-divided stat
+           band, neutral warm-white hairlines. */
+        .reveal-moment {
+          display: grid; grid-template-columns: repeat(3, 1fr);
+          background: linear-gradient(180deg, var(--surf-2) 0%, var(--surf-1) 100%);
+          border: 1px solid rgba(245,234,212,0.08); border-radius: 14px; overflow: hidden;
+        }
+        .reveal-moment > div + div { border-left: 1px solid rgba(245,234,212,0.08); }
+        .reveal-picks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        @media (min-width: 560px) { .reveal-picks { grid-template-columns: repeat(3, 1fr); } }
+        @media (min-width: 880px) { .reveal-picks { grid-template-columns: repeat(4, 1fr); } }
+        .pickcard {
+          display: flex; flex-direction: column; align-items: center; text-align: center;
+          gap: 10px; padding: 24px 14px 16px;
+          border: 1px solid rgba(245,234,212,0.08); border-radius: 14px;
+          background: linear-gradient(180deg, var(--surf-2) 0%, var(--surf-1) 100%);
+          position: relative; overflow: hidden;
+        }
+        .pickcard.is-correct { border-color: rgba(155,210,60,0.28); }
+        .pickcard.is-correct::before {
+          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+          background: linear-gradient(90deg, var(--tac-green, #9bd23c) 0%, rgba(155,210,60,0.25) 45%, transparent 80%);
+        }
+        .pickcard.is-miss { opacity: 0.82; }
+        .pickcard-logo { display: flex; align-items: center; justify-content: center; min-height: 80px; }
+        .pickcard-name {
+          font-weight: 800; font-size: 19px; line-height: 1; letter-spacing: 0.01em;
+          text-transform: uppercase; max-width: 100%;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .pickcard-verdict { position: absolute; top: 10px; right: 12px; font-size: 17px; font-weight: 700; line-height: 1; }
       `}</style>
     </>
   );
@@ -416,27 +438,52 @@ const heroTitle = {
   margin: "8px 0 0",
 };
 
-const sectionLabel = {
+// v3 "Arcade → Broadcast" surface (PHA-1007): rounded, gradient, neutral
+// hairline — no corner brackets. Shared by the reveal's secondary panels.
+const v3Card = {
+  position: "relative" as const,
+  background: "linear-gradient(180deg, var(--surf-2) 0%, var(--surf-1) 100%)",
+  border: "1px solid rgba(245,234,212,0.08)",
+  borderRadius: 14,
+  padding: "18px 22px",
+};
+
+const v3CardLabel = {
   fontFamily: "var(--font-mono)",
-  fontSize: 9,
-  letterSpacing: "0.16em",
+  fontSize: 13,
+  fontWeight: 600 as const,
+  letterSpacing: "0.18em",
   textTransform: "uppercase" as const,
-  color: "var(--ink-low)",
-  margin: "20px 0 8px",
+  marginBottom: 10,
+};
+
+const sectionHeader = {
+  fontFamily: "var(--font-mono)",
+  fontSize: 13,
+  fontWeight: 600 as const,
+  letterSpacing: "0.18em",
+  textTransform: "uppercase" as const,
+  color: "var(--ink-mid)",
+  margin: "30px 0 12px",
+  display: "flex",
+  alignItems: "baseline" as const,
+  justifyContent: "space-between" as const,
+  gap: 12,
 };
 
 const tagStyle = {
   fontFamily: "var(--font-mono)",
-  fontSize: 9,
-  letterSpacing: "0.08em",
+  fontSize: 10.5,
+  letterSpacing: "0.1em",
   color: "var(--ink-low)",
   textTransform: "uppercase" as const,
 };
 
 function RevealEyebrow({ stageIdx }: { stageIdx: number }) {
+  // v3 broadcast direction (PHA-1007): mono overline loses the literal [ ].
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <span className="eyebrow-mono">[ STAGE_REVEAL · {String(stageIdx + 1).padStart(2, "0")} ]</span>
+      <span className="eyebrow-mono" style={{ fontSize: 10.5, letterSpacing: "0.2em" }}>STAGE_REVEAL · {String(stageIdx + 1).padStart(2, "0")}</span>
     </div>
   );
 }
@@ -455,12 +502,12 @@ function MomentCard({
   custom?: ReactNode;
 }) {
   return (
-    <div style={{ padding: "16px 14px", textAlign: "center" }}>
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-low)", marginBottom: 6 }}>{label}</div>
+    <div style={{ padding: "18px 14px", textAlign: "center" }}>
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--ink-mid)", marginBottom: 8 }}>{label}</div>
       {custom ?? (
-        <div className={"font-display" + (foil ? " foil" : "")} style={{ fontWeight: 800, fontSize: 36, lineHeight: 0.9, color: "var(--ink-hi)" }}>
+        <div className={"font-display" + (foil ? " foil" : "")} style={{ fontWeight: 800, fontSize: 42, lineHeight: 0.9, color: "var(--ink-hi)" }}>
           {value}
-          {unit && <small style={{ fontSize: 15, color: "var(--ink-low)", fontWeight: 600 }}>{unit}</small>}
+          {unit && <small style={{ fontSize: 16, color: "var(--ink-low)", fontWeight: 600 }}>{unit}</small>}
         </div>
       )}
     </div>
@@ -478,7 +525,7 @@ function RankMove({
 }) {
   if (!delta || delta.direction === "new") {
     return (
-      <div className="font-display" style={{ fontWeight: 800, fontSize: 36, lineHeight: 0.9, color: "var(--ink-hi)" }}>
+      <div className="font-display" style={{ fontWeight: 800, fontSize: 42, lineHeight: 0.9, color: "var(--ink-hi)" }}>
         {rankAfter != null ? (<>{rankAfter}<small style={{ fontSize: 15, color: "var(--ink-low)" }}>{ordSuffix(rankAfter)}</small></>) : "—"}
       </div>
     );
@@ -488,7 +535,7 @@ function RankMove({
   const flat = delta.direction === "flat";
   const color = up ? "var(--tac-green, #9bd23c)" : flat ? "var(--ink-mid)" : "var(--ember, #d8351c)";
   return (
-    <div className="font-display" style={{ fontWeight: 800, fontSize: 36, lineHeight: 0.9, color }} title={rankBefore != null ? `was ${rankBefore}${ordSuffix(rankBefore)}` : undefined}>
+    <div className="font-display" style={{ fontWeight: 800, fontSize: 42, lineHeight: 0.9, color }} title={rankBefore != null ? `was ${rankBefore}${ordSuffix(rankBefore)}` : undefined}>
       {flat ? "—" : (up ? "▲" : "▼")}{!flat && moved}
     </div>
   );
@@ -507,34 +554,71 @@ function ConsensusPanel({
   const cTeam = teamMap.get(consensus.winnerPickId);
   const bTeam = bold ? teamMap.get(bold.winnerPickId) : null;
   return (
-    <div className="reveal-insights" style={{ marginTop: 14 }}>
-      <div className="panel brk" style={{ background: "rgba(240,163,0,0.04)", borderColor: "var(--hair-3)" }}>
-        <span className="br-tr" />
-        <span className="br-bl" />
-        <div className="panel-title" style={{ color: "var(--heat)" }}>[ Consensus ]</div>
-        <div style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-hi)" }}>
-          {cTeam?.name ?? `#${consensus.winnerPickId}`}{consensus.tag ? ` (${consensus.tag})` : ""}
-        </div>
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-low)", marginTop: 2 }}>
-          {consensus.correctCount}/{consensus.total_field} called it right
+    <div className="reveal-insights" style={{ marginTop: 16 }}>
+      <div className="insight-card insight-consensus">
+        <div className="insight-head" style={{ color: "var(--heat)" }}>Consensus</div>
+        <div className="insight-body">
+          <div className="insight-logo">
+            {cTeam && cTeam.pickid !== 0
+              ? <TeamLogo tiers={resolveLogoTiers(cTeam)} teamName={cTeam.name} size={60} />
+              : <div className="insight-logo-blank">#{consensus.winnerPickId}</div>}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div className="font-display insight-name" style={{ color: "var(--ink-hi)" }}>
+              {cTeam?.name ?? `#${consensus.winnerPickId}`}{consensus.tag ? <span className="insight-tag"> {consensus.tag}</span> : null}
+            </div>
+            <div className="insight-meta">
+              {consensus.correctCount}/{consensus.total_field} called it right
+            </div>
+          </div>
         </div>
       </div>
       {bTeam && bold && bold.correctCount > 0 && (
-        <div className="panel brk" style={{ borderColor: "rgba(216,53,28,0.25)" }}>
-          <span className="br-tr" />
-          <span className="br-bl" />
-          <div className="panel-title" style={{ color: "var(--ember, #d8351c)" }}>[ Bold Call ]</div>
-          <div style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-hi)" }}>
-            {bTeam.name}{bold.tag ? ` (${bold.tag})` : ""}
-          </div>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-low)", marginTop: 2 }}>
-            only {bold.correctCount}/{bold.total_field} nailed it
+        <div className="insight-card insight-bold">
+          <div className="insight-head" style={{ color: "var(--ember, #d8351c)" }}>Bold Call</div>
+          <div className="insight-body">
+            <div className="insight-logo">
+              <TeamLogo tiers={resolveLogoTiers(bTeam)} teamName={bTeam.name} size={60} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div className="font-display insight-name" style={{ color: "var(--ink-hi)" }}>
+                {bTeam.name}{bold.tag ? <span className="insight-tag"> {bold.tag}</span> : null}
+              </div>
+              <div className="insight-meta">
+                only {bold.correctCount}/{bold.total_field} nailed it
+              </div>
+            </div>
           </div>
         </div>
       )}
       <style>{`
-        .reveal-insights { display: grid; grid-template-columns: 1fr; gap: 8px; }
+        .reveal-insights { display: grid; grid-template-columns: 1fr; gap: 10px; }
         @media (min-width: 640px) { .reveal-insights { grid-template-columns: 1fr 1fr; } }
+        /* v3 broadcast card: rounded, gradient surface, one top keyline (no
+           corner brackets), neutral hairline. Accent keyed per card. */
+        .insight-card {
+          position: relative; overflow: hidden; padding: 18px 22px;
+          background: linear-gradient(180deg, var(--surf-2) 0%, var(--surf-1) 100%);
+          border: 1px solid rgba(245,234,212,0.08); border-radius: 14px;
+        }
+        .insight-card::before {
+          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+        }
+        .insight-consensus::before { background: linear-gradient(90deg, var(--heat) 0%, rgba(240,163,0,0.25) 42%, transparent 78%); }
+        .insight-bold::before { background: linear-gradient(90deg, var(--ember, #d8351c) 0%, rgba(216,53,28,0.22) 42%, transparent 78%); }
+        .insight-head {
+          font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+          letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 14px;
+        }
+        .insight-body { display: flex; align-items: center; gap: 16px; }
+        .insight-logo { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 60px; height: 60px; }
+        .insight-logo-blank { font-family: var(--font-mono); font-size: 13px; color: var(--ink-low); }
+        .insight-name {
+          font-weight: 800; font-size: 26px; line-height: 0.95; letter-spacing: 0.01em;
+          text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .insight-tag { font-size: 14px; color: var(--ink-low); font-weight: 700; }
+        .insight-meta { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-mid); margin-top: 5px; }
       `}</style>
     </div>
   );
