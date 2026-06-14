@@ -34,9 +34,8 @@
  */
 
 import { NextResponse } from "next/server";
-import { warmStandings, standingsSectionIds, getSwissStandings, getSwissBracket } from "@/lib/swiss-results";
+import { warmStandings, standingsSectionIds } from "@/lib/swiss-results";
 import { bridgeSwissOutcomes } from "@/lib/outcomes";
-import { bracketMatchRecords, bracketTerminalRecords } from "@/lib/swiss-bracket-core";
 import { currentEventId } from "@/lib/events-core";
 import { getCommittedLayout } from "@/lib/layout";
 import { prisma } from "@/lib/db";
@@ -101,43 +100,7 @@ async function warmAll() {
   } catch (e) {
     console.error("[standings/refresh] answer-key dump failed (non-fatal):", e);
   }
-  // What does the bridge actually SEE in the cache for the active swiss section?
-  // (PHA-1109) Reads the SAME cached blob the bridge merges — if B8/Spirit aren't
-  // terminal here, the cache crawl is the problem, not the resolver.
-  let bridgeView: unknown = null;
-  try {
-    const layout = getCommittedLayout();
-    const teams = layout.teams.map((t) => ({ pickid: t.pickid, name: t.name }));
-    const liveSec = layout.sections.find((s) => s.sectionid === 107);
-    if (liveSec) {
-      const table = await getSwissStandings(EVENT_ID, liveSec.sectionid, teams);
-      const bracket = await getSwissBracket(EVENT_ID, liveSec.sectionid, teams);
-      const byPick = new Map<number, { pickid: number; wins: number; losses: number }>();
-      const consider = (r: { pickid: number; wins: number; losses: number }) => {
-        const p = byPick.get(r.pickid);
-        if (!p || r.wins + r.losses > p.wins + p.losses) byPick.set(r.pickid, r);
-      };
-      if (table) for (const r of table.rows) if (r.pickid != null) consider({ pickid: r.pickid, wins: r.wins, losses: r.losses });
-      if (bracket) {
-        for (const r of bracketMatchRecords(bracket.rounds)) consider(r);
-        for (const r of bracketTerminalRecords(bracket.rounds)) consider(r);
-      }
-      const nameByPick = new Map(layout.teams.map((t) => [t.pickid, t.name]));
-      bridgeView = {
-        section: liveSec.sectionid,
-        tableRows: table?.rows.length ?? 0,
-        tableFetchedAt: table?.fetchedAtIso ?? null,
-        bracketRounds: bracket?.rounds.length ?? 0,
-        bracketFetchedAt: bracket?.fetchedAtIso ?? null,
-        mergedRecords: [...byPick.values()]
-          .sort((a, b) => a.pickid - b.pickid)
-          .map((r) => ({ team: nameByPick.get(r.pickid) ?? `#${r.pickid}`, rec: `${r.wins}-${r.losses}` })),
-      };
-    }
-  } catch (e) {
-    console.error("[standings/refresh] bridge-view dump failed (non-fatal):", e);
-  }
-  return NextResponse.json({ ok: true, eventId: EVENT_ID, results, resolved, answerKey, bridgeView });
+  return NextResponse.json({ ok: true, eventId: EVENT_ID, results, resolved, answerKey });
 }
 
 // GET so it's trivial to warm from a browser / curl / uptime poke; POST aliased

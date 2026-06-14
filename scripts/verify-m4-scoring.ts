@@ -154,6 +154,31 @@ function proveNormalization(): void {
   check("4 junk rows rejected", rejected.length === 4, `rejected ${rejected.length}`);
   check("accepted row tagged source=liquipedia", outcomes[0]?.source === "liquipedia");
   check("CC-BY-SA attribution constant present", /CC-BY-SA/.test(LIQUIPEDIA_ATTRIBUTION), LIQUIPEDIA_ATTRIBUTION);
+
+  // PHA-1109: the HLTV bridge resolves Swiss clinches from the LIVE field, which can
+  // be larger than a section's committed per-group roster (Cologne Stage III group
+  // 273 carries 8 teams; the live Swiss runs 16). A real clinch by a team in the
+  // global roster but not the per-group list (B8 0:3, Spirit 3:0) must score for an
+  // HLTV-sourced winner, while Valve / Liquipedia keep the strict per-group check.
+  const s3 = layout.sections.find((s) => s.sectionid === 107)!;
+  const g3 = s3.groups[0];
+  const inGroup = new Set(g3.teams.map((t) => t.pickid));
+  const offRoster = layout.teams.find((t) => t.pickid !== 0 && !inGroup.has(t.pickid))!.pickid;
+  const bridgeRaw = [{ sectionId: 107, groupId: g3.groupid, slotIndex: 9, winnerPickId: offRoster }];
+  check(
+    "off-roster live clinch is ACCEPTED for source=hltv (PHA-1109)",
+    normalizeOutcomes(layout, bridgeRaw, "hltv").outcomes.length === 1,
+    `accepted ${normalizeOutcomes(layout, bridgeRaw, "hltv").outcomes.length}`,
+  );
+  check(
+    "same off-roster winner is still REJECTED for source=valve (strict guard kept)",
+    normalizeOutcomes(layout, bridgeRaw, "valve").outcomes.length === 0,
+  );
+  check(
+    "a bogus pickid is rejected even for source=hltv (a real team is still required)",
+    normalizeOutcomes(layout, [{ sectionId: 107, groupId: g3.groupid, slotIndex: 8, winnerPickId: 999999 }], "hltv")
+      .outcomes.length === 0,
+  );
 }
 
 console.log("=== HOTLINE M4 leaderboard/scoring verification ===");
