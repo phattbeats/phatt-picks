@@ -1125,6 +1125,164 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   margin: 18px 0 0; padding-top: 12px; border-top: 1px solid var(--hair);
 }
 
+/* ──────────────────────────────────────────────────────────────────
+   Stage Wrapped (PHA-1052) — click-through recap deck. Reuses the
+   .tsd-backdrop/.tsd-panel bottom-sheet + .tsd-close from TeamStatsDrawer;
+   adds the slide stage, progress dots, nav controls and entrance anim.
+   ────────────────────────────────────────────────────────────────── */
+.sw-panel {
+  max-width: 440px;
+  display: flex; flex-direction: column;
+  /* A recap is a takeover, not a scroll — fix the height so the slide stage
+     owns the middle and the controls pin to the foot. */
+  min-height: 60vh;
+  overflow: hidden;
+  position: relative;
+}
+/* Ambient heat bloom — a soft amber aura top-center that "breathes". Pure
+   atmosphere; sits behind the deck and never eats a click. */
+.sw-panel::before {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(125% 80% at 50% -12%, var(--heat-glow), transparent 58%),
+    radial-gradient(90% 60% at 50% 112%, rgba(255,122,26,0.12), transparent 60%);
+  animation: sw-bloom 7s ease-in-out infinite;
+}
+.sw-panel > * { position: relative; z-index: 1; }
+@keyframes sw-bloom { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
+@media (min-width: 560px) {
+  .sw-panel { min-height: 0; height: auto; max-height: 80vh; }
+}
+
+/* Stories-style segmented progress. Each segment is a track; an inner fill
+   reads as elapsed. The live segment fills over the slide's auto-advance
+   duration (--sw-fill-ms) for that Wrapped/Stories tick. */
+.sw-dots {
+  display: flex; gap: 6px; justify-content: center;
+  padding: 6px 26px 2px; margin-bottom: 6px;
+}
+.sw-dot {
+  flex: 1; max-width: 52px; height: 4px; padding: 0; border: none;
+  border-radius: 3px; overflow: hidden; cursor: pointer;
+  background: var(--hair-2); position: relative;
+}
+.sw-dot-fill {
+  position: absolute; inset: 0; width: 0; border-radius: inherit;
+  background: linear-gradient(90deg, var(--heat-deep), var(--heat));
+}
+.sw-dot.past .sw-dot-fill { width: 100%; }
+.sw-dot.on { box-shadow: 0 0 10px var(--heat-glow); }
+.sw-dot.on .sw-dot-fill { width: 100%; background: linear-gradient(90deg, var(--heat), var(--heat-hot)); }
+.sw-dot.on.auto .sw-dot-fill { width: 0; animation: sw-fill var(--sw-fill-ms, 5000ms) linear forwards; }
+@keyframes sw-fill { from { width: 0; } to { width: 100%; } }
+
+/* Slide stage — flexes to fill, centers the card */
+.sw-stage {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 30px 8px; min-height: 0;
+}
+.sw-slide { width: 100%; text-align: center; }
+.sw-eyebrow {
+  display: inline-block; margin-bottom: 16px; color: var(--heat);
+  padding: 3px 9px; border: 1px solid color-mix(in srgb, var(--heat) 40%, transparent);
+  border-radius: 999px; background: color-mix(in srgb, var(--heat) 9%, transparent);
+}
+.sw-figure {
+  font-size: clamp(54px, 19vw, 88px); line-height: 0.92; font-weight: 800;
+  letter-spacing: -0.03em; margin-bottom: 8px;
+  background: linear-gradient(165deg, var(--ink-hi) 18%, var(--heat) 78%, var(--heat-hot));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 6px 26px var(--heat-glow));
+}
+.sw-figcap {
+  margin: 0 auto 18px; max-width: 30ch;
+  font-size: 12px; color: var(--ink-mid); line-height: 1.45;
+}
+.sw-headline {
+  font-size: clamp(22px, 6.4vw, 30px); line-height: 1.14; color: var(--ink-hi);
+  margin: 0 auto; max-width: 18ch; letter-spacing: -0.015em; text-wrap: balance;
+}
+.sw-body {
+  margin: 13px auto 0; max-width: 32ch;
+  font-size: 14px; line-height: 1.55; color: var(--ink-mid); text-wrap: pretty;
+}
+
+/* Kind-aware flavour — the framework ships generic, but each template gets a
+   touch of its own so a deck doesn't read as one note. */
+.sw-kind-intro .sw-headline,
+.sw-kind-outro .sw-headline { font-size: clamp(26px, 8vw, 38px); line-height: 1.05; max-width: 16ch; }
+.sw-kind-moment .sw-eyebrow { color: var(--heat-hot); border-color: color-mix(in srgb, var(--heat-hot) 45%, transparent); }
+.sw-kind-standings .sw-figure { background: linear-gradient(165deg, var(--ink-hi), var(--heat-deep)); -webkit-background-clip: text; background-clip: text; }
+
+/* Footer nav */
+.sw-controls {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding-top: 14px; border-top: 1px solid var(--hair);
+}
+.sw-nav {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-mid); background: transparent;
+  border: 1px solid var(--hair-2); border-radius: 999px; padding: 9px 16px; cursor: pointer;
+  transition: all 150ms var(--ease);
+}
+.sw-nav:hover:not(:disabled) { color: var(--heat); border-color: var(--heat); transform: translateY(-1px); }
+.sw-nav:active:not(:disabled) { transform: translateY(0); }
+.sw-nav:disabled { opacity: 0.3; cursor: default; }
+.sw-nav.primary {
+  color: var(--surf-1); border-color: transparent;
+  background: linear-gradient(120deg, var(--heat), var(--heat-hot));
+  box-shadow: 0 4px 16px var(--heat-glow);
+}
+.sw-nav.primary:hover:not(:disabled) { filter: brightness(1.06); box-shadow: 0 6px 22px var(--heat-glow); }
+.sw-nav svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.sw-count {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em;
+  color: var(--ink-low);
+}
+
+/* Kinetic entrance — blur + scale + lift that settles, staggered per element,
+   re-fired each slide via the React remount key. The Wrapped "snap into focus". */
+@keyframes sw-slide-in {
+  from { opacity: 0; transform: translateY(20px) scale(0.965); filter: blur(7px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+@keyframes sw-figure-pop {
+  0% { opacity: 0; transform: translateY(14px) scale(0.8); filter: blur(8px); }
+  62% { transform: translateY(0) scale(1.05); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+.sw-enter { animation: sw-slide-in 420ms var(--ease) both; }
+.sw-enter .sw-eyebrow { animation: sw-slide-in 460ms var(--ease) both; animation-delay: 40ms; }
+.sw-enter .sw-figure { animation: sw-figure-pop 620ms var(--ease) both; animation-delay: 90ms; }
+.sw-enter .sw-figcap { animation: sw-slide-in 480ms var(--ease) both; animation-delay: 150ms; }
+.sw-enter .sw-headline { animation: sw-slide-in 480ms var(--ease) both; animation-delay: 130ms; }
+.sw-enter .sw-body { animation: sw-slide-in 500ms var(--ease) both; animation-delay: 190ms; }
+
+/* Loading skeleton */
+.sw-skeleton { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.sw-sk-line { display: block; background: var(--hair-2); border-radius: 3px; position: relative; overflow: hidden; }
+.sw-sk-line::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--heat) 18%, transparent), transparent);
+  animation: sw-shimmer 1.3s ease-in-out infinite;
+}
+.sw-sk-eyebrow { width: 120px; height: 11px; }
+.sw-sk-fig { width: 150px; height: 64px; margin: 6px 0; }
+.sw-sk-head { width: 70%; height: 22px; }
+.sw-sk-body { width: 80%; height: 13px; }
+.sw-sk-body.short { width: 55%; }
+@keyframes sw-shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sw-panel::before { animation: none; }
+  .sw-enter, .sw-enter * { animation: none !important; }
+  .sw-dot.on.auto .sw-dot-fill { animation: none; width: 100%; }
+  .sw-sk-line::after { animation: none; }
+}
+
 /* ---------------------------------------------------------------------------
    Spotlight (PHA-1043) playoff-grade team modal. Reuses the .tsd-panel
    bottom-sheet shell; adds a cinematic hero, the before/after narrative, a
