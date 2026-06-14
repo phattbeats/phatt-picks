@@ -354,6 +354,26 @@ export async function warmStandings(
   return { section: sectionId, status: rows > 0 ? "ingested" : "kept-cache", rows };
 }
 
+/**
+ * Force a synchronous crawl + ingest, bypassing the ~1h floor (PHA-1109).
+ *
+ * The on-read driver stamps the shared floor at claim time, then DEFERS its crawl
+ * via after() — which doesn't fire reliably in the standalone server. So during a
+ * live stage the floor stays perpetually stamped while no crawl ever lands, and
+ * floor-respecting paths (warmStandings) are wedged out for the hour. The
+ * in-process live-results scheduler calls THIS so it always crawls regardless of
+ * who last stamped the floor; its own fixed tick is the rate limit. Stamps the
+ * floor afterwards so the on-read path backs off and doesn't double-crawl. Still
+ * window-gated by the caller; never throws (ingestStandings is best-effort and
+ * keeps the prior cache on any failure).
+ */
+export async function ingestStandingsNow(eventId: number, sectionId: number): Promise<number> {
+  if (!hasStandingsSource(eventId, sectionId)) return 0;
+  const rows = await ingestStandings(eventId, sectionId);
+  await stampStandingsRefreshSlot();
+  return rows;
+}
+
 /** The sections that have a live standings source for an event (warm-all entry point). */
 export function standingsSectionIds(eventId: number): number[] {
   return Object.keys(sectionSourcesFor(eventId)).map(Number);
