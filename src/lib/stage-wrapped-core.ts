@@ -13,6 +13,8 @@
  * you're on*.
  */
 
+import type { LogoTier } from "./logos-core";
+
 /** The visual template a slide renders with. The shell ships generic layouts; */
 /** sibling content issues pick the kind per moment. */
 export type WrappedSlideKind =
@@ -22,6 +24,36 @@ export type WrappedSlideKind =
   | "standings" // where you / the field landed
   | "outro" // closer / share prompt
   | "placeholder"; // shell-only filler until real data lands
+
+/** A resolved team logo for a slide (cascade tiers + name), serializable for RSC. */
+export interface WrappedTeamLogo {
+  tiers: LogoTier[];
+  name: string;
+}
+
+/** A brand mark (game / major logo) rendered on intro/outro/brand slides. */
+export interface WrappedBrandLogo {
+  src: string;
+  alt: string;
+  /** White-treat a dark logo for the dark deck (brightness(0) invert(1)). */
+  invert?: boolean;
+}
+
+/** The viewer's avatar for personal slides; `src` null falls back to initials. */
+export interface WrappedAvatar {
+  src: string | null;
+  label: string;
+}
+
+/** A stylized STAGE logo lockup (HEAT brand) — hero mark on the cover/closer. */
+export interface WrappedStageBadge {
+  /** Roman numeral, e.g. "I" / "II" / "III". */
+  numeral: string;
+  /** Word above the numeral (default "STAGE"). */
+  label?: string;
+  /** Caption under the numeral, e.g. "WRAPPED". */
+  sub?: string;
+}
 
 export interface WrappedSlide {
   /** Stable id (used as the animation remount key + dot aria labels). */
@@ -37,6 +69,14 @@ export interface WrappedSlide {
   figure?: string;
   /** Caption under the figure, e.g. "of your Stage I picks hit". */
   figureCaption?: string;
+  /** 1–3 team logos to render as a visual row (matchups, clinchers). */
+  teamLogos?: WrappedTeamLogo[];
+  /** A brand mark (major / game logo) for cover + closer slides. */
+  brandLogo?: WrappedBrandLogo;
+  /** The viewer's avatar, for personal slides. */
+  avatar?: WrappedAvatar;
+  /** A stylized STAGE logo lockup, for the cover + closer. */
+  stageBadge?: WrappedStageBadge;
   /**
    * Per-slide auto-advance, in ms. Falsy / omitted => this slide waits for the
    * user. The shell clamps to a sane floor so a stray `1` can't strobe.
@@ -170,6 +210,18 @@ export function wrappedSeenKey(eventId: number | string, sectionId: number | str
 /** A stable per-stage identity passed to the shell (event:section). */
 export function stageWrappedKey(eventId: number | string, sectionId: number | string): string {
   return `${eventId}:${sectionId}`;
+}
+
+/** Parse the roman numeral out of a stage label like "Stage II" → "II". Pure. */
+export function stageNumeral(stageName: string): string {
+  const m = stageName.match(/\b([IVX]+)\b/i);
+  if (m) return m[1].toUpperCase();
+  const n = stageName.match(/\b(\d+)\b/);
+  if (n) {
+    const map: Record<string, string> = { "1": "I", "2": "II", "3": "III", "4": "IV", "5": "V" };
+    return map[n[1]] ?? n[1];
+  }
+  return stageName.replace(/^stage\s+/i, "").toUpperCase();
 }
 
 /* ------------------------------------------------------------------ */
