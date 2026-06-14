@@ -135,6 +135,70 @@ check(
   })(),
 );
 
+console.log("\nspotlight-odds - moneyline selection (the bug a live H2H event would hit)");
+// A real H2H esports/sports event carries MANY two-outcome markets, several of
+// which ALSO name the two teams (handicaps, set winners). Only `moneyline` is the
+// match win %. Mirrors the live gamma shape (LoL/tennis: ~17 two-outcome markets).
+const realisticEvent: GammaEvent = {
+  slug: "furia-vs-spirit-bo3",
+  markets: [
+    // NON-moneyline lines that DO name the teams — must NOT be chosen as win %.
+    { outcomes: '["Over","Under"]', outcomePrices: '["0.5","0.5"]', sportsMarketType: "totals" },
+    {
+      outcomes: '["FURIA","Spirit"]',
+      outcomePrices: '["0.40","0.60"]',
+      sportsMarketType: "map_handicap",
+    },
+    {
+      outcomes: '["Spirit","FURIA"]',
+      outcomePrices: '["0.35","0.65"]',
+      sportsMarketType: "child_moneyline",
+    },
+    // The real match-winner line — appears AFTER the decoys.
+    {
+      outcomes: '["FURIA","Spirit"]',
+      outcomePrices: '["0.58","0.42"]',
+      sportsMarketType: "moneyline",
+    },
+  ],
+};
+check(
+  "picks the moneyline price, not the first team-named (handicap) market",
+  (() => {
+    const r = resolveMatchupOdds(realisticEvent, "FURIA");
+    return !!r && near(r.teamPct, 58) && r.oppName === "Spirit" && near(r.oppPct, 42);
+  })(),
+);
+check(
+  "moneyline orientation flips for the opponent side too",
+  (() => {
+    const r = resolveMatchupOdds(realisticEvent, "Spirit");
+    return !!r && near(r.teamPct, 42) && r.oppName === "FURIA";
+  })(),
+);
+check(
+  "moneyline present but team unmatched → null (does NOT fall through to a handicap line)",
+  (() => {
+    const ev: GammaEvent = {
+      markets: [
+        { outcomes: '["FURIA","Spirit"]', outcomePrices: '["0.4","0.6"]', sportsMarketType: "map_handicap" },
+        { outcomes: '["FURIA","Spirit"]', outcomePrices: '["0.58","0.42"]', sportsMarketType: "moneyline" },
+      ],
+    };
+    return resolveMatchupOdds(ev, "Vitality") === null;
+  })(),
+);
+check(
+  "no moneyline type → falls back to the first two-outcome market naming the team",
+  (() => {
+    const ev: GammaEvent = {
+      markets: [{ outcomes: '["FURIA","Spirit"]', outcomePrices: '["0.7","0.3"]' }],
+    };
+    const r = resolveMatchupOdds(ev, "FURIA");
+    return !!r && near(r.teamPct, 70);
+  })(),
+);
+
 console.log("\nspotlight-odds - formatUpdatedLabel (honest against the ~1h floor)");
 const T = 1_700_000_000_000;
 check("<1 min → 'just now'", formatUpdatedLabel(T, T + 30_000) === "just now");
