@@ -106,7 +106,31 @@ const SPOTLIGHTS: Record<number, TeamSpotlight> = {
       caption: "FURIA close BB Team to advance 3-0, Stage 3 (ESL highlights)",
     },
   },
-  // The other seven fill in here as each team clinches (PHA-1065), authored from
+  // Team Spirit, pickid 81. SECOND REAL ENTRY (Brandon, 2026-06-14: "SPIRIT is
+  // also one of the 3-0 picks, make that so we know the pipeline works"). Clean
+  // 3-0 Stage 3 Swiss run (beat NaVi, Aurora, 9z), verified via HLTV + the ESL
+  // highlight feed; storyline-first per the template (donk, best player alive).
+  81: {
+    pickid: 81,
+    narrative: {
+      tag: "THE BEST IN THE WORLD",
+      seedLine: "Advanced 3-0 from Stage 3 · NaVi, Aurora, 9z",
+      before:
+        "Team Spirit are built around donk, the phenom who won a Major MVP at 16 and has been called the best player alive ever since. Beside him stands sh1ro, a former Major champion and one of the deadliest AWPers of his generation.",
+      during:
+        "At Cologne the hype has looked modest. donk put up one of the most dominant individual runs the Major has seen on a clean 3-0 over NaVi, Aurora, and 9z, Spirit barely conceding a round. Right now the rest of the bracket is playing for second.",
+    },
+    // Official ESL per-match reel for the 9z clinch ("CRAZY GAME!"), trimmed to a
+    // ~55s window via start/end (no re-hosting), same recipe as FURIA.
+    highlight: {
+      kind: "youtube",
+      src: "G0PbejF_8VA", // @ESLCSHighlights, verified via oEmbed 2026-06-14
+      start: 8,
+      end: 63,
+      caption: "Spirit close 9z to advance 3-0, Stage 3 (ESL highlights)",
+    },
+  },
+  // The other six fill in here as each team clinches (PHA-1065), authored from
   // their real run per the template above. Until then a playoff team with no
   // entry renders the dossier-only fallback (roster + last 5), never a
   // placeholder story, so nothing fabricated can ship.
