@@ -91,7 +91,7 @@ const SPOTLIGHTS: Record<number, TeamSpotlight> = {
       before:
         "Gabriel 'FalleN' Toledo built Brazilian Counter-Strike from nothing and won the Major twice at its 2016 peak. At 34 he has named this his final year as a player. Cologne is one of the last times the godfather takes the Major stage that made him a legend.",
       during:
-        "The old king is not going quietly. FalleN called and AWPed a clean 3-0 with KSCERATO and yuurih, the lieutenants who never left, beside him for the long goodbye and a young core carrying the rest. Every round from here is one fewer he has left.",
+        "The old king is not going quietly, and he is not alone. FalleN steers while the AWP now belongs to molodoy, the 21-year-old pride of Kazakhstan and reigning Rookie of the Year, with KSCERATO and yuurih grinding beside them. A clean 3-0, and the torch passing from a legend to his heir in real time.",
     },
     // The official ESL per-match highlights reel for the clinch (BB Team vs
     // FURIA, "WINNER TO PLAYOFFS"), trimmed to a ~55s window so the modal plays
