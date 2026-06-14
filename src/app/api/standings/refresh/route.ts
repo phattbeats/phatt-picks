@@ -37,8 +37,47 @@ import { NextResponse } from "next/server";
 import { warmStandings, standingsSectionIds } from "@/lib/swiss-results";
 import { bridgeSwissOutcomes } from "@/lib/outcomes";
 import { currentEventId } from "@/lib/events-core";
+import { getCommittedLayout } from "@/lib/layout";
+import { prisma } from "@/lib/db";
+import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Read-only dump of the resolved Swiss answer key + each slot's bucket and team
+ * name (PHA-1109 diagnostic). The resolved outcomes are already public on the
+ * leaderboard / reveal, so this exposes nothing new — it just makes "which team
+ * is the bridge crediting in which bucket" inspectable from a single headless
+ * poke, which is exactly the question a frozen / mis-resolved clinch raises.
+ */
+async function dumpAnswerKey(eventId: number) {
+  const layout = getCommittedLayout();
+  const nameByPick = new Map(layout.teams.map((t) => [t.pickid, t.name]));
+  const rows = await prisma.stageOutcome.findMany({
+    where: { eventId },
+    select: { sectionId: true, groupId: true, slotIndex: true, winnerPickId: true },
+  });
+  const dump: Record<number, Array<{ slot: number; bucket: string; pickId: number; team: string }>> = {};
+  for (const section of layout.sections) {
+    if (!isSwissSection(section.sectionid)) continue;
+    const group = section.groups[0];
+    const bucketBySlot = new Map<number, string>();
+    for (const b of bucketSwissSlots(group?.picks.length ?? 10)) {
+      for (const s of b.slotIndexes) bucketBySlot.set(s, b.label);
+    }
+    const secRows = rows
+      .filter((r) => r.sectionId === section.sectionid)
+      .sort((a, b) => a.slotIndex - b.slotIndex)
+      .map((r) => ({
+        slot: r.slotIndex,
+        bucket: bucketBySlot.get(r.slotIndex) ?? "?",
+        pickId: r.winnerPickId,
+        team: nameByPick.get(r.winnerPickId) ?? `unknown#${r.winnerPickId}`,
+      }));
+    if (secRows.length) dump[section.sectionid] = secRows;
+  }
+  return dump;
+}
 
 async function warmAll() {
   const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
@@ -55,7 +94,13 @@ async function warmAll() {
   } catch (e) {
     console.error("[standings/refresh] outcome bridge failed (non-fatal):", e);
   }
-  return NextResponse.json({ ok: true, eventId: EVENT_ID, results, resolved });
+  let answerKey: Awaited<ReturnType<typeof dumpAnswerKey>> = {};
+  try {
+    answerKey = await dumpAnswerKey(EVENT_ID);
+  } catch (e) {
+    console.error("[standings/refresh] answer-key dump failed (non-fatal):", e);
+  }
+  return NextResponse.json({ ok: true, eventId: EVENT_ID, results, resolved, answerKey });
 }
 
 // GET so it's trivial to warm from a browser / curl / uptime poke; POST aliased
