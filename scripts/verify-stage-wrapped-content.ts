@@ -76,7 +76,8 @@ check("Stage I ends on the outro slide", s1[s1.length - 1]?.kind === "outro");
 const s1ids = s1.map((s) => s.id);
 check("Stage I slide ids are unique", new Set(s1ids).size === s1ids.length);
 check("every Stage I slide has a non-empty headline", s1.every((s) => typeof s.headline === "string" && s.headline.length > 0));
-check("Stage I carries 4 authored event moments", s1.filter((s) => s.id.startsWith("s1-")).length === 4);
+check("Stage I carries 5 authored event moments", s1.filter((s) => s.id.startsWith("s1-")).length === 5);
+check("Stage I has a FUCK YOUR PICK'EMS slide", s1.some((s) => s.id === "s1-fyp" && /PICK'EMS/.test(s.eyebrow ?? "")));
 check("Stage I has the BIG 0-12 comeback moment", s1.some((s) => s.id === "s1-comeback-big-nrg" && /0-12/.test(s.figure ?? "")));
 check("Stage I has the FlyQuest upset moment", s1.some((s) => s.id === "s1-upset-flyquest-liquid"));
 check("Stage I has a personal score slide", s1.some((s) => s.id === "personal-score" && s.figure === "+6"));
@@ -90,7 +91,8 @@ check("personal outro promises replay (button is wired)", s1.some((s) => s.kind 
 /* ---- Authored Stage II, personal ---- */
 const s2 = buildStageWrappedDeck(106, "Stage II", PERSONAL);
 check("Stage II deck is non-empty", s2.length > 0);
-check("Stage II carries 4 authored event moments", s2.filter((s) => s.id.startsWith("s2-")).length === 4);
+check("Stage II carries 5 authored event moments", s2.filter((s) => s.id.startsWith("s2-")).length === 5);
+check("Stage II has a FUCK YOUR PICK'EMS slide", s2.some((s) => s.id === "s2-fyp" && /PICK'EMS/.test(s.eyebrow ?? "")));
 check("Stage II has the donk/Spirit dominance moment", s2.some((s) => s.id === "s2-dominance-spirit-donk" && /10 rounds/.test(s.figure ?? "")));
 check("Stage II has the Astralis drought moment", s2.some((s) => s.id === "s2-drought-astralis"));
 
