@@ -3,16 +3,16 @@
  *
  * The registry is the backbone of multi-major support. This proves:
  *   • exactly one event is `live`, and resolveActiveEvent() returns it;
- *   • ACTIVE_EVENT_ID equals that event's id (the value the ~15 pages/routes
- *     used to hardcode as `26`) — i.e. the refactor is behind current behavior;
+ *   • currentEventId() equals that event's id (the value the ~15 pages/routes
+ *     resolve PER REQUEST since PHA-1046 — no module-load-bound ACTIVE_EVENT_ID);
  *   • getEventConfig() round-trips by id and is null for an unregistered id;
  *   • the active event's identity matches the committed layout fixture
  *     (eventId === result.event, name === result.name) — the registry can't
  *     drift from the fixture it indexes;
  *   • the per-event config the registry references IS the committed
  *     lock-schedule constants (no duplicate, no drift);
- *   • SECTION_SOURCES (what swiss-results.ts now imports) equals the active
- *     event's sectionSources and still maps the Cologne Swiss stages.
+ *   • the active event's sectionSources (what swiss-results.ts now resolves via
+ *     getEventConfig(eventId)) still maps the Cologne Swiss stages.
  *
  * Run: node scripts/verify-events.ts
  */
@@ -25,8 +25,8 @@ import {
   EVENTS,
   getEventConfig,
   resolveActiveEvent,
-  ACTIVE_EVENT_ID,
-  SECTION_SOURCES,
+  currentEvent,
+  currentEventId,
   validateEventRevealConfig,
   validateSwissClassification,
   type EventConfig,
@@ -64,8 +64,8 @@ check("exactly one live event in the registry", liveEntries.length === 1);
 const active = resolveActiveEvent();
 check("resolveActiveEvent() returns the live event", active.status === "live");
 check("active event id is 26 (Cologne — current behavior)", active.eventId === 26);
-check("ACTIVE_EVENT_ID === active.eventId", ACTIVE_EVENT_ID === active.eventId);
-check("ACTIVE_EVENT_ID === 26 (the value pages hardcoded before)", ACTIVE_EVENT_ID === 26);
+check("currentEventId() === active.eventId (per-request, PHA-1046)", currentEventId() === active.eventId);
+check("currentEventId() === 26 (the value pages resolve per request)", currentEventId() === 26);
 
 // — getEventConfig round-trips and is honest about misses —
 check("getEventConfig(26) returns the active event", getEventConfig(26) === active);
@@ -82,11 +82,11 @@ check("lockSchedule IS COLOGNE_LOCK_SCHEDULE", active.lockSchedule === COLOGNE_L
 check("matchWindows IS COLOGNE_MATCH_WINDOWS", active.matchWindows === COLOGNE_MATCH_WINDOWS);
 check("sectionNames IS COLOGNE_SECTION_NAMES", active.sectionNames === COLOGNE_SECTION_NAMES);
 
-// — sectionSources / SECTION_SOURCES (consumed by swiss-results) —
-check("SECTION_SOURCES === active.sectionSources", SECTION_SOURCES === active.sectionSources);
-check("Stage I (105) maps to HLTV event 9028", SECTION_SOURCES[105]?.url.includes("/9028/") === true);
-check("Stage II (106) maps to HLTV event 9029", SECTION_SOURCES[106]?.url.includes("/9029/") === true);
-check("every section source has a label", Object.values(SECTION_SOURCES).every((s) => !!s.label));
+// — sectionSources (resolved per-event by swiss-results via getEventConfig) —
+const sources = active.sectionSources;
+check("Stage I (105) maps to HLTV event 9028", sources[105]?.url.includes("/9028/") === true);
+check("Stage II (106) maps to HLTV event 9029", sources[106]?.url.includes("/9029/") === true);
+check("every section source has a label", Object.values(sources).every((s) => !!s.label));
 
 // — dates + resource bindings are present and well-formed —
 check("dates.start parses", !Number.isNaN(Date.parse(active.dates.start)));
@@ -94,6 +94,49 @@ check("dates.end parses and is after start", Date.parse(active.dates.end) > Date
 check("fixtures.layout names the committed fixture", active.fixtures.layout === "cologne-layout");
 check("fixtures.logos names the committed manifest", active.fixtures.logos === "cologne-logos");
 check("teamMaps record the owning modules", !!active.teamMaps.regions && !!active.teamMaps.stats && !!active.teamMaps.sources);
+
+// — PHA-1055: the next Major (PGL Singapore 2026) is pre-seeded as `upcoming`,
+//   fully gated (no section-keyed config yet) so it has zero impact on live
+//   Cologne and both CI guards pass on an empty config. —
+const singapore = getEventConfig(27);
+check("Singapore 2026 is registered (eventId 27)", singapore !== null);
+check("Singapore is staged as upcoming", singapore?.status === "upcoming");
+check("Singapore slug is pgl-singapore-2026", singapore?.slug === "pgl-singapore-2026");
+check("Singapore dates parse and end after start",
+  !!singapore &&
+  !Number.isNaN(Date.parse(singapore.dates.start)) &&
+  Date.parse(singapore.dates.end) > Date.parse(singapore.dates.start));
+check("Singapore start is Nov 25 2026 (main event opener)",
+  singapore?.dates.start === "2026-11-25T00:00:00Z");
+check("Singapore section-keyed config is gated (empty until HLTV publishes)",
+  !!singapore &&
+  Object.keys(singapore.sectionNames).length === 0 &&
+  Object.keys(singapore.lockSchedule).length === 0 &&
+  Object.keys(singapore.matchWindows).length === 0 &&
+  Object.keys(singapore.sectionSources).length === 0);
+check("Singapore records its fixture/teamMap bindings for the re-point",
+  !!singapore && !!singapore.fixtures.layout && !!singapore.fixtures.logos &&
+  !!singapore.teamMaps.regions && !!singapore.teamMaps.stats && !!singapore.teamMaps.sources);
+check("seeding Singapore did not disturb the single live event (Cologne)",
+  Object.values(EVENTS).filter((e) => e.status === "live").length === 1 &&
+  resolveActiveEvent().eventId === 26);
+
+// — PHA-1048: the off-season HANDOFF on the REAL registry. Singapore is seeded
+//   ~5 months before it opens with EMPTY section-keyed config. Without the
+//   anticipation window (event-lifecycle-core), it would become the site's
+//   identity the instant Cologne archives (its dates.end ceiling, Jun 26) and
+//   sit there all summer — a "Singapore" banner over the still-static Cologne
+//   fixtures, no live boards. The gate holds the just-archived Major as the face
+//   until the next is within ~45 days of go-live (Singapore go-live = its
+//   dates.start Nov 25, no lock schedule → window opens ~Oct 11). These pin the
+//   real EVENTS through that arc so the imminent transition can't regress. —
+const offSeason = Date.parse("2026-08-01T00:00:00Z"); // Cologne archived, Singapore far out
+check("off-season: the site still serves archived Cologne, not the empty-config upcoming Singapore",
+  currentEvent(offSeason).eventId === 26);
+check("off-season served event is a real configured Major (non-empty sectionNames), never a gated upcoming",
+  Object.keys(currentEvent(offSeason).sectionNames).length > 0);
+check("hand-off: once inside Singapore's anticipation window it becomes current, still pre-go-live upcoming",
+  currentEvent(Date.parse("2026-11-01T00:00:00Z")).eventId === 27);
 
 // — config-sanity invariant: at most one BASELINE-live event. (resolveActiveEvent
 //   is clock-derived since PHA-950 and no longer throws on multiples — it picks
@@ -146,6 +189,36 @@ check(
     ...base,
     lockSchedule: { 200: "not-a-date" },
   }).some((p) => p.includes("not a valid ISO")),
+);
+// — invariant E (PHA-1046): the event's own span must parse, or the clock-derived
+//   lifecycle can't place it (unparseable start → goLiveMs +Infinity → never live). —
+check(
+  "guard flags an unparseable dates.start (would never go live)",
+  validateEventRevealConfig({
+    ...base,
+    dates: { start: "not-a-date", end: "2027-02-01T00:00:00Z" },
+  }).some((p) => p.includes("dates.start") && p.includes("never go live")),
+);
+check(
+  "guard flags an unparseable dates.end (no archive backstop)",
+  validateEventRevealConfig({
+    ...base,
+    dates: { start: "2027-01-01T00:00:00Z", end: "garbage" },
+  }).some((p) => p.includes("dates.end")),
+);
+check(
+  "guard flags start after end",
+  validateEventRevealConfig({
+    ...base,
+    dates: { start: "2027-03-01T00:00:00Z", end: "2027-01-01T00:00:00Z" },
+  }).some((p) => p.includes("after dates.end")),
+);
+check(
+  "guard passes a well-formed span",
+  !validateEventRevealConfig({
+    ...base,
+    dates: { start: "2027-01-01T00:00:00Z", end: "2027-02-01T00:00:00Z" },
+  }).some((p) => p.includes("dates.")),
 );
 
 // — future-major guard (PHA-946): the registry's structural Swiss-ness

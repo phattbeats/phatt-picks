@@ -14,8 +14,11 @@
  *
  * SEQUENCING (PHA-948). This is the BACKBONE that lands *behind current
  * behavior*: `resolveActiveEvent()` returns Cologne (eventId 26, the sole
- * `live` entry), so every consumer that reads `ACTIVE_EVENT_ID` gets exactly
- * the 26 it hardcoded before — nothing about the live event changes. The full
+ * `live` entry), so every consumer that resolves `currentEventId()` per request
+ * gets exactly the 26 it hardcoded before — nothing about the live event
+ * changes. (PHA-1046 removed the module-load-bound `ACTIVE_EVENT_ID`/
+ * `SECTION_SOURCES` constants; resolve per request, never cache at module
+ * scope.) The full
  * *cutover* (inverting the domain modules' default params so they read the
  * active event's `lockSchedule` / `matchWindows` instead of their own
  * `COLOGNE_*` constant) is deliberately deferred to the follow-up workstream so
@@ -42,10 +45,15 @@ import { isSwissSection } from "./swiss-bucket-core";
 import {
   isEffectivelyLive,
   selectCurrentEvent,
+  type EventStatus,
 } from "./event-lifecycle-core";
 
-/** Lifecycle of a Major in the registry. Exactly one entry is `live`. */
-export type EventStatus = "upcoming" | "live" | "archived";
+/**
+ * Lifecycle of a Major in the registry. Exactly one entry is `live`. Defined in
+ * the zero-dependency `event-lifecycle-core` leaf and re-exported here so the
+ * registry and its consumers share one canonical definition.
+ */
+export type { EventStatus };
 
 /** Which HLTV event page carries the live Swiss table for a section. */
 export interface SectionSource {
@@ -110,7 +118,7 @@ export interface EventConfig {
  * `lockSchedule` / `matchWindows` / `sectionNames` reference the committed
  * constants in lock-schedule-core (their canonical home until the cutover
  * inverts the dependency). `sectionSources` lives here — this registry is its
- * home (swiss-results.ts imports `SECTION_SOURCES` from this module). Only
+ * home (swiss-results.ts resolves it per-event via `getEventConfig`). Only
  * Swiss stages with a live HLTV event are mapped; Stage III + playoffs map in
  * as HLTV publishes them (the picker/lineup still render without a source).
  */
@@ -166,12 +174,68 @@ const COLOGNE_2026: EventConfig = {
 };
 
 /**
+ * PGL Major Singapore 2026 — the NEXT Major, pre-seeded as `upcoming` (PHA-1055,
+ * leaning on the multi-major backbone PHA-948/949/950). It resolves `upcoming`
+ * purely from the clock today and has ZERO impact on live Cologne:
+ * `selectCurrentEvent` prefers the effectively-live event, so Cologne stays the
+ * served Major until it archives, after which the site counts down to this one.
+ *
+ * Confirmed facts (PHA-1048 research): PGL · Singapore Indoor Stadium · 32 teams
+ * · $1.25M prize pool · BO5 Grand Final. Main event runs Nov 25 – Dec 13 2026,
+ * playoffs/finals Dec 10–13. These descriptive facts (org/prize/format/venue)
+ * have no field on `EventConfig` and intentionally live in this doc comment —
+ * the registry indexes *config*, and adding consumer-less fields would be scope
+ * creep. They're the seed record for the re-point runbook (docs/NEXT-MAJOR.md).
+ *
+ * GATED until ~Oct/Nov 2026 — left deliberately EMPTY so both CI guards pass
+ * (an empty config has nothing to validate) and nothing renders half-built:
+ *   • `sectionNames` — empty. Declaring "Stage N" names before their section ids
+ *     are wired into `isSwissSection` would trip `validateSwissClassification`
+ *     (the PHA-946 regression guard). Fill when the layout fixture lands.
+ *   • `lockSchedule` / `matchWindows` — empty. Only the overall window + the
+ *     Dec 10–13 finals are dated today; precise stage day-splits are unpublished.
+ *   • `sectionSources` — empty. HLTV mints per-stage event ids (mirror Cologne's
+ *     9028/9029 + the 8301 hub) only once stage pages exist (~Oct/Nov). The
+ *     PHA-926-style watcher pulls them the moment they publish.
+ *
+ * `eventId: 27` is PROVISIONAL — Valve's tournament id for this Major isn't
+ * published yet (Cologne is 26; 27 is the natural next). It's only a unique
+ * registry key today (no fixture asserts it while the event is `upcoming`);
+ * Phase 1a of the runbook replaces it with the real id when the layout lands.
+ * Likewise `fixtures`/`teamMaps` name the files/modules the re-point will fill.
+ */
+const SINGAPORE_2026: EventConfig = {
+  eventId: 27,
+  slug: "pgl-singapore-2026",
+  name: "PGL Major Singapore 2026",
+  status: "upcoming",
+  // Main event Nov 25 – Dec 13 2026 (playoffs/finals Dec 10–13, Singapore Indoor
+  // Stadium). `end` is the calendar BACKSTOP for the archive transition, set a
+  // touch past the Dec 13 finals so it sits comfortably beyond GF + the 48h grace
+  // (PHA-954) — the real archive fires on the Grand Final resolving, not this
+  // ceiling (mirrors Cologne's reasoning). Refine both dates when stage day-
+  // splits publish.
+  dates: { start: "2026-11-25T00:00:00Z", end: "2026-12-15T23:59:59Z" },
+  sectionNames: {},
+  lockSchedule: {},
+  matchWindows: {},
+  sectionSources: {},
+  fixtures: { layout: "pgl-singapore-2026-layout", logos: "pgl-singapore-2026-logos" },
+  teamMaps: {
+    regions: "regions-core",
+    stats: "team-stats-core",
+    sources: "team-stats-sources",
+  },
+};
+
+/**
  * The committed event registry, keyed by Valve event id. Adding a Major is a
  * new entry here (plus the per-fixture swaps in NEXT-MAJOR.md); going live is
  * flipping its `status` to "live" and the previous event's to "archived".
  */
 export const EVENTS: Readonly<Record<number, EventConfig>> = {
   [COLOGNE_2026.eventId]: COLOGNE_2026,
+  [SINGAPORE_2026.eventId]: SINGAPORE_2026,
 };
 
 /** Look up an event's config by Valve event id; null when not registered. */
@@ -196,10 +260,12 @@ export function liveEvents(nowMs: number = Date.now()): EventConfig[] {
 
 /**
  * The single event the picker / pages should serve right now — robust across
- * the gaps a self-sustaining multi-Major site has (live › soonest-upcoming ›
- * most-recently-archived, so the off-season still shows the last Major rather
- * than a blank site). Throws only if the registry is empty, which is a build
- * error, never a runtime state. Clock-derived; Cologne today.
+ * the gaps a self-sustaining multi-Major site has (live › soonest-upcoming
+ * once it's within its anticipation window › most-recently-archived, so the
+ * off-season keeps showing the last Major's results until the next one is near
+ * rather than flipping to a barely-seeded future event — PHA-1048). Throws only
+ * if the registry is empty, which is a build error, never a runtime state.
+ * Clock-derived; Cologne today.
  */
 export function currentEvent(nowMs: number = Date.now()): EventConfig {
   const e = selectCurrentEvent(Object.values(EVENTS), nowMs) as EventConfig | null;
@@ -245,6 +311,11 @@ export function resolveActiveEvent(nowMs: number = Date.now()): EventConfig {
  *      orphaned window with no lock is a config slip;
  *   D. every `lockSchedule` value is a valid ISO whose reveal instant
  *      (`lockAt − 24h`) resolves strictly before the lock.
+ *   E. `dates.start` and `dates.end` are both valid ISO instants, and start ≤
+ *      end (PHA-1046). An unparseable `dates.start` with no published lock
+ *      schedule makes `goLiveMs` return +Infinity, so the lifecycle never flips
+ *      the event to `live` — it silently never goes live. Catching it at CI is
+ *      the difference between a loud build failure and a Major that no-shows.
  *
  * Note these flow only FROM sources→lock/window and window→lock: a Swiss stage
  * with a lock+window but no source yet (Stage III today, source unpublished) and
@@ -256,6 +327,19 @@ export function validateEventRevealConfig(event: EventConfig): string[] {
   const tag = `event ${event.eventId} (${event.slug})`;
   const lockKeys = new Set(Object.keys(event.lockSchedule).map(Number));
   const windowKeys = new Set(Object.keys(event.matchWindows).map(Number));
+
+  // E. The event's own span must parse, or the clock-derived lifecycle can't
+  // place it: an unparseable start (with no lock schedule to fall back on) yields
+  // a +Infinity go-live and the Major never flips live; an unparseable end loses
+  // the archive backstop. Both are silent in production, loud here.
+  const startMs = Date.parse(event.dates.start);
+  const endMs = Date.parse(event.dates.end);
+  if (Number.isNaN(startMs))
+    problems.push(`${tag}: dates.start "${event.dates.start}" is not a valid ISO instant (event would never go live — goLiveMs → +Infinity)`);
+  if (Number.isNaN(endMs))
+    problems.push(`${tag}: dates.end "${event.dates.end}" is not a valid ISO instant (no archive backstop)`);
+  if (!Number.isNaN(startMs) && !Number.isNaN(endMs) && startMs > endMs)
+    problems.push(`${tag}: dates.start is after dates.end (${event.dates.start} > ${event.dates.end})`);
 
   for (const key of Object.keys(event.sectionSources).map(Number)) {
     if (!lockKeys.has(key))
@@ -344,21 +428,15 @@ export function grandFinalSectionId(event: EventConfig): number | null {
   return null;
 }
 
-/**
- * Convenience constant for the ~15 pages/routes that previously hardcoded
- * `const EVENT_ID = 26`. Resolved once at module load from the clock-derived
- * active event, so every consumer shares one source of truth — and a deploy/
- * restart inside the next Major's window auto-serves it (the boot-time half of
- * the self-sustaining lifecycle; in-process drivers re-evaluate via the
- * `liveEvents(now)` / `currentEvent(now)` accessors above).
+/*
+ * PHA-1046 — the module-load-bound `ACTIVE_EVENT_ID` and `SECTION_SOURCES`
+ * constants were REMOVED. Both were evaluated once at import time, which pinned
+ * the active event for the whole process lifetime: when one Major archived and
+ * the next went live without a redeploy, every consumer kept serving the stale
+ * event. They are replaced by the per-request accessors `currentEventId(now)`
+ * (the ~15 pages/routes resolve it inside their force-dynamic handlers) and, for
+ * the standings/bracket crawl, `getEventConfig(eventId).sectionSources` threaded
+ * through swiss-results. The clock-derived accessors above (`currentEvent`,
+ * `liveEvents`, `resolveActiveEvent`) are the single source of truth — call them
+ * per request, never cache their result at module scope.
  */
-export const ACTIVE_EVENT_ID: number = currentEvent().eventId;
-
-/**
- * The active event's HLTV Swiss sources, keyed by section id. swiss-results.ts
- * imports this so the standings/bracket crawl reads the registry rather than a
- * private duplicate. The clock-derived live event's `sectionSources` (Cologne
- * today) — identical bytes to the constant swiss-results used before.
- */
-export const SECTION_SOURCES: Readonly<Record<number, SectionSource>> =
-  currentEvent().sectionSources;

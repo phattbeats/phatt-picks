@@ -34,6 +34,7 @@ import {
   CRAWL_CHUNK_SIZE,
   CRAWL_CHUNK_TIMEOUT_MS,
   CRAWL_PAGE_TIMEOUT_MS,
+  hltvTeamIdFromUrl,
   type ParsedMatch,
 } from "./team-stats-sources";
 import { statsForPickid, type TeamStats } from "./team-stats-core";
@@ -133,16 +134,30 @@ function resultMarkdown(r: Crawl4aiResult | undefined): string {
 /**
  * Crawl ONE sub-batch of profiles in a single crawl4ai request (renders + bypasses
  * the Cloudflare gate that 403s a direct fetch). Returns pickid → markdown, matched
- * back by result url (crawl4ai may not preserve input order). Lighter page settings
- * (domcontentloaded + a tight page_timeout) stop the ~50s/page networkidle hangs
- * that burned a core each; semaphore_count belt-and-suspenders the dispatcher.
- * Throws on a network / non-2xx / empty-body failure so the caller can fall back.
+ * back by the HLTV TEAM ID parsed out of each result url (PHA-1044). crawl4ai's
+ * `semaphore_count` concurrency renders the chunk in parallel, so it neither
+ * preserves input order nor returns the exact submitted url (it can redirect-
+ * normalise / rewrite it) — keying on the stable `/team/<id>/` segment binds each
+ * page to the right team regardless. A result we can't attribute to a requested id
+ * is DROPPED, never assigned by position: a positional fallback under reordered
+ * results would hand one team's last-5 to another team's pickid (a silently-wrong
+ * dossier). A dropped team simply retries on the next pass / hourly tick. Lighter
+ * page settings (domcontentloaded + a tight page_timeout) stop the ~50s/page
+ * networkidle hangs that burned a core each; semaphore_count belt-and-suspenders
+ * the dispatcher. Throws on a network / non-2xx / empty-body failure so the caller
+ * can fall back.
  */
 async function crawlChunk(
   targets: ReadonlyArray<{ pickid: number; url: string }>,
   timeoutMs: number,
 ): Promise<Record<number, string>> {
-  const urlToPickid = new Map(targets.map((t) => [t.url, t.pickid]));
+  // Map HLTV team id → pickid for the teams we asked for; results are matched back
+  // by the id in their own url, not by submitted-url equality or position.
+  const idToPickid = new Map<number, number>();
+  for (const t of targets) {
+    const id = hltvTeamIdFromUrl(t.url);
+    if (id != null) idToPickid.set(id, t.pickid);
+  }
   const res = await fetch(`${CRAWL4AI_URL}/crawl`, {
     method: "POST",
     headers: {
@@ -166,14 +181,14 @@ async function crawlChunk(
   const results = json.results ?? [];
   if (results.length === 0) throw new Error("crawl4ai returned no results");
   const out: Record<number, string> = {};
-  results.forEach((r, i) => {
-    // Prefer matching by the result's own url; fall back to input order.
-    const matched = r.url ? urlToPickid.get(r.url) : undefined;
-    const pickid = matched ?? targets[i]?.pickid;
-    if (pickid == null) return;
+  for (const r of results) {
+    // Match by the HLTV team id in the result's own url — never by position.
+    const id = hltvTeamIdFromUrl(r.url);
+    const pickid = id != null ? idToPickid.get(id) : undefined;
+    if (pickid == null) continue; // can't safely attribute — drop; retried next pass
     const md = resultMarkdown(r);
     if (md) out[pickid] = md;
-  });
+  }
   return out;
 }
 

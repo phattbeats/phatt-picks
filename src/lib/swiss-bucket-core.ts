@@ -19,6 +19,14 @@ export interface SwissBucket {
 }
 
 /**
+ * A slot-bucketing function — the signature of `bucketSwissSlots` below. The
+ * pure leaf cores (swiss-standings-core, swiss-clinch-core) take this as an
+ * injected dependency rather than importing `bucketSwissSlots` directly, so
+ * they stay type-only-dependency leaves that load under the verify harness.
+ */
+export type BucketsForSlotCount = (slotCount: number) => SwissBucket[];
+
+/**
  * Bucket a Swiss stage's flat pick slots by predicted outcome. The 10-slot
  * layout below matches the Cologne 2026 Stage I screenshot Brandon attached on
  * PHA-853 (2 / 6 / 2 split: 3:0 advance, 3:1 / 3:2 advance, 0:3 eliminated).

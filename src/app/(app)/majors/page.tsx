@@ -152,6 +152,7 @@ export default async function MajorsPage() {
       name: cfg.name,
       status: cfg.status,
       start: cfg.dates.start,
+      scored: layout != null,
       score: layout ? scoreById[session.playerId] ?? 0 : 0,
       finish: layout ? computeFinish(session.playerId, ranked) : null,
       fieldSize: playerIds.length,
@@ -226,9 +227,13 @@ export default async function MajorsPage() {
                   letterSpacing: "0.08em",
                   color: "var(--ink-mid)",
                 }}>
-                  {row.finish !== null
-                    ? `${row.finish}${ordSuffix(row.finish)} of ${row.fieldSize}`
-                    : "Not scored"}
+                  {/* PHA-1046: when the layout fixture isn't loadable the score is
+                      not a genuine 0 — say so explicitly rather than imply a result. */}
+                  {!row.scored
+                    ? "Score unavailable"
+                    : row.finish !== null
+                      ? `${row.finish}${ordSuffix(row.finish)} of ${row.fieldSize}`
+                      : "Not scored"}
                   {row.pickCount > 0 && ` · ${row.pickCount} picks`}
                 </span>
               </div>
@@ -237,10 +242,10 @@ export default async function MajorsPage() {
                   fontFamily: "var(--font-mono)",
                   fontWeight: 600,
                   fontSize: 24,
-                  color: row.score > 0 ? "var(--ink-hi)" : "var(--ink-low)",
+                  color: row.scored && row.score > 0 ? "var(--ink-hi)" : "var(--ink-low)",
                   lineHeight: 1,
                 }}>
-                  {row.score}
+                  {row.scored ? row.score : "—"}
                 </span>
                 <span style={{
                   fontFamily: "var(--font-mono)",
@@ -249,7 +254,7 @@ export default async function MajorsPage() {
                   textTransform: "uppercase",
                   color: "var(--ink-low)",
                 }}>
-                  pts
+                  {row.scored ? "pts" : "n/a"}
                 </span>
               </div>
             </Link>

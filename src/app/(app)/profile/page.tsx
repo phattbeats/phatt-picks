@@ -169,9 +169,23 @@ export default async function ProfilePage() {
         <Link href="/players" style={accountLink}>
           › Player directory
         </Link>
-        <a href="/api/auth/logout" style={{ ...accountLink, color: "var(--ink-low)" }}>
-          › Sign out
-        </a>
+        {/* POST so a cross-site GET can't force a logout (PHA-1045 CSRF). */}
+        <form action="/api/auth/logout" method="post" style={{ margin: 0 }}>
+          <button
+            type="submit"
+            style={{
+              ...accountLink,
+              color: "var(--ink-low)",
+              background: "none",
+              border: "none",
+              padding: 0,
+              textAlign: "left",
+              cursor: "pointer",
+            }}
+          >
+            › Sign out
+          </button>
+        </form>
       </section>
     </>
   );

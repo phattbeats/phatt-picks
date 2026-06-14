@@ -27,10 +27,7 @@
  */
 
 import type { Section } from "./layout";
-import type { SwissBucket } from "./swiss-bucket-core";
-
-/** Same injection pattern as swiss-standings-core — callers pass bucketSwissSlots. */
-export type BucketsForSlotCount = (slotCount: number) => SwissBucket[];
+import type { BucketsForSlotCount } from "./swiss-bucket-core";
 
 /** The three pickable Swiss outcome buckets. */
 export type SwissPickBucket = "3-0" | "advance" | "0-3";
