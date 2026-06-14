@@ -153,5 +153,22 @@ check("Stage I intro badge sub is WRAPPED", s1Intro?.stageBadge?.sub === "WRAPPE
 check("Stage II intro badge numeral is II", s2Intro?.stageBadge?.numeral === "II");
 check("outro also carries a STAGE badge", !!s1Outro?.stageBadge?.numeral);
 
+/* ---- "YOU CALLED IT" personal reward (PHA-1054) ---- */
+// Brandon's example: picked FUT (145) to go 3:0 in Stage II → reward on the FUT slide.
+const s2Called = buildStageWrappedDeck(106, "Stage II", { ...PERSONAL, claims: ["145:3:0"] }, ASSETS);
+const futSlide = s2Called.find((s) => s.id === "s2-fut-3-0");
+const futFyp = s2Called.find((s) => s.id === "s2-fyp");
+check("FUT 3-0 slide rewards a matching pick (145:3:0)", futSlide?.calledIt?.label === "YOU CALLED IT");
+check("FUCK YOUR PICK'EMS slide also rewards the FUT 3-0 caller", futFyp?.calledIt?.label === "YOU CALLED IT");
+check("a non-matching moment is NOT rewarded", s2Called.find((s) => s.id === "s2-drought-astralis")?.calledIt === undefined);
+// No claims → no rewards anywhere.
+const s2None = buildStageWrappedDeck(106, "Stage II", { ...PERSONAL, claims: [] }, ASSETS);
+check("no viewer claims → no calledIt on any slide", s2None.every((s) => s.calledIt === undefined));
+// Stage I: picked BetBoom 3:0 (137) → flawless slide lights up.
+const s1Called = buildStageWrappedDeck(105, "Stage I", { ...PERSONAL, claims: ["137:3:0"] }, ASSETS);
+check("Stage I flawless slide rewards BetBoom 3:0 caller", s1Called.find((s) => s.id === "s1-flawless-betboom-b8")?.calledIt?.label === "YOU CALLED IT");
+// Signed-out (personal null) → never rewarded.
+check("signed-out deck has no calledIt", buildStageWrappedDeck(106, "Stage II", null, ASSETS).every((s) => s.calledIt === undefined));
+
 console.log(`\nverify-stage-wrapped-content: ${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);

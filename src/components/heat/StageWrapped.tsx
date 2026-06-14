@@ -458,6 +458,35 @@ function SlideCard({ slide }: { slide: WrappedSlide }) {
       )}
       {slide.figureCaption && <p className="sw-figcap">{slide.figureCaption}</p>}
       <h3 className="sw-headline font-display">{slide.headline}</h3>
+      {/* Personal reward — the viewer's pick matched this narrative moment. */}
+      {slide.calledIt && (
+        <div
+          className="sw-calledit brk"
+          style={{
+            position: "relative",
+            margin: "12px auto 2px",
+            padding: "8px 16px",
+            border: "1px solid var(--heat)",
+            background: "rgba(240,163,0,0.12)",
+            display: "inline-flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
+            boxShadow: "0 0 18px var(--heat-glow)",
+          }}
+        >
+          <span className="br-tr" />
+          <span className="br-bl" />
+          <span className="font-display foil" style={{ fontWeight: 800, fontSize: 17, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+            ✓ {slide.calledIt.label}
+          </span>
+          {slide.calledIt.sub && (
+            <span className="eyebrow-mono" style={{ color: "var(--heat)", fontSize: 9.5, letterSpacing: "0.16em" }}>
+              {slide.calledIt.sub}
+            </span>
+          )}
+        </div>
+      )}
       {slide.body && <p className="sw-body">{slide.body}</p>}
     </div>
   );

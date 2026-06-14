@@ -245,6 +245,9 @@ export default async function StageRevealPage({
   // read). Reuses the same bucket-correctness + slot-consensus the reveal grid
   // below already renders, so the recap agrees with the per-pick breakdown.
   let bestCall: StageWrappedBestCall | null = null;
+  // The viewer's CORRECT calls as "<pickId>:<bucket>" — feeds the Stage Wrapped
+  // "YOU CALLED IT" reward when a pick matched a narrative moment (PHA-1054).
+  const viewerClaims = new Set<string>();
   for (const group of sectionDef.groups) {
     const gOut = outcomeMap[sectionId]?.[group.groupid] ?? {};
     const buckets = isSwissSection(sectionId) ? bucketSwissSlots(group.picks.length) : null;
@@ -258,6 +261,8 @@ export default async function StageRevealPage({
         ? resolveBucketWinners(bucket.slotIndexes, gOut).winners.has(pickId)
         : pickId === winner;
       if (!isCorrect) continue;
+      const claimTag = bucketLabelFor(sectionId, group, slot.index);
+      if (claimTag) viewerClaims.add(`${pickId}:${claimTag}`);
       const share = shareFor(slotConsensus, sectionId, group.groupid, slot.index, pickId);
       const pct = share?.pct ?? 0;
       const count = share?.count ?? 0;
@@ -294,6 +299,7 @@ export default async function StageRevealPage({
           rankMove: delta,
           bestCall,
           avatar: { src: subject.avatarUrl ?? null, label: subject.displayName },
+          claims: [...viewerClaims],
         }, wrappedAssets)}
         title={stageLabel}
         resolved
