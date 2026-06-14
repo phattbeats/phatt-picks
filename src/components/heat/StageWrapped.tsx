@@ -100,6 +100,10 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
   const last = count === 0 || safeIndex >= count - 1;
   const current = slides[safeIndex];
 
+  // The live segment's fill races the active slide's auto-advance; null when the
+  // deck is waiting on the user (so the segment just reads as fully-elapsed).
+  const autoMs = resolveAutoAdvanceMs(current, { reducedMotion, userControlled: !!state.controlled });
+
   // Auto-advance (timer) — plain `next`, never marks the deck user-controlled.
   const goNext = useCallback(() => {
     if (count === 0 || state.index >= count - 1) {
@@ -169,12 +173,10 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
   // Optional per-slide auto-advance. Stands down for reduced-motion and once the
   // viewer takes manual control. Cleared on slide change / close / unmount.
   useEffect(() => {
-    if (!open || loading) return;
-    const ms = resolveAutoAdvanceMs(current, { reducedMotion, userControlled: !!state.controlled });
-    if (ms == null) return;
-    const t = setTimeout(goNext, ms);
+    if (!open || loading || autoMs == null) return;
+    const t = setTimeout(goNext, autoMs);
     return () => clearTimeout(t);
-  }, [open, loading, current, reducedMotion, state.controlled, goNext]);
+  }, [open, loading, autoMs, goNext]);
 
   // Lock body scroll while the deck is open (it's a full takeover on mobile).
   useEffect(() => {
@@ -247,17 +249,24 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
         {/* Progress dots */}
         {count > 0 && !loading && (
           <div className="sw-dots" role="tablist" aria-label="Slides">
-            {slides.map((s, i) => (
-              <button
-                key={s.id}
-                type="button"
-                role="tab"
-                aria-selected={i === safeIndex}
-                aria-label={`Slide ${i + 1} of ${count}`}
-                className={`sw-dot${i === safeIndex ? " on" : ""}${i < safeIndex ? " past" : ""}`}
-                onClick={() => userGoto(i)}
-              />
-            ))}
+            {slides.map((s, i) => {
+              const isOn = i === safeIndex;
+              const ticking = isOn && autoMs != null;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isOn}
+                  aria-label={`Slide ${i + 1} of ${count}`}
+                  className={`sw-dot${isOn ? " on" : ""}${i < safeIndex ? " past" : ""}${ticking ? " auto" : ""}`}
+                  style={ticking ? ({ "--sw-fill-ms": `${autoMs}ms` } as React.CSSProperties) : undefined}
+                  onClick={() => userGoto(i)}
+                >
+                  <span className="sw-dot-fill" />
+                </button>
+              );
+            })}
           </div>
         )}
 
