@@ -142,6 +142,17 @@ export function spotlightForPickid(pickid: number): TeamSpotlight | null {
 }
 
 /**
+ * Pickids of every team with an authored spotlight, in insertion order (PHA-1043
+ * follow-up). The playoffs page drives its "Qualified for Playoffs" anticipation
+ * strip off this before Valve seeds the bracket: as the pipeline authors each
+ * newly-clinched team, that team appears in the strip automatically. Once the
+ * bracket seeds and real picker tiles exist, the strip yields to them.
+ */
+export function authoredSpotlightPickids(): number[] {
+  return Object.keys(SPOTLIGHTS).map(Number);
+}
+
+/**
  * Per-team accent color (PHA-1043 follow-up, Brandon: each spotlight wears the
  * team's own color, not the house orange). Keyed by logo slug so it resolves for
  * every playoff team whether or not a narrative is authored yet. Each hue keeps
