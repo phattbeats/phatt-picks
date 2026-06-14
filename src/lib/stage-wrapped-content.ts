@@ -19,10 +19,24 @@
  *      moments + a sign-in outro, never fabricated personal numbers.
  */
 
-import type { WrappedSlide, WrappedSlideKind } from "./stage-wrapped-core";
+import type { WrappedSlide, WrappedSlideKind, WrappedTeamLogo } from "./stage-wrapped-core";
 
 /** Per-slide auto-advance for the recap (floored by the shell to MIN_AUTO_ADVANCE_MS). */
 const AUTO_MS = 6000;
+
+/**
+ * Visual assets the deck builder needs but can't compute itself (pure): a
+ * team-logo resolver (pickId → cascade tiers + name, from the reveal page's
+ * teamMap + logo manifest) and the brand marks. Optional so the builder still
+ * yields a valid text-only deck offline; the verify exercises both paths.
+ */
+export interface StageWrappedAssets {
+  resolveTeamLogo?: (pickId: number) => WrappedTeamLogo | null;
+  /** Major mark, e.g. "/watch/iem-cologne.png" (already white on dark). */
+  majorLogoSrc?: string;
+  /** Game mark, e.g. "/watch/counter-strike.png". */
+  gameLogoSrc?: string;
+}
 
 /** Rank movement for the viewer this stage (matches rank-snapshot-core's RankDelta). */
 export interface StageWrappedRankMove {
@@ -32,6 +46,8 @@ export interface StageWrappedRankMove {
 
 /** The viewer's lowest-consensus correct call this stage (their boldest right read). */
 export interface StageWrappedBestCall {
+  /** Team pickid, for the logo. */
+  pickId: number;
   teamName: string;
   /** Swiss bucket tag, e.g. "3:0" / "0:3"; null for untagged/playoff slots. */
   tag: string | null;
@@ -56,6 +72,8 @@ export interface StageWrappedPersonal {
   rankAfter: number | null;
   rankMove: StageWrappedRankMove | null;
   bestCall?: StageWrappedBestCall | null;
+  /** The viewer's avatar (src null → initials), for the personal score slide. */
+  avatar?: { src: string | null; label: string } | null;
 }
 
 interface AuthoredMoment {
@@ -66,6 +84,8 @@ interface AuthoredMoment {
   figure?: string;
   figureCaption?: string;
   body?: string;
+  /** Team pickids whose logos illustrate this moment (matchup / clinchers). */
+  logoPickIds?: number[];
 }
 
 interface AuthoredStage {
@@ -96,6 +116,7 @@ const AUTHORED: Record<number, AuthoredStage> = {
         figure: "#81 › #25",
         figureCaption: "FlyQuest 2-0 Team Liquid",
         body: "World #81 FlyQuest met pre-event favorite Liquid in a win-or-go-home match and demolished the opener 13-2 before closing the sweep. The biggest ranking-gap exit of the stage.",
+        logoPickIds: [132, 48],
       },
       {
         id: "s1-comeback-big-nrg",
@@ -105,6 +126,7 @@ const AUTHORED: Record<number, AuthoredStage> = {
         figure: "0-12 → 16-12",
         figureCaption: "BIG def. NRG on Mirage, in OT",
         body: "Deciding map, last ticket to Stage II. NRG raced to a flawless 12-0 half — then BIG won sixteen rounds in a row to take it in overtime. The first 0-12 comeback in Major history, in the home building, peaking near 500K viewers.",
+        logoPickIds: [69, 87],
       },
       {
         id: "s1-flawless-betboom-b8",
@@ -114,6 +136,7 @@ const AUTHORED: Record<number, AuthoredStage> = {
         figure: "3-0",
         figureCaption: "BetBoom and B8 swept the field",
         body: "BetBoom ran the table at +29 round diff; B8 matched them — including a 22-20 Inferno marathon — to make it two perfect runs into Stage II.",
+        logoPickIds: [137, 135],
       },
       {
         id: "s1-fallen-liquid-heroic",
@@ -123,6 +146,7 @@ const AUTHORED: Record<number, AuthoredStage> = {
         figure: "#25 · #27",
         figureCaption: "Liquid and HEROIC eliminated",
         body: "Both came in expected to advance; both went home in the opening Swiss. And nobody left winless quietly — SINNERS pushed FlyQuest to 14-16 before bowing out 0-3 alongside Gaimin Gladiators.",
+        logoPickIds: [48, 95],
       },
     ],
   },
@@ -141,6 +165,7 @@ const AUTHORED: Record<number, AuthoredStage> = {
         figure: "10 rounds",
         figureCaption: "conceded across the entire 3-0",
         body: "Spirit gave up ten total rounds all stage (+42): 13-1 over MIBR, 13-3 and 13-1 over 9z. donk posted a 2.27 rating — the highest individual figure of the stage.",
+        logoPickIds: [81],
       },
       {
         id: "s2-fut-3-0",
@@ -150,6 +175,7 @@ const AUTHORED: Record<number, AuthoredStage> = {
         figure: "3-0",
         figureCaption: "incl. a 2-1 over G2",
         body: "The team most brackets underestimated went a flawless 3-0. Krabeni took over the Ancient decider against G2 to book FUT's first-ever Stage III at an IEM Cologne Major.",
+        logoPickIds: [145, 59],
       },
       {
         id: "s2-drought-astralis",
@@ -159,6 +185,7 @@ const AUTHORED: Record<number, AuthoredStage> = {
         figure: "9 Majors",
         figureCaption: "paiN sweep them 2-0",
         body: "TYLOO cracked them open 13-9, then paiN finished it — Astralis collapsed on their own Nuke pick and got run off Overpass. Nine straight Majors now without reaching the Playoffs. MIBR went out the same day.",
+        logoPickIds: [60, 102],
       },
       {
         id: "s2-gauntlet-deciders",
@@ -168,6 +195,7 @@ const AUTHORED: Record<number, AuthoredStage> = {
         figure: "3-2",
         figureCaption: "Monte, Legacy and B8 each won a do-or-die",
         body: "The final day was a gauntlet of single-match survival. Monte upset paiN 2-0, Legacy bullied TYLOO, and B8 — 0-2 to start the stage — reverse-swept BIG, kensizor771 sealing it with an ace.",
+        logoPickIds: [119, 126, 135],
       },
     ],
   },
@@ -223,6 +251,7 @@ export function buildStageWrappedDeck(
   sectionId: number,
   stageName: string,
   personal: StageWrappedPersonal | null,
+  assets: StageWrappedAssets = {},
 ): WrappedSlide[] {
   const authored = AUTHORED[sectionId];
   if (!authored || authored.moments.length === 0) return [];
@@ -230,12 +259,28 @@ export function buildStageWrappedDeck(
   const eyebrow = `${stageName.toUpperCase()} · WRAPPED`;
   const slides: WrappedSlide[] = [];
 
+  // Resolve 1–3 team logos for a moment; drops any that don't resolve.
+  const logosFor = (pickIds?: number[]): WrappedTeamLogo[] | undefined => {
+    if (!pickIds || !assets.resolveTeamLogo) return undefined;
+    const resolved = pickIds
+      .map((id) => assets.resolveTeamLogo!(id))
+      .filter((l): l is WrappedTeamLogo => l != null);
+    return resolved.length ? resolved : undefined;
+  };
+  const majorBrand = assets.majorLogoSrc
+    ? { src: assets.majorLogoSrc, alt: "IEM Cologne 2026", invert: false }
+    : undefined;
+  const gameBrand = assets.gameLogoSrc
+    ? { src: assets.gameLogoSrc, alt: "Counter-Strike 2", invert: false }
+    : majorBrand;
+
   slides.push({
     id: "intro",
     kind: "intro",
     eyebrow,
     headline: authored.intro.headline,
     body: authored.intro.body,
+    brandLogo: majorBrand,
     autoAdvanceMs: AUTO_MS,
   });
 
@@ -248,6 +293,7 @@ export function buildStageWrappedDeck(
       figure: m.figure,
       figureCaption: m.figureCaption,
       body: m.body,
+      teamLogos: logosFor(m.logoPickIds),
       autoAdvanceMs: AUTO_MS,
     });
   }
@@ -261,6 +307,7 @@ export function buildStageWrappedDeck(
       headline: name ? `${name}, you scored.` : "Your stage.",
       figure: `+${personal.stagePoints}`,
       figureCaption: `${personal.correct}/${personal.resolvedSlots} calls landed · ${personal.totalPoints} total`,
+      avatar: personal.avatar ?? undefined,
       autoAdvanceMs: AUTO_MS,
     });
 
@@ -277,6 +324,7 @@ export function buildStageWrappedDeck(
         figure: `${bc.pct}%`,
         figureCaption: `of the field had it`,
         body: `Your sharpest read of the stage — only ${bc.count}/${bc.total} of the players who picked this slot got it right.`,
+        teamLogos: logosFor([bc.pickId]),
         autoAdvanceMs: AUTO_MS,
       });
     }
@@ -290,6 +338,7 @@ export function buildStageWrappedDeck(
     body: personal
       ? "Replay this any time from the stage reveal. See you next stage."
       : "Sign in to get your personal recap — your score, your rank move, your boldest right call.",
+    brandLogo: gameBrand,
   });
 
   return slides;
