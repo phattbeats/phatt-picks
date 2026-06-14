@@ -1130,36 +1130,34 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
    bottom-sheet shell; adds a cinematic hero, the before/after narrative, a
    tap-to-play event highlight, and a live market line above the dossier "tape".
    --------------------------------------------------------------------------- */
-/* Each spotlight wears the team's own color: --team-accent is set inline per
-   team (PHA-1043 follow-up), and every accent below keys off --sa, which falls
-   back to the house --heat for teams without a mapped color. The scoped
-   .spot-panel overrides retint the shared .tsd-* dossier classes too, so the
-   whole modal (hero, narrative, highlight, odds, roster) reads in one color. */
+/* v3 "Broadcast" direction (PHA-1007): each spotlight wears the team's color,
+   but as a BUDGET, not ambient chrome. The accent lands only on signal elements
+   (the win %, the play control, the live tick, a thin rule under the nameplate);
+   labels stay warm-neutral ink, corners are soft, brackets are retired, and
+   nothing loops. --sa is the team color, falling back to the house --heat. */
 .spot-panel {
   max-width: 480px;
   --sa: var(--team-accent, var(--heat));
+  border-radius: 14px;
+  /* Soft broadcast panel: hairline + a faint top-edge sheen, no brackets. */
+  background:
+    linear-gradient(180deg, rgba(245,234,212,0.025), transparent 64px),
+    var(--surf-2);
 }
-.spot-panel .tsd-sec-title,
-.spot-panel .tsd-rank-num,
-.spot-panel .tsd-player-pos.pos-awp { color: var(--sa); }
-.spot-panel .tsd-rank { background: color-mix(in srgb, var(--sa) 8%, transparent); }
+/* Labels read as neutral ink (amber/accent budget spent elsewhere). */
+.spot-panel .tsd-sec-title { color: var(--ink-mid); }
+.spot-panel .tsd-rank-num { color: var(--ink-hi); }
+.spot-panel .tsd-player-pos.pos-awp {
+  color: var(--sa); background: color-mix(in srgb, var(--sa) 9%, transparent);
+}
 .spot-panel .tsd-player-name:hover { color: var(--sa); }
-.spot-panel .tsd-player-pos.pos-awp { background: color-mix(in srgb, var(--sa) 9%, transparent); }
 .spot-panel .tsd-close:hover { color: var(--sa); border-color: var(--sa); }
-.spot-panel .tsd-link {
-  color: var(--sa); background: color-mix(in srgb, var(--sa) 7%, transparent);
-}
-.spot-panel .tsd-link:hover {
-  border-color: var(--sa); background: color-mix(in srgb, var(--sa) 13%, transparent);
-}
-/* The decorative corner brackets are part of the accent too. */
-.spot-panel.brk::before, .spot-panel.brk::after,
-.spot-panel.brk .br-tr, .spot-panel.brk .br-bl { border-color: var(--sa); }
+.spot-panel .tsd-link:hover { border-color: var(--sa); }
 
-/* Roster rows in the Spotlight carry a player head-shot (PHA-1043). The avatar
-   is a Spotlight-only column, so the grid override is scoped here; the shared
-   TeamStatsDrawer roster keeps its three-column layout. */
-.spot-panel .tsd-player { grid-template-columns: auto 1fr auto auto; }
+/* Roster rows carry a player head-shot (PHA-1043), Spotlight-only column. */
+.spot-panel .tsd-player {
+  grid-template-columns: auto 1fr auto auto; border-radius: 10px;
+}
 .tsd-player-av {
   width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
   object-fit: cover; background: var(--surf-1);
@@ -1170,40 +1168,30 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   font-family: var(--font-display); font-weight: 700; font-size: 14px;
   color: var(--ink-mid); text-transform: uppercase;
 }
-/* Hero (v3): the team gets a cinematic, bracket-framed nameplate with an
-   atmospheric pool of its own color behind the crest, echoing the dashboard
-   stage-briefing and the splash glow. */
+/* Hero (Broadcast): a soft-cornered nameplate, a faint team wash, and a single
+   thin team-color rule along the base. No brackets, no light-pool bloom. */
 .spot-hero {
   display: flex; align-items: center; gap: 14px;
-  position: relative; isolation: isolate;
-  padding: 16px 16px 16px 14px; margin-bottom: 4px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--sa) 7%, transparent), transparent 90%);
-  border: 1px solid var(--hair-2);
+  position: relative;
+  padding: 16px 16px 18px 16px; margin-bottom: 4px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--sa) 6%, transparent), transparent 80%);
+  border: 1px solid var(--hair-2); border-radius: 12px;
+  border-bottom: 2px solid color-mix(in srgb, var(--sa) 55%, transparent);
 }
-/* Team-colored light pool blooming from behind the crest. */
-.spot-hero::before {
-  content: ""; position: absolute; z-index: -1;
-  left: -10%; top: -40%; width: 60%; height: 180%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--sa) 30%, transparent), transparent 70%);
-  filter: blur(34px); opacity: 0.55; pointer-events: none;
-}
-.spot-hero.brk::before, .spot-hero.brk::after,
-.spot-hero.brk .br-tr, .spot-hero.brk .br-bl { border-color: var(--sa); }
 .spot-hero-logo {
   display: flex; align-items: center; justify-content: center;
-  width: 64px; height: 64px; flex-shrink: 0;
-  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--sa) 22%, transparent), transparent 72%);
+  width: 64px; height: 64px; flex-shrink: 0; border-radius: 10px;
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--sa) 14%, transparent), transparent 72%);
   border: 1px solid var(--hair-3);
 }
 .spot-hero-text { flex: 1; min-width: 0; }
-.spot-eyebrow { display: block; margin-bottom: 4px; color: var(--sa); }
+.spot-eyebrow { display: block; margin-bottom: 5px; color: var(--ink-mid); }
 .spot-name {
   margin: 0; font-family: var(--font-display); font-weight: 800;
-  font-size: clamp(30px, 7vw, 40px);
+  font-size: clamp(28px, 7vw, 38px);
   text-transform: uppercase; letter-spacing: 0.01em;
   color: var(--ink-hi); line-height: 0.9;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  text-shadow: 0 0 22px color-mix(in srgb, var(--sa) 22%, transparent);
 }
 .spot-seed {
   margin: 5px 0 0; font-family: var(--font-mono); font-size: 11px;
@@ -1224,65 +1212,46 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   letter-spacing: 0.16em; color: var(--ink-low);
 }
 .spot-beat-tag.now { color: var(--sa); }
-/* The "NOW" beat lights up: heavier accent rail + a soft inset glow. */
-.spot-beat:has(.now) {
-  border-left-width: 3px; border-left-color: var(--sa);
-  box-shadow: inset 10px 0 16px -10px color-mix(in srgb, var(--sa) 45%, transparent);
-}
+/* The "NOW" beat is marked by a thin team rail, no glow (Broadcast restraint). */
+.spot-beat:has(.now) { border-left-width: 3px; border-left-color: var(--sa); }
 .spot-beat p {
   margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink-hi);
 }
 
-/* Highlight: 16:9 tap-to-play. */
+/* Highlight: 16:9 tap-to-play, soft-cornered, no sweep. */
 .spot-clip {
-  position: relative; width: 100%; aspect-ratio: 16 / 9;
+  position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 12px;
   background: var(--surf-3); border: 1px solid var(--hair-2); overflow: hidden;
 }
-/* Glass sweep across the poster so it reads like a display case, not a thumbnail. */
-.spot-clip::after {
-  content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
-  background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,0.22) 50%, transparent 65%);
-  transform: translateX(-120%); animation: line-sheen 4.5s ease-in-out infinite;
-}
-.spot-clip-frame { width: 100%; height: 100%; border: 0; display: block; position: relative; z-index: 3; }
+.spot-clip-frame { width: 100%; height: 100%; border: 0; display: block; }
 .spot-clip-poster {
   width: 100%; height: 100%; border: 0; cursor: pointer; padding: 0;
   background-color: var(--surf-3); background-size: cover; background-position: center;
   display: flex; align-items: center; justify-content: center;
   transition: filter 200ms var(--ease);
 }
-.spot-clip-poster:hover { filter: brightness(1.08); }
+.spot-clip-poster:hover { filter: brightness(1.06); }
 .spot-clip-play {
-  position: relative; z-index: 2;
   display: flex; align-items: center; justify-content: center;
-  width: 72px; height: 72px; border-radius: 50%;
+  width: 64px; height: 64px; border-radius: 50%;
   background: color-mix(in srgb, var(--sa) 92%, transparent);
-  /* A ring keeps the affordance visible even when the accent is a light
-     near-white (e.g. FURIA) against a bright poster frame. */
-  border: 2px solid rgba(10,8,5,0.55);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5),
-    0 0 0 0 color-mix(in srgb, var(--sa) 55%, transparent);
-  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--sa) 40%, transparent));
+  /* A ring keeps the affordance visible even on a light near-white accent. */
+  border: 2px solid rgba(10,8,5,0.45);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.45);
   transition: transform 160ms var(--ease);
-  animation: spot-play-pulse 2s var(--ease) infinite;
 }
-.spot-clip-poster:hover .spot-clip-play { transform: scale(1.08); }
-.spot-clip-play svg { width: 30px; height: 30px; fill: var(--void); margin-left: 3px; }
-/* Expanding ring, drawing the eye to "dive in". */
-@keyframes spot-play-pulse {
-  0% { box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 0 color-mix(in srgb, var(--sa) 50%, transparent); }
-  70% { box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 16px color-mix(in srgb, var(--sa) 0%, transparent); }
-  100% { box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 0 color-mix(in srgb, var(--sa) 0%, transparent); }
-}
-@media (max-width: 480px) { .spot-clip-play { width: 64px; height: 64px; } }
+.spot-clip-poster:hover .spot-clip-play { transform: scale(1.06); }
+.spot-clip-play svg { width: 28px; height: 28px; fill: var(--void); margin-left: 3px; }
+@media (max-width: 480px) { .spot-clip-play { width: 56px; height: 56px; } }
 .spot-clip-cap {
   margin: 9px 0 0; font-family: var(--font-mono); font-size: 11px;
   letter-spacing: 0.02em; color: var(--ink-mid); line-height: 1.4;
 }
 
-/* Market line: implied win % bar, refreshed hourly. */
+/* Market line: implied win % bar, refreshed hourly. Soft-cornered card. */
 .spot-odds {
-  background: var(--surf-3); border: 1px solid var(--hair-2); padding: 13px 14px;
+  background: var(--surf-3); border: 1px solid var(--hair-2);
+  border-radius: 12px; padding: 14px 16px;
 }
 .spot-odds-row {
   display: flex; align-items: baseline; justify-content: space-between;
@@ -1297,19 +1266,15 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   font-family: var(--font-display); font-weight: 800; font-size: 22px;
   color: var(--ink-mid); font-variant-numeric: tabular-nums; line-height: 1;
 }
-/* The team's own win number is the headline stat, sized like a stat-card val. */
-.spot-odds-pct.heat {
-  color: var(--sa); font-size: 34px;
-  text-shadow: 0 0 18px color-mix(in srgb, var(--sa) 30%, transparent);
-}
+/* The team's own win number is the headline stat (the accent budget, spent
+   here), sized like a stat-card val. Clean, no glow. */
+.spot-odds-pct.heat { color: var(--sa); font-size: 34px; }
 .spot-odds-bar {
-  height: 10px; margin: 9px 0; background: var(--surf-1);
-  border: 1px solid var(--hair); overflow: hidden;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.35);
+  height: 10px; margin: 10px 0; background: var(--surf-1);
+  border: 1px solid var(--hair); border-radius: 6px; overflow: hidden;
 }
 .spot-odds-fill {
-  display: block; height: 100%; background: var(--sa);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--sa) 35%, transparent);
+  display: block; height: 100%; background: var(--sa); border-radius: 6px;
 }
 .spot-odds-foot {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -1327,12 +1292,16 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
    Keyed to the team accent, and matches the live .spot-odds padding so the two
    mutually-exclusive states carry the same visual weight in the slot. */
 .spot-odds-soon { text-align: center; }
+/* Presence, not alarm: a static team-color dot with a soft halo and a slow
+   breathe (matches the Broadcast live-tag treatment, no strobe). */
 .spot-soon-dot {
   display: inline-block; width: 7px; height: 7px; border-radius: 50%;
-  background: var(--sa); box-shadow: 0 0 8px color-mix(in srgb, var(--sa) 45%, transparent);
-  margin-bottom: 9px; animation: live-blink 1.6s steps(2, end) infinite;
+  background: var(--sa);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sa) 16%, transparent),
+    0 0 8px color-mix(in srgb, var(--sa) 45%, transparent);
+  margin-bottom: 10px; animation: live-breathe 4.5s ease-in-out infinite;
 }
-/* Respect reduced-motion: hold the dot steady rather than blink. */
+@keyframes live-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.72; } }
 @media (prefers-reduced-motion: reduce) {
   .spot-soon-dot { animation: none; }
 }
