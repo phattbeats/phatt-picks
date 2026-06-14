@@ -85,6 +85,26 @@ export const DEFAULT_GO_LIVE_LEAD_MS = 7 * 24 * 60 * 60_000;
  */
 export const GRAND_FINAL_ARCHIVE_GRACE_MS = 48 * 60 * 60_000;
 
+/**
+ * How close to its go-live an `upcoming` Major must be before it becomes the
+ * event the SITE SHOWS — the off-season anticipation window (PHA-1048). It does
+ * NOT change when an event goes live (that's `goLiveMs`); it only governs which
+ * event `selectCurrentEvent` surfaces while none is live. The motivation: the
+ * next Major is pre-seeded in the registry the moment its dates are known —
+ * often ~5 months out (Singapore was seeded in June for a late-November start).
+ * Without this gate, the instant the prior Major archives the whole site would
+ * flip its identity to that barely-configured future event (empty sources/
+ * schedule, name + countdown only) rather than letting players bask in the
+ * results they just played for. So a far-off upcoming event is held back: until
+ * it's within this window of go-live, the most-recently-archived Major stays the
+ * face of the site, then the next one takes over ~6 weeks out. Tuned to ~45 days
+ * so the handover lands around when HLTV/Valve publish the stage pages and the
+ * field anyway. A registry with ONLY a far-future upcoming event (a brand-new
+ * site, nothing archived yet) still shows it — the gate only defers an upcoming
+ * event when there's an archived one to fall back to.
+ */
+export const ANTICIPATION_LEAD_MS = 45 * 24 * 60 * 60_000;
+
 /** Tunables for the derivation; all optional with documented defaults. */
 export interface LifecycleOptions {
   /**
@@ -223,11 +243,19 @@ export function selectLiveEvents(
  * The single event the picker / pages should show — robust across the gaps that
  * a self-sustaining, multi-Major site has. Preference order:
  *   1. an effectively-live event (the soonest go-live among them, if several);
- *   2. else the soonest UPCOMING event (so we count down to the next Major);
- *   3. else the most-recently-concluded ARCHIVED event (so the off-season still
- *      shows the last Major rather than a blank site);
- *   4. else null (empty registry).
- * Deterministic: ties break on the earlier go-live / later end / lower eventId.
+ *   2. else the soonest-STARTING upcoming event (by `dates.start`, PHA-1046)
+ *      that is WITHIN its anticipation window (`ANTICIPATION_LEAD_MS` of go-live)
+ *      — so we count down to the Major that genuinely plays next once it's near,
+ *      but a Major seeded months out doesn't yet hijack the site (PHA-1048);
+ *   3. else the most-recently-concluded ARCHIVED event (so the off-season keeps
+ *      showing the last Major — its results stay the face of the site — rather
+ *      than a half-built future event or a blank page);
+ *   4. else the soonest-STARTING upcoming event regardless of window — the
+ *      brand-new-site fallback so a registry holding ONLY a far-future event
+ *      still shows it;
+ *   5. else null (empty registry).
+ * Deterministic: ties break on earlier start → earlier go-live / later end /
+ * lower eventId.
  */
 export function selectCurrentEvent(
   events: readonly LifecycleEvent[],
@@ -238,18 +266,41 @@ export function selectCurrentEvent(
     e,
     status: resolveEffectiveStatus(e, nowMs, optsFor(e)),
     goLive: goLiveMs(e, optsFor(e).goLiveLeadMs ?? DEFAULT_GO_LIVE_LEAD_MS),
+    start: Date.parse(e.dates.start),
     end: Date.parse(e.dates.end),
   }));
 
+  // A live event is ranked by when it went live — soonest-live first (a tie only
+  // arises in the brief overlap as one Major archives while the next opens).
   const live = tagged
     .filter((t) => t.status === "live")
     .sort((a, b) => a.goLive - b.goLive || a.e.eventId - b.e.eventId);
   if (live.length) return live[0].e;
 
+  // Upcoming events. PHA-1046: rank by GENUINE `dates.start`, NOT lead-adjusted
+  // go-live. `goLiveMs` is `min(start, firstLock − lead)`, so go-live is pulled up
+  // to the staging lead (7d) ahead of an event's start; ranking on go-live lets a
+  // LATER-starting Major outrank a genuinely-sooner one when its match-day lock
+  // pulls its go-live earlier (A starts Jun 1, no lock → go-live Jun 1; B starts
+  // Jun 5, match-day lock → go-live May 29; go-live ranks B first though A plays
+  // first). (The audit's `min(goLive, dates.start)` is a no-op — since go-live ≤
+  // start, that min always equals go-live; raw start is the real fix.) Unparseable
+  // starts sort last so a misconfig never hijacks the countdown; go-live then
+  // eventId break ties.
+  //
+  // PHA-1048: split on the anticipation window so a Major seeded months out (the
+  // day its dates were known) does not preempt a just-finished one — it becomes
+  // the face only once within ANTICIPATION_LEAD_MS of its go-live.
+  const startKey = (t: { start: number }) =>
+    Number.isNaN(t.start) ? Number.POSITIVE_INFINITY : t.start;
   const upcoming = tagged
     .filter((t) => t.status === "upcoming")
-    .sort((a, b) => a.goLive - b.goLive || a.e.eventId - b.e.eventId);
-  if (upcoming.length) return upcoming[0].e;
+    .sort(
+      (a, b) =>
+        startKey(a) - startKey(b) || a.goLive - b.goLive || a.e.eventId - b.e.eventId,
+    );
+  const anticipated = upcoming.filter((t) => nowMs >= t.goLive - ANTICIPATION_LEAD_MS);
+  if (anticipated.length) return anticipated[0].e;
 
   const archived = tagged
     .filter((t) => t.status === "archived")
@@ -259,6 +310,11 @@ export function selectCurrentEvent(
       return be - ae || a.e.eventId - b.e.eventId;
     });
   if (archived.length) return archived[0].e;
+
+  // Nothing live, nothing archived to hold on, and the only events are upcoming
+  // but still outside their anticipation window — show the soonest anyway, so a
+  // first-launch registry counts down rather than rendering blank.
+  if (upcoming.length) return upcoming[0].e;
 
   return null;
 }

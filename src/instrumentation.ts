@@ -48,6 +48,23 @@ export async function register(): Promise<void> {
     }
   }
 
+  // PHA-1045 — captcha fail-open guard. verifyTurnstile() returns true when
+  // TURNSTILE_SECRET_KEY is unset (a deliberate local-dev skip), so in
+  // production a missing key means signup CAPTCHA is silently DISABLED. Given
+  // this app's Force-Update env-drift history, shout it at boot the same way the
+  // session-secret guard above does, rather than failing closed and breaking
+  // every local signup the moment the var drops.
+  if (process.env.NODE_ENV === "production" && !process.env.TURNSTILE_SECRET_KEY) {
+    console.error(
+      "[captcha] WARNING: TURNSTILE_SECRET_KEY is unset in production — local " +
+        "signup CAPTCHA verification is DISABLED (fail-open). Set TURNSTILE_SECRET_KEY " +
+        "in the Unraid template (NOT ad-hoc on the container — Force-Update drops " +
+        "ad-hoc vars) to enforce it.",
+    );
+  } else if (process.env.TURNSTILE_SECRET_KEY) {
+    console.log("[captcha] TURNSTILE_SECRET_KEY present — signup CAPTCHA enforced.");
+  }
+
   if (
     !prelockSchedulerEnabled(
       process.env.PRELOCK_REMINDERS_ENABLED,

@@ -321,6 +321,38 @@ export function matchBracketToLayout(
   }));
 }
 
+/**
+ * Derive per-team clinched W-L records from the bracket's TERMINAL columns
+ * (PHA-1044). Each terminal round's label IS the record of every settled team
+ * listed in it: "3:0" → 3-0, "3:1" → 3-1, "0:3" → 0-3, etc. This is the fallback
+ * source for outcome bridging when HLTV reformats the W-L *table* header (so
+ * `parseHltvSwissStandings` yields nothing) but the *bracket* still parses — the
+ * leaderboard then keeps resolving Swiss clinches off the bracket instead of
+ * silently freezing (the PHA-918/951 "scoring stalled for two days" symptom).
+ *
+ * Only terminal (advancing/eliminated) rounds carry settled teams; contention
+ * columns are skipped. Only sides matched to a layout pickid are returned (an
+ * unmatched name can't be bridged to an outcome). The exact label record is
+ * preserved so the downstream clinch logic buckets 3:0 vs 3:1/3:2 vs 0:3
+ * correctly. Pure — verify covers it offline.
+ */
+export function bracketTerminalRecords(
+  rounds: readonly SwissRound[],
+): Array<{ pickid: number; wins: number; losses: number }> {
+  const out: Array<{ pickid: number; wins: number; losses: number }> = [];
+  for (const r of rounds) {
+    if (r.kind === "contention") continue;
+    const m = r.label.match(/(\d+)\s*:\s*(\d+)/);
+    if (!m) continue;
+    const wins = Number(m[1]);
+    const losses = Number(m[2]);
+    for (const t of r.teams) {
+      if (t.pickid != null) out.push({ pickid: t.pickid, wins, losses });
+    }
+  }
+  return out;
+}
+
 /** Count played/scheduled matches + settled teams across the bracket. */
 export function bracketSummary(rounds: readonly SwissRound[]): {
   rounds: number;

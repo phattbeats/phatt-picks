@@ -77,6 +77,20 @@ export function hltvProfileUrl(s: TeamSource): string {
   return `https://www.hltv.org/team/${s.hltvId}/${s.slug}`;
 }
 
+/**
+ * Pull the HLTV team id out of a profile url — the stable `/team/<id>/<slug>`
+ * segment (PHA-1044). The id survives the redirect-normalisation / trailing-slash
+ * / http↔https rewrites crawl4ai applies to a result url, so it's the safe key to
+ * match a crawl result back to the team we asked for. Returns null when no id is
+ * present (a url we then can't safely attribute — the caller drops it rather than
+ * guess by position). Pure: verify covers it offline.
+ */
+export function hltvTeamIdFromUrl(url: string | undefined | null): number | null {
+  if (!url) return null;
+  const m = url.match(/\/team\/(\d+)(?:[/?#]|$)/);
+  return m ? Number(m[1]) : null;
+}
+
 /** The canonical HLTV player-profile url. */
 export function hltvPlayerUrl(playerId: number, slug: string): string {
   return `https://www.hltv.org/player/${playerId}/${slug}`;
