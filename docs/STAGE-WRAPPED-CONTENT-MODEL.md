@@ -1,7 +1,14 @@
 # Stage Wrapped — "Craziest Moments" Content Model & Media Recommendation
 
 **Issue:** PHA-1053 (research) · **Epic:** PHA-1051 Stage Wrapped · **Feeds:** PHA-1052 shell (done), PHA-1054 Stage 1 content
-**Date:** 2026-06-13 · **Author:** Vision Quest
+**Date:** 2026-06-13 · **Rev:** 2026-06-14 (review & upgrade — see §6) · **Author:** Vision Quest
+
+> **Rev 2026-06-14 in one line:** the model verified clean against the live codebase *and* against
+> PHA-1054's real Stage 1/2 content. Three upgrades fell out of that review — a **second media
+> track** the original missed (editorial news-recap links, which carried the actually-craziest
+> moments), a **resolved** HLTV-URL open item (the slug'd match URL is already in the data we
+> crawl), and a **type fix** (`source` enum was missing a value, forcing PHA-1054 to mislabel).
+> Details in **§6**. Sections 0–5 stand as written; §6 is the delta.
 
 ---
 
@@ -192,3 +199,126 @@ PHA-1054 builds the real `WrappedSlide[]` builder. This model hands it:
 **Verdict:** the key unknown the issue named — *what a moment is and where its media comes from* —
 is **resolved**. Moments are stat-derived and fully computable today; media is logos + an honest
 optional deep-link; embedded per-moment clips are confirmed infeasible and designed out.
+
+---
+
+## 6. Review & upgrade — 2026-06-14
+
+This rev re-tested the model two ways: (1) every cited source `file → fn` against the live tree,
+and (2) the model against **PHA-1054's real Stage 1/2 content**, which has since been authored *on
+top of* this model (`docs/STAGE-WRAPPED-S1-S2-DRAFT.md`, branch `pha1054-stage-wrapped-content`).
+Building the real thing is the only honest test of a content model. It passed — and surfaced three
+upgrades.
+
+### 6.1 Source-reference verification (adversarial self-review)
+
+The §2 catalog asserts a `file → fn` for each moment. A spec whose refs are wrong is worse than no
+spec, so every one was checked against the current repo. **All nine Tier-1 builders resolve to a
+real, exported function.** One ref correction:
+
+| Cited in §2 | Reality | Action |
+|---|---|---|
+| `pickBucketForRecord` (clinchers) | ✅ `swiss-clinch-core.ts:58` | none |
+| `deriveStatus` (elimination) | ✅ `swiss-results-core.ts` | none |
+| `RawStandingRow.seed` (upset) | ✅ `swiss-results-core.ts:28` (`number \| null`) | none |
+| `buildBucketConsensus` / `bucketShareFor` (contrarian) | ✅ `consensus-core.ts:171` | none |
+| `rankDelta` (rank-climber) | ✅ `rank-snapshot-core.ts:109` | none |
+| `buildSnapshotRows` (rank-climber) | ⚠️ lives in **`rank-snapshot.ts`**, not `-core` | fix ref in §2 #6 |
+| `ScoreBreakdown.bySection[]` (personal) | ✅ `scoring.ts` | none |
+
+Net: the model is buildable as written; PHA-1054 wired real moments to these exact functions
+without inventing new plumbing. The only edit is the `buildSnapshotRows` module path.
+
+### 6.2 The model missed a second media track: **editorial news-recap links**
+
+The original media analysis (§4) framed the choice as *stat card* vs *full-match reel* vs *clip*,
+and concluded clips are dead and reels are the only "watch" affordance. Authoring PHA-1054 proved
+that frame **incomplete**. The two genuinely "craziest" beats of the major were:
+
+- **BIG's 16-12 OT comeback over NRG from 0-12** — the first 0-12 comeback in Major history.
+- **donk's 2.27-rating Stage 2 smurf run.**
+
+Neither is a stat card (the *number* undersells it), neither has a usable clip, and a full-match
+reel buries the moment in 6 minutes. What actually carried them in PHA-1054 was a **link to a
+written recap** — `Read what happened` → an HLTV news article, `Read the donk run` → a dust2.us
+feature. That is a **third media option the original §4 never cataloged**, and it is the *best*
+medium for the historic beats: a human already wrote the 200 words that make it land.
+
+**The pattern (why this matters):** the data path and the editorial path cover *different kinds of
+crazy.* The data path owns the **systematic** moments — clinchers, upsets, your-run — that recur
+every stage and need zero human labor. The editorial path owns the **historic** moments — a record
+broken, a smurf-tier individual run — that data can flag the *shape* of but never the *weight* of.
+A Wrapped that only does the first feels like a stats dump; the second is what people screenshot.
+Ship both tracks.
+
+### 6.3 Type fix: the `source` enum was too small, and PHA-1054 had to lie to compile
+
+Direct consequence of 6.2. The model's `WrappedMomentLink.source` enum is
+`"esl-youtube" | "hltv-match"`. PHA-1054 needed to attach news-article and dust2 URLs, found no
+honest value, and typed them as `source: "hltv-match"` — a news article labeled as a match page.
+That is a real (if cosmetic) type smell traceable straight to this doc. **Upgrade the enum** so the
+type tells the truth:
+
+```ts
+export interface WrappedMomentLink {
+  label: string;   // honest CTA — must match what's on the other end of the link
+  href: string;
+  source:
+    | "esl-youtube"   // full-match ESL @ESLCSHighlights reel        → CTA "Watch the full-match highlights"
+    | "hltv-match"    // HLTV match page (slug'd URL, see 6.4)         → CTA "See the match"
+    | "news-recap"    // HLTV / dust2 / etc. written recap article    → CTA "Read what happened"
+    | "curated";      // editorially hand-picked URL (old option c)    → CTA author's choice
+}
+```
+
+The **honesty rule from §4 still governs**: the CTA verb must match the medium — *Watch* a reel,
+*Read* a recap, *See* a match page. The only thing that changes is the type now has a slot for each,
+so nobody has to mislabel to ship. PHA-1054's three links re-typed cleanly: the ESL reel stays
+`esl-youtube`; the two articles become `news-recap`.
+
+### 6.4 Open item #1 (canonical HLTV match URL) — **RESOLVED with evidence**
+
+§5 left open: *"the HLTV URL needs a slug we don't store — verify the canonical form before shipping
+a live match link."* Resolved. The slug'd URL is **already in the data we crawl.** The standings
+markdown each refresh ingests carries full human-readable match links, e.g. (from
+`src/fixtures/hltv-stage1-standings.sample.md`):
+
+```
+https://www.hltv.org/matches/2394776/big-vs-liquid-iem-cologne-major-2026-stage-1
+```
+
+Form: `https://www.hltv.org/matches/{matchId}/{teamA}-vs-{teamB}-{event-slug}`. We do **not** need to
+reconstruct or guess the slug — `swiss-results-core.ts` already sees this URL while parsing the row;
+it currently keeps only `matchId` from the bracket popup JSON and drops the link. **Capturing the
+full URL is a one-field add to the standings parse**, not a new crawl and not a guess. (Browser
+clicks pass HLTV's Cloudflare fine — the 403 only ever blocked *our server's* direct fetch, which
+this link never needs.) So a "See the match" deep-link is shippable now if wanted; PHA-1054 still
+chose news-recap + channel-level reel for v1, which is the right call for the marquee beats.
+
+### 6.5 Tier-2 "closest-map" reclassified — historic version ships **now** via the editorial track
+
+§2 filed moment #10 (closest map / overtime / comeback) as **Tier 2, deferred** because per-map
+scores aren't parsed. The *auto-derived* version is still correctly deferred — HLTV's popup JSON
+carries only the series count, not 16-14, and we store no map end time (unchanged, still true). But
+PHA-1054 shipped the BIG **16-12-OT-from-0-12** comeback in Stage 1 — i.e. the single craziest
+"closest map" beat of the event — via the **editorial/news-recap track (6.2)**, not via parsing. So
+the correction is: *closest-map/comeback is not gated on a parser.* Its **systematic** form waits on
+Tier 2; its **marquee** form is an editorial moment available today. Don't let "the parser isn't
+built" read as "we can't show the comeback" — we already did.
+
+### 6.6 Updated handoff (supersedes the §5 open-items list)
+
+| §5 open item | Status after this review |
+|---|---|
+| Confirm canonical HLTV match-page URL form | ✅ **Resolved** (6.4) — slug'd URL is in the standings markdown; capture, don't reconstruct |
+| ESL reel: per-match map vs channel-level link for v1 | ✅ **Decided in practice** — PHA-1054 shipped channel-level `@ESLCSHighlights`; per-match title→reel map remains an optional later polish |
+| `your-miss` copy tone (wink not scold) | ⏳ still a copy pass for whoever wires personal slides (unchanged) |
+| **NEW** — grow `source` enum + add `news-recap`/`curated` (6.3) | 🆕 one-line type change; re-types PHA-1054's links cleanly |
+| **NEW** — add a `news-recap` editorial moment class to the deck mix (6.2) | 🆕 the second media track; pairs an authored recap with a logo card |
+
+**Net verdict of the review:** the model held — every builder is real and PHA-1054 was authored on
+it without rework. The upgrade is not a correction of the thesis (stat-derived moments + honest
+deep-links, no embedded clips) but an **expansion**: a second, editorial media track for the
+historic beats, a `source` enum that lets that track be typed honestly, and one open item closed
+with evidence. The clips conclusion from §0 is **re-confirmed** — nothing here reintroduces a
+per-moment video dependency.
