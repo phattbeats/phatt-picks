@@ -47,6 +47,27 @@ export interface WrappedSlide {
 /** Floor for auto-advance so authored data can't produce a strobe. */
 export const MIN_AUTO_ADVANCE_MS = 1200;
 
+/**
+ * Resolve the effective auto-advance delay for a slide, or `null` when the deck
+ * should wait for the user. Auto-advance is suppressed when:
+ *   - the slide didn't ask for it (falsy / non-positive `autoAdvanceMs`),
+ *   - the viewer prefers reduced motion (auto-moving content is exactly what
+ *     that setting asks us to stop — WCAG 2.2.2 / 2.3.3), or
+ *   - the viewer has taken manual control of the deck (we never page out from
+ *     under someone who is clicking/swiping through it themselves).
+ * Honoured delays are floored to `MIN_AUTO_ADVANCE_MS` so authored data can't
+ * strobe. Pure so the shell's pacing rule is asserted offline.
+ */
+export function resolveAutoAdvanceMs(
+  slide: Pick<WrappedSlide, "autoAdvanceMs"> | undefined,
+  opts: { reducedMotion?: boolean; userControlled?: boolean } = {},
+): number | null {
+  const requested = slide?.autoAdvanceMs;
+  if (!requested || requested <= 0) return null;
+  if (opts.reducedMotion || opts.userControlled) return null;
+  return Math.max(MIN_AUTO_ADVANCE_MS, requested);
+}
+
 /* ------------------------------------------------------------------ */
 /* Deck cursor reducer                                                 */
 /* ------------------------------------------------------------------ */
@@ -56,12 +77,19 @@ export interface DeckState {
   index: number;
   /** Total slide count this deck was built for. */
   count: number;
+  /**
+   * Sticky once the viewer pages the deck themselves (a `user: true` action).
+   * The shell reads this to stand auto-advance down so it never pages out from
+   * under someone in manual control. Reset by `reset`.
+   */
+  controlled?: boolean;
 }
 
 export type DeckAction =
-  | { type: "next" }
-  | { type: "prev" }
-  | { type: "goto"; index: number }
+  /** `user: true` marks the deck viewer-controlled (manual page vs. auto-advance). */
+  | { type: "next"; user?: boolean }
+  | { type: "prev"; user?: boolean }
+  | { type: "goto"; index: number; user?: boolean }
   /** Rebuild for a (possibly new) slide list — resets the cursor to 0. */
   | { type: "reset"; count: number };
 
@@ -81,20 +109,32 @@ export function clampIndex(index: number, count: number): number {
 export function deckReducer(state: DeckState, action: DeckAction): DeckState {
   switch (action.type) {
     case "next":
-      return { ...state, index: clampIndex(state.index + 1, state.count) };
+      return {
+        ...state,
+        index: clampIndex(state.index + 1, state.count),
+        controlled: state.controlled || !!action.user,
+      };
     case "prev":
-      return { ...state, index: clampIndex(state.index - 1, state.count) };
+      return {
+        ...state,
+        index: clampIndex(state.index - 1, state.count),
+        controlled: state.controlled || !!action.user,
+      };
     case "goto":
-      return { ...state, index: clampIndex(action.index, state.count) };
+      return {
+        ...state,
+        index: clampIndex(action.index, state.count),
+        controlled: state.controlled || !!action.user,
+      };
     case "reset":
-      return { count: Math.max(0, Math.trunc(action.count)), index: 0 };
+      return { count: Math.max(0, Math.trunc(action.count)), index: 0, controlled: false };
     default:
       return state;
   }
 }
 
 export function initialDeckState(count: number): DeckState {
-  return { index: 0, count: Math.max(0, Math.trunc(count)) };
+  return { index: 0, count: Math.max(0, Math.trunc(count)), controlled: false };
 }
 
 export function isFirstSlide(state: DeckState): boolean {
