@@ -26,6 +26,7 @@ import { fileURLToPath } from "node:url";
 import { parseHltvSwissStandings, matchStandingsToLayout } from "../src/lib/swiss-results-core.ts";
 import { deriveClinchedSlots, pickBucketForRecord } from "../src/lib/swiss-clinch-core.ts";
 import { bucketSwissSlots } from "../src/lib/swiss-bucket-core.ts";
+import { bracketMatchRecords, type SwissRound } from "../src/lib/swiss-bracket-core.ts";
 import type { Layout, Section } from "../src/lib/layout.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -98,6 +99,77 @@ const existing = fresh.map((f) => ({ groupId: f.groupId, slotIndex: f.slotIndex,
 const again = deriveClinchedSlots(stage3, standings, existing, bucketSwissSlots);
 console.log("\nlive-results-bridge - re-running against the written answer key is idempotent");
 check("no duplicate writes for already-clinched teams", again.length === 0, `re-wrote ${again.length}`);
+
+// ── PHA-1109 follow-up: resolve from the BRACKET's match cells when the table is
+// stale/absent. The live freeze persisted even after the scheduler shipped: the
+// in-container crawl's cached W-L *table* lagged behind B8's 0:3 clinch (it still
+// read 0-2 from before the floor wedged), and the bridge's table-OR-bracket
+// branch trusted that stale table and never consulted the bracket. The bracket's
+// per-match results — server-rendered, present in the SAME cache — already showed
+// B8 losing its third series. bracketMatchRecords tallies that, and the bridge now
+// MERGES every source keeping the most-played (most-current) record per team.
+const B8 = pid("B8")!;
+const FUR = pid("FURIA")!;
+const PARI = pid("PARIVISION") ?? pid("Parivision")!;
+// A minimal mapped bracket: B8 lost three series (0-3), FURIA won three (3-0),
+// PARIVISION lost three (0-3). Only the loser/winner flags + pickids matter.
+const side = (pickid: number, winner: boolean) => ({ name: "", hltvId: null, score: winner ? 2 : 0, winner, pickid });
+const series = (id: number, opp: number, idWon: boolean, matchId: number) => ({
+  matchId,
+  team1: side(id, idWon),
+  team2: side(opp, !idWon),
+  bestOf: 3,
+  played: true,
+  startTimeMs: null,
+});
+const bracketRounds: SwissRound[] = [
+  {
+    label: "0:0",
+    kind: "contention",
+    teams: [],
+    matches: [
+      series(B8, 999, false, 1), // B8 loss 1
+      series(B8, 998, false, 2), // B8 loss 2
+      series(B8, 997, false, 3), // B8 loss 3 → 0-3
+      series(FUR, 996, true, 4),
+      series(FUR, 995, true, 5),
+      series(FUR, 994, true, 6), // FURIA 3-0
+      series(PARI, 993, false, 7),
+      series(PARI, 992, false, 8),
+      series(PARI, 991, false, 9), // PARIVISION 0-3
+    ],
+  },
+];
+const matchRecs = bracketMatchRecords(bracketRounds);
+const recOf = (p: number) => matchRecs.find((r) => r.pickid === p);
+
+console.log("\nlive-results-bridge - bracketMatchRecords tally the Swiss record from match cells");
+check("B8 tallies to 0-3 from three lost series", recOf(B8)?.wins === 0 && recOf(B8)?.losses === 3, JSON.stringify(recOf(B8)));
+check("FURIA tallies to 3-0 from three won series", recOf(FUR)?.wins === 3 && recOf(FUR)?.losses === 0, JSON.stringify(recOf(FUR)));
+
+// The merge the bridge runs: a STALE table (B8 0-2) + the fresh bracket records.
+// Stale-table-alone would leave B8 unresolved; the merge keeps the most-played
+// record (the bracket's 0-3) and B8 clinches.
+const staleTable = [{ pickid: B8, wins: 0, losses: 2 }]; // pre-clinch cached row
+const byPick = new Map<number, { pickid: number; wins: number; losses: number }>();
+const consider = (r: { pickid: number; wins: number; losses: number }) => {
+  const prev = byPick.get(r.pickid);
+  if (!prev || r.wins + r.losses > prev.wins + prev.losses) byPick.set(r.pickid, r);
+};
+for (const r of staleTable) consider(r);
+for (const r of matchRecs) consider(r);
+const merged = [...byPick.values()];
+
+console.log("\nlive-results-bridge - merging stale table + bracket keeps the most-current record");
+check("stale table alone would NOT clinch B8 (0-2)", pickBucketForRecord(0, 2) === null);
+check("merged B8 record is the bracket's terminal 0-3", byPick.get(B8)?.losses === 3);
+const mergedFresh = deriveClinchedSlots(stage3, merged, [], bucketSwissSlots);
+const b8Slot = mergedFresh.find((f) => f.winnerPickId === B8)?.slotIndex;
+check(
+  "B8 clinches a 0:3 slot from the merged record — the live fix",
+  b8Slot !== undefined && slots("0:3").includes(b8Slot),
+  `slot=${b8Slot}`,
+);
 
 console.log(`\nlive-results-bridge: ${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);
