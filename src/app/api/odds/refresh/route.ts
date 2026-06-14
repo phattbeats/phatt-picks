@@ -22,14 +22,16 @@
 
 import { NextResponse } from "next/server";
 import { warmSpotlightOdds } from "@/lib/spotlight-odds";
-import { ACTIVE_EVENT_ID } from "@/lib/events-core";
+import { currentEventId } from "@/lib/events-core";
 
-const EVENT_ID = ACTIVE_EVENT_ID;
 export const dynamic = "force-dynamic";
 
 async function warm() {
-  const result = await warmSpotlightOdds(EVENT_ID);
-  return NextResponse.json({ ok: true, eventId: EVENT_ID, ...result });
+  // PHA-1046 removed the module-load-bound ACTIVE_EVENT_ID; resolve the live
+  // event per-request so this stays correct across a Major rollover.
+  const eventId = currentEventId();
+  const result = await warmSpotlightOdds(eventId);
+  return NextResponse.json({ ok: true, eventId, ...result });
 }
 
 // GET so it's trivial to warm from a browser / curl / uptime poke; POST aliased.

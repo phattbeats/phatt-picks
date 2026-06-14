@@ -31,11 +31,11 @@ import { fetchTournamentLayout } from "./valve";
 import { isEventFrozenById } from "./event-freeze";
 import { cacheLiveLayout } from "./layout-state";
 import { writeRankSnapshots } from "./rank-snapshot";
-import { getSwissStandings, getSwissBracket } from "./swiss-results";
+import { getSwissStandings, getSwissBracket, ingestStandingsNow, standingsSectionIds } from "./swiss-results";
 import { bracketTerminalRecords } from "./swiss-bracket-core";
 import { deriveClinchedSlots } from "./swiss-clinch-core";
 import { bucketSwissSlots, isSwissSection } from "./swiss-bucket-core";
-import { isLockTimePassed } from "./lock-schedule-core";
+import { isLockTimePassed, isWithinRefreshWindow } from "./lock-schedule-core";
 
 export interface IngestSummary {
   eventId: number;
@@ -370,6 +370,62 @@ export async function bridgeSwissOutcomes(
     }
   }
   return written;
+}
+
+export interface LiveResultsTick {
+  eventId: number;
+  ingested: number;
+  resolved: number;
+}
+
+/**
+ * Synchronous live-results driver for the in-process scheduler (PHA-1109).
+ *
+ * The on-read drivers (refreshStandingsOnRead / refreshOutcomesOnRead) DEFER
+ * their HLTV crawl + bridge past the response via `after()` — which does not
+ * fire reliably in the Next standalone production server. The symptom: during a
+ * live stage the standings cache (and the StageOutcome answer key the
+ * leaderboard scores off) can freeze for hours with nothing to notice. PHA-1109:
+ * a 0-3 elimination (B8) stayed un-green and unscored for ~19h because the crawl
+ * never ran — every page load STAMPED the ~1h refresh floor at claim time, then
+ * deferred a crawl that never executed, perpetually wedging the floor while no
+ * crawl ever landed, and locking out the synchronous warm route too.
+ *
+ * This is the traffic- and after()-independent path the instrumentation
+ * scheduler calls on a fixed tick: force-crawl every in-window standings section
+ * (ingestStandingsNow bypasses the floor — the tick cadence is the rate limit),
+ * then bridge the freshly-warmed cache into StageOutcome so green checkmarks AND
+ * points land together the moment a team clinches. Self-gating and best-effort:
+ * a frozen (effectively archived) Major no-ops, off-window sections are skipped,
+ * and any single failure is logged and never throws (a stuck section can't wedge
+ * the rest, and the scheduler keeps ticking).
+ */
+export async function refreshLiveResultsTick(
+  eventId: number,
+  nowMs: number = Date.now(),
+): Promise<LiveResultsTick> {
+  if (await isEventFrozenById(eventId, nowMs)) return { eventId, ingested: 0, resolved: 0 };
+
+  let ingested = 0;
+  for (const sectionId of standingsSectionIds(eventId)) {
+    if (!isWithinRefreshWindow(sectionId, nowMs)) continue; // off-window → serve cache, don't crawl
+    try {
+      ingested += await ingestStandingsNow(eventId, sectionId);
+    } catch (e) {
+      console.error(
+        `[live-tick] standings ingest failed for section ${sectionId} (non-fatal):`,
+        e instanceof Error ? e.message : e,
+      );
+    }
+  }
+
+  let resolved = 0;
+  try {
+    resolved = await bridgeSwissOutcomes(eventId, nowMs);
+  } catch (e) {
+    console.error("[live-tick] outcome bridge failed (non-fatal):", e instanceof Error ? e.message : e);
+  }
+  return { eventId, ingested, resolved };
 }
 
 /**
