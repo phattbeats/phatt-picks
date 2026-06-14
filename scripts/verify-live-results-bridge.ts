@@ -24,7 +24,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { parseHltvSwissStandings, matchStandingsToLayout } from "../src/lib/swiss-results-core.ts";
-import { deriveClinchedSlots, pickBucketForRecord } from "../src/lib/swiss-clinch-core.ts";
+import { deriveClinchedSlots, findContradictedSlots, pickBucketForRecord, recordContradictsBucket } from "../src/lib/swiss-clinch-core.ts";
 import { bucketSwissSlots } from "../src/lib/swiss-bucket-core.ts";
 import { bracketMatchRecords, type SwissRound } from "../src/lib/swiss-bracket-core.ts";
 import type { Layout, Section } from "../src/lib/layout.ts";
@@ -169,6 +169,48 @@ check(
   "B8 clinches a 0:3 slot from the merged record — the live fix",
   b8Slot !== undefined && slots("0:3").includes(b8Slot),
   `slot=${b8Slot}`,
+);
+
+// Self-heal (PHA-1109): a slot resolved off a stale/partial crawl can hold the
+// WRONG winner; the never-rewrite rule would freeze that error and block the team
+// that actually clinched. findContradictedSlots flags such slots so the bridge can
+// evict + re-derive the correct winner.
+console.log("\nlive-results-bridge - recordContradictsBucket flags a stored winner the live record rules out");
+check("a team with a win can't be the 0:3 it was recorded as", recordContradictsBucket("0-3", 2, 2) === true);
+check("a team with a loss can't be the 3:0 it was recorded as", recordContradictsBucket("3-0", 2, 1) === true);
+check("an eliminated (1-3) team can't be in the advance bucket", recordContradictsBucket("advance", 1, 3) === true);
+check("a 3-1 team parked in a 0:3 slot is contradicted (wrong terminal bucket)", recordContradictsBucket("0-3", 3, 1) === true);
+check("the genuine 0-3 team is NOT contradicted in its 0:3 slot", recordContradictsBucket("0-3", 0, 3) === false);
+check("the genuine 3-0 team is NOT contradicted in its 3:0 slot", recordContradictsBucket("3-0", 3, 0) === false);
+check("a still-pending team's all-zero record contradicts nothing", recordContradictsBucket("0-3", 0, 0) === false);
+
+// Simulate the broken production state: B8's 0:3 slot + Spirit's 3:0 slot are
+// occupied by other teams whose live record no longer fits the bucket.
+const NAVI = pid("Natus Vincere")!; // 2-1, wrongly parked in a 3:0 slot
+const MONGOLZ = pid("The MongolZ")!; // 2-2, wrongly parked in a 0:3 slot
+const wrongExisting = [
+  { groupId: stage3.groups[0].groupid, slotIndex: slots("3:0")[0], winnerPickId: pid("FURIA")! },
+  { groupId: stage3.groups[0].groupid, slotIndex: slots("3:0")[1], winnerPickId: NAVI },
+  { groupId: stage3.groups[0].groupid, slotIndex: slots("0:3")[0], winnerPickId: pid("Parivision")! },
+  { groupId: stage3.groups[0].groupid, slotIndex: slots("0:3")[1], winnerPickId: MONGOLZ },
+];
+const evicted = findContradictedSlots(stage3, standings, wrongExisting, bucketSwissSlots);
+console.log("\nlive-results-bridge - findContradictedSlots evicts only the wrong winners, then re-derive heals");
+check("evicts exactly the two contradicted slots", evicted.length === 2, `evicted ${evicted.length}`);
+check("NaVi is evicted from the 3:0 slot", evicted.some((e) => e.winnerPickId === NAVI));
+check("MongolZ is evicted from the 0:3 slot", evicted.some((e) => e.winnerPickId === MONGOLZ));
+check("the correct FURIA / Parivision rows are NOT evicted", !evicted.some((e) => e.winnerPickId === pid("FURIA") || e.winnerPickId === pid("Parivision")));
+const evictedKeys = new Set(evicted.map((e) => `${e.groupId}:${e.slotIndex}`));
+const healedExisting = wrongExisting.filter((e) => !evictedKeys.has(`${e.groupId}:${e.slotIndex}`));
+const healed = deriveClinchedSlots(stage3, standings, healedExisting, bucketSwissSlots);
+const healedSlot = (p: number | undefined) => healed.find((f) => f.winnerPickId === p)?.slotIndex;
+check("after heal, Spirit (3-0) takes the freed 3:0 slot", slots("3:0").includes(healedSlot(pid("Spirit"))!), `slot=${healedSlot(pid("Spirit"))}`);
+check("after heal, B8 (0-3) takes the freed 0:3 slot", slots("0:3").includes(healedSlot(pid("B8"))!), `slot=${healedSlot(pid("B8"))}`);
+
+// And the correct answer key is left fully alone — no eviction, no thrash.
+check(
+  "a correct answer key is never evicted (no thrash)",
+  findContradictedSlots(stage3, standings, existing, bucketSwissSlots).length === 0,
 );
 
 console.log(`\nlive-results-bridge: ${pass} passed, ${fail} failed\n`);
