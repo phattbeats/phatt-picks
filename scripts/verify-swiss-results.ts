@@ -23,6 +23,7 @@ import {
   deriveStatus,
   summarizeStandings,
   recordsByPickId,
+  isValidSwissRecord,
   planStandingsCrawlPass,
   STANDINGS_CRAWL_PASS_TIMEOUT_MS,
   STANDINGS_MAX_CRAWL_PASSES,
@@ -146,6 +147,26 @@ check("a row with no game played (0-0) is omitted", (() => {
   return recordsByPickId(zero).size === 0;
 })());
 check("unmatched rows (pickid null) are skipped", recordsByPickId([]).size === 0);
+
+console.log("\nswiss-results - W-L parse bounds (PHA-1044: a map score can't fake a clinch)");
+
+check("a real record is valid (2-0, 2 matches)", isValidSwissRecord(2, 0, 2));
+check("a full advance is valid (3-2, 5 matches)", isValidSwissRecord(3, 2, 5));
+check("a full elimination is valid (0-3, 3 matches)", isValidSwissRecord(0, 3, 3));
+check("a map score (13-7) is rejected (over the win bound)", !isValidSwissRecord(13, 7, 20));
+check("matches must equal wins+losses (2-0 with 3 matches rejected)", !isValidSwissRecord(2, 0, 3));
+check("4 wins rejected (past the 3-win clinch)", !isValidSwissRecord(4, 0, 4));
+check("negative numbers rejected", !isValidSwissRecord(-1, 0, -1));
+check("a 2-win Swiss format validates 2-0 under custom bounds", isValidSwissRecord(2, 0, 2, 2, 2));
+// End-to-end: a row whose tail carries an extra map-score run must be dropped, not
+// admitted as a fabricated "advanced" standing.
+{
+  const good = "|  #1 ![BetBoom](logo) [BetBoom](https://www.hltv.org/team/12394/betboom) 2 26 13 13 2 - 0 |";
+  const bad = "|  #2 ![Fake](logo) [Fake](https://www.hltv.org/team/99999/fake) 1 16 7 9 16 - 7 |";
+  const md = `| Group Swiss | M | RW | RL | RD | Record | E |\n|---|\n${good}\n${bad}`;
+  const rows = parseHltvSwissStandings(md);
+  check("a row with an out-of-bounds W-L tail is dropped", rows.length === 1 && rows[0].name === "BetBoom");
+}
 
 console.log("\nswiss-results - crawl retry/timeout policy (PHA-951: survive team-stats contention)");
 

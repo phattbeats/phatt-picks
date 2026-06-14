@@ -87,7 +87,15 @@ export interface MajorHistoryRow {
   status: EventStatus;
   /** Inclusive UTC span the Major was played over (registry `dates`). */
   start: string;
-  /** This player's total score for the Major. */
+  /**
+   * Whether this Major's layout fixture was loadable, so `score`/`finish` are a
+   * REAL result and not the 0/null fallback (PHA-1046). Today only the live
+   * event's layout is loadable; once a 2nd Major archives and per-event fixtures
+   * land, an unloadable layout degrades to an honest "score unavailable" row
+   * instead of a misleading genuine 0.
+   */
+  scored: boolean;
+  /** This player's total score for the Major (0 when `scored` is false). */
   score: number;
   /** 1-based placement among everyone who played it, or null if unscored. */
   finish: number | null;

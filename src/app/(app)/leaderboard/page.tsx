@@ -9,10 +9,11 @@ import { getSession } from "@/lib/session";
 import { rankMapForSection, snapshotSectionIds } from "@/lib/rank-snapshot";
 import { baselineSectionId, latestSectionId, rankDelta, type RankDelta } from "@/lib/rank-snapshot-core";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
-import { ACTIVE_EVENT_ID } from "@/lib/events-core";
+import { currentEventId } from "@/lib/events-core";
 
-const EVENT_ID = ACTIVE_EVENT_ID;
 export default async function LeaderboardPage() {
+  // Per-request active event (PHA-1046) — follows the clock across Majors, no redeploy.
+  const EVENT_ID = currentEventId();
   const layout = getCommittedLayout();
   const session = await getSession();
 

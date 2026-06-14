@@ -72,21 +72,25 @@ export interface StageGateOpts {
 }
 
 /**
- * Which section should the dashboard hero spotlight (PHA-1007)?
+ * Which section is the event's CURRENT stage — the one a player should land on
+ * "now" (PHA-1007 dashboard hero, PHA-1050 picks-nav default)?
  *
  * Priority:
  *   1. The first stage whose pick window is OPEN — real urgency, real countdown.
  *   2. Otherwise the LATEST stage that has actually STARTED (its lock time
  *      passed, or Valve closed it) — the stage in progress right now. Mid-event
- *      the briefing should read "check your picks, watch the matches", not
- *      manufacture urgency for a future stage.
+ *      this should read "check your picks, watch the matches", not manufacture
+ *      urgency for a future stage.
  *   3. Defensive fallback: the last section.
  *
- * Before this rule the fallback was always the LAST section, so the moment
- * Stage III locked the hero jumped to the un-seeded Grand Final — a stage
- * whose window doesn't open for another week.
+ * Before this rule the dashboard hero's fallback was always the LAST section, so
+ * the moment Stage III locked the hero jumped to the un-seeded Grand Final — a
+ * stage whose window doesn't open for another week. The picks page shared the
+ * opposite bug from the other end: it always defaulted to the FIRST section
+ * (Stage I), so clicking "Picks" mid-event dropped you on a long-locked stage
+ * instead of the live one. Both now resolve the same "current stage" here.
  */
-export function selectBriefingIndex(
+export function selectCurrentStageIndex(
   statuses: ReadonlyArray<StagePickability>,
 ): number {
   const firstOpen = statuses.findIndex((s) => s.pickable);

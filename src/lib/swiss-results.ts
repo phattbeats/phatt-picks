@@ -44,12 +44,31 @@ import { isWithinRefreshWindow } from "./lock-schedule-core";
 // Which HLTV event page carries the live Swiss table for each pick'em section
 // is now per-event config in the registry (PHA-948). For the active event
 // (Cologne) these are exactly the section ids/urls this module declared before.
-import { SECTION_SOURCES } from "./events-core";
+import { getEventConfig, type SectionSource } from "./events-core";
+
+/**
+ * The Swiss standings sources for a SPECIFIC event, resolved per-call from the
+ * registry (PHA-1046). The old module-level `SECTION_SOURCES` const pinned the
+ * active event at process load, so once Cologne archives and the next Major goes
+ * live the crawl would keep fetching the stale event's pages until a redeploy.
+ * Threading the eventId through means every section lookup follows whichever
+ * event the caller is driving. Returns an empty map for an unknown event id (no
+ * sources → every `hasStandingsSource` is false → the driver no-ops, never
+ * crawls a wrong page). For Cologne this returns the exact same map as before.
+ */
+function sectionSourcesFor(eventId: number): Readonly<Record<number, SectionSource>> {
+  return getEventConfig(eventId)?.sectionSources ?? {};
+}
 import { isEventFrozenById } from "./event-freeze";
 
 // crawl4ai on the phattvip network. Same hostname resolves in the workspace and
 // in the deployed container; CRAWL4AI_URL overrides for other topologies.
 const CRAWL4AI_URL = (process.env.CRAWL4AI_URL ?? "http://crawl4ai:11235").replace(/\/+$/, "");
+// Same token the team-stats crawl sends (PHA-1044). Both crawls hit the same
+// crawl4ai instance, so they must present the same auth — otherwise, the day the
+// service starts requiring the token, the user-visible standings crawl 401s while
+// team-stats keeps working and the W-L table silently freezes.
+const CRAWL4AI_TOKEN = process.env.CRAWL4AI_API_TOKEN ?? "Phatt-tech-2026";
 
 // ~Hourly refresh floor (Brandon: "refreshing every hour"). The driver attempts
 // at most one pull per hour across the whole cluster.
@@ -91,8 +110,8 @@ export interface LiveBracket {
   fetchedAtIso: string;
 }
 
-export function hasStandingsSource(sectionId: number): boolean {
-  return sectionId in SECTION_SOURCES;
+export function hasStandingsSource(eventId: number, sectionId: number): boolean {
+  return sectionId in sectionSourcesFor(eventId);
 }
 
 /**
@@ -153,7 +172,10 @@ async function crawlPageOnce(
 ): Promise<{ markdown: string; html: string }> {
   const res = await fetch(`${CRAWL4AI_URL}/crawl`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${CRAWL4AI_TOKEN}`,
+    },
     body: JSON.stringify({
       urls: [url],
       // domcontentloaded + a tight page_timeout stop the ~50s networkidle hang
@@ -220,7 +242,7 @@ async function crawlPage(url: string): Promise<{ markdown: string; html: string 
  * the floor so the read path backs off afterward.
  */
 async function ingestStandings(eventId: number, sectionId: number): Promise<number> {
-  const src = SECTION_SOURCES[sectionId];
+  const src = sectionSourcesFor(eventId)[sectionId];
   if (!src) return 0; // no known source for this section — nothing to do
   try {
     const { markdown, html } = await crawlPage(src.url);
@@ -276,21 +298,10 @@ export async function refreshStandingsOnRead(
   nowMs: number = Date.now(),
 ): Promise<void> {
   if (await isEventFrozenById(eventId, nowMs)) return; // PHA-949/954: frozen (effectively archived) Majors never re-crawl
-  if (!hasStandingsSource(sectionId)) return; // nothing to refresh
+  if (!hasStandingsSource(eventId, sectionId)) return; // nothing to refresh
   if (!isWithinRefreshWindow(sectionId, nowMs)) return; // outside the reveal→end window — serve cache
   if (!(await claimStandingsRefreshSlot())) return; // within floor or lost the race
   runDeferred(() => ingestStandings(eventId, sectionId));
-}
-
-/**
- * Force a synchronous refresh, bypassing the floor — the owner-triggered entry
- * point (an ingest route / deploy smoke). Stamps the floor so the read path
- * backs off afterward. Best-effort; returns rows written.
- */
-export async function ingestStandingsNow(eventId: number, sectionId: number): Promise<number> {
-  const n = await ingestStandings(eventId, sectionId);
-  await stampStandingsRefreshSlot();
-  return n;
 }
 
 /** Is there already a cached standings blob for this section? (cheap existence check) */
@@ -332,7 +343,7 @@ export async function warmStandings(
   sectionId: number,
   nowMs: number = Date.now(),
 ): Promise<WarmResult> {
-  if (!hasStandingsSource(sectionId)) return { section: sectionId, status: "no-source", rows: 0 };
+  if (!hasStandingsSource(eventId, sectionId)) return { section: sectionId, status: "no-source", rows: 0 };
   if (!isWithinRefreshWindow(sectionId, nowMs)) return { section: sectionId, status: "off-window", rows: 0 };
   const cold = !(await hasCachedSection(eventId, sectionId));
   // Warm cache → respect the ~1h floor (don't re-crawl on every poke). Cold
@@ -343,9 +354,9 @@ export async function warmStandings(
   return { section: sectionId, status: rows > 0 ? "ingested" : "kept-cache", rows };
 }
 
-/** The sections that have a live standings source (for the warm-all entry point). */
-export function standingsSectionIds(): number[] {
-  return Object.keys(SECTION_SOURCES).map(Number);
+/** The sections that have a live standings source for an event (warm-all entry point). */
+export function standingsSectionIds(eventId: number): number[] {
+  return Object.keys(sectionSourcesFor(eventId)).map(Number);
 }
 
 /**
@@ -360,7 +371,7 @@ export async function getSwissStandings(
   sectionId: number,
   teams: readonly MatchableTeam[],
 ): Promise<LiveStandings | null> {
-  if (!hasStandingsSource(sectionId)) return null;
+  if (!hasStandingsSource(eventId, sectionId)) return null;
   let row;
   try {
     row = await prisma.swissStandingsCache.findUnique({
@@ -411,7 +422,7 @@ export async function getSwissBracket(
   sectionId: number,
   teams: readonly MatchableTeam[],
 ): Promise<LiveBracket | null> {
-  if (!hasStandingsSource(sectionId)) return null;
+  if (!hasStandingsSource(eventId, sectionId)) return null;
   let row;
   try {
     row = await prisma.swissStandingsCache.findUnique({

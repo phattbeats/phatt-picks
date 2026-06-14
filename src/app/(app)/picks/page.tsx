@@ -8,6 +8,7 @@ import { mirrorPlayerPredictionsThrottled } from "@/lib/predictions-sync";
 import { PicksBoard } from "@/components/PicksBoard";
 import {
   isStagePickable,
+  selectCurrentStageIndex,
   type StagePickability,
 } from "@/lib/stage-gate-core";
 import { LockCountdown } from "@/components/heat/LockCountdown";
@@ -29,10 +30,10 @@ import { LiveSwissBracketBoard } from "@/components/heat/LiveSwissBracketBoard";
 import { refreshStandingsOnRead, getSwissStandings, getSwissBracket } from "@/lib/swiss-results";
 import { recordsByPickId } from "@/lib/swiss-results-core";
 import { refreshTeamStatsOnRead, getLiveTeamStats } from "@/lib/team-stats";
+import { refreshSpotlightOddsOnRead, getSpotlightMarket } from "@/lib/spotlight-odds";
 import { AutoRefresh } from "@/components/AutoRefresh";
-import { ACTIVE_EVENT_ID } from "@/lib/events-core";
+import { currentEventId } from "@/lib/events-core";
 
-const EVENT_ID = ACTIVE_EVENT_ID;
 export const dynamic = "force-dynamic";
 
 export default async function PicksPage({
@@ -40,6 +41,8 @@ export default async function PicksPage({
 }: {
   searchParams: Promise<{ section?: string }>;
 }) {
+  // Per-request active event (PHA-1046) — force-dynamic, follows the clock across Majors.
+  const EVENT_ID = currentEventId();
   const params = await searchParams;
   await refreshLayoutOnRead(EVENT_ID); // live driver — throttled, deferred past render
   const layout = await getEffectiveLayout(EVENT_ID);
@@ -65,6 +68,12 @@ export default async function PicksPage({
   // cold start falls back to the committed frozen snapshot (never empty).
   await refreshTeamStatsOnRead(EVENT_ID, nowMs);
 
+  // Live playoff Spotlight odds refresh (PHA-1066): same on-read, ~1h-claimed,
+  // deferred pattern as the dossier, but the source is Polymarket's gamma-api.
+  // Gated to an authored matchup registry (empty until Valve seeds the bracket),
+  // so this is a no-op until a real playoff matchup exists to target.
+  await refreshSpotlightOddsOnRead(EVENT_ID, nowMs);
+
   // Signed in via Steam but no auth code yet: picks save in HOTLINE, but we
   // can't push them to the official in-game CS2 Pick'Em until they connect a
   // Game Authentication Code. Surface that gap up front with a link (PHA-891).
@@ -72,26 +81,36 @@ export default async function PicksPage({
     ? !(await hasAuthCode(session.playerId))
     : false;
 
-  const activeSectionId = params.section
-    ? parseInt(params.section, 10)
-    : layout.sections[0].sectionid;
-
-  const section = layout.sections.find((s) => s.sectionid === activeSectionId);
-
   // Scheduled hard lock (PHA-886/898): once a stage's first match starts, its
   // pick window is closed — even though the committed layout still says
   // picks_allowed and an outcome row hasn't landed yet. The published schedule
   // is the truthful signal; the gate surfaces `locked-time-passed` (friendlier
   // copy that introduces the live lineup below) and POST /api/picks mirrors the
-  // same lock. Playoffs have no published time (null) → unaffected.
-  const sectionPickability: Map<number, StagePickability> = new Map(
-    layout.sections.map((s) => [
-      s.sectionid,
-      isStagePickable(layout, s.sectionid, {
-        lockedByTime: isLockTimePassed(s.sectionid, nowMs),
-      }),
-    ]),
+  // same lock. Playoffs have no published time (null) → unaffected. Computed
+  // once in layout order, then keyed by id for the tab/lock rendering below.
+  const orderedPickability = layout.sections.map((s) =>
+    isStagePickable(layout, s.sectionid, {
+      lockedByTime: isLockTimePassed(s.sectionid, nowMs),
+    }),
   );
+  const sectionPickability: Map<number, StagePickability> = new Map(
+    layout.sections.map((s, i) => [s.sectionid, orderedPickability[i]]),
+  );
+
+  // PHA-1050: clicking "Picks" with no ?section lands on the event's CURRENT
+  // stage — the one open for picks, else the latest stage underway — instead of
+  // always Stage I. Same "current stage" rule the dashboard hero uses, so the
+  // nav and the briefing always agree on what "now" is. An explicit ?section
+  // (a tab click, a deep link) still wins.
+  const defaultSectionId =
+    layout.sections[selectCurrentStageIndex(orderedPickability)]?.sectionid ??
+    layout.sections[0].sectionid;
+
+  const activeSectionId = params.section
+    ? parseInt(params.section, 10)
+    : defaultSectionId;
+
+  const section = layout.sections.find((s) => s.sectionid === activeSectionId);
   const activePickability =
     sectionPickability.get(activeSectionId) ??
     ({ pickable: false, reason: "unknown-section" } as StagePickability);
@@ -222,6 +241,11 @@ export default async function PicksPage({
     activePickability.pickable || (playoffActive && anyPlayoffPickable)
       ? await getLiveTeamStats(EVENT_ID)
       : null;
+
+  // Live market lines for the playoff Spotlight (PHA-1066). Playoff-only — the
+  // Spotlight modal is the only place that renders a market bar. Empty {} until a
+  // matchup is authored, in which case the modal shows its "coming soon" state.
+  const spotlightMarket = playoffActive ? await getSpotlightMarket(EVENT_ID, nowMs) : undefined;
 
   // Header: the consolidated Playoffs tab reads as one stage regardless of
   // which playoff section id is in the URL; Swiss stages keep their number.
@@ -397,6 +421,7 @@ export default async function PicksPage({
                     steamLinked={!!session?.steamId}
                     liveTeamStats={liveTeamStats?.byPickid}
                     liveStatsAsOf={liveTeamStats?.asOf}
+                    spotlightMarket={spotlightMarket}
                   />
                 </section>
               ))

@@ -107,6 +107,26 @@ const TEAM_LINK_RE = /\[([^\]]+)\]\((?:https?:)?\/\/[^)]*\/team\/\d+\/[^)]*\)/i;
 const STATS_RE = /(\d+)\s+(\d+)\s+(\d+)\s+(-?\d+)\s+(\d+)\s*-\s*(\d+)/;
 const SEED_RE = /#(\d+)/;
 
+/**
+ * Is (wins, losses, matches) a plausible Swiss record? (PHA-1044) STATS_RE binds
+ * the first `N N N ±N N-N` run on a row, but a stray map score in the cell (e.g.
+ * "13-7") could be mis-read as wins=13 / losses=7 → a fake "advanced". A real
+ * Swiss record satisfies: non-negative integers, neither side past its clinch
+ * threshold (≤3 wins / ≤3 losses by default), and matches === wins + losses (no
+ * byes or ties in Swiss). A row that fails is a misparse and is dropped.
+ */
+export function isValidSwissRecord(
+  wins: number,
+  losses: number,
+  matches: number,
+  advanceAt = 3,
+  eliminateAt = 3,
+): boolean {
+  if (![wins, losses, matches].every((n) => Number.isInteger(n) && n >= 0)) return false;
+  if (wins > advanceAt || losses > eliminateAt) return false;
+  return matches === wins + losses;
+}
+
 export function parseHltvSwissStandings(markdown: string): RawStandingRow[] {
   const lines = markdown.split("\n");
   const i = lines.findIndex((l) => HEADER_RE.test(l));
@@ -119,12 +139,17 @@ export function parseHltvSwissStandings(markdown: string): RawStandingRow[] {
     const nameMatch = line.match(TEAM_LINK_RE);
     const stats = line.match(STATS_RE);
     if (!nameMatch || !stats) continue; // header repeat / malformed / non-team row
+    const matches = Number(stats[1]);
     const wins = Number(stats[5]);
     const losses = Number(stats[6]);
+    // Bound check: a stray map score (e.g. "13-7") binding as the W-L record would
+    // fake an "advanced" clinch. Drop any row whose numbers aren't a valid Swiss
+    // record rather than feed a fabricated standing downstream (PHA-1044).
+    if (!isValidSwissRecord(wins, losses, matches)) continue;
     rows.push({
       seed: line.match(SEED_RE) ? Number(line.match(SEED_RE)![1]) : null,
       name: nameMatch[1].trim(),
-      matches: Number(stats[1]),
+      matches,
       roundsWon: Number(stats[2]),
       roundsLost: Number(stats[3]),
       roundDiff: Number(stats[4]),
