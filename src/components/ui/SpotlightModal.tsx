@@ -12,24 +12,11 @@ import {
   youtubeEmbedUrl,
   youtubePoster,
 } from "@/lib/playoff-spotlights";
-
-/** A live market line for the team's next/active playoff matchup (1h refresh). */
-export interface SpotlightMarketLine {
-  /** This team's name (echoed for clarity). */
-  teamName: string;
-  /** This team's implied win probability, 0-100. */
-  teamPct: number;
-  /** The opponent's display name, or "TBD". */
-  oppName: string;
-  /** Opponent implied win probability, 0-100. */
-  oppPct: number;
-  /** Where the line came from, e.g. "Bookmaker consensus via HLTV". */
-  sourceLabel: string;
-  /** When it was last refreshed (already-formatted, e.g. "1h ago"). */
-  updatedLabel: string;
-  /** Deep link to the HLTV match page for people who want to dive in. */
-  hltvMatchUrl?: string;
-}
+// SpotlightMarketLine is canonical in spotlight-odds-core (PHA-1066) — the live
+// fetch builds it there; the modal just renders it. Re-exported so existing
+// importers of `@/components/ui/SpotlightModal` keep resolving the type.
+import type { SpotlightMarketLine } from "@/lib/spotlight-odds-core";
+export type { SpotlightMarketLine };
 
 interface Props {
   team: TeamDef;
