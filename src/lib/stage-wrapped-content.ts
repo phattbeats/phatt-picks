@@ -74,6 +74,12 @@ export interface StageWrappedPersonal {
   bestCall?: StageWrappedBestCall | null;
   /** The viewer's avatar (src null → initials), for the personal score slide. */
   avatar?: { src: string | null; label: string } | null;
+  /**
+   * The narrative outcomes the viewer actually CALLED, as `"<pickId>:<bucket>"`
+   * keys (bucket = "3:0" / "3:1 / 3:2" / "0:3"). A moment whose claim is in this
+   * set lights up its "YOU CALLED IT" reward. Built from the viewer's correct picks.
+   */
+  claims?: string[];
 }
 
 interface AuthoredMoment {
@@ -86,6 +92,12 @@ interface AuthoredMoment {
   body?: string;
   /** Team pickids whose logos illustrate this moment (matchup / clinchers). */
   logoPickIds?: number[];
+  /**
+   * Pickable outcomes this moment celebrates, as `{pickId, bucket}`. If the
+   * viewer called any of them, the slide shows a "YOU CALLED IT" reward.
+   * bucket ∈ "3:0" | "3:1 / 3:2" | "0:3".
+   */
+  claims?: Array<{ pickId: number; bucket: string }>;
 }
 
 interface AuthoredStage {
@@ -117,6 +129,7 @@ const AUTHORED: Record<number, AuthoredStage> = {
         figureCaption: "FlyQuest 2-0 Team Liquid",
         body: "World #81 FlyQuest met pre-event favorite Liquid in a win-or-go-home match and demolished the opener 13-2 before closing the sweep. The biggest ranking-gap exit of the stage.",
         logoPickIds: [132, 48],
+        claims: [{ pickId: 132, bucket: "3:1 / 3:2" }],
       },
       {
         id: "s1-comeback-big-nrg",
@@ -127,6 +140,7 @@ const AUTHORED: Record<number, AuthoredStage> = {
         figureCaption: "BIG def. NRG on Mirage, in OT",
         body: "Deciding map, last ticket to Stage II. NRG raced to a flawless 12-0 half — then BIG won sixteen rounds in a row to take it in overtime. The first 0-12 comeback in Major history, in the home building, peaking near 500K viewers.",
         logoPickIds: [69, 87],
+        claims: [{ pickId: 69, bucket: "3:1 / 3:2" }],
       },
       {
         id: "s1-flawless-betboom-b8",
@@ -137,6 +151,7 @@ const AUTHORED: Record<number, AuthoredStage> = {
         figureCaption: "BetBoom and B8 swept the field",
         body: "BetBoom ran the table at +29 round diff; B8 matched them — including a 22-20 Inferno marathon — to make it two perfect runs into Stage II.",
         logoPickIds: [137, 135],
+        claims: [{ pickId: 137, bucket: "3:0" }, { pickId: 135, bucket: "3:0" }],
       },
       {
         id: "s1-fallen-liquid-heroic",
@@ -157,6 +172,7 @@ const AUTHORED: Record<number, AuthoredStage> = {
         figureCaption: "#81 FlyQuest buried #25 Liquid",
         body: "The chalk got shredded: Liquid (top-25) and HEROIC (#27) both crashed out, and world #81 FlyQuest did the burying on a 13-2 demolition. The single result that wrecked the most Stage I pick'ems.",
         logoPickIds: [132, 48],
+        claims: [{ pickId: 132, bucket: "3:1 / 3:2" }],
       },
     ],
   },
@@ -176,6 +192,7 @@ const AUTHORED: Record<number, AuthoredStage> = {
         figureCaption: "conceded across the entire 3-0",
         body: "Spirit gave up ten total rounds all stage (+42): 13-1 over MIBR, 13-3 and 13-1 over 9z. donk posted a 2.27 rating — the highest individual figure of the stage.",
         logoPickIds: [81],
+        claims: [{ pickId: 81, bucket: "3:0" }],
       },
       {
         id: "s2-fut-3-0",
@@ -186,6 +203,7 @@ const AUTHORED: Record<number, AuthoredStage> = {
         figureCaption: "incl. a 2-1 over G2",
         body: "The team most brackets underestimated went a flawless 3-0. Krabeni took over the Ancient decider against G2 to book FUT's first-ever Stage III at an IEM Cologne Major.",
         logoPickIds: [145, 59],
+        claims: [{ pickId: 145, bucket: "3:0" }],
       },
       {
         id: "s2-drought-astralis",
@@ -206,6 +224,7 @@ const AUTHORED: Record<number, AuthoredStage> = {
         figureCaption: "Monte, Legacy and B8 each won a do-or-die",
         body: "The final day was a gauntlet of single-match survival. Monte upset paiN 2-0, Legacy bullied TYLOO, and B8 — 0-2 to start the stage — reverse-swept BIG, kensizor771 sealing it with an ace.",
         logoPickIds: [119, 126, 135],
+        claims: [{ pickId: 119, bucket: "3:1 / 3:2" }, { pickId: 126, bucket: "3:1 / 3:2" }, { pickId: 135, bucket: "3:1 / 3:2" }],
       },
       {
         id: "s2-fyp",
@@ -216,6 +235,7 @@ const AUTHORED: Record<number, AuthoredStage> = {
         figureCaption: "FUT ran it; Astralis bowed out",
         body: "The safe picks died on schedule — Astralis out for a ninth straight Major and MIBR gone — while the team nobody penciled in, FUT, went a flawless 3-0 through a stacked stage. So much for the chalk.",
         logoPickIds: [145, 60],
+        claims: [{ pickId: 145, bucket: "3:0" }],
       },
     ],
   },
@@ -288,6 +308,13 @@ export function buildStageWrappedDeck(
       .filter((l): l is WrappedTeamLogo => l != null);
     return resolved.length ? resolved : undefined;
   };
+  const claimed = new Set(personal?.claims ?? []);
+  // "YOU CALLED IT" if the viewer's correct picks include any outcome this moment celebrates.
+  const calledItFor = (claims?: Array<{ pickId: number; bucket: string }>): WrappedSlide["calledIt"] => {
+    if (!claims || claimed.size === 0) return undefined;
+    if (!claims.some((c) => claimed.has(`${c.pickId}:${c.bucket}`))) return undefined;
+    return { label: "YOU CALLED IT", sub: "You saw the vision." };
+  };
   const majorBrand = assets.majorLogoSrc
     ? { src: assets.majorLogoSrc, alt: "IEM Cologne 2026", invert: false }
     : undefined;
@@ -316,6 +343,7 @@ export function buildStageWrappedDeck(
       figureCaption: m.figureCaption,
       body: m.body,
       teamLogos: logosFor(m.logoPickIds),
+      calledIt: calledItFor(m.claims),
       autoAdvanceMs: AUTO_MS,
     });
   }
