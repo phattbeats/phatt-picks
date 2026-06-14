@@ -14,6 +14,7 @@ import {
   type WrappedSlide,
 } from "@/lib/stage-wrapped-core";
 import { TeamLogo } from "@/components/ui/TeamLogo";
+import { StageLogo } from "@/components/heat/StageLogo";
 
 /**
  * Stage Wrapped (PHA-1052) — the reusable popup + click-through slide deck shell.
@@ -321,9 +322,11 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
 
 function SlideCard({ slide }: { slide: WrappedSlide }) {
   const logos = slide.teamLogos ?? [];
+  const badge = slide.stageBadge;
   return (
     <div className={`sw-slide sw-kind-${slide.kind} sw-enter`}>
-      {/* Brand mark (major / game logo) — cover + closer slides. */}
+      {/* Brand mark (major / game logo) — cover + closer slides. Smaller when a
+          stage badge is the hero so the STAGE logo leads. */}
       {slide.brandLogo && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -331,17 +334,25 @@ function SlideCard({ slide }: { slide: WrappedSlide }) {
           src={slide.brandLogo.src}
           alt={slide.brandLogo.alt}
           style={{
-            height: 52,
+            height: badge ? 34 : 52,
             width: "auto",
-            maxWidth: "70%",
+            maxWidth: "60%",
             objectFit: "contain",
             display: "block",
-            margin: "0 auto 16px",
+            margin: badge ? "0 auto 10px" : "0 auto 16px",
+            opacity: badge ? 0.85 : 1,
             filter: slide.brandLogo.invert ? "brightness(0) invert(1)" : undefined,
           }}
         />
       )}
-      {slide.eyebrow && <span className="eyebrow-mono sw-eyebrow">[ {slide.eyebrow} ]</span>}
+      {/* Stage logo (HEAT v3 lockup) — the hero mark; replaces the plain eyebrow. */}
+      {badge ? (
+        <div style={{ margin: "2px 0 10px" }}>
+          <StageLogo numeral={badge.numeral} label={badge.label} sub={badge.sub} />
+        </div>
+      ) : (
+        slide.eyebrow && <span className="eyebrow-mono sw-eyebrow">[ {slide.eyebrow} ]</span>
+      )}
       {/* Team logos — matchups / clinchers. One logo centred; two flank a "vs". */}
       {logos.length > 0 && (
         <div
