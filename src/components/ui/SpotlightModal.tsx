@@ -130,13 +130,10 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
     >
       <div
         ref={panelRef}
-        className={`tsd-panel spot-panel panel brk${moreBelow ? " tsd-more-below" : ""}`}
+        className={`tsd-panel spot-panel panel${moreBelow ? " tsd-more-below" : ""}`}
         style={accentStyle}
         onClick={(e) => e.stopPropagation()}
       >
-        <span className="br-tr" aria-hidden="true" />
-        <span className="br-bl" aria-hidden="true" />
-
         <button className="tsd-close" type="button" aria-label="Close" onClick={onClose}>
           <svg viewBox="0 0 24 24">
             <line x1="18" y1="6" x2="6" y2="18" />

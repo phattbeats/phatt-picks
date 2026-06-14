@@ -17,9 +17,12 @@
  *   2. SOURCES. before/during come from the team's real run: HLTV results +
  *      ranking (already in team-stats-core) and the ESL highlight feed. tag and
  *      seedLine restate the verifiable record (e.g. "Advanced 3-0 from Stage 3").
- *   3. VOICE. Two short beats that read on a phone: BEFORE = who they were
- *      walking in (the question over them), NOW = what this run answered. Tight,
- *      factual, no hype words we can't back up. No em dashes (use ".", ",", ":").
+ *   3. VOICE. Gravitas, not a recap (Brandon). Lead with the BIG human storyline,
+ *      the career arc and the stakes, not just the scoreline: a legend's last
+ *      year (FalleN), a redemption, a Cinderella run from Stage 1. BEFORE = who
+ *      they were and what is on the line; NOW = what this run means against that
+ *      weight. Two short phone-sized beats, every claim true and sourceable, no
+ *      hype we can't back up. No em dashes (use ".", ",", ":").
  *   4. HIGHLIGHT. One official @ESLCSHighlights match reel for that team, trimmed
  *      to a 30-60s window via start/end (no re-hosting). Caption says what + when.
  *   5. ODDS are NOT committed here. They're fetched live (1h refresh) per matchup
@@ -83,12 +86,12 @@ const SPOTLIGHTS: Record<number, TeamSpotlight> = {
   85: {
     pickid: 85,
     narrative: {
-      tag: "3-0 AND THROUGH",
+      tag: "THE LAST DANCE",
       seedLine: "Advanced 3-0 from Stage 3 · B8, MOUZ, BB Team",
       before:
-        "FalleN's veteran-led Brazilian side walked in with the oldest question in CS hanging over them: whether a legend's experience could still translate into a deep Major run, or whether the legs were finally gone.",
+        "Gabriel 'FalleN' Toledo built Brazilian Counter-Strike from nothing and won the Major twice at its 2016 peak. At 34 he has named this his final year as a player. Cologne is one of the last times the godfather takes the Major stage that made him a legend.",
       during:
-        "Emphatically yes. FURIA ran the table 3-0 in Stage 3, past B8, a statement win over MOUZ, then closing BB Team to punch into the playoffs without dropping a series. No team looked more in control on the way in.",
+        "The old king is not going quietly, and he is not alone. FalleN steers while the AWP now belongs to molodoy, the 21-year-old pride of Kazakhstan and reigning Rookie of the Year, with KSCERATO and yuurih grinding beside them. A clean 3-0, and the torch passing from a legend to his heir in real time.",
     },
     // The official ESL per-match highlights reel for the clinch (BB Team vs
     // FURIA, "WINNER TO PLAYOFFS"), trimmed to a ~55s window so the modal plays
