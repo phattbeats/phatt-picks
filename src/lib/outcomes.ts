@@ -33,7 +33,7 @@ import { cacheLiveLayout } from "./layout-state";
 import { writeRankSnapshots } from "./rank-snapshot";
 import { getSwissStandings, getSwissBracket, ingestStandingsNow, standingsSectionIds } from "./swiss-results";
 import { bracketMatchRecords, bracketTerminalRecords } from "./swiss-bracket-core";
-import { deriveClinchedSlots } from "./swiss-clinch-core";
+import { deriveClinchedSlots, findContradictedSlots } from "./swiss-clinch-core";
 import { bucketSwissSlots, isSwissSection } from "./swiss-bucket-core";
 import { isLockTimePassed, isWithinRefreshWindow } from "./lock-schedule-core";
 
@@ -363,10 +363,38 @@ export async function bridgeSwissOutcomes(
     const standings = [...byPick.values()];
     if (standings.length === 0) continue;
 
-    const existing = await prisma.stageOutcome.findMany({
+    let existing = await prisma.stageOutcome.findMany({
       where: { eventId, sectionId: section.sectionid },
       select: { groupId: true, slotIndex: true, winnerPickId: true },
     });
+
+    // Self-heal (PHA-1109): a slot resolved off a stale/partial crawl can hold the
+    // WRONG winner, and the never-rewrite rule would freeze that error forever —
+    // blocking the team that actually clinched the bucket (B8's 0:3, Spirit's 3:0)
+    // from ever scoring. Evict any slot whose stored winner the CURRENT live record
+    // provably contradicts, then re-derive so the correct team takes the freed slot.
+    // Records are monotonic and terminal records are permanent, so this converges
+    // (a corrected slot can't be contradicted again) and never thrashes.
+    const contradicted = findContradictedSlots(section, standings, existing, bucketSwissSlots);
+    if (contradicted.length > 0) {
+      await prisma.stageOutcome.deleteMany({
+        where: {
+          OR: contradicted.map((c) => ({
+            eventId,
+            sectionId: section.sectionid,
+            groupId: c.groupId,
+            slotIndex: c.slotIndex,
+          })),
+        },
+      });
+      const evicted = new Set(contradicted.map((c) => `${c.groupId}:${c.slotIndex}`));
+      existing = existing.filter((e) => !evicted.has(`${e.groupId}:${e.slotIndex}`));
+      console.warn(
+        `[outcomes] self-heal: evicted ${contradicted.length} contradicted slot(s) in section ${section.sectionid} (stale winners ruled out by live record):`,
+        contradicted.map((c) => `slot ${c.slotIndex}←pick ${c.winnerPickId}`).join(", "),
+      );
+      written += contradicted.length;
+    }
 
     const fresh = deriveClinchedSlots(section, standings, existing, bucketSwissSlots);
     if (fresh.length === 0) continue;
