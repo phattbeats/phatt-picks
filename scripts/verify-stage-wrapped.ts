@@ -21,7 +21,9 @@ import {
   initialDeckState,
   isFirstSlide,
   isLastSlide,
+  MIN_AUTO_ADVANCE_MS,
   progressLabel,
+  resolveAutoAdvanceMs,
   stageWrappedKey,
   wrappedSeenKey,
   type DeckState,
@@ -84,6 +86,27 @@ check("seen-key differs across events", wrappedSeenKey(26, 105) !== wrappedSeenK
 check("seen-key stable for same stage", wrappedSeenKey(26, 105) === wrappedSeenKey(26, 105));
 check("seen-key is versioned", wrappedSeenKey(26, 105).includes("wrapped-seen:v1"));
 check("stageWrappedKey is event:section", stageWrappedKey(26, 105) === "26:105");
+
+console.log("\nstage-wrapped - user-control flag");
+check("fresh deck is not user-controlled", initialDeckState(4).controlled === false);
+check("auto next leaves deck un-controlled", deckReducer(initialDeckState(4), { type: "next" }).controlled !== true);
+check("user next marks controlled", deckReducer(initialDeckState(4), { type: "next", user: true }).controlled === true);
+check("user prev marks controlled", deckReducer(initialDeckState(4), { type: "prev", user: true }).controlled === true);
+check("user goto marks controlled", deckReducer(initialDeckState(4), { type: "goto", index: 2, user: true }).controlled === true);
+check(
+  "control is sticky across a later auto next",
+  deckReducer(deckReducer(initialDeckState(4), { type: "next", user: true }), { type: "next" }).controlled === true,
+);
+check("reset clears user-control", deckReducer(deckReducer(initialDeckState(4), { type: "next", user: true }), { type: "reset", count: 4 }).controlled === false);
+
+console.log("\nstage-wrapped - resolveAutoAdvanceMs");
+check("no autoAdvanceMs -> null (waits for user)", resolveAutoAdvanceMs({}) === null);
+check("zero/negative autoAdvanceMs -> null", resolveAutoAdvanceMs({ autoAdvanceMs: 0 }) === null && resolveAutoAdvanceMs({ autoAdvanceMs: -5 }) === null);
+check("honoured delay above floor passes through", resolveAutoAdvanceMs({ autoAdvanceMs: 4000 }) === 4000);
+check("delay below floor is raised to MIN", resolveAutoAdvanceMs({ autoAdvanceMs: 1 }) === MIN_AUTO_ADVANCE_MS);
+check("reduced motion suppresses auto-advance", resolveAutoAdvanceMs({ autoAdvanceMs: 4000 }, { reducedMotion: true }) === null);
+check("user control suppresses auto-advance", resolveAutoAdvanceMs({ autoAdvanceMs: 4000 }, { userControlled: true }) === null);
+check("undefined slide -> null", resolveAutoAdvanceMs(undefined) === null);
 
 console.log("\nstage-wrapped - placeholder deck shape");
 const slides = buildPlaceholderSlides("Stage I");
