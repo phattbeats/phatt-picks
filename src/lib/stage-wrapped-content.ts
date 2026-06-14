@@ -19,7 +19,7 @@
  *      moments + a sign-in outro, never fabricated personal numbers.
  */
 
-import type { WrappedSlide, WrappedSlideKind, WrappedTeamLogo } from "./stage-wrapped-core";
+import { stageNumeral, type WrappedSlide, type WrappedSlideKind, type WrappedTeamLogo } from "./stage-wrapped-core";
 
 /** Per-slide auto-advance for the recap (floored by the shell to MIN_AUTO_ADVANCE_MS). */
 const AUTO_MS = 6000;
@@ -257,6 +257,7 @@ export function buildStageWrappedDeck(
   if (!authored || authored.moments.length === 0) return [];
 
   const eyebrow = `${stageName.toUpperCase()} · WRAPPED`;
+  const numeral = stageNumeral(stageName);
   const slides: WrappedSlide[] = [];
 
   // Resolve 1–3 team logos for a moment; drops any that don't resolve.
@@ -281,6 +282,7 @@ export function buildStageWrappedDeck(
     headline: authored.intro.headline,
     body: authored.intro.body,
     brandLogo: majorBrand,
+    stageBadge: { numeral, label: "STAGE", sub: "WRAPPED" },
     autoAdvanceMs: AUTO_MS,
   });
 
@@ -339,6 +341,7 @@ export function buildStageWrappedDeck(
       ? "Replay this any time from the stage reveal. See you next stage."
       : "Sign in to get your personal recap — your score, your rank move, your boldest right call.",
     brandLogo: gameBrand,
+    stageBadge: { numeral, label: "STAGE", sub: personal ? "DONE" : "RECAP" },
   });
 
   return slides;

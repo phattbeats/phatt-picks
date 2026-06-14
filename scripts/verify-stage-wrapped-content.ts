@@ -24,6 +24,7 @@ import {
   type StageWrappedAssets,
   type StageWrappedPersonal,
 } from "../src/lib/stage-wrapped-content.ts";
+import { stageNumeral } from "../src/lib/stage-wrapped-core.ts";
 
 // Stub asset resolver — every pickid resolves to a monogram tier + a name, so
 // the builder's logo-attachment path is exercised without the real manifest.
@@ -136,6 +137,19 @@ const noAssets = buildStageWrappedDeck(105, "Stage I", PERSONAL);
 check("no assets → moments have no teamLogos", noAssets.every((s) => s.teamLogos === undefined));
 check("no assets → intro has no brandLogo", noAssets.find((s) => s.kind === "intro")?.brandLogo === undefined);
 check("no assets → deck is still well-formed (intro..outro)", noAssets[0]?.kind === "intro" && noAssets[noAssets.length - 1]?.kind === "outro");
+
+/* ---- Stage logos (HEAT v3 lockup): STAGE I / II / III ---- */
+check("stageNumeral: 'Stage I' → I", stageNumeral("Stage I") === "I");
+check("stageNumeral: 'Stage II' → II", stageNumeral("Stage II") === "II");
+check("stageNumeral: 'Stage III' → III", stageNumeral("Stage III") === "III");
+check("stageNumeral: numeric 'Stage 2' → II", stageNumeral("Stage 2") === "II");
+const s1Intro = s1.find((s) => s.kind === "intro");
+const s1Outro = s1.find((s) => s.kind === "outro");
+const s2Intro = buildStageWrappedDeck(106, "Stage II", PERSONAL).find((s) => s.kind === "intro");
+check("Stage I intro carries a STAGE badge with numeral I", s1Intro?.stageBadge?.numeral === "I" && s1Intro?.stageBadge?.label === "STAGE");
+check("Stage I intro badge sub is WRAPPED", s1Intro?.stageBadge?.sub === "WRAPPED");
+check("Stage II intro badge numeral is II", s2Intro?.stageBadge?.numeral === "II");
+check("outro also carries a STAGE badge", !!s1Outro?.stageBadge?.numeral);
 
 console.log(`\nverify-stage-wrapped-content: ${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);
