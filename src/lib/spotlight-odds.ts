@@ -41,6 +41,15 @@ const ODDS_REFRESH_SOURCE = "polymarket-spotlight-odds";
 interface SpotlightOddsBlob {
   /** pickid → market line (with `updatedLabel` recomputed at read time). */
   byPickid: Record<number, SpotlightMarketLine>;
+  /**
+   * pickid → the timestamp THAT line was actually fetched. Per-line, NOT one
+   * blob-wide stamp: a partial refresh keeps prior lines (accumulate), so a
+   * kept-but-not-refreshed line must report its OWN age, not the latest cycle's
+   * (else a day-old line would read "just now"). `fetchedAt` is a fallback for
+   * blobs written before this field existed.
+   */
+  fetchedAtByPickid?: Record<number, number>;
+  /** Wall-clock of the latest ingest cycle (fallback when per-line stamp absent). */
   fetchedAt: number;
 }
 
@@ -107,15 +116,25 @@ async function fetchGammaEvent(slug: string): Promise<GammaEvent | null> {
   }
 }
 
-/** Read the prior cached lines (so a partial refresh accumulates, not regresses). */
-async function readPriorLines(eventId: number): Promise<Record<number, SpotlightMarketLine>> {
+/** Read the prior cached blob (so a partial refresh accumulates, not regresses). */
+async function readPriorBlob(
+  eventId: number,
+): Promise<{ byPickid: Record<number, SpotlightMarketLine>; fetchedAtByPickid: Record<number, number> }> {
+  const empty = { byPickid: {}, fetchedAtByPickid: {} };
   try {
     const row = await prisma.spotlightOddsCache.findUnique({ where: { eventId } });
-    if (!row) return {};
+    if (!row) return empty;
     const blob = JSON.parse(row.data) as SpotlightOddsBlob;
-    return blob.byPickid && typeof blob.byPickid === "object" ? blob.byPickid : {};
+    const byPickid = blob.byPickid && typeof blob.byPickid === "object" ? blob.byPickid : {};
+    // Older blobs lack per-line stamps: fall back to the blob-wide fetchedAt for
+    // every kept line so their age is still bounded, never reset to "now".
+    const fetchedAtByPickid =
+      blob.fetchedAtByPickid && typeof blob.fetchedAtByPickid === "object"
+        ? blob.fetchedAtByPickid
+        : Object.fromEntries(Object.keys(byPickid).map((pid) => [pid, blob.fetchedAt]));
+    return { byPickid, fetchedAtByPickid };
   } catch {
-    return {};
+    return empty;
   }
 }
 
@@ -156,9 +175,13 @@ async function ingestSpotlightOdds(eventId: number, nowMs: number): Promise<numb
       return 0;
     }
 
-    const prior = await readPriorLines(eventId);
-    const byPickid: Record<number, SpotlightMarketLine> = { ...prior, ...fresh };
-    const blob: SpotlightOddsBlob = { byPickid, fetchedAt: nowMs };
+    const prior = await readPriorBlob(eventId);
+    const byPickid: Record<number, SpotlightMarketLine> = { ...prior.byPickid, ...fresh };
+    // Stamp each FRESH line with this cycle's time; kept-prior lines retain their
+    // own earlier stamp so their "updated N ago" stays honest after a partial run.
+    const freshStamps = Object.fromEntries(Object.keys(fresh).map((pid) => [pid, nowMs]));
+    const fetchedAtByPickid: Record<number, number> = { ...prior.fetchedAtByPickid, ...freshStamps };
+    const blob: SpotlightOddsBlob = { byPickid, fetchedAtByPickid, fetchedAt: nowMs };
     const data = JSON.stringify(blob);
     await prisma.spotlightOddsCache.upsert({
       where: { eventId },
@@ -266,11 +289,14 @@ export async function getSpotlightMarket(
   }
   const lines = blob.byPickid;
   if (!lines || typeof lines !== "object") return {};
-  const fetchedAt = blob.fetchedAt ?? row.fetchedAt.getTime();
-  const updatedLabel = formatUpdatedLabel(fetchedAt, nowMs);
+  const blobFetchedAt = blob.fetchedAt ?? row.fetchedAt.getTime();
+  const stamps = blob.fetchedAtByPickid ?? {};
   const out: Record<number, SpotlightMarketLine> = {};
   for (const [pid, line] of Object.entries(lines)) {
-    out[Number(pid)] = { ...line, updatedLabel };
+    // Each line's age comes from ITS OWN fetch time (per-line stamp), so a kept
+    // line from a partial earlier cycle reads honestly, not as fresh as the rest.
+    const fetchedAt = stamps[Number(pid)] ?? blobFetchedAt;
+    out[Number(pid)] = { ...line, updatedLabel: formatUpdatedLabel(fetchedAt, nowMs) };
   }
   return out;
 }
