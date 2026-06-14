@@ -353,6 +353,50 @@ export function bracketTerminalRecords(
   return out;
 }
 
+/**
+ * Tally each team's Swiss series W-L straight from the bracket's MATCH cells
+ * (PHA-1109). Every played match carries both sides and the decided winner, all
+ * read from HLTV's server-rendered popup-json — so this resolves records even
+ * when the JS standings *table* never renders into the crawl (parseHltvSwissStandings
+ * yields 0 rows) AND the terminal-column lists don't parse (bracketTerminalRecords
+ * yields 0). That is exactly the post-stage hub state that left a 0:3 elimination
+ * (B8) un-green and unscored: the only crawlable terminal-record source was this
+ * one, and the bridge wasn't reading it.
+ *
+ * Keyed by layout pickid; a side with no pickid (unmatched name / TBD slot) is
+ * skipped. Deduped by matchId so a match surfacing in more than one round can't
+ * double-count a series. Counts SERIES results (one win/loss per match), which is
+ * the Swiss record — not map scores. Pure; verify covers it offline.
+ */
+export function bracketMatchRecords(
+  rounds: readonly SwissRound[],
+): Array<{ pickid: number; wins: number; losses: number }> {
+  const rec = new Map<number, { wins: number; losses: number }>();
+  const seen = new Set<number>();
+  const bump = (pickid: number, w: number, l: number) => {
+    const r = rec.get(pickid) ?? { wins: 0, losses: 0 };
+    r.wins += w;
+    r.losses += l;
+    rec.set(pickid, r);
+  };
+  for (const round of rounds) {
+    for (const m of round.matches) {
+      if (!m.played) continue;
+      if (m.matchId != null) {
+        if (seen.has(m.matchId)) continue; // same series can appear in >1 column
+        seen.add(m.matchId);
+      }
+      const { team1: a, team2: b } = m;
+      if (a.winner === b.winner) continue; // undecided / malformed — no result to bank
+      const winner = a.winner ? a : b;
+      const loser = a.winner ? b : a;
+      if (winner.pickid != null) bump(winner.pickid, 1, 0);
+      if (loser.pickid != null) bump(loser.pickid, 0, 1);
+    }
+  }
+  return [...rec.entries()].map(([pickid, r]) => ({ pickid, ...r }));
+}
+
 /** Count played/scheduled matches + settled teams across the bracket. */
 export function bracketSummary(rounds: readonly SwissRound[]): {
   rounds: number;
