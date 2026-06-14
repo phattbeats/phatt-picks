@@ -181,11 +181,11 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   81: { // Spirit
     worldRank: 3,
     roster: [
-      { name: "sh1ro", position: "AWP", rating: 1.18, hltvUrl: "https://www.hltv.org/player/16920/sh1ro" },
-      { name: "magixx", position: "Rifler", rating: 1.05, hltvUrl: "https://www.hltv.org/player/18317/magixx" },
-      { name: "tN1R", position: "Rifler", rating: 1.04, hltvUrl: "https://www.hltv.org/player/19808/tn1r" },
-      { name: "zont1x", position: "Rifler", rating: 1.09, hltvUrl: "https://www.hltv.org/player/20423/zont1x" },
-      { name: "donk", position: "Rifler", rating: 1.40, hltvUrl: "https://www.hltv.org/player/21167/donk" },
+      { name: "sh1ro", position: "AWP", rating: 1.18, hltvUrl: "https://www.hltv.org/player/16920/sh1ro", photo: "https://img-cdn.hltv.org/playerbodyshot/1V7ijAaTXl3umTr7cPo0VF.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=117%2C12%2C467%2C467&w=100&s=e815e7c88352c371883d77c63bb5ab7a" },
+      { name: "magixx", position: "Rifler", rating: 1.05, hltvUrl: "https://www.hltv.org/player/18317/magixx", photo: "https://img-cdn.hltv.org/playerbodyshot/PONEIASU8jyJz2lnNS13bp.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C8%2C467%2C467&w=100&s=88ed0156a8f5fca66a6ab0f728748bf5" },
+      { name: "tN1R", position: "Rifler", rating: 1.04, hltvUrl: "https://www.hltv.org/player/19808/tn1r", photo: "https://img-cdn.hltv.org/playerbodyshot/wi3shJIerTjUCELul_JOus.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C8%2C467%2C467&w=100&s=b7bc229d38620d56b1bd93c1c6e42717" },
+      { name: "zont1x", position: "Rifler", rating: 1.09, hltvUrl: "https://www.hltv.org/player/20423/zont1x", photo: "https://img-cdn.hltv.org/playerbodyshot/Grz5vLIlrpeI7IQmm8d-jH.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C8%2C467%2C467&w=100&s=11f85e52de2c2992eadfcf7d6f7c46b0" },
+      { name: "donk", position: "Rifler", rating: 1.40, hltvUrl: "https://www.hltv.org/player/21167/donk", photo: "https://img-cdn.hltv.org/playerbodyshot/C4b0sMnty05S40UmXhLRD4.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C8%2C467%2C467&w=100&s=5720722b6a57dce6b4c5f5242f69ea11" },
     ],
     recent: [
       { date: "17/05/2026", opponent: "Falcons", score: "3-0", result: "W" },
