@@ -24,6 +24,8 @@ import {
 import { LockIcon } from "@/components/ui/LockIcon";
 import { LivePlayoffBracket } from "@/components/heat/LivePlayoffBracket";
 import { buildSwissStandings, type SlotPickMap } from "@/lib/swiss-standings-core";
+import { stageWrappedHasContent } from "@/lib/stage-wrapped-content";
+import { stageNumeral } from "@/lib/stage-wrapped-core";
 import { LockedPicksBoard } from "@/components/heat/LockedPicksBoard";
 import { LiveSwissStandings } from "@/components/heat/LiveSwissStandings";
 import { LiveSwissBracketBoard } from "@/components/heat/LiveSwissBracketBoard";
@@ -155,6 +157,9 @@ export default async function PicksPage({
 
   let swissStandings: ReturnType<typeof buildSwissStandings> | null = null;
   let outcomeResolvedAtIso: string | null = null;
+  // Whether this Swiss stage is OVER (every slot resolved), not merely locked /
+  // underway — drives the "stage complete" copy + the Stage Wrapped entry below.
+  let stageComplete = false;
   // Live HLTV/BLAST-style W-L standings (PHA-902): the running win-loss table the
   // Valve answer key can't provide. Hourly on-read refresh, graceful-empty.
   let liveStandings: Awaited<ReturnType<typeof getSwissStandings>> = null;
@@ -186,6 +191,11 @@ export default async function PicksPage({
       if (t > latest) latest = t;
     }
     outcomeResolvedAtIso = latest > 0 ? new Date(latest).toISOString() : null;
+    // The stage is OVER when every Swiss slot has a resolved winner (full answer
+    // key), vs. merely locked while matches are still being played.
+    stageComplete = section.groups.every((g) =>
+      g.picks.every((slot) => outcomesForSection[g.groupid]?.[slot.index] !== undefined),
+    );
     swissStandings = buildSwissStandings(
       section,
       outcomesForSection as SlotPickMap,
@@ -488,7 +498,52 @@ export default async function PicksPage({
         </div>
       ) : swissStandings ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <LockedStageCard pickability={activePickability} compact />
+          <LockedStageCard pickability={activePickability} compact complete={stageComplete} />
+          {/* Stage Wrapped entry (PHA-1054) — once the stage is OVER, the recap
+              is the headline action here, right where the player lands. Opens the
+              full personal deck on the stage reveal. */}
+          {stageComplete && stageWrappedHasContent(activeSectionId) && (
+            <Link
+              href={`/reveal/${activeSectionId}`}
+              className="panel brk"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 16,
+                textDecoration: "none",
+                padding: "16px 20px",
+                borderColor: "var(--heat)",
+                background: "rgba(240,163,0,0.05)",
+              }}
+            >
+              <span className="br-tr" />
+              <span className="br-bl" />
+              <span
+                className="font-display foil"
+                aria-hidden="true"
+                style={{ fontWeight: 800, fontSize: 40, lineHeight: 0.8, letterSpacing: "0.03em", filter: "drop-shadow(0 0 12px var(--heat-glow))" }}
+              >
+                {stageNumeral(activeLabel)}
+              </span>
+              <span style={{ minWidth: 0, flex: 1 }}>
+                <span className="eyebrow-mono" style={{ color: "var(--heat)", display: "block" }}>
+                  [ STAGE WRAPPED ]
+                </span>
+                <span
+                  className="font-display"
+                  style={{ display: "block", fontWeight: 800, fontSize: 17, textTransform: "uppercase", color: "var(--ink-hi)", margin: "5px 0 0", lineHeight: 1.15 }}
+                >
+                  Your {activeLabel} recap is in
+                </span>
+                <span style={{ display: "block", color: "var(--ink-mid)", fontSize: 13, margin: "4px 0 0" }}>
+                  The craziest moments, your score, and where you landed — tap through the recap.
+                </span>
+              </span>
+              <span className="font-display" aria-hidden="true" style={{ color: "var(--heat)", fontSize: 22, fontWeight: 800 }}>
+                →
+              </span>
+            </Link>
+          )}
           {/* Your locked picks, in the SAME bucket-slot UI you picked them in
               (PHA-902, replacing PHA-898's YOUR BUILD / THE FIELD). Each call
               turns green/red as the answer key confirms it. Only when you picked. */}
@@ -635,31 +690,38 @@ function SteamLinkNotice() {
 function LockedStageCard({
   pickability,
   compact = false,
+  complete = false,
 }: {
   pickability: StagePickability;
   /** Tighter card used as a banner above the live lineup. */
   compact?: boolean;
+  /** The stage is fully resolved (over), not merely locked/underway (PHA-1054). */
+  complete?: boolean;
 }) {
   const heading =
     pickability.pickable
       ? "Locked"
-      : pickability.reason === "teams-not-set"
-        ? "Teams not set yet"
-        : pickability.reason === "locked-time-passed"
-          ? "Stage locked — it's underway"
-          : pickability.reason === "locked-by-valve"
-            ? "Locked by Valve"
-            : "Locked";
+      : complete
+        ? "Stage complete"
+        : pickability.reason === "teams-not-set"
+          ? "Teams not set yet"
+          : pickability.reason === "locked-time-passed"
+            ? "Stage locked — it's underway"
+            : pickability.reason === "locked-by-valve"
+              ? "Locked by Valve"
+              : "Locked";
   const subline =
     pickability.pickable
       ? undefined
-      : pickability.reason === "teams-not-set"
-        ? "Teams for this stage aren't seeded yet. Picks open automatically once Valve sets the bracket."
-        : pickability.reason === "locked-time-passed"
-          ? "This stage has begun, so picks are locked. Track how the teams you called are doing in the live lineup below."
-          : pickability.reason === "locked-by-valve"
-            ? "Valve closed the pick window for this stage. Results will appear here as matches complete."
-            : "This stage isn't available.";
+      : complete
+        ? "This stage is over. See how your picks landed in the final lineup below — and tap the Stage Wrapped recap for the story."
+        : pickability.reason === "teams-not-set"
+          ? "Teams for this stage aren't seeded yet. Picks open automatically once Valve sets the bracket."
+          : pickability.reason === "locked-time-passed"
+            ? "This stage has begun, so picks are locked. Track how the teams you called are doing in the live lineup below."
+            : pickability.reason === "locked-by-valve"
+              ? "Valve closed the pick window for this stage. Results will appear here as matches complete."
+              : "This stage isn't available.";
 
   // PHA-1016: the lock state is a status strip, not a billboard — left-aligned
   // mono tag + one line of plain copy, small stroke padlock instead of the
@@ -667,7 +729,9 @@ function LockedStageCard({
   const tag =
     !pickability.pickable && pickability.reason === "teams-not-set"
       ? "AWAITING SEEDING"
-      : "PICKS LOCKED";
+      : complete
+        ? "STAGE OVER"
+        : "PICKS LOCKED";
 
   return (
     <div
