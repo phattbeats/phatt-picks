@@ -318,7 +318,10 @@ export default async function StageRevealPage({
       <ConsensusPanel consensus={consensus} bold={bold} teamMap={teamMap} />
 
       {/* Per-pick breakdown */}
-      <div className="section-label" style={sectionLabel}>How Your Picks Landed · {correct}/{resolvedSlots}</div>
+      <div style={sectionHeader}>
+        <span>How Your Picks Landed</span>
+        <span style={{ color: "var(--heat)" }}>{correct}/{resolvedSlots}</span>
+      </div>
       <div className="reveal-picks">
         {sectionDef.groups.flatMap((group) => {
           // Swiss buckets are interchangeable: a pick is correct if its team
@@ -350,22 +353,26 @@ export default async function StageRevealPage({
                     background: resolved && isCorrect ? "rgba(240,163,0,0.06)" : "var(--surf-1)",
                   }}
                 >
-                  {team && team.pickid !== 0 ? (
-                    <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={40} />
-                  ) : (
-                    <div style={{ width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-low)", fontFamily: "var(--font-mono)" }}>?</div>
-                  )}
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink-hi)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {team?.name ?? "No pick"}
-                    </div>
-                    {tag && <div style={tagStyle}>{tag}</div>}
-                  </div>
                   {resolved && (
-                    <span style={{ fontSize: 16, fontWeight: 700, color: isCorrect ? "var(--tac-green, #9bd23c)" : "var(--ember, #d8351c)" }}>
+                    <span
+                      className="pickcard-verdict"
+                      style={{ color: isCorrect ? "var(--tac-green, #9bd23c)" : "var(--ember, #d8351c)" }}
+                      aria-label={isCorrect ? "correct" : "missed"}
+                    >
                       {isCorrect ? "✓" : "✗"}
                     </span>
                   )}
+                  <div className="pickcard-logo">
+                    {team && team.pickid !== 0 ? (
+                      <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={80} />
+                    ) : (
+                      <div style={{ width: 80, height: 80, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-low)", fontFamily: "var(--font-mono)", fontSize: 30 }}>?</div>
+                    )}
+                  </div>
+                  <div className="font-display pickcard-name" style={{ color: "var(--ink-hi)" }}>
+                    {team?.name ?? "No pick"}
+                  </div>
+                  {tag && <div style={tagStyle}>{tag}</div>}
                 </div>
                 <ConsensusBar
                   consensus={slotConsensus.get(consensusKey(sectionId, group.groupid, slot.index))}
@@ -394,9 +401,21 @@ export default async function StageRevealPage({
       <style>{`
         .reveal-moment { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--hair-2); border: 1px solid var(--hair-2); }
         .reveal-moment > div { background: var(--surf-1); }
-        .reveal-picks { display: grid; grid-template-columns: 1fr; gap: 8px; }
-        @media (min-width: 640px) { .reveal-picks { grid-template-columns: 1fr 1fr; } }
-        .pickcard { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--hair); position: relative; }
+        .reveal-picks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        @media (min-width: 560px) { .reveal-picks { grid-template-columns: repeat(3, 1fr); } }
+        @media (min-width: 880px) { .reveal-picks { grid-template-columns: repeat(4, 1fr); } }
+        .pickcard {
+          display: flex; flex-direction: column; align-items: center; text-align: center;
+          gap: 10px; padding: 22px 14px 16px; border: 1px solid var(--hair);
+          position: relative; border-radius: 2px;
+        }
+        .pickcard-logo { display: flex; align-items: center; justify-content: center; min-height: 80px; }
+        .pickcard-name {
+          font-weight: 800; font-size: 19px; line-height: 1; letter-spacing: 0.01em;
+          text-transform: uppercase; max-width: 100%;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .pickcard-verdict { position: absolute; top: 9px; right: 11px; font-size: 17px; font-weight: 700; line-height: 1; }
       `}</style>
     </>
   );
@@ -410,19 +429,24 @@ const heroTitle = {
   margin: "8px 0 0",
 };
 
-const sectionLabel = {
+const sectionHeader = {
   fontFamily: "var(--font-mono)",
-  fontSize: 9,
-  letterSpacing: "0.16em",
+  fontSize: 13,
+  fontWeight: 600 as const,
+  letterSpacing: "0.14em",
   textTransform: "uppercase" as const,
-  color: "var(--ink-low)",
-  margin: "20px 0 8px",
+  color: "var(--ink-mid)",
+  margin: "30px 0 12px",
+  display: "flex",
+  alignItems: "baseline" as const,
+  justifyContent: "space-between" as const,
+  gap: 12,
 };
 
 const tagStyle = {
   fontFamily: "var(--font-mono)",
-  fontSize: 9,
-  letterSpacing: "0.08em",
+  fontSize: 10.5,
+  letterSpacing: "0.1em",
   color: "var(--ink-low)",
   textTransform: "uppercase" as const,
 };
@@ -449,12 +473,12 @@ function MomentCard({
   custom?: ReactNode;
 }) {
   return (
-    <div style={{ padding: "16px 14px", textAlign: "center" }}>
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-low)", marginBottom: 6 }}>{label}</div>
+    <div style={{ padding: "18px 14px", textAlign: "center" }}>
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--ink-mid)", marginBottom: 8 }}>{label}</div>
       {custom ?? (
-        <div className={"font-display" + (foil ? " foil" : "")} style={{ fontWeight: 800, fontSize: 36, lineHeight: 0.9, color: "var(--ink-hi)" }}>
+        <div className={"font-display" + (foil ? " foil" : "")} style={{ fontWeight: 800, fontSize: 42, lineHeight: 0.9, color: "var(--ink-hi)" }}>
           {value}
-          {unit && <small style={{ fontSize: 15, color: "var(--ink-low)", fontWeight: 600 }}>{unit}</small>}
+          {unit && <small style={{ fontSize: 16, color: "var(--ink-low)", fontWeight: 600 }}>{unit}</small>}
         </div>
       )}
     </div>
@@ -472,7 +496,7 @@ function RankMove({
 }) {
   if (!delta || delta.direction === "new") {
     return (
-      <div className="font-display" style={{ fontWeight: 800, fontSize: 36, lineHeight: 0.9, color: "var(--ink-hi)" }}>
+      <div className="font-display" style={{ fontWeight: 800, fontSize: 42, lineHeight: 0.9, color: "var(--ink-hi)" }}>
         {rankAfter != null ? (<>{rankAfter}<small style={{ fontSize: 15, color: "var(--ink-low)" }}>{ordSuffix(rankAfter)}</small></>) : "—"}
       </div>
     );
@@ -482,7 +506,7 @@ function RankMove({
   const flat = delta.direction === "flat";
   const color = up ? "var(--tac-green, #9bd23c)" : flat ? "var(--ink-mid)" : "var(--ember, #d8351c)";
   return (
-    <div className="font-display" style={{ fontWeight: 800, fontSize: 36, lineHeight: 0.9, color }} title={rankBefore != null ? `was ${rankBefore}${ordSuffix(rankBefore)}` : undefined}>
+    <div className="font-display" style={{ fontWeight: 800, fontSize: 42, lineHeight: 0.9, color }} title={rankBefore != null ? `was ${rankBefore}${ordSuffix(rankBefore)}` : undefined}>
       {flat ? "—" : (up ? "▲" : "▼")}{!flat && moved}
     </div>
   );
@@ -501,34 +525,64 @@ function ConsensusPanel({
   const cTeam = teamMap.get(consensus.winnerPickId);
   const bTeam = bold ? teamMap.get(bold.winnerPickId) : null;
   return (
-    <div className="reveal-insights" style={{ marginTop: 14 }}>
-      <div className="panel brk" style={{ background: "rgba(240,163,0,0.04)", borderColor: "var(--hair-3)" }}>
+    <div className="reveal-insights" style={{ marginTop: 16 }}>
+      <div className="panel brk insight-card" style={{ background: "rgba(240,163,0,0.05)", borderColor: "var(--hair-3)" }}>
         <span className="br-tr" />
         <span className="br-bl" />
-        <div className="panel-title" style={{ color: "var(--heat)" }}>[ Consensus ]</div>
-        <div style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-hi)" }}>
-          {cTeam?.name ?? `#${consensus.winnerPickId}`}{consensus.tag ? ` (${consensus.tag})` : ""}
-        </div>
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-low)", marginTop: 2 }}>
-          {consensus.correctCount}/{consensus.total_field} called it right
+        <div className="insight-head" style={{ color: "var(--heat)" }}>[ Consensus ]</div>
+        <div className="insight-body">
+          <div className="insight-logo">
+            {cTeam && cTeam.pickid !== 0
+              ? <TeamLogo tiers={resolveLogoTiers(cTeam)} teamName={cTeam.name} size={60} />
+              : <div className="insight-logo-blank">#{consensus.winnerPickId}</div>}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div className="font-display insight-name" style={{ color: "var(--ink-hi)" }}>
+              {cTeam?.name ?? `#${consensus.winnerPickId}`}{consensus.tag ? <span className="insight-tag"> {consensus.tag}</span> : null}
+            </div>
+            <div className="insight-meta">
+              {consensus.correctCount}/{consensus.total_field} called it right
+            </div>
+          </div>
         </div>
       </div>
       {bTeam && bold && bold.correctCount > 0 && (
-        <div className="panel brk" style={{ borderColor: "rgba(216,53,28,0.25)" }}>
+        <div className="panel brk insight-card" style={{ borderColor: "rgba(216,53,28,0.3)" }}>
           <span className="br-tr" />
           <span className="br-bl" />
-          <div className="panel-title" style={{ color: "var(--ember, #d8351c)" }}>[ Bold Call ]</div>
-          <div style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-hi)" }}>
-            {bTeam.name}{bold.tag ? ` (${bold.tag})` : ""}
-          </div>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-low)", marginTop: 2 }}>
-            only {bold.correctCount}/{bold.total_field} nailed it
+          <div className="insight-head" style={{ color: "var(--ember, #d8351c)" }}>[ Bold Call ]</div>
+          <div className="insight-body">
+            <div className="insight-logo">
+              <TeamLogo tiers={resolveLogoTiers(bTeam)} teamName={bTeam.name} size={60} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div className="font-display insight-name" style={{ color: "var(--ink-hi)" }}>
+                {bTeam.name}{bold.tag ? <span className="insight-tag"> {bold.tag}</span> : null}
+              </div>
+              <div className="insight-meta">
+                only {bold.correctCount}/{bold.total_field} nailed it
+              </div>
+            </div>
           </div>
         </div>
       )}
       <style>{`
-        .reveal-insights { display: grid; grid-template-columns: 1fr; gap: 8px; }
+        .reveal-insights { display: grid; grid-template-columns: 1fr; gap: 10px; }
         @media (min-width: 640px) { .reveal-insights { grid-template-columns: 1fr 1fr; } }
+        .insight-card { padding: 16px 20px; }
+        .insight-head {
+          font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+          letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 12px;
+        }
+        .insight-body { display: flex; align-items: center; gap: 16px; }
+        .insight-logo { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 60px; height: 60px; }
+        .insight-logo-blank { font-family: var(--font-mono); font-size: 13px; color: var(--ink-low); }
+        .insight-name {
+          font-weight: 800; font-size: 26px; line-height: 0.95; letter-spacing: 0.01em;
+          text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .insight-tag { font-size: 14px; color: var(--ink-low); font-weight: 700; }
+        .insight-meta { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-mid); margin-top: 5px; }
       `}</style>
     </div>
   );
