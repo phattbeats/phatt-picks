@@ -71,6 +71,18 @@ export default async function StageRevealPage({
   const sectionDef = layout.sections.find((s) => s.sectionid === sectionId);
   if (!sectionDef) notFound();
 
+  // Visual assets for the Stage Wrapped deck (PHA-1054): team-logo cascade from
+  // the same teamMap + manifest the reveal grid uses, plus the major + game
+  // brand marks served from /public/watch.
+  const wrappedAssets = {
+    resolveTeamLogo: (pid: number) => {
+      const t = teamMap.get(pid);
+      return t ? { tiers: resolveLogoTiers(t), name: t.name } : null;
+    },
+    majorLogoSrc: "/watch/iem-cologne.png",
+    gameLogoSrc: "/watch/counter-strike.png",
+  };
+
   const session = await getSession();
   // Live driver (PHA-866): the issue names Stage Reveal explicitly — keep it fresh
   // for a direct first-viewer (deep link / push). Atomic claim shared with the
@@ -171,7 +183,7 @@ export default async function StageRevealPage({
           stageKey={stageWrappedKey(EVENT_ID, sectionId)}
           eventId={EVENT_ID}
           sectionId={sectionId}
-          slides={buildStageWrappedDeck(sectionId, stageLabel, null)}
+          slides={buildStageWrappedDeck(sectionId, stageLabel, null, wrappedAssets)}
           title={stageLabel}
           resolved
         />
@@ -252,6 +264,7 @@ export default async function StageRevealPage({
       const total = slotConsensus.get(consensusKey(sectionId, group.groupid, slot.index))?.total ?? 0;
       if (bestCall === null || pct < bestCall.pct) {
         bestCall = {
+          pickId,
           teamName: teamMap.get(pickId)?.name ?? `#${pickId}`,
           tag: bucketLabelFor(sectionId, group, slot.index),
           pct,
@@ -280,7 +293,8 @@ export default async function StageRevealPage({
           rankAfter,
           rankMove: delta,
           bestCall,
-        })}
+          avatar: { src: subject.avatarUrl ?? null, label: subject.displayName },
+        }, wrappedAssets)}
         title={stageLabel}
         resolved
       />

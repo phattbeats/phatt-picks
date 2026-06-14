@@ -13,6 +13,8 @@
  * you're on*.
  */
 
+import type { LogoTier } from "./logos-core";
+
 /** The visual template a slide renders with. The shell ships generic layouts; */
 /** sibling content issues pick the kind per moment. */
 export type WrappedSlideKind =
@@ -22,6 +24,26 @@ export type WrappedSlideKind =
   | "standings" // where you / the field landed
   | "outro" // closer / share prompt
   | "placeholder"; // shell-only filler until real data lands
+
+/** A resolved team logo for a slide (cascade tiers + name), serializable for RSC. */
+export interface WrappedTeamLogo {
+  tiers: LogoTier[];
+  name: string;
+}
+
+/** A brand mark (game / major logo) rendered on intro/outro/brand slides. */
+export interface WrappedBrandLogo {
+  src: string;
+  alt: string;
+  /** White-treat a dark logo for the dark deck (brightness(0) invert(1)). */
+  invert?: boolean;
+}
+
+/** The viewer's avatar for personal slides; `src` null falls back to initials. */
+export interface WrappedAvatar {
+  src: string | null;
+  label: string;
+}
 
 export interface WrappedSlide {
   /** Stable id (used as the animation remount key + dot aria labels). */
@@ -37,6 +59,12 @@ export interface WrappedSlide {
   figure?: string;
   /** Caption under the figure, e.g. "of your Stage I picks hit". */
   figureCaption?: string;
+  /** 1–3 team logos to render as a visual row (matchups, clinchers). */
+  teamLogos?: WrappedTeamLogo[];
+  /** A brand mark (major / game logo) for cover + closer slides. */
+  brandLogo?: WrappedBrandLogo;
+  /** The viewer's avatar, for personal slides. */
+  avatar?: WrappedAvatar;
   /**
    * Per-slide auto-advance, in ms. Falsy / omitted => this slide waits for the
    * user. The shell clamps to a sane floor so a stray `1` can't strobe.
