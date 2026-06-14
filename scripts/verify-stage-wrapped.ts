@@ -114,6 +114,10 @@ check("placeholder deck is non-empty", slides.length >= 3);
 check("every slide has a non-empty headline", slides.every((s) => s.headline.trim().length > 0));
 check("every slide id is unique", new Set(slides.map((s) => s.id)).size === slides.length);
 check("eyebrow carries the stage name", slides[0].eyebrow?.includes("STAGE I") === true);
+check("deck exercises distinct kinds", new Set(slides.map((s) => s.kind)).size >= 4);
+check("deck includes a standings slide", slides.some((s) => s.kind === "standings"));
+check("auto-advanced slides all resolve at/above the floor", slides.filter((s) => s.autoAdvanceMs).every((s) => resolveAutoAdvanceMs(s) !== null && resolveAutoAdvanceMs(s)! >= MIN_AUTO_ADVANCE_MS));
+check("closing slide waits for the user (no auto-advance)", slides[slides.length - 1].autoAdvanceMs == null);
 
 console.log(`\nstage-wrapped: ${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);
