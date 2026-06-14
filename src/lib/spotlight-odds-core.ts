@@ -200,11 +200,12 @@ export function resolveMatchupOdds(
   if (!wanted) return null;
 
   // Prefer the moneyline (straight match-winner) market — the actual win %.
-  const moneyline = markets.find(
-    (m) => m.sportsMarketType === MONEYLINE_MARKET_TYPE && parseMarketOutcomes(m)?.outcomes.length === 2,
-  );
-  if (moneyline) {
-    return orientMarket(parseMarketOutcomes(moneyline)!, wanted); // null if name mismatch — don't fall through
+  for (const market of markets) {
+    if (market.sportsMarketType !== MONEYLINE_MARKET_TYPE) continue;
+    const parsed = parseMarketOutcomes(market);
+    if (parsed?.outcomes.length === 2) {
+      return orientMarket(parsed, wanted); // null if name mismatch — don't fall through
+    }
   }
 
   // No moneyline (e.g. a plain binary non-sports event): first 2-outcome match.
