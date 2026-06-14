@@ -21,8 +21,17 @@
 import {
   buildStageWrappedDeck,
   stageWrappedHasContent,
+  type StageWrappedAssets,
   type StageWrappedPersonal,
 } from "../src/lib/stage-wrapped-content.ts";
+
+// Stub asset resolver — every pickid resolves to a monogram tier + a name, so
+// the builder's logo-attachment path is exercised without the real manifest.
+const ASSETS: StageWrappedAssets = {
+  resolveTeamLogo: (id: number) => ({ tiers: [{ kind: "monogram", label: "XX" }], name: `team-${id}` }),
+  majorLogoSrc: "/watch/iem-cologne.png",
+  gameLogoSrc: "/watch/counter-strike.png",
+};
 
 let pass = 0;
 let fail = 0;
@@ -44,7 +53,8 @@ const PERSONAL: StageWrappedPersonal = {
   totalPoints: 14,
   rankAfter: 3,
   rankMove: { delta: 4, direction: "up" },
-  bestCall: { teamName: "FlyQuest", tag: "3:2", pct: 9, count: 2, total: 22 },
+  bestCall: { pickId: 132, teamName: "FlyQuest", tag: "3:2", pct: 9, count: 2, total: 22 },
+  avatar: { src: null, label: "phaTT" },
 };
 
 /* ---- NO-OP invariant ---- */
@@ -104,6 +114,28 @@ check("rank down → ▼N", rankFigure({ delta: 2, direction: "down" }, 9) === "
 check("rank flat → —", rankFigure({ delta: 0, direction: "flat" }, 5) === "—");
 check("rank new → #rank", rankFigure({ delta: null, direction: "new" }, 7) === "#7");
 check("rank new with unknown rank → —", rankFigure({ delta: null, direction: "new" }, null) === "—");
+
+/* ---- Visuals: logos / brand marks / avatar (Brandon: "more visuals") ---- */
+const vis = buildStageWrappedDeck(105, "Stage I", PERSONAL, ASSETS);
+const vIntro = vis.find((s) => s.kind === "intro");
+const vOutro = vis.find((s) => s.kind === "outro");
+const vUpset = vis.find((s) => s.id === "s1-upset-flyquest-liquid");
+const vDom = buildStageWrappedDeck(106, "Stage II", PERSONAL, ASSETS).find((s) => s.id === "s2-dominance-spirit-donk");
+const vScore = vis.find((s) => s.id === "personal-score");
+const vBest = vis.find((s) => s.id === "personal-best-call");
+check("intro carries the major brand logo", vIntro?.brandLogo?.src === "/watch/iem-cologne.png");
+check("outro carries the game brand logo", vOutro?.brandLogo?.src === "/watch/counter-strike.png");
+check("matchup moment has 2 team logos", (vUpset?.teamLogos?.length ?? 0) === 2);
+check("matchup logos carry resolved tiers + names", !!vUpset?.teamLogos?.[0]?.tiers?.length && vUpset!.teamLogos![0].name === "team-132");
+check("single-team moment has 1 logo", (vDom?.teamLogos?.length ?? 0) === 1);
+check("personal score slide carries the viewer avatar", vScore?.avatar?.label === "phaTT");
+check("best-call slide carries the called team's logo", (vBest?.teamLogos?.length ?? 0) === 1);
+
+/* ---- Backward-compat: no assets → no visuals (text-only deck still valid) ---- */
+const noAssets = buildStageWrappedDeck(105, "Stage I", PERSONAL);
+check("no assets → moments have no teamLogos", noAssets.every((s) => s.teamLogos === undefined));
+check("no assets → intro has no brandLogo", noAssets.find((s) => s.kind === "intro")?.brandLogo === undefined);
+check("no assets → deck is still well-formed (intro..outro)", noAssets[0]?.kind === "intro" && noAssets[noAssets.length - 1]?.kind === "outro");
 
 console.log(`\nverify-stage-wrapped-content: ${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);

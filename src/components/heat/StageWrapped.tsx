@@ -13,6 +13,7 @@ import {
   type DeckState,
   type WrappedSlide,
 } from "@/lib/stage-wrapped-core";
+import { TeamLogo } from "@/components/ui/TeamLogo";
 
 /**
  * Stage Wrapped (PHA-1052) — the reusable popup + click-through slide deck shell.
@@ -319,9 +320,52 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
 /* ------------------------------------------------------------------ */
 
 function SlideCard({ slide }: { slide: WrappedSlide }) {
+  const logos = slide.teamLogos ?? [];
   return (
     <div className={`sw-slide sw-kind-${slide.kind} sw-enter`}>
+      {/* Brand mark (major / game logo) — cover + closer slides. */}
+      {slide.brandLogo && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          className="sw-brand"
+          src={slide.brandLogo.src}
+          alt={slide.brandLogo.alt}
+          style={{
+            height: 52,
+            width: "auto",
+            maxWidth: "70%",
+            objectFit: "contain",
+            display: "block",
+            margin: "0 auto 16px",
+            filter: slide.brandLogo.invert ? "brightness(0) invert(1)" : undefined,
+          }}
+        />
+      )}
       {slide.eyebrow && <span className="eyebrow-mono sw-eyebrow">[ {slide.eyebrow} ]</span>}
+      {/* Team logos — matchups / clinchers. One logo centred; two flank a "vs". */}
+      {logos.length > 0 && (
+        <div
+          className="sw-logos"
+          style={{ display: "flex", gap: 16, justifyContent: "center", alignItems: "center", margin: "6px 0 12px" }}
+        >
+          {logos.map((t, i) => (
+            <span key={`${t.name}-${i}`} style={{ display: "inline-flex", alignItems: "center", gap: 16 }}>
+              {i > 0 && (
+                <span
+                  className="font-display"
+                  aria-hidden="true"
+                  style={{ color: "var(--ink-low)", fontWeight: 700, fontSize: 18 }}
+                >
+                  {logos.length === 2 ? "vs" : "·"}
+                </span>
+              )}
+              <TeamLogo tiers={t.tiers} teamName={t.name} size={72} />
+            </span>
+          ))}
+        </div>
+      )}
+      {/* Player avatar — personal slides. */}
+      {slide.avatar && <SlideAvatar avatar={slide.avatar} />}
       {slide.figure != null && (
         <div className="sw-figure font-display" aria-hidden={!slide.figureCaption}>
           {slide.figure}
@@ -330,6 +374,43 @@ function SlideCard({ slide }: { slide: WrappedSlide }) {
       {slide.figureCaption && <p className="sw-figcap">{slide.figureCaption}</p>}
       <h3 className="sw-headline font-display">{slide.headline}</h3>
       {slide.body && <p className="sw-body">{slide.body}</p>}
+    </div>
+  );
+}
+
+/** Circular viewer avatar; falls back to initials when there's no image. */
+function SlideAvatar({ avatar }: { avatar: NonNullable<WrappedSlide["avatar"]> }) {
+  const initials = avatar.label
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) || "?";
+  const size = 64;
+  const base: React.CSSProperties = {
+    width: size,
+    height: size,
+    borderRadius: "50%",
+    margin: "4px auto 12px",
+    border: "2px solid var(--hair-3)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    background: "var(--surf-2, rgba(255,255,255,0.04))",
+  };
+  if (avatar.src) {
+    return (
+      <div style={base}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={avatar.src} alt={avatar.label} width={size} height={size} style={{ objectFit: "cover", width: "100%", height: "100%" }} />
+      </div>
+    );
+  }
+  return (
+    <div style={base} aria-label={avatar.label} title={avatar.label}>
+      <span className="font-display" style={{ fontWeight: 800, fontSize: 24, color: "var(--ink-hi)" }}>{initials}</span>
     </div>
   );
 }
