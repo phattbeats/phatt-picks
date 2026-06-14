@@ -1170,23 +1170,40 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   font-family: var(--font-display); font-weight: 700; font-size: 14px;
   color: var(--ink-mid); text-transform: uppercase;
 }
+/* Hero (v3): the team gets a cinematic, bracket-framed nameplate with an
+   atmospheric pool of its own color behind the crest, echoing the dashboard
+   stage-briefing and the splash glow. */
 .spot-hero {
-  display: flex; align-items: center; gap: 14px; padding-right: 30px;
-  position: relative;
+  display: flex; align-items: center; gap: 14px;
+  position: relative; isolation: isolate;
+  padding: 16px 16px 16px 14px; margin-bottom: 4px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--sa) 7%, transparent), transparent 90%);
+  border: 1px solid var(--hair-2);
 }
+/* Team-colored light pool blooming from behind the crest. */
+.spot-hero::before {
+  content: ""; position: absolute; z-index: -1;
+  left: -10%; top: -40%; width: 60%; height: 180%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--sa) 30%, transparent), transparent 70%);
+  filter: blur(34px); opacity: 0.55; pointer-events: none;
+}
+.spot-hero.brk::before, .spot-hero.brk::after,
+.spot-hero.brk .br-tr, .spot-hero.brk .br-bl { border-color: var(--sa); }
 .spot-hero-logo {
   display: flex; align-items: center; justify-content: center;
   width: 64px; height: 64px; flex-shrink: 0;
-  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--sa) 18%, transparent), transparent 70%);
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--sa) 22%, transparent), transparent 72%);
   border: 1px solid var(--hair-3);
 }
 .spot-hero-text { flex: 1; min-width: 0; }
 .spot-eyebrow { display: block; margin-bottom: 4px; color: var(--sa); }
 .spot-name {
-  margin: 0; font-weight: 800; font-size: 28px;
+  margin: 0; font-family: var(--font-display); font-weight: 800;
+  font-size: clamp(30px, 7vw, 40px);
   text-transform: uppercase; letter-spacing: 0.01em;
-  color: var(--ink-hi); line-height: 0.95;
+  color: var(--ink-hi); line-height: 0.9;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  text-shadow: 0 0 22px color-mix(in srgb, var(--sa) 22%, transparent);
 }
 .spot-seed {
   margin: 5px 0 0; font-family: var(--font-mono); font-size: 11px;
@@ -1207,7 +1224,11 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   letter-spacing: 0.16em; color: var(--ink-low);
 }
 .spot-beat-tag.now { color: var(--sa); }
-.spot-beat:has(.now) { border-left-color: var(--sa); }
+/* The "NOW" beat lights up: heavier accent rail + a soft inset glow. */
+.spot-beat:has(.now) {
+  border-left-width: 3px; border-left-color: var(--sa);
+  box-shadow: inset 10px 0 16px -10px color-mix(in srgb, var(--sa) 45%, transparent);
+}
 .spot-beat p {
   margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink-hi);
 }
@@ -1217,7 +1238,13 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   position: relative; width: 100%; aspect-ratio: 16 / 9;
   background: var(--surf-3); border: 1px solid var(--hair-2); overflow: hidden;
 }
-.spot-clip-frame { width: 100%; height: 100%; border: 0; display: block; }
+/* Glass sweep across the poster so it reads like a display case, not a thumbnail. */
+.spot-clip::after {
+  content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,0.22) 50%, transparent 65%);
+  transform: translateX(-120%); animation: line-sheen 4.5s ease-in-out infinite;
+}
+.spot-clip-frame { width: 100%; height: 100%; border: 0; display: block; position: relative; z-index: 3; }
 .spot-clip-poster {
   width: 100%; height: 100%; border: 0; cursor: pointer; padding: 0;
   background-color: var(--surf-3); background-size: cover; background-position: center;
@@ -1226,17 +1253,28 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 }
 .spot-clip-poster:hover { filter: brightness(1.08); }
 .spot-clip-play {
+  position: relative; z-index: 2;
   display: flex; align-items: center; justify-content: center;
-  width: 56px; height: 56px; border-radius: 50%;
+  width: 72px; height: 72px; border-radius: 50%;
   background: color-mix(in srgb, var(--sa) 92%, transparent);
   /* A ring keeps the affordance visible even when the accent is a light
      near-white (e.g. FURIA) against a bright poster frame. */
   border: 2px solid rgba(10,8,5,0.55);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5),
+    0 0 0 0 color-mix(in srgb, var(--sa) 55%, transparent);
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--sa) 40%, transparent));
   transition: transform 160ms var(--ease);
+  animation: spot-play-pulse 2s var(--ease) infinite;
 }
 .spot-clip-poster:hover .spot-clip-play { transform: scale(1.08); }
-.spot-clip-play svg { width: 26px; height: 26px; fill: var(--void); margin-left: 3px; }
+.spot-clip-play svg { width: 30px; height: 30px; fill: var(--void); margin-left: 3px; }
+/* Expanding ring, drawing the eye to "dive in". */
+@keyframes spot-play-pulse {
+  0% { box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 0 color-mix(in srgb, var(--sa) 50%, transparent); }
+  70% { box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 16px color-mix(in srgb, var(--sa) 0%, transparent); }
+  100% { box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 0 color-mix(in srgb, var(--sa) 0%, transparent); }
+}
+@media (max-width: 480px) { .spot-clip-play { width: 64px; height: 64px; } }
 .spot-clip-cap {
   margin: 9px 0 0; font-family: var(--font-mono); font-size: 11px;
   letter-spacing: 0.02em; color: var(--ink-mid); line-height: 1.4;
@@ -1259,10 +1297,15 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   font-family: var(--font-display); font-weight: 800; font-size: 22px;
   color: var(--ink-mid); font-variant-numeric: tabular-nums; line-height: 1;
 }
-.spot-odds-pct.heat { color: var(--sa); }
+/* The team's own win number is the headline stat, sized like a stat-card val. */
+.spot-odds-pct.heat {
+  color: var(--sa); font-size: 34px;
+  text-shadow: 0 0 18px color-mix(in srgb, var(--sa) 30%, transparent);
+}
 .spot-odds-bar {
-  height: 6px; margin: 7px 0; background: var(--surf-1);
+  height: 10px; margin: 9px 0; background: var(--surf-1);
   border: 1px solid var(--hair); overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.35);
 }
 .spot-odds-fill {
   display: block; height: 100%; background: var(--sa);
@@ -1301,10 +1344,32 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   margin: 5px 0 0; font-size: 12px; line-height: 1.45; color: var(--ink-mid);
 }
 
-/* Narrow phones: the 28px hero name plus the rank badge and close button can
+/* Narrow phones: the big hero name plus the rank badge and close button can
    crush a multi-word team name (e.g. "Natus Vincere"). Shrink the name and let
    the odds footer stack rather than squeeze. */
 @media (max-width: 380px) {
-  .spot-name { font-size: 22px; }
+  .spot-name { font-size: 24px; }
   .spot-odds-foot { flex-direction: column; align-items: flex-start; gap: 8px; }
+}
+
+/* Entrance (v3): the content unfolds downward, hero first, like the splash and
+   the stage briefing rather than popping in flat. */
+@keyframes spot-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.spot-panel > .spot-hero,
+.spot-panel > section { animation: spot-rise 0.42s var(--ease) both; }
+.spot-panel > section:nth-of-type(1) { animation-delay: 0.06s; }
+.spot-panel > section:nth-of-type(2) { animation-delay: 0.12s; }
+.spot-panel > section:nth-of-type(3) { animation-delay: 0.18s; }
+.spot-panel > section:nth-of-type(4) { animation-delay: 0.24s; }
+.spot-panel > section:nth-of-type(n+5) { animation-delay: 0.30s; }
+
+/* Honor reduced-motion: no entrance, no pulse, no sweep. Hold final states. */
+@media (prefers-reduced-motion: reduce) {
+  .spot-panel > .spot-hero,
+  .spot-panel > section { animation: none; }
+  .spot-clip-play { animation: none; }
+  .spot-clip::after { animation: none; display: none; }
 }

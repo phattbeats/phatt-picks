@@ -158,7 +158,9 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
         </button>
 
         {/* Hero */}
-        <div className="spot-hero">
+        <div className="spot-hero brk">
+          <span className="br-tr" aria-hidden="true" />
+          <span className="br-bl" aria-hidden="true" />
           <div className="spot-hero-logo">
             <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={56} />
           </div>
