@@ -13,6 +13,8 @@ import {
   type DeckState,
   type WrappedSlide,
 } from "@/lib/stage-wrapped-core";
+import { TeamLogo } from "@/components/ui/TeamLogo";
+import { StageLogo } from "@/components/heat/StageLogo";
 
 /**
  * Stage Wrapped (PHA-1052) — the reusable popup + click-through slide deck shell.
@@ -127,6 +129,36 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
 
   const panelRef = useRef<HTMLDivElement>(null);
 
+  // Optional epic soundtrack (PHA-1054). Off by default — the deck auto-opens
+  // without a user gesture, and browsers block autoplay-with-sound there, so we
+  // never blare uninvited. One tap on the sound toggle starts the (looping)
+  // royalty-free theme; closing the deck stops it.
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [soundOn, setSoundOn] = useState(false);
+  const toggleSound = useCallback(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    setSoundOn((on) => {
+      if (on) {
+        el.pause();
+        return false;
+      }
+      el.volume = 0.55;
+      void el.play().catch(() => {});
+      return true;
+    });
+  }, []);
+  // Stop + reset the track whenever the deck closes.
+  useEffect(() => {
+    if (open) return;
+    const el = audioRef.current;
+    if (el) {
+      el.pause();
+      el.currentTime = 0;
+    }
+    setSoundOn(false);
+  }, [open]);
+
   // Keyboard: arrows page, Escape closes, Tab is trapped inside the panel.
   useEffect(() => {
     if (!open) return;
@@ -239,6 +271,50 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
         <span className="br-tr" />
         <span className="br-bl" />
 
+        {/* Epic royalty-free soundtrack — "The Descent" by Kevin MacLeod (CC-BY 3.0). */}
+        <audio ref={audioRef} src="/audio/wrapped-theme.mp3" loop preload="none" aria-hidden="true" />
+        <button
+          className="sw-sound"
+          type="button"
+          aria-pressed={soundOn}
+          aria-label={soundOn ? "Mute soundtrack" : "Play epic soundtrack"}
+          title={soundOn ? "Mute" : "Play epic soundtrack — 'The Descent', Kevin MacLeod (CC-BY)"}
+          onClick={toggleSound}
+          style={{
+            position: "absolute",
+            top: 10,
+            left: 12,
+            zIndex: 2,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "5px 9px",
+            background: soundOn ? "rgba(240,163,0,0.14)" : "transparent",
+            border: "1px solid var(--hair-2)",
+            borderColor: soundOn ? "var(--heat)" : "var(--hair-2)",
+            color: soundOn ? "var(--heat)" : "var(--ink-mid)",
+            borderRadius: 4,
+            cursor: "pointer",
+            font: "inherit",
+          }}
+        >
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" />
+            {soundOn ? (
+              <>
+                <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+                <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+              </>
+            ) : (
+              <line x1="16" y1="9" x2="22" y2="15" />
+            )}
+            {!soundOn && <line x1="22" y1="9" x2="16" y2="15" />}
+          </svg>
+          <span className="eyebrow-mono" style={{ fontSize: 9, letterSpacing: "0.12em" }}>
+            {soundOn ? "SOUND ON" : "MUSIC"}
+          </span>
+        </button>
+
         <button className="tsd-close" type="button" aria-label="Close" onClick={onClose}>
           <svg viewBox="0 0 24 24">
             <line x1="18" y1="6" x2="6" y2="18" />
@@ -319,9 +395,62 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
 /* ------------------------------------------------------------------ */
 
 function SlideCard({ slide }: { slide: WrappedSlide }) {
+  const logos = slide.teamLogos ?? [];
+  const badge = slide.stageBadge;
   return (
     <div className={`sw-slide sw-kind-${slide.kind} sw-enter`}>
-      {slide.eyebrow && <span className="eyebrow-mono sw-eyebrow">[ {slide.eyebrow} ]</span>}
+      {/* Brand mark (major / game logo) — cover + closer slides. Smaller when a
+          stage badge is the hero so the STAGE logo leads. */}
+      {slide.brandLogo && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          className="sw-brand"
+          src={slide.brandLogo.src}
+          alt={slide.brandLogo.alt}
+          style={{
+            height: badge ? 34 : 52,
+            width: "auto",
+            maxWidth: "60%",
+            objectFit: "contain",
+            display: "block",
+            margin: badge ? "0 auto 10px" : "0 auto 16px",
+            opacity: badge ? 0.85 : 1,
+            filter: slide.brandLogo.invert ? "brightness(0) invert(1)" : undefined,
+          }}
+        />
+      )}
+      {/* Stage logo (HEAT v3 lockup) — the hero mark; replaces the plain eyebrow. */}
+      {badge ? (
+        <div style={{ margin: "2px 0 10px" }}>
+          <StageLogo numeral={badge.numeral} label={badge.label} sub={badge.sub} />
+        </div>
+      ) : (
+        slide.eyebrow && <span className="eyebrow-mono sw-eyebrow">[ {slide.eyebrow} ]</span>
+      )}
+      {/* Team logos — matchups / clinchers. One logo centred; two flank a "vs". */}
+      {logos.length > 0 && (
+        <div
+          className="sw-logos"
+          style={{ display: "flex", gap: 16, justifyContent: "center", alignItems: "center", margin: "6px 0 12px" }}
+        >
+          {logos.map((t, i) => (
+            <span key={`${t.name}-${i}`} style={{ display: "inline-flex", alignItems: "center", gap: 16 }}>
+              {i > 0 && (
+                <span
+                  className="font-display"
+                  aria-hidden="true"
+                  style={{ color: "var(--ink-low)", fontWeight: 700, fontSize: 18 }}
+                >
+                  {logos.length === 2 ? "vs" : "·"}
+                </span>
+              )}
+              <TeamLogo tiers={t.tiers} teamName={t.name} size={72} />
+            </span>
+          ))}
+        </div>
+      )}
+      {/* Player avatar — personal slides. */}
+      {slide.avatar && <SlideAvatar avatar={slide.avatar} />}
       {slide.figure != null && (
         <div className="sw-figure font-display" aria-hidden={!slide.figureCaption}>
           {slide.figure}
@@ -330,6 +459,43 @@ function SlideCard({ slide }: { slide: WrappedSlide }) {
       {slide.figureCaption && <p className="sw-figcap">{slide.figureCaption}</p>}
       <h3 className="sw-headline font-display">{slide.headline}</h3>
       {slide.body && <p className="sw-body">{slide.body}</p>}
+    </div>
+  );
+}
+
+/** Circular viewer avatar; falls back to initials when there's no image. */
+function SlideAvatar({ avatar }: { avatar: NonNullable<WrappedSlide["avatar"]> }) {
+  const initials = avatar.label
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) || "?";
+  const size = 64;
+  const base: React.CSSProperties = {
+    width: size,
+    height: size,
+    borderRadius: "50%",
+    margin: "4px auto 12px",
+    border: "2px solid var(--hair-3)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    background: "var(--surf-2, rgba(255,255,255,0.04))",
+  };
+  if (avatar.src) {
+    return (
+      <div style={base}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={avatar.src} alt={avatar.label} width={size} height={size} style={{ objectFit: "cover", width: "100%", height: "100%" }} />
+      </div>
+    );
+  }
+  return (
+    <div style={base} aria-label={avatar.label} title={avatar.label}>
+      <span className="font-display" style={{ fontWeight: 800, fontSize: 24, color: "var(--ink-hi)" }}>{initials}</span>
     </div>
   );
 }
