@@ -1284,6 +1284,36 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 }
 
 /* ---------------------------------------------------------------------------
+   "Qualified for Playoffs" strip (PHA-1043). Anticipation row on the Playoffs
+   tab before Valve seeds: clinched + authored teams, each opening its Spotlight.
+   Broadcast style, soft tiles, the team accent as a sparing budget. */
+.qstrip { display: flex; flex-direction: column; gap: 10px; }
+.qstrip-label { color: var(--ink-mid); }
+.qstrip-row {
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+.qstrip-tile {
+  --sa: var(--team-accent, var(--heat));
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 13px 9px 9px; cursor: pointer;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--sa) 8%, transparent), transparent 90%), var(--surf-2);
+  border: 1px solid var(--hair-2); border-radius: 12px;
+  border-left: 3px solid color-mix(in srgb, var(--sa) 70%, transparent);
+  color: var(--ink-hi); text-align: left;
+  transition: border-color 150ms var(--ease), background 150ms var(--ease), transform 120ms var(--ease);
+}
+.qstrip-tile:hover, .qstrip-tile:focus-visible {
+  border-color: color-mix(in srgb, var(--sa) 55%, transparent);
+  transform: translateY(-1px);
+}
+.qstrip-logo { display: flex; flex-shrink: 0; }
+.qstrip-name {
+  font-family: var(--font-display); font-weight: 800; font-size: 16px;
+  text-transform: uppercase; letter-spacing: 0.01em; line-height: 1;
+}
+.qstrip-star { color: var(--sa); font-size: 13px; line-height: 1; }
+
+/* ---------------------------------------------------------------------------
    Spotlight (PHA-1043) playoff-grade team modal. Reuses the .tsd-panel
    bottom-sheet shell; adds a cinematic hero, the before/after narrative, a
    tap-to-play event highlight, and a live market line above the dossier "tape".
