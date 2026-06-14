@@ -89,7 +89,19 @@ export interface GammaMarket {
   outcomes?: string;
   /** JSON-encoded string array of prices (implied prob 0..1), e.g. '["0.62","0.38"]'. */
   outcomePrices?: string;
+  /**
+   * Polymarket's classifier for a sports/esports sub-market. A single H2H event
+   * carries MANY two-outcome markets — moneyline, map/set handicaps, totals,
+   * round/kill props — and several non-moneyline ones ALSO use the two team
+   * names as outcomes (e.g. "Set Handicap: A vs B", "map_handicap"). The MATCH
+   * win % is the `"moneyline"` market specifically; we must select it by type,
+   * not by "first market that names the team" (verified live, PHA-1066 review).
+   */
+  sportsMarketType?: string;
 }
+
+/** Polymarket's market type for the straight match-winner line (the win %). */
+export const MONEYLINE_MARKET_TYPE = "moneyline";
 
 /** Minimal shape of a gamma event (the /events?slug= response is an array of these). */
 export interface GammaEvent {
@@ -143,15 +155,40 @@ export interface ParsedMatchupOdds {
   oppPct: number;
 }
 
+/** Orient a single parsed two-way market to `wanted` (normalized name). null = no match. */
+function orientMarket(parsed: ParsedMarket, wanted: string): ParsedMatchupOdds | null {
+  if (parsed.outcomes.length !== 2) return null;
+  const norm = parsed.outcomes.map(normalizeName);
+  let idx = norm.findIndex((n) => n === wanted);
+  if (idx === -1) {
+    idx = norm.findIndex((n) => n.includes(wanted) || wanted.includes(n));
+  }
+  if (idx === -1) return null;
+  const oppIdx = idx === 0 ? 1 : 0;
+  return {
+    teamPct: parsed.prices[idx] * 100,
+    oppName: parsed.outcomes[oppIdx],
+    oppPct: parsed.prices[oppIdx] * 100,
+  };
+}
+
 /**
  * Resolve a matchup event into this team's implied win % and the opponent's,
- * oriented by name-matching `teamName` against the market's two outcomes. Returns
- * null when the event has no parseable two-way market OR `teamName` can't be
- * matched to a side — we never GUESS which outcome is "this team" (a wrong
- * orientation would show a team its opponent's odds). Tries exact normalized
- * equality first, then substring either direction (handles "Natus Vincere" vs
- * "NAVI"-style aliases). Scans all markets so a multi-market event still resolves
- * the one binary market that names this team.
+ * oriented by name-matching `teamName`. Returns null when no usable market exists
+ * OR `teamName` can't be matched — we never GUESS which outcome is "this team" (a
+ * wrong orientation would show a team its opponent's odds).
+ *
+ * CRITICAL (PHA-1066 review, verified against live gamma events): a single H2H
+ * event carries MANY two-outcome markets, and several non-moneyline ones (set/map
+ * handicaps, "Set 1 Winner", child moneylines) ALSO use the two TEAM NAMES as
+ * outcomes. The MATCH win % is the `"moneyline"` market specifically. So:
+ *   1. If a `moneyline` market exists, resolve ONLY against it — a name mismatch
+ *      there returns null rather than falling through to a handicap line (which
+ *      would surface, say, a map-handicap price as the "win %").
+ *   2. Only when NO moneyline market exists do we fall back to the first
+ *      two-outcome market that names the team (a non-sports binary event).
+ * Exact normalized match first, then substring either direction (handles
+ * "Natus Vincere" vs "NAVI" aliases).
  */
 export function resolveMatchupOdds(
   event: GammaEvent | null | undefined,
@@ -162,21 +199,20 @@ export function resolveMatchupOdds(
   const wanted = normalizeName(teamName);
   if (!wanted) return null;
 
+  // Prefer the moneyline (straight match-winner) market — the actual win %.
+  const moneyline = markets.find(
+    (m) => m.sportsMarketType === MONEYLINE_MARKET_TYPE && parseMarketOutcomes(m)?.outcomes.length === 2,
+  );
+  if (moneyline) {
+    return orientMarket(parseMarketOutcomes(moneyline)!, wanted); // null if name mismatch — don't fall through
+  }
+
+  // No moneyline (e.g. a plain binary non-sports event): first 2-outcome match.
   for (const market of markets) {
     const parsed = parseMarketOutcomes(market);
-    if (!parsed || parsed.outcomes.length !== 2) continue;
-    const norm = parsed.outcomes.map(normalizeName);
-    let idx = norm.findIndex((n) => n === wanted);
-    if (idx === -1) {
-      idx = norm.findIndex((n) => n.includes(wanted) || wanted.includes(n));
-    }
-    if (idx === -1) continue;
-    const oppIdx = idx === 0 ? 1 : 0;
-    return {
-      teamPct: parsed.prices[idx] * 100,
-      oppName: parsed.outcomes[oppIdx],
-      oppPct: parsed.prices[oppIdx] * 100,
-    };
+    if (!parsed) continue;
+    const oriented = orientMarket(parsed, wanted);
+    if (oriented) return oriented;
   }
   return null;
 }
