@@ -127,7 +127,7 @@ export interface MatchWindow {
 export const COLOGNE_MATCH_WINDOWS: Readonly<Record<number, MatchWindow>> = {
   105: { start: "2026-06-02T00:00:00Z", end: "2026-06-05T23:59:59Z" }, // Stage I   — Jun 2–5
   106: { start: "2026-06-06T00:00:00Z", end: "2026-06-09T23:59:59Z" }, // Stage II  — Jun 6–9
-  107: { start: "2026-06-11T00:00:00Z", end: "2026-06-14T23:59:59Z" }, // Stage III — Jun 11–14
+  107: { start: "2026-06-11T00:00:00Z", end: "2026-06-15T23:59:59Z" }, // Stage III — Jun 11–15 (clinches ran into Jun 15; a too-early end froze the crawl while teams were still clinching — PHA-1109)
 };
 
 /**
