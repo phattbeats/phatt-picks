@@ -27,11 +27,9 @@ import { currentEventId } from "@/lib/events-core";
 export const dynamic = "force-dynamic";
 
 async function warm() {
-  // PHA-1046 removed the module-load-bound ACTIVE_EVENT_ID; resolve the live
-  // event per-request so this stays correct across a Major rollover.
-  const eventId = currentEventId();
-  const result = await warmSpotlightOdds(eventId);
-  return NextResponse.json({ ok: true, eventId, ...result });
+  const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
+  const result = await warmSpotlightOdds(EVENT_ID);
+  return NextResponse.json({ ok: true, eventId: EVENT_ID, ...result });
 }
 
 // GET so it's trivial to warm from a browser / curl / uptime poke; POST aliased.
