@@ -77,6 +77,8 @@ export interface WrappedSlide {
   avatar?: WrappedAvatar;
   /** A stylized STAGE logo lockup, for the cover + closer. */
   stageBadge?: WrappedStageBadge;
+  /** Personal reward: set when the viewer's pick matched this narrative moment. */
+  calledIt?: { label: string; sub?: string };
   /**
    * Per-slide auto-advance, in ms. Falsy / omitted => this slide waits for the
    * user. The shell clamps to a sane floor so a stray `1` can't strobe.
