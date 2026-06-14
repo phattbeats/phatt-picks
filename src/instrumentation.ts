@@ -65,6 +65,41 @@ export async function register(): Promise<void> {
     console.log("[captcha] TURNSTILE_SECRET_KEY present — signup CAPTCHA enforced.");
   }
 
+  // PHA-1109 — live results driver. The on-read standings crawl + StageOutcome
+  // bridge defer their work via after(), which does not fire reliably in the
+  // standalone server, so during a live stage the leaderboard / locked-picks can
+  // freeze (a 0-3 elimination stayed un-green and unscored for ~19h because the
+  // crawl never ran). Drive them here on this long-lived process timer —
+  // traffic- and after()-independent — so a clinch turns green and awards points
+  // within a tick. Self-gating: a frozen Major / off-window sections no-op, so
+  // it's dormant outside a live stage and needs no env. An in-flight guard
+  // prevents overlap if a crawl runs long (bounded multi-pass HLTV fetch). Armed
+  // independently of the pre-lock reminder opt-out below — they're separate
+  // concerns and disabling reminders must NOT freeze live scoring.
+  {
+    const { refreshLiveResultsTick } = await import("@/lib/outcomes");
+    const { currentEventId } = await import("@/lib/events-core");
+    let liveTickInFlight = false;
+    const liveTick = async (): Promise<void> => {
+      if (liveTickInFlight) return;
+      liveTickInFlight = true;
+      try {
+        const r = await refreshLiveResultsTick(currentEventId());
+        if (r.ingested > 0 || r.resolved > 0) {
+          console.log(`[live-tick] event ${r.eventId}: ingested ${r.ingested}, resolved ${r.resolved} slot(s)`);
+        }
+      } catch (err) {
+        console.error("[live-tick] tick failed:", err);
+      } finally {
+        liveTickInFlight = false;
+      }
+    };
+    setTimeout(() => void liveTick(), FIRST_TICK_DELAY_MS);
+    const liveTimer = setInterval(() => void liveTick(), TICK_MS);
+    if (typeof liveTimer.unref === "function") liveTimer.unref();
+    console.log(`[live-tick] live results driver armed — every ${TICK_MS / 60_000} min`);
+  }
+
   if (
     !prelockSchedulerEnabled(
       process.env.PRELOCK_REMINDERS_ENABLED,
