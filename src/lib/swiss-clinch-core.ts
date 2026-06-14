@@ -76,6 +76,85 @@ export function pickBucketForLabel(label: string): SwissPickBucket {
 }
 
 /**
+ * Does a team's CURRENT record contradict a resolved slot of pick bucket `bucket`
+ * (PHA-1109 self-heal)? A StageOutcome slot is normally terminal-and-immutable,
+ * but the bridge can persist a WRONG winner when it resolves off a stale/partial
+ * crawl (the cache froze mid-stage with a team still reading 0:2, then it lost its
+ * third and the frozen row never caught up). Records are monotonic and a terminal
+ * record is permanent truth, so a stored winner whose own live record can no
+ * longer land in its slot's bucket is provably wrong and must be evicted:
+ *
+ *   - 0:3 slot   → contradicted once the stored team has ANY win (wins >= 1): it
+ *                  can never be the 0-3 it was recorded as.
+ *   - 3:0 slot   → contradicted once it has ANY loss (losses >= 1).
+ *   - advance    → contradicted once it is eliminated short of advancing
+ *                  (losses >= eliminateAt && wins < advanceAt).
+ * Plus the general case: the team has a DIFFERENT terminal pick bucket than the
+ * slot it sits in (e.g. a 3:1 team parked in a 0:3 slot). Returns false when the
+ * record is still compatible (incl. the all-zero / not-yet-contradicting case) so
+ * a correct row is never disturbed.
+ */
+export function recordContradictsBucket(
+  bucket: SwissPickBucket,
+  wins: number,
+  losses: number,
+  advanceAt = 3,
+  eliminateAt = 3,
+): boolean {
+  const terminal = pickBucketForRecord(wins, losses, advanceAt, eliminateAt);
+  if (terminal !== null && terminal !== bucket) return true;
+  switch (bucket) {
+    case "3-0":
+      return losses >= 1;
+    case "0-3":
+      return wins >= 1;
+    case "advance":
+      return losses >= eliminateAt && wins < advanceAt;
+  }
+}
+
+/**
+ * Find resolved slots whose stored winner the current live records CONTRADICT
+ * (PHA-1109 self-heal). Returns the StageOutcome rows the bridge should EVICT so
+ * the correct clinched team can take the freed slot. Conservative by construction:
+ * a slot is only flagged when we have a record for its stored team that provably
+ * rules out the slot's bucket (`recordContradictsBucket`). A stored team absent
+ * from the current crawl is left untouched — a missing read is not evidence of a
+ * wrong result, only a positive contradiction is.
+ */
+export function findContradictedSlots(
+  section: Section,
+  standings: readonly ClinchInput[],
+  existing: ReadonlyArray<{ groupId: number; slotIndex: number; winnerPickId: number }>,
+  bucketsFor: BucketsForSlotCount,
+  opts: { advanceAt?: number; eliminateAt?: number } = {},
+): Array<{ groupId: number; slotIndex: number; winnerPickId: number }> {
+  const recByPick = new Map<number, ClinchInput>();
+  for (const r of standings) recByPick.set(r.pickid, r);
+
+  const evict: Array<{ groupId: number; slotIndex: number; winnerPickId: number }> = [];
+  for (const group of section.groups) {
+    // slotIndex → pick bucket, for this group's layout.
+    const bucketBySlot = new Map<number, SwissPickBucket>();
+    for (const b of bucketsFor(group.picks.length)) {
+      const bucket = pickBucketForLabel(b.label);
+      for (const s of b.slotIndexes) bucketBySlot.set(s, bucket);
+    }
+    for (const e of existing) {
+      if (e.groupId !== group.groupid) continue;
+      const bucket = bucketBySlot.get(e.slotIndex);
+      if (bucket === undefined) continue; // slot not in any known bucket (defensive)
+      const rec = recByPick.get(e.winnerPickId);
+      if (!rec) continue; // no current record for this team — don't evict on missing data
+      if (recordContradictsBucket(bucket, rec.wins, rec.losses, opts.advanceAt, opts.eliminateAt)) {
+        evict.push({ groupId: e.groupId, slotIndex: e.slotIndex, winnerPickId: e.winnerPickId });
+      }
+    }
+  }
+  return evict;
+}
+
+/**
  * Derive the newly-clinched Swiss slots for a section. Reads each team's terminal
  * record, finds the pick bucket it clinched, and assigns it to a free slot of
  * that bucket — skipping teams already placed (idempotent) and buckets with no
