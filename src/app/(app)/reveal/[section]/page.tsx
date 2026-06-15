@@ -276,9 +276,11 @@ export default async function StageRevealPage({
 
   return (
     <>
-      {/* Stage Wrapped recap (PHA-1054) — auto-opens once per stage from the
-          resolved-stage reveal, reusing the score / rank-move / best-call data
-          computed above. Gated by `resolved` so it never leaks before lock. */}
+      {/* Stage Wrapped recap (PHA-1054 / PHA-1051) — replay-only here: the
+          app-wide launcher in (app)/layout.tsx (StageWrappedGate) owns the
+          once-per-stage AUTO-open for signed-in viewers, so this mount stays
+          `resolved={false}` to avoid a double popup while still answering the
+          "Replay the recap" button below for this exact stage. */}
       <StageWrappedAnnounce
         stageKey={stageWrappedKey(EVENT_ID, sectionId)}
         eventId={EVENT_ID}
@@ -296,7 +298,7 @@ export default async function StageRevealPage({
           claims: [...viewerClaims],
         }, wrappedAssets)}
         title={stageLabel}
-        resolved
+        resolved={false}
       />
       <RevealEyebrow stageIdx={stageIdx} />
       <h1 className="font-display" style={heroTitle}>{stageLabel}</h1>

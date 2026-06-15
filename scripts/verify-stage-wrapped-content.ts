@@ -58,14 +58,15 @@ const PERSONAL: StageWrappedPersonal = {
   avatar: { src: null, label: "phaTT" },
 };
 
-/* ---- NO-OP invariant ---- */
-const unauthored = buildStageWrappedDeck(107, "Stage III", PERSONAL);
-check("unauthored section (107) yields an EMPTY deck (no-op)", unauthored.length === 0);
-check("unauthored section with null personal is also empty", buildStageWrappedDeck(107, "Stage III", null).length === 0);
+/* ---- NO-OP invariant (Playoffs 108 is still unauthored) ---- */
+const unauthored = buildStageWrappedDeck(108, "Playoffs", PERSONAL);
+check("unauthored section (108) yields an EMPTY deck (no-op)", unauthored.length === 0);
+check("unauthored section with null personal is also empty", buildStageWrappedDeck(108, "Playoffs", null).length === 0);
 check("an entirely unknown section is empty", buildStageWrappedDeck(999, "Stage X", PERSONAL).length === 0);
 check("stageWrappedHasContent: 105 true", stageWrappedHasContent(105) === true);
 check("stageWrappedHasContent: 106 true", stageWrappedHasContent(106) === true);
-check("stageWrappedHasContent: 107 false (not authored yet)", stageWrappedHasContent(107) === false);
+check("stageWrappedHasContent: 107 true (Stage III authored)", stageWrappedHasContent(107) === true);
+check("stageWrappedHasContent: 108 false (not authored yet)", stageWrappedHasContent(108) === false);
 check("stageWrappedHasContent: unknown false", stageWrappedHasContent(999) === false);
 
 /* ---- Authored Stage I, personal ---- */
@@ -95,6 +96,20 @@ check("Stage II carries 5 authored event moments", s2.filter((s) => s.id.startsW
 check("Stage II has a FUCK YOUR PICK'EMS slide", s2.some((s) => s.id === "s2-fyp" && /PICK'EMS/.test(s.eyebrow ?? "")));
 check("Stage II has the donk/Spirit dominance moment", s2.some((s) => s.id === "s2-dominance-spirit-donk" && /10 rounds/.test(s.figure ?? "")));
 check("Stage II has the Astralis drought moment", s2.some((s) => s.id === "s2-drought-astralis"));
+
+/* ---- Authored Stage III, personal (PHA-1120) ---- */
+const s3 = buildStageWrappedDeck(107, "Stage III", PERSONAL);
+check("Stage III deck is non-empty", s3.length > 0);
+check("Stage III opens on the intro slide", s3[0]?.kind === "intro");
+check("Stage III ends on the outro slide", s3[s3.length - 1]?.kind === "outro");
+const s3ids = s3.map((s) => s.id);
+check("Stage III slide ids are unique", new Set(s3ids).size === s3ids.length);
+check("every Stage III slide has a non-empty headline", s3.every((s) => typeof s.headline === "string" && s.headline.length > 0));
+check("Stage III carries 5 authored event moments", s3.filter((s) => s.id.startsWith("s3-")).length === 5);
+check("Stage III has a FUCK YOUR PICK'EMS slide", s3.some((s) => s.id === "s3-fyp" && /PICK'EMS/.test(s.eyebrow ?? "")));
+check("Stage III has the two flawless 3-0 clinchers moment", s3.some((s) => s.id === "s3-perfect-furia-spirit" && /3-0/.test(s.figure ?? "")));
+check("Stage III has the 0-3 elimination moment", s3.some((s) => s.id === "s3-elim-parivision-b8" && /0-3/.test(s.figure ?? "")));
+check("Stage III intro badge numeral is III", buildStageWrappedDeck(107, "Stage III", PERSONAL).find((s) => s.kind === "intro")?.stageBadge?.numeral === "III");
 
 /* ---- Best call absent → no best-call slide ---- */
 const noBest = buildStageWrappedDeck(105, "Stage I", { ...PERSONAL, bestCall: null });
@@ -169,6 +184,9 @@ const s1Called = buildStageWrappedDeck(105, "Stage I", { ...PERSONAL, claims: ["
 check("Stage I flawless slide rewards BetBoom 3:0 caller", s1Called.find((s) => s.id === "s1-flawless-betboom-b8")?.calledIt?.label === "YOU CALLED IT");
 // Signed-out (personal null) → never rewarded.
 check("signed-out deck has no calledIt", buildStageWrappedDeck(106, "Stage II", null, ASSETS).every((s) => s.calledIt === undefined));
+// Stage III: picked FURIA 3:0 (85) → the flawless clincher slide lights up.
+const s3Called = buildStageWrappedDeck(107, "Stage III", { ...PERSONAL, claims: ["85:3:0"] }, ASSETS);
+check("Stage III flawless slide rewards FURIA 3:0 caller", s3Called.find((s) => s.id === "s3-perfect-furia-spirit")?.calledIt?.label === "YOU CALLED IT");
 
 console.log(`\nverify-stage-wrapped-content: ${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);

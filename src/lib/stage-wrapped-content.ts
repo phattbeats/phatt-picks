@@ -239,6 +239,72 @@ const AUTHORED: Record<number, AuthoredStage> = {
       },
     ],
   },
+  // Stage III (the Champions Swiss on HLTV 8301) — sixteen teams, eight Playoff
+  // tickets. Every figure below is from the resolved HLTV Stage 3 table (seeds,
+  // series scores, round diff) and the live answer key — no fabricated beats.
+  107: {
+    intro: {
+      headline: "Sixteen teams. Eight Playoff tickets.",
+      body: "The Champions Stage is done and the Cologne Playoffs are set. Before you see how you called it — here's how Stage III actually went down.",
+    },
+    moments: [
+      {
+        id: "s3-perfect-furia-spirit",
+        kind: "stat",
+        eyebrow: "FLAWLESS",
+        headline: "Two perfect runs into the Playoffs.",
+        figure: "3-0",
+        figureCaption: "FURIA and Spirit dropped zero series",
+        body: "FURIA (#11 seed) swept B8, MOUZ and BetBoom at +32 round diff; Spirit answered at +31. The only two flawless records of the stage, and the top two seeds in the Playoff bracket.",
+        logoPickIds: [85, 81],
+        claims: [{ pickId: 85, bucket: "3:0" }, { pickId: 81, bucket: "3:0" }],
+      },
+      {
+        id: "s3-upset-betboom-falcons",
+        kind: "moment",
+        eyebrow: "BIGGEST UPSET",
+        headline: "The #15 seed swept the #3.",
+        figure: "#15 › #3",
+        figureCaption: "BetBoom 2-0 Falcons",
+        body: "Second-lowest seed in the stage, BetBoom blanked title contender Falcons 2-0 on day two — then closed a 2-0 over FUT on the final day to crash the Playoffs as the lowest-seeded team left standing.",
+        logoPickIds: [137, 139],
+        claims: [{ pickId: 137, bucket: "3:1 / 3:2" }],
+      },
+      {
+        id: "s3-contrarian-9z",
+        kind: "moment",
+        eyebrow: "NOBODY'S BRACKET",
+        headline: "Outscored all stage. Still advanced.",
+        figure: "−3 RD",
+        figureCaption: "9z made it at 139-142 rounds",
+        body: "9z (#13) is the only Playoff team that lost more rounds than it won across the stage — and they did it by knocking out top-seeded Vitality 2-1, then sealing the ticket with a 2-0 over The MongolZ. The bracket-buster nobody pencilled in.",
+        logoPickIds: [112, 89],
+        claims: [{ pickId: 112, bucket: "3:1 / 3:2" }],
+      },
+      {
+        id: "s3-elim-parivision-b8",
+        kind: "moment",
+        eyebrow: "WENT HOME WINLESS",
+        headline: "Both bottom seeds bowed out 0-3.",
+        figure: "0-3",
+        figureCaption: "PARIVISION and B8 eliminated",
+        body: "The two lowest seeds (#16 PARIVISION, #17 B8) were the only teams to leave Stage III without a series win. B8 — a flawless 3-0 back in Stage I — finally ran out of road, dropping all three including the 0-2 to FURIA that opened the stage.",
+        logoPickIds: [142, 135],
+        claims: [{ pickId: 142, bucket: "0:3" }, { pickId: 135, bucket: "0:3" }],
+      },
+      {
+        id: "s3-fyp",
+        kind: "moment",
+        eyebrow: "FUCK YOUR PICK'EMS",
+        headline: "The Playoffs run through 9z and BetBoom.",
+        figure: "#13 · #15",
+        figureCaption: "both crashed the top eight",
+        body: "Seeds #13 (9z, on a negative round diff) and #15 (BetBoom) booked Playoff spots over higher-ranked names, while #1 Vitality needed four tries to advance and lost to 9z on the way. The chalk didn't hold where your pick'em needed it to.",
+        logoPickIds: [112, 137],
+        claims: [{ pickId: 112, bucket: "3:1 / 3:2" }, { pickId: 137, bucket: "3:1 / 3:2" }],
+      },
+    ],
+  },
 };
 
 /** True when a stage has an authored recap (so a caller can skip work for unauthored stages). */
