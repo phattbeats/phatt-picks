@@ -5,7 +5,7 @@
  *
  *   - latestWrappedSectionId picks the LAST (layout-order) section that is BOTH
  *     resolved (in the outcome map) AND authored (Stage Wrapped content exists).
- *   - A resolved-but-UNAUTHORED stage (e.g. Stage III 107 before its moments
+ *   - A resolved-but-UNAUTHORED stage (e.g. Playoffs 108 before its moments
  *     are written) is skipped — it never pops an empty deck.
  *   - An authored-but-UNRESOLVED stage is skipped — no leak before lock.
  *   - "Latest" follows layout order, not numeric id.
@@ -33,9 +33,9 @@ function check(name: string, cond: boolean) {
 }
 
 // Minimal layout: only `sections[].sectionid` is read by the selector. Sections
-// 105/106 are authored (real Stage Wrapped content); 107 (Stage III) is not.
+// 105/106/107 are authored (real Stage Wrapped content); 108 (Playoffs) is not.
 const layout = {
-  sections: [{ sectionid: 105 }, { sectionid: 106 }, { sectionid: 107 }],
+  sections: [{ sectionid: 105 }, { sectionid: 106 }, { sectionid: 107 }, { sectionid: 108 }],
 } as unknown as Layout;
 
 // A resolved section just needs *a* key in the outcome map.
@@ -48,9 +48,10 @@ const resolved = (...ids: number[]): OutcomeMap => {
 check("no outcomes → null (inert before any stage resolves)", latestWrappedSectionId(layout, resolved()) === null);
 check("only 105 resolved+authored → 105", latestWrappedSectionId(layout, resolved(105)) === 105);
 check("105 & 106 resolved+authored → 106 (latest by layout order)", latestWrappedSectionId(layout, resolved(105, 106)) === 106);
-check("107 resolved but UNAUTHORED → null (no empty-deck popup)", latestWrappedSectionId(layout, resolved(107)) === null);
-check("106 authored + 107 unauthored, both resolved → 106", latestWrappedSectionId(layout, resolved(106, 107)) === 106);
-check("all resolved, but only authored ones count → 106", latestWrappedSectionId(layout, resolved(105, 106, 107)) === 106);
+check("105/106/107 resolved+authored → 107 (latest by layout order)", latestWrappedSectionId(layout, resolved(105, 106, 107)) === 107);
+check("108 resolved but UNAUTHORED → null (no empty-deck popup)", latestWrappedSectionId(layout, resolved(108)) === null);
+check("107 authored + 108 unauthored, both resolved → 107", latestWrappedSectionId(layout, resolved(107, 108)) === 107);
+check("all resolved, but only authored ones count → 107", latestWrappedSectionId(layout, resolved(105, 106, 107, 108)) === 107);
 
 // Authored-but-unresolved must NOT be picked (105 authored, but not resolved here).
 check("authored 105 unresolved → null", latestWrappedSectionId(layout, resolved()) === null);
