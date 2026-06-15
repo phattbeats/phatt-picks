@@ -130,7 +130,75 @@ const SPOTLIGHTS: Record<number, TeamSpotlight> = {
       caption: "Spirit close 9z to advance 3-0, Stage 3 (ESL highlights)",
     },
   },
-  // The other six fill in here as each team clinches (PHA-1065), authored from
+  // Aurora, pickid 134. THIRD REAL ENTRY (PHA-1065, authored 2026-06-14 the day
+  // they clinched). Advanced 3-1 from the Stage 3 Swiss (beat Monte, G2, 9z; one
+  // loss to Spirit), sealed by woxic's 1v4 on Dust2 in the decider, verified via
+  // HLTV (event 8301, news 44902) + the ESL highlight feed. Storyline-first per
+  // the template: Turkish CS finally back among the last eight.
+  134: {
+    pickid: 134,
+    narrative: {
+      tag: "A NATION'S RETURN",
+      seedLine: "Advanced 3-1 from Stage 3 · Monte, G2, 9z",
+      before:
+        "Aurora carry Turkish Counter-Strike on their backs. XANTARES has been the face of the scene for a decade, the most explosive entry rifler of his generation, and for all of it a deep Major run has stayed just out of reach. MAJ3R, the veteran in-game leader, has spent a career trying to take a Turkish core to a stage like this.",
+      during:
+        "At Cologne they crossed through. A 3-1 over Monte, G2, and 9z, sealed when woxic stood up in a 1v4 on Dust2 with the berth on the line and won it. Their first run to a Major playoff stage since Copenhagen 2024, the Turkish core back among the last eight.",
+    },
+    highlight: {
+      kind: "youtube",
+      src: "eAWapDuMuas", // @ESLCSHighlights, oEmbed-verified 2026-06-14
+      start: 8,
+      end: 63,
+      caption: "Aurora close 9z to advance 3-1, Stage 3 (ESL highlights)",
+    },
+  },
+  // Vitality, pickid 89. FOURTH REAL ENTRY (PHA-1065, authored 2026-06-14). The
+  // world #1 advanced 3-1 from Stage 3 (beat FUT, MOUZ, BetBoom; an upset loss to
+  // 9z along the way), clinched on a clean 2-0 over BetBoom with ZywOo at 1.66,
+  // verified via HLTV (event 8301, news 44903) + the ESL feed.
+  89: {
+    pickid: 89,
+    narrative: {
+      tag: "THE BURDEN OF FIRST",
+      seedLine: "Advanced 3-1 from Stage 3 · FUT, MOUZ, BetBoom",
+      before:
+        "Vitality came to Cologne ranked number one in the world, built around ZywOo, the AWPer most of the scene calls the best player alive. apEX leads them, the captain who rebuilt his career around that talent. When you are the favorite, anything short of a deep run reads as failure, and they know it.",
+      during:
+        "Stage 3 made them earn it. An upset loss to 9z, then two three-map grinds past FUT and MOUZ, before a clean 2-0 over BetBoom to advance with ZywOo posting a 1.66 in the clincher. Not the procession the ranking implies, but the world number one is through to the bracket where it means to settle things.",
+    },
+    highlight: {
+      kind: "youtube",
+      src: "hQ__kpIsFdI", // @ESLCSHighlights, oEmbed-verified 2026-06-14
+      start: 8,
+      end: 63,
+      caption: "Vitality close BetBoom to advance 3-1, Stage 3 (ESL highlights)",
+    },
+  },
+  // Falcons, pickid 139. FIFTH REAL ENTRY (PHA-1065, authored 2026-06-14).
+  // Advanced 3-1 from Stage 3 (beat G2, Monte, NAVI; one loss to BetBoom), the
+  // NAVI win on the final Swiss day the clinch, verified via HLTV (event 8301,
+  // news 44910/44911) + the ESL feed. Storyline-first: the superteam chasing the
+  // one trophy its biggest star has never won.
+  139: {
+    pickid: 139,
+    narrative: {
+      tag: "THE MISSING CROWN",
+      seedLine: "Advanced 3-1 from Stage 3 · G2, Monte, NAVI",
+      before:
+        "Falcons were assembled to win a Major. NiKo is one of the finest riflers the game has produced and, for all of it, has never lifted the trophy. m0NESY is the prodigy AWP chasing his first. karrigan, the in-game leader who has stood on that stage and won it, was brought in to take them back.",
+      during:
+        "Stage 3 went the distance. A 3-1 through G2 and Monte, then a 2-1 over NAVI on the final Swiss day to reach the LANXESS Arena. NiKo has already named the ambition out loud, that this group is built to repeat what karrigan once did. The bracket is where that gets tested.",
+    },
+    highlight: {
+      kind: "youtube",
+      src: "t3-h7KOVqOM", // @ESLCSHighlights, oEmbed-verified 2026-06-14
+      start: 8,
+      end: 63,
+      caption: "Falcons close NAVI to advance 3-1, Stage 3 (ESL highlights)",
+    },
+  },
+  // The other three fill in here as each team clinches (PHA-1065), authored from
   // their real run per the template above. Until then a playoff team with no
   // entry renders the dossier-only fallback (roster + last 5), never a
   // placeholder story, so nothing fabricated can ship.

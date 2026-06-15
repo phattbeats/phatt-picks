@@ -235,11 +235,11 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   89: { // Vitality
     worldRank: 1,
     roster: [
-      { name: "apEX", position: "IGL", rating: 1.00, hltvUrl: "https://www.hltv.org/player/7322/apex" },
-      { name: "ropz", position: "Rifler", rating: 1.16, hltvUrl: "https://www.hltv.org/player/11816/ropz" },
-      { name: "ZywOo", position: "AWP", rating: 1.32, hltvUrl: "https://www.hltv.org/player/11893/zywoo" },
-      { name: "flameZ", position: "Rifler", rating: 1.14, hltvUrl: "https://www.hltv.org/player/16693/flamez" },
-      { name: "mezii", position: "Rifler", rating: 1.06, hltvUrl: "https://www.hltv.org/player/18462/mezii" },
+      { name: "apEX", position: "IGL", rating: 1.00, hltvUrl: "https://www.hltv.org/player/7322/apex", photo: "https://img-cdn.hltv.org/playerbodyshot/3M9h08qvl3YOsaRcAvKhs4.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C0%2C467%2C467&w=100&s=04d9dbff54d199233368a0f35677b700" },
+      { name: "ropz", position: "Rifler", rating: 1.16, hltvUrl: "https://www.hltv.org/player/11816/ropz", photo: "https://img-cdn.hltv.org/playerbodyshot/YQ9kQQ3aop1JZQE9xJ140r.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=117%2C8%2C467%2C467&w=100&s=0e87b5b49a484b8191bf18fb0bb5209c" },
+      { name: "ZywOo", position: "AWP", rating: 1.32, hltvUrl: "https://www.hltv.org/player/11893/zywoo", photo: "https://img-cdn.hltv.org/playerbodyshot/blnoWFtH8GUJZjhr8H0P4u.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C8%2C467%2C467&w=100&s=3e2f64c057b9a697de74efc831d0e967" },
+      { name: "flameZ", position: "Rifler", rating: 1.14, hltvUrl: "https://www.hltv.org/player/16693/flamez", photo: "https://img-cdn.hltv.org/playerbodyshot/LUQi5dX9boyO0uDadUGht5.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C8%2C467%2C467&w=100&s=ce93fe004f9085d1603f3ca148364b5b" },
+      { name: "mezii", position: "Rifler", rating: 1.06, hltvUrl: "https://www.hltv.org/player/18462/mezii", photo: "https://img-cdn.hltv.org/playerbodyshot/7GVUrVLAQkgnuovRkk5Bxw.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=117%2C8%2C467%2C467&w=100&s=e489a038a337ee7ed99723743ef3ba3c" },
     ],
     recent: [
       { date: "15/05/2026", opponent: "Natus Vincere", score: "1-2", result: "L" },
@@ -451,11 +451,11 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   134: { // Aurora
     worldRank: 6,
     roster: [
-      { name: "MAJ3R", position: "IGL", rating: 0.89, hltvUrl: "https://www.hltv.org/player/150/maj3r" },
-      { name: "XANTARES", position: "Rifler", rating: 1.16, hltvUrl: "https://www.hltv.org/player/7938/xantares" },
-      { name: "woxic", position: "AWP", rating: 1.05, hltvUrl: "https://www.hltv.org/player/8574/woxic" },
-      { name: "soulfly", position: "Rifler", rating: 1.01, hltvUrl: "https://www.hltv.org/player/20968/soulfly" },
-      { name: "Wicadia", position: "Rifler", rating: 1.12, hltvUrl: "https://www.hltv.org/player/21243/wicadia" },
+      { name: "MAJ3R", position: "IGL", rating: 0.89, hltvUrl: "https://www.hltv.org/player/150/maj3r", photo: "https://img-cdn.hltv.org/playerbodyshot/OHhj5VnQSq11DnTdsIvR2s.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=124%2C8%2C467%2C467&w=100&s=6b4de506ca55affcd5011e8aab040d8d" },
+      { name: "XANTARES", position: "Rifler", rating: 1.16, hltvUrl: "https://www.hltv.org/player/7938/xantares", photo: "https://img-cdn.hltv.org/playerbodyshot/aEgLOOfzRrsHvRrKpL47rE.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C8%2C467%2C467&w=100&s=7e9ecb513c3b8f04ae2adba8e5dc3035" },
+      { name: "woxic", position: "AWP", rating: 1.05, hltvUrl: "https://www.hltv.org/player/8574/woxic", photo: "https://img-cdn.hltv.org/playerbodyshot/2cF-tkevaAVy-qMjUWba4W.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C8%2C467%2C467&w=100&s=bf5ae47317fbb9a5b462b967bf1b9c51" },
+      { name: "soulfly", position: "Rifler", rating: 1.01, hltvUrl: "https://www.hltv.org/player/20968/soulfly", photo: "https://img-cdn.hltv.org/playerbodyshot/ilIYrdas7tyZB8YsHqZjwq.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=124%2C0%2C467%2C467&w=100&s=0a476b3e4a80f32d8b98da98a03742b2" },
+      { name: "Wicadia", position: "Rifler", rating: 1.12, hltvUrl: "https://www.hltv.org/player/21243/wicadia", photo: "https://img-cdn.hltv.org/playerbodyshot/Z9uIo6WYSEC5Sk9X6q-7BR.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=117%2C8%2C467%2C467&w=100&s=247a4c748843463badd702c4bc57d8c7" },
     ],
     recent: [
       { date: "15/05/2026", opponent: "MOUZ", score: "0-2", result: "L" },
@@ -505,11 +505,11 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   139: { // Falcons
     worldRank: 4,
     roster: [
-      { name: "karrigan", position: "IGL", rating: 0.73, hltvUrl: "https://www.hltv.org/player/429/karrigan" },
-      { name: "NiKo", position: "Rifler", rating: 1.13, hltvUrl: "https://www.hltv.org/player/3741/niko" },
-      { name: "TeSeS", position: "Rifler", rating: 1.03, hltvUrl: "https://www.hltv.org/player/12018/teses" },
-      { name: "m0NESY", position: "AWP", rating: 1.26, hltvUrl: "https://www.hltv.org/player/19230/m0nesy" },
-      { name: "kyousuke", position: "Rifler", rating: 1.17, hltvUrl: "https://www.hltv.org/player/24177/kyousuke" },
+      { name: "karrigan", position: "IGL", rating: 0.73, hltvUrl: "https://www.hltv.org/player/429/karrigan", photo: "https://img-cdn.hltv.org/playerbodyshot/xBsdjNQu8t41sc7_xp-oru.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=117%2C4%2C467%2C467&w=100&s=7f5bcaee6b2db48f62cf95f04c8bac8a" },
+      { name: "NiKo", position: "Rifler", rating: 1.13, hltvUrl: "https://www.hltv.org/player/3741/niko", photo: "https://img-cdn.hltv.org/playerbodyshot/tNeWr2qE97l9huJU1Whcr7.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C8%2C467%2C467&w=100&s=2b677069d27dbb9fbc5563046ea27b69" },
+      { name: "TeSeS", position: "Rifler", rating: 1.03, hltvUrl: "https://www.hltv.org/player/12018/teses", photo: "https://img-cdn.hltv.org/playerbodyshot/09IF7a6T90bzcmhtZ3zG6Z.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C0%2C467%2C467&w=100&s=8c4b3cfc22fb55e2daa95a5b5dc6ae7a" },
+      { name: "m0NESY", position: "AWP", rating: 1.26, hltvUrl: "https://www.hltv.org/player/19230/m0nesy", photo: "https://img-cdn.hltv.org/playerbodyshot/2Qa6QeoErj6A7sK82UHQm9.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=124%2C0%2C467%2C467&w=100&s=5732dc74850751290d023050236f97a8" },
+      { name: "kyousuke", position: "Rifler", rating: 1.17, hltvUrl: "https://www.hltv.org/player/24177/kyousuke", photo: "https://img-cdn.hltv.org/playerbodyshot/ve31sdQzcMJkyiFnSXeb6N.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=124%2C0%2C467%2C467&w=100&s=4ccb2cf479e95fd4406628c22682555c" },
     ],
     recent: [
       { date: "24/05/2026", opponent: "Legacy", score: "1-3", result: "L" },
