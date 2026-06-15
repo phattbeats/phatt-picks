@@ -18,11 +18,12 @@ import { isSwissSection, bucketSwissSlots } from "@/lib/swiss-bucket-core";
 import {
   isPlayoffSection,
   buildPlayoffBracket,
-  playoffRoundForSection,
+  buildPlayoffPickTree,
   PLAYOFF_ROUNDS,
 } from "@/lib/playoff-bracket-core";
 import { LockIcon } from "@/components/ui/LockIcon";
 import { LivePlayoffBracket } from "@/components/heat/LivePlayoffBracket";
+import { PlayoffBracketPicker } from "@/components/heat/PlayoffBracketPicker";
 import { QualifiedStrip } from "@/components/ui/QualifiedStrip";
 import { buildSwissStandings, type SlotPickMap } from "@/lib/swiss-standings-core";
 import { stageWrappedHasContent } from "@/lib/stage-wrapped-content";
@@ -213,9 +214,11 @@ export default async function PicksPage({
   // is open, matching Brandon's reference. Built only when viewing a playoff tab.
   let playoffBracket: ReturnType<typeof buildPlayoffBracket> | null = null;
   let playoffResolvedAtIso: string | null = null;
-  // Viewer's saved picks per playoff section, in the PicksBoard shape — feeds
-  // the stacked round pickers on the consolidated Playoffs tab (PHA-1016).
-  const playoffPicksBySection: Record<number, Record<number, Record<number, number>>> = {};
+  // PHA-1204: the predictor model (QF→SF→GF feed tree) + the viewer's saved
+  // winner per match, keyed by groupId (slot 0). Feeds the single interactive
+  // bracket that replaces the stacked round-pickers.
+  let playoffPickModel: ReturnType<typeof buildPlayoffPickTree> | null = null;
+  const playoffInitialPicks: Record<number, number> = {};
   if (playoffActive) {
     // Viewer's call per match (one pick slot per match group, slot 0).
     const userPickByGroup = new Map<number, number>();
@@ -224,11 +227,13 @@ export default async function PicksPage({
         where: { playerId: session.playerId, eventId: EVENT_ID, sectionId: { in: playoffSectionIds } },
       });
       for (const p of myPlayoffPicks) {
-        const bySection = (playoffPicksBySection[p.sectionId] ??= {});
-        (bySection[p.groupId] ??= {})[p.slotIndex] = p.pickId;
-        if (p.slotIndex === 0 && p.pickId !== 0) userPickByGroup.set(p.groupId, p.pickId);
+        if (p.slotIndex === 0 && p.pickId !== 0) {
+          userPickByGroup.set(p.groupId, p.pickId);
+          playoffInitialPicks[p.groupId] = p.pickId;
+        }
       }
     }
+    playoffPickModel = buildPlayoffPickTree(playoffSections);
     // Resolved winners per match.
     const winnerByGroup = new Map<number, number>();
     const playoffOutcomes = await prisma.stageOutcome.findMany({
@@ -412,50 +417,43 @@ export default async function PicksPage({
         // (they all lock together); until then an honest status strip. The
         // full QF → SF → GF tree renders beneath either way.
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          {anyPlayoffPickable ? (
-            playoffSections
-              .filter((s) => sectionPickability.get(s.sectionid)?.pickable)
-              .map((s) => (
-                <section
-                  key={s.sectionid}
-                  style={{ display: "flex", flexDirection: "column", gap: 10 }}
-                >
-                  <span className="eyebrow-mono" style={{ color: "var(--heat)" }}>
-                    [ {playoffRoundForSection(s.sectionid)?.label ?? s.name.split(" | ")[0].toUpperCase()} ]
-                  </span>
-                  <PicksBoard
-                    section={s}
-                    teams={layout.teams}
-                    initialPicks={playoffPicksBySection[s.sectionid] ?? {}}
-                    enabled={!!session}
-                    eventId={EVENT_ID}
-                    steamLinked={!!session?.steamId}
-                    liveTeamStats={liveTeamStats?.byPickid}
-                    liveStatsAsOf={liveTeamStats?.asOf}
-                    spotlightMarket={spotlightMarket}
-                  />
-                </section>
-              ))
+          {anyPlayoffPickable && playoffPickModel ? (
+            // PHA-1204: ONE bracket, placed at once. The interactive QF→SF→GF
+            // tree replaces the three stacked round-pickers — crown a winner and
+            // they advance into the round they feed.
+            <PlayoffBracketPicker
+              model={playoffPickModel}
+              teams={layout.teams}
+              initialPicks={playoffInitialPicks}
+              enabled={!!session}
+              eventId={EVENT_ID}
+              signedIn={!!session}
+              steamLinked={!!session?.steamId}
+              liveTeamStats={liveTeamStats?.byPickid}
+              liveStatsAsOf={liveTeamStats?.asOf}
+              spotlightMarket={spotlightMarket}
+            />
           ) : (
             <>
-              {/* PHA-1043: before Valve seeds, the picker tiles are empty, so a
+              {/* PHA-1043: before Valve seeds, the picker is empty, so a
                   "Qualified for Playoffs" strip surfaces clinched + authored
-                  teams' Spotlights to build anticipation as the field is named. */}
+                  teams' Spotlights to build anticipation as the field is named.
+                  The read-only bracket below shows the tree filling in live. */}
               <QualifiedStrip
                 teams={layout.teams}
                 liveTeamStats={liveTeamStats?.byPickid}
                 liveStatsAsOf={liveTeamStats?.asOf}
               />
               <LockedStageCard pickability={activePickability} compact />
+              {playoffBracket && (
+                <LivePlayoffBracket
+                  bracket={playoffBracket}
+                  teamMap={buildTeamMap(layout)}
+                  signedIn={!!session}
+                  resolvedAtIso={playoffResolvedAtIso}
+                />
+              )}
             </>
-          )}
-          {playoffBracket && (
-            <LivePlayoffBracket
-              bracket={playoffBracket}
-              teamMap={buildTeamMap(layout)}
-              signedIn={!!session}
-              resolvedAtIso={playoffResolvedAtIso}
-            />
           )}
           <AutoRefresh intervalMs={60_000} />
         </div>

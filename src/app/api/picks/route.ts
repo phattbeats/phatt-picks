@@ -27,6 +27,7 @@ import { isStageWritable } from "@/lib/reveal-core";
 import { isLockTimePassed } from "@/lib/lock-schedule-core";
 import { currentEventId } from "@/lib/events-core";
 import { isWriteFrozenById } from "@/lib/event-freeze";
+import { isPlayoffSection, PLAYOFF_ROUNDS, playoffFieldTeams } from "@/lib/playoff-bracket-core";
 
 export async function GET(req: NextRequest) {
   const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
@@ -78,10 +79,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `unknown section ${secId}` }, { status: 400 });
   }
 
-  // A resolved outcome for any slot in this section proves the stage closed,
-  // even if the layout snapshot we hold still says picks_allowed:true.
+  // PHA-1204: the playoffs are ONE stage — you fill the whole QF→SF→GF bracket at
+  // once. So a Semifinal / Grand Final write must be allowed the moment the
+  // bracket OPENS (the QF round seeds), not gated on its own round, whose teams
+  // are still TBD and whose picks_allowed flag Valve may flip independently. Gate
+  // every playoff section's write on the Quarterfinals: writable until any
+  // playoff match resolves or the QF's published start passes.
+  const playoff = isPlayoffSection(secId);
+  const playoffSectionIds = PLAYOFF_ROUNDS.map((r) => r.sectionId);
+  const lockSectionId = playoff ? PLAYOFF_ROUNDS[0].sectionId : secId;
+  const lockSection = playoff
+    ? layout.sections.find((s) => s.sectionid === lockSectionId) ?? section
+    : section;
+
+  // A resolved outcome for any slot in the gating section proves the stage
+  // closed, even if the layout snapshot we hold still says picks_allowed:true.
+  // For playoffs, ANY resolved playoff match closes the whole bracket.
   const resolvedCount = await prisma.stageOutcome.count({
-    where: { eventId: evtId, sectionId: secId },
+    where: playoff
+      ? { eventId: evtId, sectionId: { in: playoffSectionIds } }
+      : { eventId: evtId, sectionId: secId },
   });
   const hasOutcome = resolvedCount > 0;
 
@@ -90,11 +107,17 @@ export async function POST(req: NextRequest) {
   // write so a crafted POST can't slip a pick past the (now Locked) UI (PHA-898).
   // Same lockedByTime signal the reveal gate uses, so writable and revealed stay
   // exact inverses (no edit-but-can't-compare dead zone).
-  const lockedByTime = isLockTimePassed(secId, Date.now());
+  const lockedByTime = isLockTimePassed(lockSectionId, Date.now());
 
-  if (section.groups.some((g) => !isStageWritable(g, hasOutcome, lockedByTime))) {
+  if (lockSection.groups.some((g) => !isStageWritable(g, hasOutcome, lockedByTime))) {
     return NextResponse.json({ error: "stage_locked" }, { status: 409 });
   }
+
+  // Eligibility universe for a downstream playoff pick (PHA-1204): your SF/GF
+  // call is one of the eight survivors you advanced, none of which the layout has
+  // placed on the SF/GF group slots yet. So validate such a pick against the
+  // whole playoff field (the QF-seeded teams), not its own — still-TBD — group.
+  const playoffField = playoff ? playoffFieldTeams(layout.sections) : null;
 
   // Per-pick validation below only checks a slot exists and the team is eligible.
   // It does NOT stop a crafted batch from putting the SAME team in two slots, or
@@ -136,7 +159,17 @@ export async function POST(req: NextRequest) {
 
     const reason = validatePickAgainstLayout(layout, secId, gId, sIdx, pId);
     if (reason) {
-      return NextResponse.json({ error: `invalid pick: ${reason}` }, { status: 400 });
+      // A downstream playoff pick targets a team seeded in the QF section, not in
+      // its own group — accept it when it's one of the eight playoff survivors;
+      // every other failure (unknown slot/group, off-field team) still rejects.
+      const playoffAdvance =
+        playoffField != null &&
+        pId !== 0 &&
+        playoffField.has(pId) &&
+        reason === `team ${pId} not eligible for group ${gId}`;
+      if (!playoffAdvance) {
+        return NextResponse.json({ error: `invalid pick: ${reason}` }, { status: 400 });
+      }
     }
 
     // Clearing a slot (pickId 0) leaves itemId empty by design; only enforce
