@@ -214,6 +214,175 @@ export function buildPlayoffBracket(inputs: PlayoffInputs): PlayoffBracket {
   return { rounds, anySeeded, anyDecided, totalMatches, championPickid };
 }
 
+/**
+ * The set of teams seeded into the playoff field — every non-TBD team that
+ * appears in the Quarterfinal section's match groups (the eight survivors).
+ *
+ * This is the eligibility universe for the WHOLE bracket (PHA-1204): a viewer's
+ * Semifinal / Grand Final pick is one of their own advanced teams, none of which
+ * the layout has placed on the SF/GF group slots yet (those stay TBD until the
+ * matches are actually played). So a pick for a downstream round targets a team
+ * seeded in the QF section, not in its own group — this set is what the picks
+ * API validates such a pick against. Empty until Valve seeds the bracket.
+ */
+export function playoffFieldTeams(sections: readonly Section[]): Set<number> {
+  const field = new Set<number>();
+  const qf = sections.find((s) => s.sectionid === PLAYOFF_ROUNDS[0].sectionId);
+  if (!qf) return field;
+  for (const g of qf.groups) {
+    for (const t of g.teams) {
+      if (t.pickid !== 0) field.add(t.pickid);
+    }
+  }
+  return field;
+}
+
+/* ------------------------------------------------------------------------- *
+ * Interactive bracket predictor (PHA-1204)
+ *
+ * Brandon: "Playoffs: it is ONE stage, you place the whole bracket at once."
+ * The old picker stacked three separate boards (QF/SF/GF) and only let you pick
+ * a round once Valve had seeded its teams — so you could never fill in the
+ * Semifinals or Final ahead of time. The bracket predictor below models the
+ * tournament truth: you crown a winner in each Quarterfinal and that team
+ * ADVANCES into the Semifinal it feeds, and so on to the Final. The SF/GF
+ * participants are derived from YOUR picks, not from the layout, so the whole
+ * tree is fillable the moment the eight QF teams seed in.
+ *
+ * Pure + total: the model is the committed bracket shape; resolving picks against
+ * it never throws and never fabricates a team. Re-picking an upstream match
+ * cascades — any downstream pick that no longer has its team in play is dropped.
+ * ------------------------------------------------------------------------- */
+
+/** One side of a predictor match: a seeded team (QF) or a feeder match (SF/GF). */
+export interface BracketSide {
+  /** Seeded team pickid for this side (Quarterfinals only), else null. */
+  seed: number | null;
+  /** The match whose winner advances into this side (SF/GF), else null. */
+  feederGroupId: number | null;
+}
+
+export interface BracketPickMatch {
+  groupId: number;
+  sectionId: number;
+  round: PlayoffRoundKey;
+  /** Short match label, e.g. "Match 1" / "Final". */
+  label: string;
+  top: BracketSide;
+  bottom: BracketSide;
+}
+
+export interface BracketPickRound {
+  key: PlayoffRoundKey;
+  label: string;
+  short: string;
+  sectionId: number;
+  matches: BracketPickMatch[];
+}
+
+export interface BracketPickModel {
+  rounds: BracketPickRound[];
+  /** The Grand Final match group, or null if the GF section isn't present. */
+  finalGroupId: number | null;
+}
+
+/**
+ * Build the predictor tree from the committed playoff sections. QF matches carry
+ * their two seeded teams; each later-round match's two sides are FED by the two
+ * matches below it (match j in round r is fed by matches 2j and 2j+1 of round
+ * r-1 — the same pairing the read-only bracket draws its connectors from). Order
+ * is QF → SF → GF; a missing round just truncates the tree.
+ */
+export function buildPlayoffPickTree(sections: readonly Section[]): BracketPickModel {
+  const byId = new Map<number, Section>();
+  for (const s of sections) byId.set(s.sectionid, s);
+
+  const rounds: BracketPickRound[] = [];
+  let prev: BracketPickMatch[] = [];
+  let finalGroupId: number | null = null;
+
+  for (const def of PLAYOFF_ROUNDS) {
+    const section = byId.get(def.sectionId);
+    if (!section) {
+      prev = [];
+      continue;
+    }
+    const isQF = def.key === "QF";
+    const matches: BracketPickMatch[] = section.groups.map((g, j) => {
+      const top: BracketSide = isQF
+        ? { seed: (g.teams[0]?.pickid ?? 0) || null, feederGroupId: null }
+        : { seed: null, feederGroupId: prev[2 * j]?.groupId ?? null };
+      const bottom: BracketSide = isQF
+        ? { seed: (g.teams[1]?.pickid ?? 0) || null, feederGroupId: null }
+        : { seed: null, feederGroupId: prev[2 * j + 1]?.groupId ?? null };
+      return {
+        groupId: g.groupid,
+        sectionId: section.sectionid,
+        round: def.key,
+        label: matchLabel(g.name),
+        top,
+        bottom,
+      };
+    });
+    if (def.key === "GF") finalGroupId = matches[0]?.groupId ?? null;
+    rounds.push({ key: def.key, label: def.label, short: def.short, sectionId: def.sectionId, matches });
+    prev = matches;
+  }
+
+  return { rounds, finalGroupId };
+}
+
+/** A match's two resolved participants, given the picks made so far. */
+export interface ResolvedMatch {
+  top: number | null;
+  bottom: number | null;
+}
+
+export interface ResolvedBracket {
+  /** groupId → the two teams currently in that match (null = undecided/TBD). */
+  participants: Map<number, ResolvedMatch>;
+  /** groupId → the viewer's winner, after cascade-pruning impossible picks. */
+  picks: Record<number, number>;
+  /** The predicted champion (Grand Final winner), or null. */
+  championPickid: number | null;
+}
+
+/**
+ * Resolve a set of raw winner picks against the tree. Walks the rounds in order
+ * so each match sees the (already pruned) winners feeding it, then keeps the
+ * viewer's pick only when that team is actually one of the two participants —
+ * dropping any pick orphaned by an upstream change. Pure: never mutates inputs.
+ */
+export function resolveBracketPicks(
+  model: BracketPickModel,
+  rawPicks: Readonly<Record<number, number>>,
+): ResolvedBracket {
+  const participants = new Map<number, ResolvedMatch>();
+  const picks: Record<number, number> = {};
+
+  const sideTeam = (side: BracketSide): number | null =>
+    side.seed != null
+      ? side.seed
+      : side.feederGroupId != null
+        ? picks[side.feederGroupId] ?? null
+        : null;
+
+  for (const round of model.rounds) {
+    for (const m of round.matches) {
+      const top = sideTeam(m.top);
+      const bottom = sideTeam(m.bottom);
+      participants.set(m.groupId, { top, bottom });
+      const cur = rawPicks[m.groupId] ?? 0;
+      if (cur !== 0 && (cur === top || cur === bottom)) picks[m.groupId] = cur;
+    }
+  }
+
+  const championPickid =
+    model.finalGroupId != null ? picks[model.finalGroupId] ?? null : null;
+
+  return { participants, picks, championPickid };
+}
+
 /** Tally the viewer's playoff calls across the whole bracket (for header copy). */
 export interface PlayoffPickSummary {
   picks: number;
