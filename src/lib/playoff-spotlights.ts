@@ -198,10 +198,88 @@ const SPOTLIGHTS: Record<number, TeamSpotlight> = {
       caption: "Falcons close NAVI to advance 3-1, Stage 3 (ESL highlights)",
     },
   },
-  // The other three fill in here as each team clinches (PHA-1065), authored from
-  // their real run per the template above. Until then a playoff team with no
-  // entry renders the dossier-only fallback (roster + last 5), never a
-  // placeholder story, so nothing fabricated can ship.
+  // 9z, pickid 112. SIXTH REAL ENTRY (PHA-1198 wave 2, authored 2026-06-15 on
+  // clinch). Advanced 3-2 from Stage 3 (beat PARIVISION, Vitality, The MongolZ;
+  // losses to Spirit and Aurora), the MongolZ win a win or go home decider that
+  // dgt closed with an ace on Overpass. Verified via HLTV (event 8301, clinch
+  // match 2394993) + the ESL feed. Storyline-first: the first South American
+  // team without a Brazilian core to reach a Major playoff.
+  112: {
+    pickid: 112,
+    narrative: {
+      tag: "BEYOND BRAZIL",
+      seedLine: "Advanced 3-2 from Stage 3 · PARIVISION, Vitality, The MongolZ",
+      before:
+        "For twenty years South American Counter-Strike has meant Brazil. 9z carry the other half of the continent, an Argentine organization with a roster drawn from Argentina, Uruguay and Chile, the Spanish speaking scene that had never broken through at a Major.",
+      during:
+        "At Cologne they broke through. 9z upset the world number one Vitality in the Swiss, then won a do or die decider against The MongolZ, dgt closing it with an ace on Overpass. It is the first time a South American team without a Brazilian core has reached a Major playoff, and luchov, the 25 year old who carried them all event, has them in the last eight.",
+    },
+    // Official ESL per-match reel for the MongolZ clinch ("LAST CHANCE!"),
+    // trimmed to a ~55s window via start/end, same recipe as the rest.
+    highlight: {
+      kind: "youtube",
+      src: "keOcraGlS54", // @ESLCSHighlights, oEmbed-verified 2026-06-15
+      start: 8,
+      end: 63,
+      caption: "9z close The MongolZ to advance 3-2, Stage 3 (ESL highlights)",
+    },
+  },
+  // BetBoom, pickid 137. SEVENTH REAL ENTRY (PHA-1198 wave 2, authored
+  // 2026-06-15 on clinch). Advanced 3-2 from Stage 3 (beat The MongolZ, Falcons,
+  // FUT; losses to FURIA and Vitality), the FUT sweep a 2-2 elimination decider.
+  // Verified via HLTV (event 8301, clinch match 2394994) + the ESL feed.
+  // Note: S1ren is BetBoom's registered fifth, but loanee fl4mus (ex-Virtus.pro)
+  // stood in across all five Stage 3 matches; the dossier shows the registered
+  // roster HLTV lists. Storyline-first: the Major-winning captain's road back.
+  137: {
+    pickid: 137,
+    narrative: {
+      tag: "THE LONG WAY BACK",
+      seedLine: "Advanced 3-2 from Stage 3 · The MongolZ, Falcons, FUT",
+      before:
+        "Boombl4 once stood at the very top. In 2021 he was the in game leader who captained Natus Vincere to the Stockholm Major, the organization's first, on a roster whose star s1mple was the tournament MVP. Then he was released, and spent years in the tier below the one he had ruled.",
+      during:
+        "At Cologne the captain found his way back. At the head of an all Russian lineup built on players in their early twenties, BetBoom beat The MongolZ and Falcons, survived losses to FURIA and Vitality, then swept FUT in a win or go home decider to reach the bracket. The man who once lifted the trophy is back among the last eight.",
+    },
+    // Official ESL per-match reel for the FUT clinch ("LAST CHANCE!"), trimmed
+    // to a ~55s window via start/end, same recipe as the rest.
+    highlight: {
+      kind: "youtube",
+      src: "MhC0VgllurE", // @ESLCSHighlights, oEmbed-verified 2026-06-15
+      start: 8,
+      end: 63,
+      caption: "BetBoom sweep FUT to advance 3-2, Stage 3 (ESL highlights)",
+    },
+  },
+  // G2, pickid 59. EIGHTH REAL ENTRY (PHA-1198 wave 2, authored 2026-06-15 on
+  // clinch). Advanced 3-2 from Stage 3 (beat FUT, Legacy, NAVI; losses to
+  // Falcons and Aurora), the NAVI win a 2-2 decider that went the full distance
+  // (overtime on Inferno, then Mirage). Verified via HLTV (event 8301, clinch
+  // match 2394995) + the ESL feed. Storyline-first: the superteam dismantled and
+  // rebuilt around youth, back in a Major playoff.
+  59: {
+    pickid: 59,
+    narrative: {
+      tag: "THE REBUILD",
+      seedLine: "Advanced 3-2 from Stage 3 · FUT, Legacy, NAVI",
+      before:
+        "A year ago G2 were a superteam built around NiKo and m0NESY, and it did not work. Both stars left for Falcons in 2025, and the organization said so plainly, that it had tried to build a future with them and failed. What was left was huNter, the lone holdover from the old core, and a young, cheaper lineup nobody expected to contend.",
+      during:
+        "That young G2 has arrived. Through the Stage 3 gauntlet they survived an elimination match with Legacy, then beat NAVI in a 2-2 decider that went the full distance, an overtime escape on Inferno before closing Mirage. HeavyGod, already an MVP this year at BLAST Open London, and MATYS carried a rebuilt roster into the last eight.",
+    },
+    // Official ESL per-match reel for the NAVI clinch ("LAST SPOT FOR
+    // PLAYOFFS!"), trimmed to a ~55s window via start/end, same recipe.
+    highlight: {
+      kind: "youtube",
+      src: "oVt4EwPR4Qo", // @ESLCSHighlights, oEmbed-verified 2026-06-15
+      start: 8,
+      end: 63,
+      caption: "G2 close NAVI to advance 3-2, Stage 3 (ESL highlights)",
+    },
+  },
+  // All eight playoff teams are now authored (FURIA, Spirit, Aurora, Vitality,
+  // Falcons, 9z, BetBoom, G2). A pickid with no entry still renders the
+  // dossier-only fallback (roster + last 5), never a placeholder story.
 };
 
 /** The team's spotlight draft, or null if none authored (→ dossier fallback). */

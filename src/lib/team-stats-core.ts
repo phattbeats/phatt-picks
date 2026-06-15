@@ -91,11 +91,11 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   59: { // G2
     worldRank: 14,
     roster: [
-      { name: "huNter-", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/3972/hunter" },
-      { name: "NertZ", position: "Rifler", rating: 1.12, hltvUrl: "https://www.hltv.org/player/9436/nertz" },
-      { name: "SunPayus", position: "AWP", rating: 1.06, hltvUrl: "https://www.hltv.org/player/19164/sunpayus" },
-      { name: "HeavyGod", position: "Rifler", rating: 1.15, hltvUrl: "https://www.hltv.org/player/20447/heavygod" },
-      { name: "MATYS", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/21062/matys" },
+      { name: "huNter-", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/3972/hunter", photo: "https://img-cdn.hltv.org/playerbodyshot/TLblUN6ECPWq8B-BCk60q5.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=117%2C8%2C467%2C467&w=100&s=363c0de7a075eac9e627887682da5009" },
+      { name: "NertZ", position: "Rifler", rating: 1.12, hltvUrl: "https://www.hltv.org/player/9436/nertz", photo: "https://img-cdn.hltv.org/playerbodyshot/fVb-kixqE1ekkxdWQIMn8V.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C8%2C467%2C467&w=100&s=0bf76a8f3b7d2dd6da12371270924036" },
+      { name: "SunPayus", position: "AWP", rating: 1.06, hltvUrl: "https://www.hltv.org/player/19164/sunpayus", photo: "https://img-cdn.hltv.org/playerbodyshot/lBSCuct0c7EwbBKHVL4m8e.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C8%2C467%2C467&w=100&s=0e7167368019c2ac60fb51789f3c5a98" },
+      { name: "HeavyGod", position: "Rifler", rating: 1.15, hltvUrl: "https://www.hltv.org/player/20447/heavygod", photo: "https://img-cdn.hltv.org/playerbodyshot/Rbf6g0Gfxofe4JPtMeYF7W.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C8%2C467%2C467&w=100&s=aabc3cfe6a5c4072bffaa8b1f4326ad2" },
+      { name: "MATYS", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/21062/matys", photo: "https://img-cdn.hltv.org/playerbodyshot/LycsmHFN1_EtxnyywwHtzG.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=124%2C12%2C467%2C467&w=100&s=59d454b244418c7447250fa47336e39a" },
     ],
     recent: [
       { date: "15/05/2026", opponent: "Spirit", score: "0-2", result: "L" },
@@ -325,11 +325,11 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   112: { // 9z
     worldRank: 20,
     roster: [
-      { name: "max", position: "Rifler", rating: 1.07, hltvUrl: "https://www.hltv.org/player/12092/max" },
-      { name: "dgt", position: "AWP", rating: 1.18, hltvUrl: "https://www.hltv.org/player/14736/dgt" },
-      { name: "meyern", position: "Rifler", rating: 1.03, hltvUrl: "https://www.hltv.org/player/14737/meyern" },
-      { name: "luchov", position: "Rifler", rating: 1.18, hltvUrl: "https://www.hltv.org/player/20394/luchov" },
-      { name: "HUASOPEEK", position: "Rifler", rating: 1.09, hltvUrl: "https://www.hltv.org/player/22613/huasopeek" },
+      { name: "max", position: "Rifler", rating: 1.07, hltvUrl: "https://www.hltv.org/player/12092/max", photo: "https://img-cdn.hltv.org/playerbodyshot/vPT97tKV6UdEu6QPI8oPew.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=124%2C4%2C467%2C467&w=100&s=4648e352dd862556a748d84689813ed4" },
+      { name: "dgt", position: "AWP", rating: 1.18, hltvUrl: "https://www.hltv.org/player/14736/dgt", photo: "https://img-cdn.hltv.org/playerbodyshot/6WgYZCFU9Si5ZpP8-Mx2Xc.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C0%2C467%2C467&w=100&s=d1bd5658b6b8b2380ac5e78d30a7e0d3" },
+      { name: "meyern", position: "Rifler", rating: 1.03, hltvUrl: "https://www.hltv.org/player/14737/meyern", photo: "https://img-cdn.hltv.org/playerbodyshot/IChotzP5mVSrqVy4PTHYzK.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C4%2C467%2C467&w=100&s=3da801fbdc6903f7f667c99e2dd74fb2" },
+      { name: "luchov", position: "Rifler", rating: 1.18, hltvUrl: "https://www.hltv.org/player/20394/luchov", photo: "https://img-cdn.hltv.org/playerbodyshot/wwhGNwbmraJczwS0mGEHv-.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C4%2C467%2C467&w=100&s=a34981ba05b31f2f9a312201ca802990" },
+      { name: "HUASOPEEK", position: "Rifler", rating: 1.09, hltvUrl: "https://www.hltv.org/player/22613/huasopeek", photo: "https://img-cdn.hltv.org/playerbodyshot/-1_hkAFXOtvEwx4rEHfalZ.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C0%2C467%2C467&w=100&s=feccbc19fe5ab9274d687d603521711c" },
     ],
     recent: [
       { date: "29/05/2026", opponent: "FaZe", score: "1-2", result: "L" },
@@ -487,11 +487,11 @@ export const TEAM_STATS: Record<number, TeamStats> = {
   137: { // BetBoom
     worldRank: 21,
     roster: [
-      { name: "Boombl4", position: "IGL", rating: 0.98, hltvUrl: "https://www.hltv.org/player/11840/boombl4" },
-      { name: "zorte", position: "AWP", rating: 0.98, hltvUrl: "https://www.hltv.org/player/15662/zorte" },
-      { name: "S1ren", position: "Rifler", rating: 1.06, hltvUrl: "https://www.hltv.org/player/18506/s1ren" },
-      { name: "d1Ledez", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/20357/d1ledez" },
-      { name: "Magnojez", position: "Rifler", rating: 1.16, hltvUrl: "https://www.hltv.org/player/21667/magnojez" },
+      { name: "Boombl4", position: "IGL", rating: 0.98, hltvUrl: "https://www.hltv.org/player/11840/boombl4", photo: "https://img-cdn.hltv.org/playerbodyshot/n0tPG5RsfX_R0u29lg1_oB.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C8%2C467%2C467&w=100&s=60d357ac585dd157b464744c13139947" },
+      { name: "zorte", position: "AWP", rating: 0.98, hltvUrl: "https://www.hltv.org/player/15662/zorte", photo: "https://img-cdn.hltv.org/playerbodyshot/2cE6sK6aThhCSgSGjA2fKe.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=121%2C8%2C467%2C467&w=100&s=97517c888730a698f799d6489c0414bd" },
+      { name: "S1ren", position: "Rifler", rating: 1.06, hltvUrl: "https://www.hltv.org/player/18506/s1ren", photo: "https://img-cdn.hltv.org/playerbodyshot/zu37eRrDGLwhf51FahmT4U.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=117%2C8%2C467%2C467&w=100&s=65542fd121294699b590e8c1e0303655" },
+      { name: "d1Ledez", position: "Rifler", rating: 1.10, hltvUrl: "https://www.hltv.org/player/20357/d1ledez", photo: "https://img-cdn.hltv.org/playerbodyshot/nw95CBsK6htGYvTiy189h3.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=117%2C8%2C467%2C467&w=100&s=3508e1828e8325003b560c035a9215c6" },
+      { name: "Magnojez", position: "Rifler", rating: 1.16, hltvUrl: "https://www.hltv.org/player/21667/magnojez", photo: "https://img-cdn.hltv.org/playerbodyshot/Ga_TmsIBrbYwNSxX_51Qvd.png?bg=3e4c54&h=100&ixlib=java-2.1.0&rect=117%2C8%2C467%2C467&w=100&s=39db0331fb20b968a68f5a3275f4ec82" },
     ],
     recent: [
       { date: "03/06/2026", opponent: "GamerLegion", score: "2-0", result: "W" },
