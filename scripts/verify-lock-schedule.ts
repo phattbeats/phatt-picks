@@ -24,6 +24,8 @@ import {
   BRACKET_REVEAL_LEAD_MS,
   COLOGNE_LOCK_SCHEDULE,
   COLOGNE_MATCH_WINDOWS,
+  COLOGNE_PLAYOFF_SCHEDULE,
+  playoffGameTime,
   type LockSchedule,
 } from "../src/lib/lock-schedule-core.ts";
 import type { Layout } from "../src/lib/layout.ts";
@@ -183,6 +185,30 @@ check("section with no lock time -> falls back to match-window gate (open inside
   isWithinRefreshWindow(1, D("2026-06-01T00:00:00Z"), {}, { 1: { start: "2026-06-01T00:00:00Z", end: "2026-06-01T23:59:59Z" } }) === true);
 check("section with no lock and no window -> fail open",
   isWithinRefreshWindow(999, D("2026-06-01T00:00:00Z"), {}, {}) === true);
+
+console.log("\nlock-schedule - per-game playoff schedule (PHA-1007): dark by default, lights up when filled");
+
+// Committed default is EMPTY → no playoff game times and no derived playoff
+// locks. This is the truthful "stay dark until authoritative" default (same rule
+// as the Swiss schedule) — proves today's behavior is unchanged.
+check("committed playoff schedule is empty (dark default)", Object.keys(COLOGNE_PLAYOFF_SCHEDULE).length === 0);
+check("no committed QF game time → null", playoffGameTime(108, 0) === null);
+check("no derived playoff lock for 108 (countdown stays dark)", lockTimeForSection(108) === null);
+check("no derived playoff lock for 110 (GF)", lockTimeForSection(110) === null);
+
+// Inject a populated schedule (what Brandon's confirmed times become): each game
+// echoes its instant, the lock derives from the EARLIEST game even out of order,
+// a missing index / unknown section / bad ISO → null (never a fabricated time).
+const injected = {
+  108: ["2026-06-18T14:00:00Z", "2026-06-18T10:30:00Z"], // intentionally out of order
+  110: ["2026-06-21T13:00:00Z"],
+} as const;
+check("injected QF game 1 echoes its instant", playoffGameTime(108, 0, injected) === "2026-06-18T14:00:00Z");
+check("injected GF game echoes its instant", playoffGameTime(110, 0, injected) === "2026-06-21T13:00:00Z");
+check("missing game index → null", playoffGameTime(108, 5, injected) === null);
+check("unknown playoff section → null", playoffGameTime(109, 0, injected) === null);
+check("bad ISO in schedule → null (no fabricated time)",
+  playoffGameTime(108, 0, { 108: ["not-a-date"] }) === null);
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);

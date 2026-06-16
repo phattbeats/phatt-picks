@@ -34,6 +34,7 @@
  */
 
 import type { Section } from "./layout";
+import { playoffGameTime } from "./lock-schedule-core";
 
 export type PlayoffRoundKey = "QF" | "SF" | "GF";
 
@@ -100,6 +101,12 @@ export interface PlayoffMatch {
    * match is still to be played, or null when they made no pick for it.
    */
   userResult: PlayoffPickResult | null;
+  /**
+   * The game's committed start instant (UTC ISO) for the "Jun 18 · 12:30" chip,
+   * or null when no authoritative time is published yet (PHA-1007). Truthful by
+   * construction — a chip renders only for a game with a real, committed time.
+   */
+  scheduledAtIso: string | null;
 }
 
 export interface PlayoffRound {
@@ -161,7 +168,7 @@ export function buildPlayoffBracket(inputs: PlayoffInputs): PlayoffBracket {
     const section = byId.get(def.sectionId);
     if (!section) continue;
 
-    const matches: PlayoffMatch[] = section.groups.map((g) => {
+    const matches: PlayoffMatch[] = section.groups.map((g, matchIndex) => {
       const t1 = g.teams[0]?.pickid ?? 0;
       const t2 = g.teams[1]?.pickid ?? 0;
       const winner = winnerByGroup?.get(g.groupid) ?? null;
@@ -195,6 +202,7 @@ export function buildPlayoffBracket(inputs: PlayoffInputs): PlayoffBracket {
         seeded,
         decided,
         userResult,
+        scheduledAtIso: playoffGameTime(def.sectionId, matchIndex),
       };
     });
 
