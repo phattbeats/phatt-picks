@@ -360,9 +360,9 @@ export default async function StageRevealPage({
                   )}
                   <div className="pickcard-logo">
                     {team && team.pickid !== 0 ? (
-                      <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={80} />
+                      <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={128} />
                     ) : (
-                      <div style={{ width: 80, height: 80, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-low)", fontFamily: "var(--font-mono)", fontSize: 30 }}>?</div>
+                      <div style={{ width: 128, height: 128, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-low)", fontFamily: "var(--font-mono)", fontSize: 48 }}>?</div>
                     )}
                   </div>
                   <div className="font-display pickcard-name" style={{ color: "var(--ink-hi)" }}>
@@ -402,17 +402,28 @@ export default async function StageRevealPage({
           display: grid; grid-template-columns: repeat(3, 1fr);
           background: linear-gradient(180deg, var(--surf-2) 0%, var(--surf-1) 100%);
           border: 1px solid rgba(245,234,212,0.08); border-radius: 14px; overflow: hidden;
+          /* light sheen (PHA-1117): a faint specular line catches the top edge */
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
         }
         .reveal-moment > div + div { border-left: 1px solid rgba(245,234,212,0.08); }
-        .reveal-picks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        @media (min-width: 560px) { .reveal-picks { grid-template-columns: repeat(3, 1fr); } }
-        @media (min-width: 880px) { .reveal-picks { grid-template-columns: repeat(4, 1fr); } }
+        /* logos are the focus (PHA-1117): wider cards, fewer columns, so each
+           crest dominates its tile rather than floating in negative space. */
+        .reveal-picks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        @media (min-width: 720px) { .reveal-picks { grid-template-columns: repeat(3, 1fr); } }
         .pickcard {
           display: flex; flex-direction: column; align-items: center; text-align: center;
           gap: 10px; padding: 24px 14px 16px;
           border: 1px solid rgba(245,234,212,0.08); border-radius: 14px;
           background: linear-gradient(180deg, var(--surf-2) 0%, var(--surf-1) 100%);
           position: relative; overflow: hidden;
+          /* light sheen (PHA-1117) */
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+          transition: transform 180ms var(--ease), box-shadow 180ms var(--ease), border-color 180ms var(--ease);
+        }
+        /* cool minimal thing (PHA-1117): the card you're reading lifts a hair on
+           hover and the sheen warms — tactile, no perpetual motion. */
+        @media (hover: hover) {
+          .pickcard:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 10px 24px -16px rgba(0,0,0,0.7); border-color: rgba(245,234,212,0.16); }
         }
         .pickcard.is-correct { border-color: rgba(155,210,60,0.28); }
         .pickcard.is-correct::before {
@@ -420,7 +431,7 @@ export default async function StageRevealPage({
           background: linear-gradient(90deg, var(--tac-green, #9bd23c) 0%, rgba(155,210,60,0.25) 45%, transparent 80%);
         }
         .pickcard.is-miss { opacity: 0.82; }
-        .pickcard-logo { display: flex; align-items: center; justify-content: center; min-height: 80px; }
+        .pickcard-logo { display: flex; align-items: center; justify-content: center; min-height: 128px; }
         .pickcard-name {
           font-weight: 800; font-size: 19px; line-height: 1; letter-spacing: 0.01em;
           text-transform: uppercase; max-width: 100%;
@@ -448,6 +459,7 @@ const v3Card = {
   border: "1px solid rgba(245,234,212,0.08)",
   borderRadius: 14,
   padding: "18px 22px",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)", // light sheen (PHA-1117)
 };
 
 const v3CardLabel = {
@@ -562,7 +574,7 @@ function ConsensusPanel({
         <div className="insight-body">
           <div className="insight-logo">
             {cTeam && cTeam.pickid !== 0
-              ? <TeamLogo tiers={resolveLogoTiers(cTeam)} teamName={cTeam.name} size={60} />
+              ? <TeamLogo tiers={resolveLogoTiers(cTeam)} teamName={cTeam.name} size={96} />
               : <div className="insight-logo-blank">#{consensus.winnerPickId}</div>}
           </div>
           <div style={{ minWidth: 0 }}>
@@ -580,7 +592,7 @@ function ConsensusPanel({
           <div className="insight-head" style={{ color: "var(--ember, #d8351c)" }}>Bold Call</div>
           <div className="insight-body">
             <div className="insight-logo">
-              <TeamLogo tiers={resolveLogoTiers(bTeam)} teamName={bTeam.name} size={60} />
+              <TeamLogo tiers={resolveLogoTiers(bTeam)} teamName={bTeam.name} size={96} />
             </div>
             <div style={{ minWidth: 0 }}>
               <div className="font-display insight-name" style={{ color: "var(--ink-hi)" }}>
@@ -602,18 +614,32 @@ function ConsensusPanel({
           position: relative; overflow: hidden; padding: 18px 22px;
           background: linear-gradient(180deg, var(--surf-2) 0%, var(--surf-1) 100%);
           border: 1px solid rgba(245,234,212,0.08); border-radius: 14px;
+          /* light sheen (PHA-1117): faint specular top edge */
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
         }
         .insight-card::before {
-          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; z-index: 2;
         }
         .insight-consensus::before { background: linear-gradient(90deg, var(--heat) 0%, rgba(240,163,0,0.25) 42%, transparent 78%); }
         .insight-bold::before { background: linear-gradient(90deg, var(--ember, #d8351c) 0%, rgba(216,53,28,0.22) 42%, transparent 78%); }
+        /* cool minimal thing (PHA-1117): a single light sweep glides across the
+           headline cards once on load — a broadcast lower-third wipe — then rests
+           off-screen. The global prefers-reduced-motion kill switch parks it. */
+        .insight-card::after {
+          content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 55%; z-index: 1;
+          background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.09) 50%, transparent 70%);
+          transform: translateX(-130%);
+          animation: rv-sheen-sweep 1.15s cubic-bezier(.22,.61,.36,1) 0.35s both;
+          pointer-events: none;
+        }
+        .insight-bold::after { animation-delay: 0.5s; }
+        @keyframes rv-sheen-sweep { from { transform: translateX(-130%); } to { transform: translateX(230%); } }
         .insight-head {
           font-family: var(--font-mono); font-size: 13px; font-weight: 600;
           letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 14px;
         }
         .insight-body { display: flex; align-items: center; gap: 16px; }
-        .insight-logo { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 60px; height: 60px; }
+        .insight-logo { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 96px; height: 96px; }
         .insight-logo-blank { font-family: var(--font-mono); font-size: 13px; color: var(--ink-low); }
         .insight-name {
           font-weight: 800; font-size: 26px; line-height: 0.95; letter-spacing: 0.01em;
