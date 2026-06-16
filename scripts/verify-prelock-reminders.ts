@@ -41,13 +41,15 @@ function check(name: string, cond: boolean) {
 
 console.log("\nstageLocksFromSchedule — single source of truth");
 const locks = stageLocksFromSchedule();
-check("derives the 3 committed Swiss stages (105/106/107)", Object.keys(locks).sort().join(",") === "105,106,107");
+check("derives all six committed stages (Swiss 105/106/107 + playoffs 108/109/110)",
+  Object.keys(locks).sort((a, b) => Number(a) - Number(b)).join(",") === "105,106,107,108,109,110");
 check("Stage III (107) name + lockAt come from the committed schedule",
   locks[107]?.name === "Stage III" && locks[107]?.lockAt === COLOGNE_LOCK_SCHEDULE[107]);
 check("Stage I / II names resolve from COLOGNE_SECTION_NAMES",
   locks[105]?.name === COLOGNE_SECTION_NAMES[105] && locks[106]?.name === COLOGNE_SECTION_NAMES[106]);
-check("playoff sections (no committed lock) are excluded — no fabricated cutoff",
-  !(108 in locks) && !(109 in locks) && !(110 in locks));
+check("playoff sections now derive a reminder cutoff from their committed lock (PHA-1007)",
+  locks[108]?.lockAt === COLOGNE_LOCK_SCHEDULE[108] && locks[108]?.name === "Quarterfinals" &&
+  locks[110]?.lockAt === COLOGNE_LOCK_SCHEDULE[110]);
 check("every derived lock is a valid ISO instant",
   Object.values(locks).every((l) => !Number.isNaN(Date.parse(l.lockAt))));
 
