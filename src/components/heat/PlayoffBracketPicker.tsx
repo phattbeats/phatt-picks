@@ -414,9 +414,13 @@ function PickCell({
         transition: "border-color 140ms var(--ease)",
       }}
     >
-      <PickSide groupId={match.groupId} teamId={top} pick={pick} teamMap={teamMap} geo={geo} enabled={enabled} onCrown={onCrown} onSpotlight={onSpotlight} />
+      {/* Scout only in the Quarterfinals (PHA-1204): from the SF on it's the
+          same eight teams advancing, so a Scout button on every later round is
+          redundant noise (Brandon). The bracket carries it once, where the field
+          is first introduced. */}
+      <PickSide groupId={match.groupId} teamId={top} pick={pick} teamMap={teamMap} geo={geo} enabled={enabled} scoutable={match.round === "QF"} onCrown={onCrown} onSpotlight={onSpotlight} />
       <div style={{ height: 1, background: "var(--hair)", margin: "0 8px" }} />
-      <PickSide groupId={match.groupId} teamId={bottom} pick={pick} teamMap={teamMap} geo={geo} enabled={enabled} onCrown={onCrown} onSpotlight={onSpotlight} />
+      <PickSide groupId={match.groupId} teamId={bottom} pick={pick} teamMap={teamMap} geo={geo} enabled={enabled} scoutable={match.round === "QF"} onCrown={onCrown} onSpotlight={onSpotlight} />
     </div>
   );
 }
@@ -428,6 +432,7 @@ function PickSide({
   teamMap,
   geo,
   enabled,
+  scoutable,
   onCrown,
   onSpotlight,
 }: {
@@ -437,6 +442,8 @@ function PickSide({
   teamMap: Map<number, TeamDef>;
   geo: BracketGeo;
   enabled: boolean;
+  /** Show the Scout button (Quarterfinals only — see PickCell). */
+  scoutable: boolean;
   onCrown: (groupId: number, teamId: number) => void;
   onSpotlight: (t: TeamDef) => void;
 }) {
@@ -497,8 +504,9 @@ function PickSide({
       {/* Spotlight button — a labelled pill, not a lone star, so it reads as
           "click me" rather than decoration (Brandon, PHA-1204). Sibling tap
           target with stopPropagation so it stays usable while the whole row is
-          also the crown-the-winner button. Wears the team's accent. */}
-      {team && (
+          also the crown-the-winner button. Wears the team's accent. Quarterfinals
+          only — the later rounds replay the same eight teams. */}
+      {team && scoutable && (
         <span
           className="po-spot"
           role="button"
