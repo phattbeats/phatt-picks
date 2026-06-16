@@ -114,6 +114,36 @@ const missed = buildSwissStandings(stage1, missOutcome, bucketSwissSlots, missPi
 check("team that clinched a different bucket -> miss", missed.userPicks[0]?.result === "miss");
 check("miss counts toward neither hits nor pending", missed.userHits === 0 && missed.userPending === 0);
 
+console.log("\nswiss-standings - off-roster resolved winner still gets a status (PHA-1207)");
+
+// Cologne Stage III: the committed per-group roster is a PARTIAL pick'em field
+// (8 teams) but the live HLTV Swiss runs 16, so the answer key resolves teams
+// that are NOT in any group's committed roster (PHA-1109 validates them against
+// the GLOBAL roster on the write side). Those off-roster winners must still flow
+// into the team set so the locked-picks board can color them — before PHA-1207
+// they were dropped and the viewer's pick for them stayed neutral forever even
+// though the stage was over.
+const OFF_ROSTER = 99135; // a pickid that is NOT in the Stage I fixture roster
+check("control: off-roster id is absent from the committed group roster", !teamIds.includes(OFF_ROSTER));
+const offRosterOutcome = { [groupId]: { 9: OFF_ROSTER } }; // it clinched 0:3
+const offRosterStandings = buildSwissStandings(stage1, offRosterOutcome, bucketSwissSlots);
+const offRow = offRosterStandings.teams.find((t) => t.pickid === OFF_ROSTER);
+check("off-roster resolved winner appears in the team set", offRow !== undefined);
+check("off-roster resolved winner carries its clinched status (eliminated)", offRow?.status === "eliminated");
+check("off-roster winner counted in resolvedTeamCount", offRosterStandings.resolvedTeamCount === 1);
+
+// The end-to-end symptom: a viewer who PICKED that off-roster team into the
+// bucket it actually clinched must read GREEN (right), not neutral (pending).
+const offRosterStatus = new Map(offRosterStandings.teams.map((t) => [t.pickid, t.status] as const));
+check(
+  "viewer's pick of an off-roster team that clinched its bucket -> right (not stuck pending)",
+  confirmPick("0:3 ELIMINATED", offRosterStatus.get(OFF_ROSTER)) === "right",
+);
+check(
+  "viewer's pick of an off-roster team in the WRONG bucket -> wrong (not stuck pending)",
+  confirmPick("3:0 ADVANCED", offRosterStatus.get(OFF_ROSTER)) === "wrong",
+);
+
 console.log("\nswiss-standings - pickId 0 (cleared slot) is ignored");
 
 const clearedPick = buildSwissStandings(stage1, {}, bucketSwissSlots, { [groupId]: { 0: 0 } });
