@@ -195,35 +195,24 @@ export function PlayoffBracketPicker({
   const totalMatches = model.rounds.reduce((n, r) => n + r.matches.length, 0);
 
   return (
-    <div className="panel brk" style={{ padding: "20px 18px 22px" }}>
-      <span className="br-tr" />
-      <span className="br-bl" />
-
-      {/* Header */}
+    <div className="cath-nave">
+      {/* Header — bracket-free overline (v3 Cathedral, PHA-1065), accent budget
+          spent on the live counter, not the label. */}
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <span className="eyebrow-mono" style={{ color: HEAT }}>[ BRACKET — PICK THE WHOLE THING ]</span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--ink-mid)" }}>
+          Place the whole bracket
+        </span>
         <span className="last-updated">
           {pickCount}/{totalMatches} called{saveState === "saving" ? " · saving…" : saveState === "saved" ? " · saved" : saveState === "error" ? " · retry" : ""}
         </span>
       </div>
       <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "10px 0 0", lineHeight: 1.5 }}>
         One stage, one bracket. Tap the team you call to win each match — they
-        advance to the next round. Change your mind upstream and the rounds below
-        re-open. {!steamLinked && signedIn ? "Saves as you go." : null}
+        advance up the nave to the next round. Tap{" "}
+        <span style={{ color: "var(--heat)", fontWeight: 600 }}>★ SPOTLIGHT</span> on any
+        team for its story. Change your mind upstream and the rounds below re-open.
+        {!steamLinked && signedIn ? " Saves as you go." : null}
       </p>
-
-      {/* Champion banner */}
-      {champion && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "14px 0 0", padding: "10px 12px", background: "rgba(240,163,0,0.10)", border: "1px solid var(--hair-3)" }}>
-          <TeamLogo tiers={resolveLogoTiers(champion)} teamName={champion.name} size={26} />
-          <span style={{ minWidth: 0 }}>
-            <span style={{ display: "block", fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.16em", textTransform: "uppercase", color: HEAT }}>
-              Your champion
-            </span>
-            <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: "var(--ink-hi)" }}>{champion.name}</span>
-          </span>
-        </div>
-      )}
 
       <div className="po-tree-compact">
         <Tree model={model} resolved={resolved} teamMap={teamMap} geo={GEO_COMPACT} enabled={enabled} dragOver={dragOver} setDragOver={setDragOver} onCrown={crown} onSpotlight={setStatsTeam} />
@@ -231,6 +220,25 @@ export function PlayoffBracketPicker({
       <div className="po-tree-desktop">
         <Tree model={model} resolved={resolved} teamMap={teamMap} geo={GEO_DESKTOP} enabled={enabled} dragOver={dragOver} setDragOver={setDragOver} onCrown={crown} onSpotlight={setStatsTeam} />
       </div>
+
+      {/* The altar (v3 Cathedral, PHA-1065): your champion crowned under a
+          pointed arch — the reverent apex you climb the bracket toward. */}
+      {champion && (
+        <div className="cath-altar">
+          <svg className="cath-altar-arch" viewBox="0 0 232 56" fill="none" aria-hidden="true">
+            <path d="M3 56 L3 28 Q3 4 116 4 Q229 4 229 28 L229 56" stroke="rgba(240,163,0,0.34)" strokeWidth="1" />
+            <line x1="116" y1="7" x2="116" y2="56" stroke="rgba(240,163,0,0.16)" strokeWidth="1" />
+          </svg>
+          <div className="cath-altar-card">
+            <div className="cath-altar-lab">Your champion</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 8 }}>
+              <TeamLogo tiers={resolveLogoTiers(champion)} teamName={champion.name} size={30} />
+              <div className="cath-altar-who">{champion.name}</div>
+            </div>
+            <div className="cath-altar-note">Crowned at the Cathedral</div>
+          </div>
+        </div>
+      )}
 
       {enabled && steamLinked && (
         <LockInStage sectionId="playoff" unsavedSinceSync={unsavedSinceSync} onSynced={() => setUnsavedSinceSync(false)} />
@@ -391,7 +399,6 @@ function PickCell({
 
   return (
     <div
-      className="brk"
       onDragOver={(e) => {
         if (!enabled) return;
         const types = e.dataTransfer.types;
@@ -406,7 +413,9 @@ function PickCell({
       style={{
         height: "100%",
         background: "var(--surf-1)",
-        border: `1px solid ${over ? HEAT : decided ? "var(--hair-3)" : "var(--hair)"}`,
+        border: `1px solid ${over ? HEAT : decided ? "var(--hair-3)" : "var(--hair-2)"}`,
+        borderRadius: 11,
+        overflow: "hidden",
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",
@@ -511,8 +520,8 @@ function PickSide({
           className="po-spot"
           role="button"
           tabIndex={0}
-          aria-label={`Scout ${team.name} — open spotlight`}
-          title={`Scout ${team.name}`}
+          aria-label={`Open ${team.name} spotlight`}
+          title={`${team.name} spotlight`}
           style={teamAccent(team) ? ({ "--team-accent": teamAccent(team) } as CSSProperties) : undefined}
           onClick={(e) => {
             e.stopPropagation();
@@ -527,7 +536,7 @@ function PickSide({
           }}
         >
           <span className="po-spot-star" aria-hidden="true">★</span>
-          <span className="po-spot-label">SCOUT</span>
+          <span className="po-spot-label">SPOTLIGHT</span>
         </span>
       )}
       {isWinner && (
