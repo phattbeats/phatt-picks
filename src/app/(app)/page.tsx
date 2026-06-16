@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCommittedLayout } from "@/lib/layout";
 import { prisma } from "@/lib/db";
 import { isStagePickable, selectCurrentStageIndex } from "@/lib/stage-gate-core";
+import { isPlayoffSection } from "@/lib/playoff-bracket-core";
 import { getSession } from "@/lib/session";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
 import { HeatMark } from "@/components/heat/HeatMark";
@@ -74,7 +75,13 @@ export default async function DashboardPage() {
   const activeIdx = selectCurrentStageIndex(stageStatuses.map((s) => s.pick));
   const active = stageStatuses[activeIdx];
 
-  const activeLabel = active.section.name.split(" | ")[0];
+  // The three single-elim sections (108/109/110) read as ONE "Playoffs" stage on
+  // the hero, the same way the picks page consolidates them (PHA-1007). Once Stage
+  // III is over and Valve seeds the bracket, selectCurrentStageIndex promotes a
+  // playoff section to "current" and the hero transitions from Stage III to
+  // Playoffs — with bracket-appropriate copy, not Swiss 3-0/0-3 language.
+  const activePlayoff = isPlayoffSection(active.section.sectionid);
+  const activeLabel = activePlayoff ? "Playoffs" : active.section.name.split(" | ")[0];
   const activeNumber = activeIdx + 1;
 
   // How many of the active section's slots the signed-in player has already
@@ -173,7 +180,7 @@ export default async function DashboardPage() {
         <div style={{ position: "relative", zIndex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
             <span className="eyebrow-mono">
-              [ STAGE_{String(activeNumber).padStart(2, "0")} ]
+              {activePlayoff ? "[ PLAYOFFS ]" : `[ STAGE_${String(activeNumber).padStart(2, "0")} ]`}
             </span>
             <StageStatusTag pickability={active.pick} />
           </div>
@@ -192,6 +199,7 @@ export default async function DashboardPage() {
             signedIn={!!session}
             filledSlots={selfFilledSlots}
             totalSlots={activeSlotCount}
+            isPlayoff={activePlayoff}
           />
           {active.pick.pickable && (
             <div style={{ marginTop: 16 }}>
@@ -403,24 +411,41 @@ function StageBody({
   signedIn,
   filledSlots,
   totalSlots,
+  isPlayoff = false,
 }: {
   pickability: ReturnType<typeof isStagePickable>;
   sectionName: string;
   signedIn: boolean;
   filledSlots: number;
   totalSlots: number;
+  /** The active stage is the single-elim playoff bracket — use bracket copy,
+   *  not the Swiss 3-0 / 0-3 / advancing-eight language (PHA-1007). */
+  isPlayoff?: boolean;
 }) {
   const complete = totalSlots > 0 && filledSlots >= totalSlots;
+  // Playoffs are one single-elim bracket (QF→SF→GF), not a Swiss board — so the
+  // open/seeding copy speaks "bracket calls" and "the quarterfinals begin", never
+  // "who goes 3-0". The underway/locked copy is shared (it already reads right
+  // with sectionName "Playoffs").
   const text = pickability.pickable
-    ? signedIn
-      ? complete
-        ? `Your ${sectionName} picks are locked in — all ${totalSlots} slots set. Tweak them anytime before the window shuts.`
-        : filledSlots > 0
-          ? `${filledSlots} of ${totalSlots} ${sectionName} slots locked. Finish the rest — who goes 3‑0, who crashes 0‑3, your advancing eight — before the window shuts.`
-          : `You haven't called your ${sectionName} picks yet. Lock who goes 3‑0, who crashes 0‑3, and your advancing eight before the window shuts.`
+    ? isPlayoff
+      ? // The dashboard only counts the active section's slots (the QF), not the
+        // whole QF→SF→GF bracket, so the playoff copy doesn't cite a slot tally —
+        // it points at the bracket; the picks page shows real per-call progress.
+        signedIn
+        ? `The playoff bracket is open. Call it from the quarterfinals to the Grand Final — pick your champion before the quarters begin.`
+        : `The playoff bracket is open. Sign in to call the quarterfinals through the Grand Final before it locks.`
+      : signedIn
+        ? complete
+          ? `Your ${sectionName} picks are locked in — all ${totalSlots} slots set. Tweak them anytime before the window shuts.`
+          : filledSlots > 0
+            ? `${filledSlots} of ${totalSlots} ${sectionName} slots locked. Finish the rest — who goes 3‑0, who crashes 0‑3, your advancing eight — before the window shuts.`
+            : `You haven't called your ${sectionName} picks yet. Lock who goes 3‑0, who crashes 0‑3, and your advancing eight before the window shuts.`
       : `Pick window is open. Sign in to lock your ${sectionName} picks before the window shuts.`
     : pickability.reason === "teams-not-set"
-      ? `Teams for ${sectionName} aren't seeded yet. Picks open automatically once Valve sets the bracket.`
+      ? isPlayoff
+        ? `The eight are still being seeded. The playoff bracket opens automatically once Valve sets the matchups.`
+        : `Teams for ${sectionName} aren't seeded yet. Picks open automatically once Valve sets the bracket.`
       : pickability.reason === "locked-time-passed"
         ? signedIn
           ? `${sectionName} is underway — picks are locked. Check how your picks are tracking on the live bracket, keep an eye on the leaderboard, and catch the matches below.`
