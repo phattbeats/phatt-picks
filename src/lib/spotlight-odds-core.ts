@@ -57,18 +57,32 @@ export interface MatchupMarketTarget {
 }
 
 /**
- * GATED CONFIG — intentionally EMPTY until Valve seeds the playoff bracket
- * (~Jun 16 2026, PHA-993). Keyed by layout pickid. Empty ⇒ no fetch, no cache
- * write, modal stays "coming soon" (no live change). Fill one entry per side per
- * seeded matchup, e.g.:
+ * AUTHORED MATCHUP REGISTRY — keyed by layout pickid. Empty until Valve seeded
+ * the IEM Cologne 2026 playoff bracket; filled at seeding (PHA-1066 / PHA-993,
+ * 2026-06-16) with the four QF matchups. The two pickids in a match share the
+ * slug; `teamName` matches that team's outcome string in the Polymarket moneyline
+ * (verified live against gamma-api). `sportsMarketType: "moneyline"` selection in
+ * resolveMatchupOdds picks the match-winner line out of each event's many markets.
  *
- *   85: { slug: "furia-vs-the-mongolz-...", teamName: "FURIA",
- *         hltvMatchUrl: "https://www.hltv.org/matches/..." },
- *   12: { slug: "furia-vs-the-mongolz-...", teamName: "The MongolZ", ... },
- *
- * (the two pickids share the slug; teamName distinguishes the side).
+ * Refill per round: when the QF resolves and SF pairings publish, repoint each
+ * advancing team's pickid at its new `cs2-<a>-<b>-<date>` slug (alongside the
+ * PHA-1065 Spotlight authoring pass). A team with no entry falls back to the
+ * modal's "coming soon" state — never a fabricated line.
  */
-export const PLAYOFF_MARKET_SLUGS: Record<number, MatchupMarketTarget> = {};
+export const PLAYOFF_MARKET_SLUGS: Record<number, MatchupMarketTarget> = {
+  // QF1 — FURIA vs 9z (2026-06-18)
+  85: { slug: "cs2-furia-9z-2026-06-18", teamName: "FURIA" },
+  112: { slug: "cs2-furia-9z-2026-06-18", teamName: "9z" },
+  // QF2 — Spirit vs G2 (2026-06-19)
+  81: { slug: "cs2-ts7-g2-2026-06-19", teamName: "Spirit" },
+  59: { slug: "cs2-ts7-g2-2026-06-19", teamName: "G2" },
+  // QF3 — Aurora Gaming vs BetBoom Team (2026-06-18)
+  134: { slug: "cs2-aur1-bb3-2026-06-18", teamName: "Aurora Gaming" },
+  137: { slug: "cs2-aur1-bb3-2026-06-18", teamName: "BetBoom Team" },
+  // QF4 — Vitality vs Team Falcons (2026-06-19)
+  89: { slug: "cs2-vit-fal2-2026-06-19", teamName: "Vitality" },
+  139: { slug: "cs2-vit-fal2-2026-06-19", teamName: "Team Falcons" },
+};
 
 export const GAMMA_API_BASE = "https://gamma-api.polymarket.com";
 /** No auth, single small JSON — a tight timeout is plenty (~160ms measured). */
