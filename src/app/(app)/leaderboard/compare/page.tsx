@@ -226,7 +226,7 @@ export default async function ComparePage({
       <div className="panel brk" style={{ padding: 32, textAlign: "center" }}>
         <span className="br-tr" />
         <span className="br-bl" />
-        <span className="eyebrow-mono">[ COMPARE ]</span>
+        <span className="eyebrow-mono">COMPARE</span>
         <h1 className="font-display" style={{ fontWeight: 800, fontSize: 28, textTransform: "uppercase", color: "var(--ink-hi)", margin: "8px 0" }}>
           Two players minimum
         </h1>
@@ -381,7 +381,7 @@ export default async function ComparePage({
         <Link href="/leaderboard" style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--ink-mid)", textDecoration: "none" }}>
           ← Leaderboard
         </Link>
-        <span className="eyebrow-mono">[ HEAD_TO_HEAD ]</span>
+        <span className="eyebrow-mono">HEAD TO HEAD</span>
         <h1 className="font-display" style={{ fontWeight: 800, fontSize: "clamp(28px, 5vw, 40px)", textTransform: "uppercase", lineHeight: 0.95 }}>
           Compare
         </h1>
@@ -427,7 +427,7 @@ export default async function ComparePage({
       {/* THE STEAL — picks called right that the other whiffed */}
       <section style={{ marginBottom: "var(--space-4)" }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "var(--space-2)" }}>
-          <span className="eyebrow-mono" style={{ color: "var(--correct)" }}>[ THE_STEAL ]</span>
+          <span className="eyebrow-mono" style={{ color: "var(--correct)" }}>THE STEAL</span>
           {resolvedAny && (
             <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.08em", color: "var(--text-low)" }}>
               {aSteals.length}–{bSteals.length} · {bothRight} SHARED

@@ -39,7 +39,7 @@ export function ConsensusBar({
   return (
     <div className="consensus">
       <div className="consensus-head">
-        <span className="consensus-lbl">[ Field Split ]</span>
+        <span className="consensus-lbl">Field Split</span>
         <span className="consensus-n">{consensus.total} picked</span>
       </div>
       {shown.map((s) => {

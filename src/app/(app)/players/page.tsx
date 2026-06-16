@@ -60,7 +60,7 @@ export default async function DirectoryPage() {
     <>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16 }}>
-          <span className="eyebrow-mono">[ ROSTER ]</span>
+          <span className="eyebrow-mono">ROSTER</span>
           <Link href="/leaderboard" style={{
             fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.14em",
             textTransform: "uppercase", color: "var(--ink-mid)", textDecoration: "none",

@@ -99,7 +99,7 @@ function ImageSlot({
           textTransform: "uppercase",
           color: "var(--ink-low)",
         }}>
-          [ WIRE ]
+          WIRE
         </span>
       )}
     </div>

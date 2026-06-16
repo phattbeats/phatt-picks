@@ -88,7 +88,7 @@ export function LivePlayoffBracket({
       {/* Header */}
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <span className="eyebrow-mono" style={{ color: "var(--heat)" }}>
-          [ PLAYOFFS BRACKET ]
+          PLAYOFFS BRACKET
         </span>
         <span className="last-updated">
           {bracket.anyDecided && resolvedAtIso ? <LastUpdated iso={resolvedAtIso} /> : "Updates as matches finish"}

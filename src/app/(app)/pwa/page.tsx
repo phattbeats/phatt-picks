@@ -9,7 +9,7 @@ export default function PwaInstallPage() {
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, textAlign: "center", padding: "8px 0 4px" }}>
         <HeatMark size={48} />
         <div>
-          <span className="eyebrow-mono">[ DEPLOY_TO_HOME_SCREEN ]</span>
+          <span className="eyebrow-mono">DEPLOY TO HOME SCREEN</span>
           <h1 className="font-display" style={{
             fontWeight: 900,
             fontSize: "clamp(30px, 6vw, 44px)",

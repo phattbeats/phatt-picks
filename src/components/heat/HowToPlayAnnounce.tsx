@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 /**
  * One-time, dismissable "how to play" nudge shown app-wide to every signed-in
- * user (PHA-987). The dashboard's [ NEW_HERE ] card only fired for players with
+ * user (PHA-987). The dashboard's NEW HERE card only fired for players with
  * zero picks, so existing users never saw the explainer existed.
  * This shows once for everyone — until they open the guide or dismiss it — so
  * nobody misses it.
@@ -63,7 +63,7 @@ export function HowToPlayAnnounce() {
       >
         <div style={{ flex: 1, minWidth: 0 }}>
           <span className="eyebrow-mono" style={{ display: "block", marginBottom: 5 }}>
-            [ NEW_HERE ]
+            NEW HERE
           </span>
           <p style={{ margin: 0, color: "var(--ink-hi)", fontSize: 14, fontWeight: 600, lineHeight: 1.4 }}>
             First Pick&apos;Em? Read the 60-second rundown.

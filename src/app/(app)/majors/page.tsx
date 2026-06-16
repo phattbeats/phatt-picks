@@ -72,7 +72,7 @@ export default async function MajorsPage() {
   if (!session) {
     return (
       <>
-        <span className="eyebrow-mono">[ YOUR MAJORS ]</span>
+        <span className="eyebrow-mono">YOUR MAJORS</span>
         <div className="panel brk" style={{ textAlign: "center", padding: "48px 24px", marginTop: 12 }}>
           <span className="br-tr" />
           <span className="br-bl" />
@@ -165,7 +165,7 @@ export default async function MajorsPage() {
   return (
     <>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <span className="eyebrow-mono">[ YOUR MAJORS ]</span>
+        <span className="eyebrow-mono">YOUR MAJORS</span>
         <h1 className="font-display" style={{
           fontWeight: 800,
           fontSize: "clamp(28px, 5vw, 40px)",

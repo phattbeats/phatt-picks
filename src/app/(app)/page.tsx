@@ -180,7 +180,7 @@ export default async function DashboardPage() {
         <div style={{ position: "relative", zIndex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
             <span className="eyebrow-mono">
-              {activePlayoff ? "[ PLAYOFFS ]" : `[ STAGE_${String(activeNumber).padStart(2, "0")} ]`}
+              {activePlayoff ? "PLAYOFFS" : `STAGE ${String(activeNumber).padStart(2, "0")}`}
             </span>
             <StageStatusTag pickability={active.pick} />
           </div>
@@ -254,7 +254,7 @@ export default async function DashboardPage() {
             <div className="stat brk">
               <span className="br-tr" />
               <span className="br-bl" />
-              <div className="lbl">[ YOUR_RANK ]</div>
+              <div className="lbl">YOUR RANK</div>
               <div className="val">
                 {selfIdx >= 0 ? (
                   <>
@@ -279,7 +279,7 @@ export default async function DashboardPage() {
             <div className="stat brk">
               <span className="br-tr" />
               <span className="br-bl" />
-              <div className="lbl">[ POINTS ]</div>
+              <div className="lbl">POINTS</div>
               <div className="val foil">{selfRow?.score ?? 0}</div>
               <div className="sub">
                 of {maxPoints} · {activeLabel}{" "}
@@ -301,7 +301,7 @@ export default async function DashboardPage() {
           }}>
             <span className="br-tr" />
             <span className="br-bl" />
-            <div className="panel-title">[ Get In ]</div>
+            <div className="panel-title">Get In</div>
             <h2 className="font-display" style={{
               fontWeight: 800,
               fontSize: 24,
@@ -321,7 +321,7 @@ export default async function DashboardPage() {
           <span className="br-tr" />
           <span className="br-bl" />
           <div className="panel-title">
-            [ Leaderboard · Top 4 ]
+            Leaderboard · Top 4
             <Link href="/leaderboard" className="link">Full board →</Link>
           </div>
           {top.length === 0 ? (
@@ -346,7 +346,7 @@ export default async function DashboardPage() {
         <span className="br-tr" />
         <span className="br-bl" />
         <div className="panel-title">
-          [ Wire ]
+          Wire
           <Link href="/news" className="link">All news →</Link>
         </div>
         {wireItems.length > 0 ? (

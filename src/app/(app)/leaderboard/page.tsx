@@ -130,7 +130,7 @@ export default async function LeaderboardPage() {
   return (
     <>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <span className="eyebrow-mono">[ STANDINGS ]</span>
+        <span className="eyebrow-mono">STANDINGS</span>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <h1 className="font-display" style={{
             fontWeight: 800,
@@ -218,7 +218,7 @@ export default async function LeaderboardPage() {
                         <span className="br-bl" />
                       </>
                     )}
-                    <span className="podium-rank">[ {String(rank).padStart(2, "0")} ]</span>
+                    <span className="podium-rank">{String(rank).padStart(2, "0")}</span>
                     <span className="podium-av">
                       {row.avatarUrl ? (
                         <Image src={row.avatarUrl} alt="" width={first ? 52 : 44} height={first ? 52 : 44} unoptimized style={{ objectFit: "cover", width: "100%", height: "100%" }} />
