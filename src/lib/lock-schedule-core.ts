@@ -63,14 +63,20 @@ const COLOGNE_SWISS_LOCKS: LockSchedule = {
  *
  * SAME TRUTHFUL-BY-CONSTRUCTION RULE as the lock schedule above: a game's time
  * lives here only once it is the published, authoritative time. EMPTY by default
- * → no playoff lock, no countdown, no game-time chips — exactly today's dark
- * behavior — until the authoritative schedule is committed (awaiting Brandon's
- * confirmed playoff broadcast times). Fill each round's array in start order.
+ * → no playoff lock, no countdown, no game-time chips.
+ *
+ * Committed from the authoritative published bracket (PHA-1007): Liquipedia +
+ * the ESL Pro Tour schedule for IEM Cologne 2026 playoffs (Jun 18–21), times
+ * converted from CEST (UTC+2) to the UTC instants below. Bo3 quarters/semis,
+ * Bo5 grand final:
+ *   QF1 Aurora–BetBoom  Jun 18 15:45 CEST · QF2 9z–FURIA       Jun 18 19:00 CEST
+ *   QF3 Spirit–G2       Jun 19 15:45 CEST · QF4 Falcons–Vitality Jun 19 19:00 CEST
+ *   SF1 Jun 20 15:45 CEST · SF2 Jun 20 19:00 CEST · GF Jun 21 17:00 CEST
  */
 export const COLOGNE_PLAYOFF_SCHEDULE: Readonly<Record<number, readonly string[]>> = {
-  // 108: ["2026-06-18T10:30:00Z", "2026-06-18T14:00:00Z", "2026-06-19T10:30:00Z", "2026-06-19T14:00:00Z"],
-  // 109: ["2026-06-20T10:30:00Z", "2026-06-20T14:00:00Z"],
-  // 110: ["2026-06-21T13:00:00Z"],
+  108: ["2026-06-18T13:45:00Z", "2026-06-18T17:00:00Z", "2026-06-19T13:45:00Z", "2026-06-19T17:00:00Z"],
+  109: ["2026-06-20T13:45:00Z", "2026-06-20T17:00:00Z"],
+  110: ["2026-06-21T15:00:00Z"],
 };
 
 /**
