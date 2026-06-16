@@ -44,7 +44,7 @@ export function LockedPicksBoard({
   teamStatus,
   recordByTeam,
   resolvedAtIso,
-  title = "[ YOUR LOCKED PICKS ]",
+  title = "YOUR LOCKED PICKS",
 }: {
   section: Section;
   teamMap: Map<number, TeamDef>;
@@ -57,7 +57,7 @@ export function LockedPicksBoard({
    *  (or pass an empty map) and the board falls back to terminal-only confirms. */
   recordByTeam?: Map<number, TeamRecord>;
   resolvedAtIso: string | null;
-  /** Header label — overridden on the player-profile page (e.g. "[ STAGE I ]"). */
+  /** Header label — overridden on the player-profile page (e.g. "STAGE I"). */
   title?: string;
 }) {
   return (

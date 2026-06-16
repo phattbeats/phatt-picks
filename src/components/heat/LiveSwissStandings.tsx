@@ -56,7 +56,7 @@ export function LiveSwissStandings({
       {/* Header */}
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <span className="eyebrow-mono" style={{ color: "var(--heat)" }}>
-          [ LIVE STANDINGS ]
+          LIVE STANDINGS
         </span>
         <span className="last-updated">
           <LastUpdated iso={fetchedAtIso} />

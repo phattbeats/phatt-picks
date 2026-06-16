@@ -27,7 +27,7 @@ export default function NotFound() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, maxWidth: 340 }}>
-        <span className="eyebrow-mono">[ NO SIGNAL · 404 ]</span>
+        <span className="eyebrow-mono">NO SIGNAL · 404</span>
         <h1
           className="font-display"
           style={{

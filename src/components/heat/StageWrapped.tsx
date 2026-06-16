@@ -425,7 +425,7 @@ function SlideCard({ slide }: { slide: WrappedSlide }) {
           <StageLogo numeral={badge.numeral} label={badge.label} sub={badge.sub} />
         </div>
       ) : (
-        slide.eyebrow && <span className="eyebrow-mono sw-eyebrow">[ {slide.eyebrow} ]</span>
+        slide.eyebrow && <span className="eyebrow-mono sw-eyebrow">{slide.eyebrow}</span>
       )}
       {/* Team logos — matchups / clinchers. One logo centred; two flank a "vs". */}
       {logos.length > 0 && (
@@ -544,7 +544,7 @@ function SkeletonSlide() {
 function EmptySlide({ title }: { title: string }) {
   return (
     <div className="sw-slide sw-empty sw-enter">
-      <span className="eyebrow-mono sw-eyebrow">[ {title.toUpperCase()} · WRAPPED ]</span>
+      <span className="eyebrow-mono sw-eyebrow">{title.toUpperCase()} · WRAPPED</span>
       <h3 className="sw-headline font-display">Nothing to wrap yet.</h3>
       <p className="sw-body">
         This stage&apos;s recap lands once it resolves. Check back when the games are in.
