@@ -97,42 +97,22 @@ body {
 .heat-bg::before, .heat-bg::after {
   content: ''; position: absolute; border-radius: 50%; filter: blur(140px);
 }
+/* PHA-1007 polish: calmer backdrop. Keep ONE soft ambient glow; retire the
+   second drifting blob, the tactical grid, and the scanlines so the content
+   reads clean instead of through a CS 1.6 HUD filter. */
 .heat-bg::before {
   width: 70vw; height: 70vw; left: -25vw; bottom: -30vw;
   background: radial-gradient(circle, var(--heat) 0%, transparent 60%);
-  opacity: .15;
-  animation: heat-drift 36s ease-in-out infinite alternate;
+  opacity: .08;
 }
-.heat-bg::after {
-  width: 50vw; height: 50vw; right: -15vw; top: -15vw;
-  background: radial-gradient(circle, var(--ember) 0%, transparent 60%);
-  opacity: .09;
-  animation: heat-drift2 44s ease-in-out infinite alternate;
-}
-@keyframes heat-drift { to { transform: translate(12vw, -8vh) scale(1.15); } }
-@keyframes heat-drift2 { to { transform: translate(-10vw, 10vh) scale(1.1); } }
+.heat-bg::after { display: none; }
 
-.map-grid {
-  position: fixed; inset: 0; z-index: 1; pointer-events: none;
-  background-image:
-    linear-gradient(rgba(240,163,0,0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(240,163,0,0.025) 1px, transparent 1px);
-  background-size: 40px 40px;
-  -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, transparent 95%);
-          mask-image: radial-gradient(ellipse at center, #000 30%, transparent 95%);
-}
-
-.scanlines {
-  position: fixed; inset: 0; z-index: 2; pointer-events: none;
-  background-image: repeating-linear-gradient(0deg,
-    rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px,
-    rgba(0,0,0,0.09) 2px, rgba(0,0,0,0.09) 3px);
-  opacity: .3; mix-blend-mode: multiply;
-}
+.map-grid { display: none; }
+.scanlines { display: none; }
 
 .vignette {
   position: fixed; inset: 0; z-index: 2; pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 55%, rgba(10,8,5,0.7) 100%);
+  background: radial-gradient(ellipse at center, transparent 65%, rgba(10,8,5,0.45) 100%);
 }
 
 /* ── KEYFRAMES ─────────────────────────────────────────────────────────── */
@@ -210,15 +190,12 @@ body {
 
 /* Corner brackets (decorative). Pair with two empty spans inside the
    element: <span class="br-tr"></span><span class="br-bl"></span>. */
+/* PHA-1007 polish: the amber corner brackets sat on every panel, tile and
+   banner — a lot of repeated decoration. Retired app-wide for a cleaner, more
+   premium read; cards lean on their hairline border instead. The .br-tr/.br-bl
+   spans stay inert in the markup. */
 .brk { position: relative; }
-.brk::before, .brk::after, .brk .br-tr, .brk .br-bl {
-  content: ''; position: absolute; width: 11px; height: 11px;
-  border: 1.5px solid var(--heat); z-index: 1; pointer-events: none;
-}
-.brk::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
-.brk::after  { bottom: -1px; right: -1px; border-left: none; border-top: none; }
-.brk .br-tr  { top: -1px; right: -1px; border-left: none; border-bottom: none; }
-.brk .br-bl  { bottom: -1px; left: -1px; border-right: none; border-top: none; }
+.brk::before, .brk::after, .brk .br-tr, .brk .br-bl { display: none; }
 
 /* Panel surface */
 .panel {
