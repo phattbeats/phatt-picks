@@ -201,7 +201,7 @@ export default async function PlayerProfilePage({
         }}>
           ← Leaderboard
         </Link>
-        <span className="eyebrow-mono">[ PLAYER_PROFILE ]</span>
+        <span className="eyebrow-mono">PLAYER PROFILE</span>
       </div>
 
       {/* Hero (mockup 06) */}
@@ -331,7 +331,7 @@ export default async function PlayerProfilePage({
                 teamStatus={teamStatus}
                 recordByTeam={recordsBySection.get(section.sectionid)}
                 resolvedAtIso={null}
-                title={`[ ${stageLabel} ]`}
+                title={`${stageLabel}`}
               />
             );
           }
@@ -339,7 +339,7 @@ export default async function PlayerProfilePage({
           return (
           <div key={section.sectionid}>
             <h2 className="eyebrow-mono" style={{ marginBottom: 8, display: "block" }}>
-              [ {stageLabel} ]
+              {stageLabel}
             </h2>
 
               {section.groups.map((group) => {

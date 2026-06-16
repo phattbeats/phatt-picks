@@ -69,7 +69,7 @@ export function WatchNow() {
       <div className="watch-head">
         <div>
           <div className="panel-title" style={{ marginBottom: 4 }}>
-            [ Watch Live ]
+            Watch Live
           </div>
           <h2 className="font-display watch-title">Watch Now</h2>
           <p className="watch-sub">

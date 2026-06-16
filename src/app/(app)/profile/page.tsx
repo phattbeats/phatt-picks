@@ -29,7 +29,7 @@ export default async function ProfilePage() {
     <>
       {/* Header */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <span className="eyebrow-mono">[ PROFILE ]</span>
+        <span className="eyebrow-mono">PROFILE</span>
         <h1 className="font-display" style={{
           fontWeight: 800,
           fontSize: "clamp(28px, 5vw, 40px)",
@@ -91,7 +91,7 @@ export default async function ProfilePage() {
       <section className="panel brk">
         <span className="br-tr" />
         <span className="br-bl" />
-        <div className="panel-title">[ Pick-lock reminders ]</div>
+        <div className="panel-title">Pick-lock reminders</div>
         <PushToggle />
       </section>
 
@@ -99,7 +99,7 @@ export default async function ProfilePage() {
       <section className="panel brk">
         <span className="br-tr" />
         <span className="br-bl" />
-        <div className="panel-title">[ Invite friends ]</div>
+        <div className="panel-title">Invite friends</div>
         <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "0 0 12px" }}>
           Send this link. They land on a one-tap join page — no account hunting.
         </p>
@@ -139,7 +139,7 @@ export default async function ProfilePage() {
       <section className="panel brk">
         <span className="br-tr" />
         <span className="br-bl" />
-        <div className="panel-title">[ Install the app ]</div>
+        <div className="panel-title">Install the app</div>
         <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: 0, lineHeight: 1.55 }}>
           <strong style={{ color: "var(--ink-hi)" }}>iPhone:</strong> tap Share → Add to Home Screen, then open HOTLINE from the new icon. Required before notifications work on iOS.
           <br />
@@ -204,7 +204,7 @@ function SignedOutProfile() {
   return (
     <>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <span className="eyebrow-mono">[ PROFILE ]</span>
+        <span className="eyebrow-mono">PROFILE</span>
         <h1 className="font-display" style={{
           fontWeight: 800,
           fontSize: "clamp(28px, 5vw, 40px)",
@@ -218,7 +218,7 @@ function SignedOutProfile() {
       <section className="panel brk">
         <span className="br-tr" />
         <span className="br-bl" />
-        <div className="panel-title">[ Session expired ]</div>
+        <div className="panel-title">Session expired</div>
         <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "0 0 16px", lineHeight: 1.55 }}>
           Sign in again to manage your account and picks.
         </p>
