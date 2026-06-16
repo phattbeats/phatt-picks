@@ -180,13 +180,27 @@ export function buildSwissStandings(
   // 1. Distinct competing teams, in layout order.
   const teamOrder: number[] = [];
   const seen = new Set<number>();
-  for (const group of section.groups) {
-    for (const t of group.teams) {
-      if (t.pickid !== 0 && !seen.has(t.pickid)) {
-        seen.add(t.pickid);
-        teamOrder.push(t.pickid);
-      }
+  const pushTeam = (pickid: number) => {
+    if (pickid !== 0 && !seen.has(pickid)) {
+      seen.add(pickid);
+      teamOrder.push(pickid);
     }
+  };
+  for (const group of section.groups) {
+    for (const t of group.teams) pushTeam(t.pickid);
+  }
+  // The committed per-group roster can be a PARTIAL pick'em field that is smaller
+  // than the live tournament (e.g. Cologne Stage III: the layout group carries 8
+  // teams, but the live HLTV Swiss runs 16). PHA-1109 fixed the WRITE side — those
+  // off-roster teams get persisted StageOutcome rows validated against the global
+  // roster — but a team resolved into a slot whose pickid is NOT in any group's
+  // committed roster would still be dropped here, so its clinch status never
+  // reached the locked-picks board and the viewer's pick for it stayed neutral
+  // forever even though the stage was over (PHA-1207). Fold every resolved winner
+  // into the team set so its status flows through — the answer key is
+  // authoritative for who actually competed, and a winner genuinely did.
+  for (const group of section.groups) {
+    for (const winner of Object.values(outcomesForSection[group.groupid] ?? {})) pushTeam(winner);
   }
 
   // 2. slotIndex -> bucket label, per group.
