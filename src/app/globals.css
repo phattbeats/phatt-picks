@@ -995,6 +995,44 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   box-shadow: 0 0 8px color-mix(in srgb, var(--sa) 35%, transparent);
 }
 
+/* Bracket spotlight button (PHA-1204): the lone star read as decoration —
+   Brandon wanted an obvious "click me". So it's a labelled, filled, accented
+   pill (★ SCOUT) with a resting glow + lift on hover. Wears the team's accent
+   (set inline), falling back to house orange. */
+.po-spot {
+  --sa: var(--team-accent, var(--heat));
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 8px;
+  font-family: var(--font-mono); font-weight: 700; font-size: 9px;
+  letter-spacing: 0.1em; text-transform: uppercase; line-height: 1;
+  color: var(--sa);
+  background: color-mix(in srgb, var(--sa) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sa) 60%, var(--hair-3));
+  border-radius: 999px;
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--sa) 45%, transparent);
+  cursor: pointer; user-select: none; white-space: nowrap;
+  transition: background 140ms var(--ease), border-color 140ms var(--ease),
+    box-shadow 140ms var(--ease), transform 140ms var(--ease);
+}
+.po-spot:hover, .po-spot:focus-visible {
+  color: var(--sa);
+  background: color-mix(in srgb, var(--sa) 30%, transparent);
+  border-color: var(--sa);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--sa) 45%, transparent);
+  transform: translateY(-1px);
+  outline: none;
+}
+.po-spot:active { transform: translateY(0); }
+.po-spot .po-spot-star { font-size: 11px; line-height: 1; }
+/* Below the desktop bracket breakpoint the cells are tight — drop the label and
+   keep a bigger, clearly-bordered star chip so it still reads as a button. */
+@media (max-width: 1023px) {
+  .po-spot { padding: 5px; }
+  .po-spot .po-spot-label { display: none; }
+  .po-spot .po-spot-star { font-size: 13px; }
+}
+
 .tsd-backdrop {
   position: fixed; inset: 0; z-index: 200;
   display: flex; align-items: flex-end; justify-content: center;
