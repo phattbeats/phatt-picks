@@ -276,23 +276,42 @@ export default async function PicksPage({
 
   return (
     <>
-      {/* Stage header */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <span className="eyebrow-mono">[ STAGE_{String(activeNumber).padStart(2, "0")} ]</span>
-        <h1 className="font-display" style={{
-          fontWeight: 800,
-          fontSize: "clamp(28px, 5vw, 40px)",
-          textTransform: "uppercase",
-          lineHeight: 0.95,
-        }}>
-          {activeLabel}
-        </h1>
-        {(playoffActive ? anyPlayoffPickable : activePickability.pickable) && (
-          <LockCountdown
-            lockAt={lockTimeForSection(playoffActive ? playoffSectionIds[0] : activeSectionId)}
-          />
-        )}
-      </div>
+      {/* Stage header. Playoffs wear the v3 "Cathedral" treatment (PHA-1065):
+          Cologne is the Cathedral of Counter-Strike, so the climax stage gets a
+          centered hero crowned by a thin pointed-arch vault. Swiss stages keep
+          the standard left-aligned eyebrow + wordmark. */}
+      {playoffActive ? (
+        <div className="cath-hero">
+          <svg className="cath-arch" viewBox="0 0 188 60" fill="none" aria-hidden="true">
+            <path d="M2 60 L2 30 Q2 2 94 2 Q186 2 186 30 L186 60" stroke="rgba(240,175,80,0.30)" strokeWidth="1" />
+            <path d="M22 60 L22 34 Q22 14 94 14 Q166 14 166 34 L166 60" stroke="rgba(240,175,80,0.16)" strokeWidth="1" />
+            <line x1="94" y1="6" x2="94" y2="60" stroke="rgba(240,175,80,0.14)" strokeWidth="1" />
+          </svg>
+          <span className="cath-eyebrow">Cathedral of Counter&#8209;Strike</span>
+          <h1 className="cath-title">{activeLabel}</h1>
+          <div className="cath-sub">Single Elimination &middot; Eight Remain</div>
+          {anyPlayoffPickable && (
+            <div style={{ display: "flex", justifyContent: "center", marginTop: 13 }}>
+              <LockCountdown lockAt={lockTimeForSection(playoffSectionIds[0])} />
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <span className="eyebrow-mono">[ STAGE_{String(activeNumber).padStart(2, "0")} ]</span>
+          <h1 className="font-display" style={{
+            fontWeight: 800,
+            fontSize: "clamp(28px, 5vw, 40px)",
+            textTransform: "uppercase",
+            lineHeight: 0.95,
+          }}>
+            {activeLabel}
+          </h1>
+          {activePickability.pickable && (
+            <LockCountdown lockAt={lockTimeForSection(activeSectionId)} />
+          )}
+        </div>
+      )}
 
       {/* Steam-connected but no auth code: picks live in HOTLINE, not yet
           pushed to the official in-game Pick'Em. Point them at the page. */}

@@ -1007,10 +1007,12 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   font-family: var(--font-mono); font-weight: 700; font-size: 9px;
   letter-spacing: 0.1em; text-transform: uppercase; line-height: 1;
   color: var(--sa);
-  background: color-mix(in srgb, var(--sa) 16%, transparent);
-  border: 1px solid color-mix(in srgb, var(--sa) 60%, var(--hair-3));
+  /* v3 Cathedral (PHA-1065): cleaner outline pill — accent as a hairline, not a
+     fill, so it reads as restrained "light through glass". */
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--sa) 50%, var(--hair-2));
   border-radius: 999px;
-  box-shadow: 0 0 0 0 color-mix(in srgb, var(--sa) 45%, transparent);
+  box-shadow: none;
   cursor: pointer; user-select: none; white-space: nowrap;
   transition: background 140ms var(--ease), border-color 140ms var(--ease),
     box-shadow 140ms var(--ease), transform 140ms var(--ease);
@@ -1032,6 +1034,56 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   .po-spot .po-spot-label { display: none; }
   .po-spot .po-spot-star { font-size: 13px; }
 }
+
+/* ---------------------------------------------------------------------------
+   v3 "Cathedral" (PHA-1065). Cologne is the Cathedral of Counter-Strike, so the
+   Playoffs page wears that as architectural restraint, not literal stained
+   glass: a thin pointed-arch vault over the hero, a centered axis, and the
+   champion crowned at an altar. One hairline arch; accent used like light.
+   --------------------------------------------------------------------------- */
+.cath-hero { text-align: center; padding: 4px 0 2px; }
+.cath-arch { display: block; margin: 0 auto 12px; width: 188px; height: 60px; }
+.cath-eyebrow {
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.26em;
+  text-transform: uppercase; color: var(--ink-mid); display: block; margin-bottom: 9px;
+}
+.cath-title {
+  font-family: var(--font-display); font-weight: 800; line-height: 0.88;
+  text-transform: uppercase; letter-spacing: 0.01em;
+  font-size: clamp(40px, 12vw, 52px);
+  background: linear-gradient(180deg, #fbf2dd, #cdbd97);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.cath-sub {
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.24em;
+  text-transform: uppercase; color: var(--ink-low); margin-top: 10px;
+}
+
+/* The nave: the bracket panel, a soft v3 surface with a single top keyline
+   (corner brackets retired). */
+.cath-nave {
+  position: relative; border-radius: 14px; overflow: hidden;
+  background: linear-gradient(180deg, var(--surf-2) 0%, var(--surf-1) 100%);
+  border: 1px solid rgba(245,234,212,0.08);
+  padding: 18px 16px 20px;
+}
+.cath-nave::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--heat) 0%, rgba(240,163,0,0.25) 45%, transparent 80%);
+}
+
+/* The altar: the champion, crowned under a pointed arch (the reverent apex). */
+.cath-altar { text-align: center; margin-top: 16px; }
+.cath-altar-arch { display: block; margin: 0 auto -7px; width: 232px; height: 56px; }
+.cath-altar-card {
+  border: 1px solid color-mix(in srgb, var(--heat) 40%, transparent);
+  border-radius: 13px;
+  background: radial-gradient(120% 90% at 50% 0%, rgba(240,163,0,0.12), transparent 70%), var(--surf-2);
+  padding: 14px 16px 16px;
+}
+.cath-altar-lab { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--heat); }
+.cath-altar-who { font-family: var(--font-display); font-weight: 800; font-size: 26px; text-transform: uppercase; color: var(--ink-hi); line-height: 0.95; margin-top: 6px; }
+.cath-altar-note { font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-low); margin-top: 8px; }
 
 .tsd-backdrop {
   position: fixed; inset: 0; z-index: 200;
