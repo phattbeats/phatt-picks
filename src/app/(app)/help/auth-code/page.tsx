@@ -87,7 +87,7 @@ export default async function AuthCodeHelpPage() {
   return (
     <>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <span className="eyebrow-mono">[ STEAM_SYNC ]</span>
+        <span className="eyebrow-mono">STEAM SYNC</span>
         <h1 className="font-display" style={{
           fontWeight: 800,
           fontSize: "clamp(28px, 5vw, 40px)",

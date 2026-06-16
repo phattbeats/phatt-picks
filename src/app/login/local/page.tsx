@@ -46,7 +46,7 @@ export default async function LocalSignInPage({
       <div className="panel brk" style={{ maxWidth: 360, width: "100%", padding: "22px 24px" }}>
         <span className="br-tr" />
         <span className="br-bl" />
-        <p className="eyebrow-mono" style={{ marginBottom: 10 }}>[ CALLSIGN ]</p>
+        <p className="eyebrow-mono" style={{ marginBottom: 10 }}>CALLSIGN</p>
         <h1 className="font-display" style={{
           fontWeight: 800,
           fontSize: 26,

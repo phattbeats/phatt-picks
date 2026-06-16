@@ -311,7 +311,7 @@ export default async function PicksPage({
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <span className="eyebrow-mono">[ STAGE_{String(activeNumber).padStart(2, "0")} ]</span>
+          <span className="eyebrow-mono">STAGE {String(activeNumber).padStart(2, "0")}</span>
           <h1 className="font-display" style={{
             fontWeight: 800,
             fontSize: "clamp(28px, 5vw, 40px)",
@@ -533,7 +533,7 @@ export default async function PicksPage({
               </>
             ) : (
               <div className="panel" style={{ padding: "20px 18px" }}>
-                <span className="eyebrow-mono" style={{ color: "var(--heat)" }}>[ LIVE BRACKET ]</span>
+                <span className="eyebrow-mono" style={{ color: "var(--heat)" }}>LIVE BRACKET</span>
                 <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "10px 0 0", lineHeight: 1.5 }}>
                   The bracket and standings go live here as soon as the opening matchups are announced.
                 </p>
@@ -571,7 +571,7 @@ export default async function PicksPage({
               </span>
               <span style={{ minWidth: 0, flex: 1 }}>
                 <span className="eyebrow-mono" style={{ color: "var(--heat)", display: "block" }}>
-                  [ STAGE WRAPPED ]
+                  STAGE WRAPPED
                 </span>
                 <span
                   className="font-display"
@@ -670,7 +670,7 @@ function SteamLinkNotice() {
         className="eyebrow-mono"
         style={{ color: "var(--heat)", display: "block" }}
       >
-        [ SAVED HERE — NOT ON STEAM YET ]
+        SAVED HERE — NOT ON STEAM YET
       </span>
       <p
         className="font-display"
@@ -793,7 +793,7 @@ function LockedStageCard({
       </span>
       <div style={{ minWidth: 0 }}>
         <span className="eyebrow-mono" style={{ color: "var(--heat)", display: "block" }}>
-          [ {tag} ]
+          {tag}
         </span>
         <p
           className="font-display"
