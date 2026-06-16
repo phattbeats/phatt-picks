@@ -360,9 +360,9 @@ export default async function StageRevealPage({
                   )}
                   <div className="pickcard-logo">
                     {team && team.pickid !== 0 ? (
-                      <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={80} />
+                      <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={128} />
                     ) : (
-                      <div style={{ width: 80, height: 80, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-low)", fontFamily: "var(--font-mono)", fontSize: 30 }}>?</div>
+                      <div style={{ width: 128, height: 128, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-low)", fontFamily: "var(--font-mono)", fontSize: 48 }}>?</div>
                     )}
                   </div>
                   <div className="font-display pickcard-name" style={{ color: "var(--ink-hi)" }}>
@@ -406,9 +406,10 @@ export default async function StageRevealPage({
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
         }
         .reveal-moment > div + div { border-left: 1px solid rgba(245,234,212,0.08); }
-        .reveal-picks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        @media (min-width: 560px) { .reveal-picks { grid-template-columns: repeat(3, 1fr); } }
-        @media (min-width: 880px) { .reveal-picks { grid-template-columns: repeat(4, 1fr); } }
+        /* logos are the focus (PHA-1117): wider cards, fewer columns, so each
+           crest dominates its tile rather than floating in negative space. */
+        .reveal-picks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        @media (min-width: 720px) { .reveal-picks { grid-template-columns: repeat(3, 1fr); } }
         .pickcard {
           display: flex; flex-direction: column; align-items: center; text-align: center;
           gap: 10px; padding: 24px 14px 16px;
@@ -430,7 +431,7 @@ export default async function StageRevealPage({
           background: linear-gradient(90deg, var(--tac-green, #9bd23c) 0%, rgba(155,210,60,0.25) 45%, transparent 80%);
         }
         .pickcard.is-miss { opacity: 0.82; }
-        .pickcard-logo { display: flex; align-items: center; justify-content: center; min-height: 80px; }
+        .pickcard-logo { display: flex; align-items: center; justify-content: center; min-height: 128px; }
         .pickcard-name {
           font-weight: 800; font-size: 19px; line-height: 1; letter-spacing: 0.01em;
           text-transform: uppercase; max-width: 100%;
@@ -573,7 +574,7 @@ function ConsensusPanel({
         <div className="insight-body">
           <div className="insight-logo">
             {cTeam && cTeam.pickid !== 0
-              ? <TeamLogo tiers={resolveLogoTiers(cTeam)} teamName={cTeam.name} size={60} />
+              ? <TeamLogo tiers={resolveLogoTiers(cTeam)} teamName={cTeam.name} size={96} />
               : <div className="insight-logo-blank">#{consensus.winnerPickId}</div>}
           </div>
           <div style={{ minWidth: 0 }}>
@@ -591,7 +592,7 @@ function ConsensusPanel({
           <div className="insight-head" style={{ color: "var(--ember, #d8351c)" }}>Bold Call</div>
           <div className="insight-body">
             <div className="insight-logo">
-              <TeamLogo tiers={resolveLogoTiers(bTeam)} teamName={bTeam.name} size={60} />
+              <TeamLogo tiers={resolveLogoTiers(bTeam)} teamName={bTeam.name} size={96} />
             </div>
             <div style={{ minWidth: 0 }}>
               <div className="font-display insight-name" style={{ color: "var(--ink-hi)" }}>
@@ -638,7 +639,7 @@ function ConsensusPanel({
           letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 14px;
         }
         .insight-body { display: flex; align-items: center; gap: 16px; }
-        .insight-logo { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 60px; height: 60px; }
+        .insight-logo { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 96px; height: 96px; }
         .insight-logo-blank { font-family: var(--font-mono); font-size: 13px; color: var(--ink-low); }
         .insight-name {
           font-weight: 800; font-size: 26px; line-height: 0.95; letter-spacing: 0.01em;
