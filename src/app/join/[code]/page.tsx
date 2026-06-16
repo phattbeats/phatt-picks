@@ -30,7 +30,7 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, maxWidth: 360, textAlign: "center" }}>
-        <span className="eyebrow-mono">[ INCOMING ]</span>
+        <span className="eyebrow-mono">INCOMING</span>
         <h1 className="font-display" style={{
           fontWeight: 800,
           fontSize: "clamp(26px, 6vw, 36px)",
@@ -55,7 +55,7 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
       <div className="brk panel" style={{ maxWidth: 360, width: "100%", padding: "22px 24px" }}>
         <span className="br-tr" />
         <span className="br-bl" />
-        <p className="eyebrow-mono" style={{ marginBottom: 12 }}>[ TWO WAYS IN ]</p>
+        <p className="eyebrow-mono" style={{ marginBottom: 12 }}>TWO WAYS IN</p>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <Link href="/login/local" className="btn-heat" style={{ width: "100%" }}>
             Start playing — no Steam

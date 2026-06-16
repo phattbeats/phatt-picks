@@ -55,7 +55,7 @@ export default function AuthPage() {
         </p>
       </div>
 
-      {/* [ Notice ] welcome block */}
+      {/* Notice welcome block */}
       <div style={{
         position: "relative",
         width: "100%",
@@ -67,7 +67,7 @@ export default function AuthPage() {
         padding: "16px 18px",
       }}>
         <span className="eyebrow-mono" style={{ display: "block", marginBottom: 8, letterSpacing: "0.18em" }}>
-          [ NOTICE ]
+          NOTICE
         </span>
         <p style={{ fontSize: 14, lineHeight: 1.62, color: "var(--ink-mid)", margin: 0 }}>
           This is an early test build, and you&apos;re one of the first inside. Things will most likely
@@ -84,7 +84,7 @@ export default function AuthPage() {
         <span className="br-tr" />
         <span className="br-bl" />
         <p className="eyebrow-mono" style={{ marginBottom: 8 }}>
-          [ AUTH ]
+          AUTH
         </p>
         <p style={{
           color: "var(--ink-mid)",

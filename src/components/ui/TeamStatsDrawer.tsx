@@ -106,7 +106,7 @@ export function TeamStatsDrawer({ team, onClose, liveStats, liveAsOf }: Props) {
         <div className="tsd-head">
           <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={48} />
           <div className="tsd-head-text">
-            <span className="eyebrow-mono">[ TEAM DOSSIER ]</span>
+            <span className="eyebrow-mono">TEAM DOSSIER</span>
             <h3 className="tsd-name font-display">{team.name}</h3>
           </div>
           {stats?.worldRank != null && (

@@ -141,7 +141,7 @@ export default function FaqPage() {
   return (
     <>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <span className="eyebrow-mono">[ FIELD_MANUAL ]</span>
+        <span className="eyebrow-mono">FIELD MANUAL</span>
         <h1 className="font-display" style={{
           fontWeight: 900,
           fontSize: "clamp(34px, 7vw, 52px)",

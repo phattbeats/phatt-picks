@@ -22,7 +22,7 @@ export default async function NewsPage() {
   return (
     <>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <span className="eyebrow-mono">[ THE_WIRE ]</span>
+        <span className="eyebrow-mono">THE WIRE</span>
         <h1 className="font-display" style={{
           fontWeight: 800,
           fontSize: "clamp(28px, 5vw, 40px)",

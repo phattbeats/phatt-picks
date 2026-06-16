@@ -85,7 +85,7 @@ export function LiveSwissBracketBoard({
       <span className="br-bl" />
 
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <span className="eyebrow-mono" style={{ color: "var(--heat)" }}>[ LIVE BRACKET ]</span>
+        <span className="eyebrow-mono" style={{ color: "var(--heat)" }}>LIVE BRACKET</span>
         <span className="last-updated">
           <LastUpdated iso={fetchedAtIso} />
         </span>
