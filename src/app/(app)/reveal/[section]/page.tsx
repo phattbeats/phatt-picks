@@ -402,6 +402,8 @@ export default async function StageRevealPage({
           display: grid; grid-template-columns: repeat(3, 1fr);
           background: linear-gradient(180deg, var(--surf-2) 0%, var(--surf-1) 100%);
           border: 1px solid rgba(245,234,212,0.08); border-radius: 14px; overflow: hidden;
+          /* light sheen (PHA-1117): a faint specular line catches the top edge */
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
         }
         .reveal-moment > div + div { border-left: 1px solid rgba(245,234,212,0.08); }
         .reveal-picks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
@@ -413,6 +415,14 @@ export default async function StageRevealPage({
           border: 1px solid rgba(245,234,212,0.08); border-radius: 14px;
           background: linear-gradient(180deg, var(--surf-2) 0%, var(--surf-1) 100%);
           position: relative; overflow: hidden;
+          /* light sheen (PHA-1117) */
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+          transition: transform 180ms var(--ease), box-shadow 180ms var(--ease), border-color 180ms var(--ease);
+        }
+        /* cool minimal thing (PHA-1117): the card you're reading lifts a hair on
+           hover and the sheen warms — tactile, no perpetual motion. */
+        @media (hover: hover) {
+          .pickcard:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 10px 24px -16px rgba(0,0,0,0.7); border-color: rgba(245,234,212,0.16); }
         }
         .pickcard.is-correct { border-color: rgba(155,210,60,0.28); }
         .pickcard.is-correct::before {
@@ -448,6 +458,7 @@ const v3Card = {
   border: "1px solid rgba(245,234,212,0.08)",
   borderRadius: 14,
   padding: "18px 22px",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)", // light sheen (PHA-1117)
 };
 
 const v3CardLabel = {
@@ -602,12 +613,26 @@ function ConsensusPanel({
           position: relative; overflow: hidden; padding: 18px 22px;
           background: linear-gradient(180deg, var(--surf-2) 0%, var(--surf-1) 100%);
           border: 1px solid rgba(245,234,212,0.08); border-radius: 14px;
+          /* light sheen (PHA-1117): faint specular top edge */
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
         }
         .insight-card::before {
-          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; z-index: 2;
         }
         .insight-consensus::before { background: linear-gradient(90deg, var(--heat) 0%, rgba(240,163,0,0.25) 42%, transparent 78%); }
         .insight-bold::before { background: linear-gradient(90deg, var(--ember, #d8351c) 0%, rgba(216,53,28,0.22) 42%, transparent 78%); }
+        /* cool minimal thing (PHA-1117): a single light sweep glides across the
+           headline cards once on load — a broadcast lower-third wipe — then rests
+           off-screen. The global prefers-reduced-motion kill switch parks it. */
+        .insight-card::after {
+          content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 55%; z-index: 1;
+          background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.09) 50%, transparent 70%);
+          transform: translateX(-130%);
+          animation: rv-sheen-sweep 1.15s cubic-bezier(.22,.61,.36,1) 0.35s both;
+          pointer-events: none;
+        }
+        .insight-bold::after { animation-delay: 0.5s; }
+        @keyframes rv-sheen-sweep { from { transform: translateX(-130%); } to { transform: translateX(230%); } }
         .insight-head {
           font-family: var(--font-mono); font-size: 13px; font-weight: 600;
           letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 14px;
