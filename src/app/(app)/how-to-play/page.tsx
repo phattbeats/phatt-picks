@@ -200,7 +200,7 @@ function StageFlow() {
     <div className="brk" style={{ ...card, background: "var(--surf-2)" }}>
       <span className="br-tr" />
       <span className="br-bl" />
-      <div className="panel-title" style={{ marginBottom: 4 }}>[ How a stage plays out ]</div>
+      <div className="panel-title" style={{ marginBottom: 4 }}>How a stage plays out</div>
       <p style={{
         fontFamily: "var(--font-mono)",
         fontSize: 10.5,
@@ -262,7 +262,7 @@ export default function HowToPlayPage() {
     <>
       {/* Header */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <span className="eyebrow-mono">[ NEW_RECRUIT ]</span>
+        <span className="eyebrow-mono">NEW RECRUIT</span>
         <h1 className="font-display" style={{
           fontWeight: 900,
           fontSize: "clamp(32px, 7vw, 50px)",
@@ -280,7 +280,7 @@ export default function HowToPlayPage() {
       </div>
 
       {/* What even is this */}
-      <SectionTitle kicker="[ THE IDEA ]">The whole thing in one line</SectionTitle>
+      <SectionTitle kicker="THE IDEA">The whole thing in one line</SectionTitle>
       <div className="brk" style={{ ...card, borderLeft: "3px solid var(--heat)" }}>
         <span className="br-tr" />
         <span className="br-bl" />
@@ -297,7 +297,7 @@ export default function HowToPlayPage() {
       </div>
 
       {/* The shape of a Major */}
-      <SectionTitle kicker="[ THE EVENT ]">What you&apos;re predicting</SectionTitle>
+      <SectionTitle kicker="THE EVENT">What you&apos;re predicting</SectionTitle>
       <div className="brk" style={card}>
         <span className="br-tr" />
         <span className="br-bl" />
@@ -318,13 +318,13 @@ export default function HowToPlayPage() {
         </ul>
         <p style={{ ...lead, margin: "12px 0 0", fontSize: 13 }}>
           You don&apos;t need to know the teams cold. Tap any team&apos;s{" "}
-          <span style={{ fontFamily: "var(--font-mono)", color: "var(--ink-hi)" }}>[ i ]</span>{" "}
+          <span style={{ fontFamily: "var(--font-mono)", color: "var(--ink-hi)" }}>i</span>{" "}
           on the board for its roster, world rank, and recent form before you commit.
         </p>
       </div>
 
       {/* The three calls */}
-      <SectionTitle kicker="[ THE CALL ]">A Swiss stage = three predictions</SectionTitle>
+      <SectionTitle kicker="THE CALL">A Swiss stage = three predictions</SectionTitle>
       <p style={{ ...lead, marginTop: -2 }}>
         For each Swiss stage you&apos;re answering three questions about the teams:
       </p>
@@ -355,7 +355,7 @@ export default function HowToPlayPage() {
       <StageFlow />
 
       {/* Steps */}
-      <SectionTitle kicker="[ DO IT ]">Making your first picks</SectionTitle>
+      <SectionTitle kicker="DO IT">Making your first picks</SectionTitle>
       <Step n={1} title="Open the board">
         Head to{" "}
         <Link href="/picks" style={{ color: "var(--heat)" }}>Picks</Link>{" "}
@@ -363,7 +363,7 @@ export default function HowToPlayPage() {
       </Step>
       <Step n={2} title="Sort the teams">
         Tap a team to drop it into a slot — 3-0, advance, or 0-3. Fill every slot. Not sure on a team?
-        Hit its <span style={{ fontFamily: "var(--font-mono)", color: "var(--ink-hi)" }}>[ i ]</span> for the dossier first.
+        Hit its <span style={{ fontFamily: "var(--font-mono)", color: "var(--ink-hi)" }}>i</span> for the dossier first.
       </Step>
       <Step n={3} title="Lock them in">
         Save. Your picks are set until the stage starts, then they&apos;re sealed — no changes once the
@@ -377,7 +377,7 @@ export default function HowToPlayPage() {
       </Step>
 
       {/* Scoring in one breath */}
-      <SectionTitle kicker="[ POINTS ]">Scoring, in one breath</SectionTitle>
+      <SectionTitle kicker="POINTS">Scoring, in one breath</SectionTitle>
       <div className="brk" style={card}>
         <span className="br-tr" />
         <span className="br-bl" />
@@ -395,7 +395,7 @@ export default function HowToPlayPage() {
       </div>
 
       {/* Joining mid-tournament */}
-      <SectionTitle kicker="[ LATE ARRIVAL ]">Just joined mid-tournament?</SectionTitle>
+      <SectionTitle kicker="LATE ARRIVAL">Just joined mid-tournament?</SectionTitle>
       <p style={{ ...lead, marginTop: -2 }}>
         Totally fine — plenty of people are. Here&apos;s how it works depending on how you play:
       </p>
@@ -403,7 +403,7 @@ export default function HowToPlayPage() {
         <div className="brk" style={{ ...card, flex: "1 1 240px", minWidth: 0 }}>
           <span className="br-tr" />
           <span className="br-bl" />
-          <div className="panel-title">[ Playing locally ]</div>
+          <div className="panel-title">Playing locally</div>
           <p style={{ ...lead, margin: "0 0 0", fontSize: 13.5 }}>
             Make your picks for the <strong style={{ color: "var(--ink-hi)" }}>current open stage</strong> and
             you&apos;re in — same board, same scoring as everyone else. Stages that already locked before you
@@ -413,7 +413,7 @@ export default function HowToPlayPage() {
         <div className="brk" style={{ ...card, flex: "1 1 240px", minWidth: 0 }}>
           <span className="br-tr" />
           <span className="br-bl" />
-          <div className="panel-title">[ Synced with Steam ]</div>
+          <div className="panel-title">Synced with Steam</div>
           <p style={{ ...lead, margin: "0 0 0", fontSize: 13.5 }}>
             If you own the Viewer Pass and already made real picks in-game, connect your{" "}
             <Link href="/help/auth-code" style={{ color: "var(--heat)" }}>Steam auth code</Link>.
