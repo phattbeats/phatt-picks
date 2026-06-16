@@ -156,7 +156,6 @@ body {
   -webkit-background-clip: text;
           background-clip: text;
   color: transparent;
-  animation: foil-shift 16s ease-in-out infinite;
 }
 
 .eyebrow-mono {
@@ -198,11 +197,16 @@ body {
   color: var(--ember);
 }
 .live-tag::before {
-  content: ''; width: 6px; height: 6px;
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
   background: var(--ember);
-  box-shadow: 0 0 6px var(--ember);
-  animation: live-blink 1.4s steps(2, end) infinite;
+  /* PHA-1007 polish: presence, not alarm. The hard 1.4s on/off strobe read cheap
+     ("the blinking light is trying too hard" — Brandon); now a static dot with a
+     soft halo and a slow, gentle breathe. */
+  box-shadow: 0 0 0 3px rgba(216,53,28,0.18), 0 0 8px var(--ember);
+  animation: live-breathe 4.5s ease-in-out infinite;
 }
+@keyframes live-breathe { 0%,100% { opacity: 1; } 50% { opacity: 0.72; } }
+@media (prefers-reduced-motion: reduce) { .live-tag::before { animation: none; } }
 
 /* Corner brackets (decorative). Pair with two empty spans inside the
    element: <span class="br-tr"></span><span class="br-bl"></span>. */
@@ -360,7 +364,6 @@ body {
   -webkit-background-clip: text;
           background-clip: text;
   color: transparent;
-  animation: foil-shift 14s ease-in-out infinite;
   filter: drop-shadow(0 0 12px rgba(240,163,0,0.25));
 }
 .stat .sub { font-size: 12px; color: var(--ink-mid); margin-top: 6px; }
@@ -731,7 +734,6 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   font-size: 36px;
   background: var(--foil); background-size: 200% 200%;
   -webkit-background-clip: text; background-clip: text; color: transparent;
-  animation: foil-shift 14s ease-in-out infinite;
 }
 .podium-pts {
   font-family: var(--font-mono);
@@ -744,7 +746,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   width: 18px; height: 18px; flex-shrink: 0;
   border-radius: 4px;
 }
-.coin-sticker.gold { background: var(--foil); background-size: 200% 200%; animation: foil-shift 12s ease-in-out infinite; box-shadow: 0 0 0 1px rgba(255,225,150,0.4); }
+.coin-sticker.gold { background: var(--foil); background-size: 200% 200%; box-shadow: 0 0 0 1px rgba(255,225,150,0.4); }
 .coin-sticker.silver { background: linear-gradient(135deg, #f2f2f2 0%, #b0b0b0 45%, #d8d8d8 100%); box-shadow: 0 0 0 1px rgba(200,200,200,0.35); }
 .coin-sticker.bronze { background: linear-gradient(135deg, #e8955a 0%, #9d5e28 45%, #c97a30 100%); box-shadow: 0 0 0 1px rgba(200,130,70,0.4); }
 .coin-sticker.diamond { background: linear-gradient(135deg, #e8f8ff 0%, #7dd3fc 38%, #3b9fd4 65%, #b9f2ff 100%); box-shadow: 0 0 0 1px rgba(180,230,255,0.5); }
@@ -818,7 +820,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .statcard { background: var(--surf-1); border: 1px solid var(--hair); padding: 16px 16px; }
 .statcard-lbl { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--heat); margin-bottom: 6px; }
 .statcard-val { font-family: var(--font-display); font-weight: 800; font-size: 34px; line-height: 0.9; color: var(--ink-hi); }
-.statcard-val.foil { background: var(--foil); background-size: 200% 200%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: foil-shift 14s ease-in-out infinite; }
+.statcard-val.foil { background: var(--foil); background-size: 200% 200%; -webkit-background-clip: text; background-clip: text; color: transparent; }
 .statcard-val small { font-size: 15px; color: var(--ink-low); font-weight: 600; }
 .statcard-sub { font-size: 11px; color: var(--ink-mid); margin-top: 6px; }
 .coin-panel { background: var(--surf-1); border: 1px solid var(--hair-2); padding: 18px 20px; display: flex; align-items: center; gap: 16px; }
