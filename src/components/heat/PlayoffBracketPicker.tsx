@@ -25,6 +25,7 @@ import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
 import { SpotlightModal, type SpotlightMarketLine } from "@/components/ui/SpotlightModal";
 import { LockInStage } from "@/components/LockInStage";
+import { teamAccent } from "@/lib/playoff-spotlights";
 import type { TeamDef } from "@/lib/layout";
 import type { TeamStats } from "@/lib/team-stats-core";
 import {
@@ -493,13 +494,18 @@ function PickSide({
           {team?.name ?? "TBD"}
         </span>
       </span>
-      {/* Spotlight star — sibling tap target, stays usable while the row is a pick button */}
+      {/* Spotlight button — a labelled pill, not a lone star, so it reads as
+          "click me" rather than decoration (Brandon, PHA-1204). Sibling tap
+          target with stopPropagation so it stays usable while the whole row is
+          also the crown-the-winner button. Wears the team's accent. */}
       {team && (
         <span
-          className="po-pick-star"
+          className="po-spot"
           role="button"
           tabIndex={0}
-          aria-label={`${team.name} spotlight`}
+          aria-label={`Scout ${team.name} — open spotlight`}
+          title={`Scout ${team.name}`}
+          style={teamAccent(team) ? ({ "--team-accent": teamAccent(team) } as CSSProperties) : undefined}
           onClick={(e) => {
             e.stopPropagation();
             onSpotlight(team);
@@ -511,9 +517,9 @@ function PickSide({
               onSpotlight(team);
             }
           }}
-          style={{ flexShrink: 0, cursor: "pointer", color: isWinner ? HEAT : "var(--ink-low)", fontSize: Math.round(geo.logo * 0.5), lineHeight: 1, padding: "0 2px" }}
         >
-          ★
+          <span className="po-spot-star" aria-hidden="true">★</span>
+          <span className="po-spot-label">SCOUT</span>
         </span>
       )}
       {isWinner && (
