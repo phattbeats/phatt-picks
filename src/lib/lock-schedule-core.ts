@@ -43,14 +43,92 @@ export type LockSchedule = Readonly<Record<number, string>>;
  * source. A null value renders no countdown — the truthful default until the
  * playoff schedule is published. Fill these in once authoritative.
  */
-export const COLOGNE_LOCK_SCHEDULE: LockSchedule = {
+const COLOGNE_SWISS_LOCKS: LockSchedule = {
   105: "2026-06-02T10:30:00Z", // Stage I  — Jun 2, 12:30 CEST first match
   106: "2026-06-06T10:30:00Z", // Stage II — Jun 6, 12:30 CEST first match
   107: "2026-06-11T10:30:00Z", // Stage III — Jun 11, 12:30 CEST first match
-  // 108: Quarterfinals — Jun 18–21 window, per-round time TBD
-  // 109: Semifinals    — Jun 18–21 window, per-round time TBD
-  // 110: Grand Final   — Jun 21 (likely), time TBD
 };
+
+/**
+ * Committed IEM Cologne 2026 PER-GAME playoff schedule (PHA-1007).
+ *
+ * Each playoff section runs several games on the day, and the Pick'Em window for
+ * the whole bracket closes when the FIRST quarterfinal begins. So unlike the
+ * Swiss stages (one lock instant each) the playoffs need per-GAME times: each is
+ * shown on the bracket ("Jun 18 · 12:30"), and the earliest QF time derives the
+ * single playoff lock the countdown counts toward.
+ *
+ * Keyed by sectionId → game start instants (UTC ISO) in bracket order:
+ *   108 Quarterfinals [QF1, QF2, QF3, QF4] · 109 Semifinals [SF1, SF2] · 110 Grand Final [GF].
+ *
+ * SAME TRUTHFUL-BY-CONSTRUCTION RULE as the lock schedule above: a game's time
+ * lives here only once it is the published, authoritative time. EMPTY by default
+ * → no playoff lock, no countdown, no game-time chips.
+ *
+ * Committed from the authoritative published bracket (PHA-1007): Liquipedia +
+ * the ESL Pro Tour schedule for IEM Cologne 2026 playoffs (Jun 18–21), times
+ * converted from CEST (UTC+2) to the UTC instants below. Bo3 quarters/semis,
+ * Bo5 grand final:
+ *   QF1 Aurora–BetBoom  Jun 18 15:45 CEST · QF2 9z–FURIA       Jun 18 19:00 CEST
+ *   QF3 Spirit–G2       Jun 19 15:45 CEST · QF4 Falcons–Vitality Jun 19 19:00 CEST
+ *   SF1 Jun 20 15:45 CEST · SF2 Jun 20 19:00 CEST · GF Jun 21 17:00 CEST
+ */
+export const COLOGNE_PLAYOFF_SCHEDULE: Readonly<Record<number, readonly string[]>> = {
+  108: ["2026-06-18T13:45:00Z", "2026-06-18T17:00:00Z", "2026-06-19T13:45:00Z", "2026-06-19T17:00:00Z"],
+  109: ["2026-06-20T13:45:00Z", "2026-06-20T17:00:00Z"],
+  110: ["2026-06-21T15:00:00Z"],
+};
+
+/**
+ * Derive each playoff section's lock instant = its EARLIEST committed game time.
+ * The bracket is one Pick'Em stage that closes at the first quarterfinal, so the
+ * countdown keys off section 108's earliest game; 109/110 carry their own
+ * earliest only for completeness. A section with no committed games contributes
+ * nothing (stays dark), so an empty COLOGNE_PLAYOFF_SCHEDULE is a no-op.
+ */
+function derivePlayoffLocks(
+  schedule: Readonly<Record<number, readonly string[]>>,
+): LockSchedule {
+  const out: Record<number, string> = {};
+  for (const key of Object.keys(schedule)) {
+    const sectionId = Number(key);
+    const times = (schedule[sectionId] ?? [])
+      .filter((iso) => typeof iso === "string" && !Number.isNaN(Date.parse(iso)))
+      .sort((a, b) => Date.parse(a) - Date.parse(b));
+    if (times.length > 0) out[sectionId] = times[0];
+  }
+  return out;
+}
+
+/**
+ * The full committed lock schedule: the Swiss stage locks plus the playoff
+ * section locks derived from the per-game playoff schedule. Folding them here
+ * means the countdown, `isLockTimePassed`, the bracket-reveal window and the
+ * pre-lock reminders all read ONE source — fill `COLOGNE_PLAYOFF_SCHEDULE` and
+ * the playoffs light up everywhere at once.
+ */
+export const COLOGNE_LOCK_SCHEDULE: LockSchedule = {
+  ...COLOGNE_SWISS_LOCKS,
+  ...derivePlayoffLocks(COLOGNE_PLAYOFF_SCHEDULE),
+};
+
+/**
+ * The committed start instant (UTC ISO) of a single playoff game, or `null` when
+ * that game has no published time yet. `matchIndex` is the game's position in its
+ * round (0-based, bracket order). Pure; lets the bracket render a per-game
+ * "Jun 18 · 12:30" chip only for games that have a real, authoritative time.
+ */
+export function playoffGameTime(
+  sectionId: number,
+  matchIndex: number,
+  schedule: Readonly<Record<number, readonly string[]>> = COLOGNE_PLAYOFF_SCHEDULE,
+): string | null {
+  const times = schedule[sectionId];
+  if (!times) return null;
+  const iso = times[matchIndex];
+  if (typeof iso !== "string" || Number.isNaN(Date.parse(iso))) return null;
+  return iso;
+}
 
 /**
  * Human stage names per section id — the single committed source for the

@@ -24,6 +24,8 @@ import {
   BRACKET_REVEAL_LEAD_MS,
   COLOGNE_LOCK_SCHEDULE,
   COLOGNE_MATCH_WINDOWS,
+  COLOGNE_PLAYOFF_SCHEDULE,
+  playoffGameTime,
   type LockSchedule,
 } from "../src/lib/lock-schedule-core.ts";
 import type { Layout } from "../src/lib/layout.ts";
@@ -50,13 +52,17 @@ function check(name: string, cond: boolean) {
 console.log("\nlock-schedule - committed Cologne schedule (PHA-865)");
 
 // Swiss stages are lit with their day-1 first-match instant (12:30 CEST =
-// 10:30 UTC). Playoff sections stay dark until the bracket schedule publishes.
+// 10:30 UTC). Playoff sections are now lit too: each section's lock derives from
+// its earliest committed game (108 = first QF, 109 = first SF, 110 = the GF) —
+// PHA-1007, from the published Cologne bracket.
 const COMMITTED_LIT: Readonly<Record<number, string>> = {
   105: "2026-06-02T10:30:00Z",
   106: "2026-06-06T10:30:00Z",
   107: "2026-06-11T10:30:00Z",
+  108: "2026-06-18T13:45:00Z", // earliest QF (Jun 18 15:45 CEST)
+  109: "2026-06-20T13:45:00Z", // earliest SF (Jun 20 15:45 CEST)
+  110: "2026-06-21T15:00:00Z", // GF (Jun 21 17:00 CEST)
 };
-const COMMITTED_DARK = [108, 109, 110];
 
 for (const s of layout.sections) {
   const label = s.name.split(" | ")[0];
@@ -69,8 +75,8 @@ for (const s of layout.sections) {
   );
 }
 check(
-  "playoff sections (108/109/110) all dark until bracket schedule publishes",
-  COMMITTED_DARK.every((id) => lockTimeForSection(id) === null),
+  "playoff sections (108/109/110) now lit from the committed bracket",
+  [108, 109, 110].every((id) => lockTimeForSection(id) !== null),
 );
 check(
   "every committed instant is a valid future-or-any ISO UTC value",
@@ -129,8 +135,12 @@ check(
   isLockTimePassed(107, lockMs) === false,
 );
 check(
-  "a dark playoff section never reports passed (no published time)",
-  isLockTimePassed(108, lockMs + 9_000_000_000) === false,
+  "Quarterfinals lock (Jun 18 13:45Z) not passed the day before",
+  isLockTimePassed(108, Date.parse("2026-06-17T12:00:00Z")) === false,
+);
+check(
+  "Quarterfinals lock passed once the first QF begins",
+  isLockTimePassed(108, Date.parse("2026-06-18T14:00:00Z")) === true,
 );
 
 console.log("\nlock-schedule - match windows gate the live refresh to play days (PHA-902)");
@@ -159,12 +169,13 @@ console.log("\nlock-schedule - bracket reveals 24h before lock (PHA-943)");
 const s2Lock = D("2026-06-06T10:30:00Z");
 check("reveal lead is 24h", BRACKET_REVEAL_LEAD_MS === 24 * 60 * 60_000);
 check("Stage II reveal = lock − 24h", bracketRevealTime(106) === "2026-06-05T10:30:00.000Z");
-check("a dark playoff section has no reveal time", bracketRevealTime(108) === null);
+check("Quarterfinals reveal = QF lock − 24h (Jun 17 13:45Z)", bracketRevealTime(108) === "2026-06-17T13:45:00.000Z");
 check("25h before lock -> not revealed yet", isBracketRevealed(106, s2Lock - 25 * 60 * 60_000) === false);
 check("exactly 24h before lock -> revealed (inclusive)", isBracketRevealed(106, s2Lock - 24 * 60 * 60_000) === true);
 check("12h before lock -> revealed", isBracketRevealed(106, s2Lock - 12 * 60 * 60_000) === true);
 check("after lock -> still revealed (bracket stays up)", isBracketRevealed(106, s2Lock + 60_000) === true);
-check("playoff section (no lock) -> never auto-reveals by clock", isBracketRevealed(108, s2Lock + 9_000_000_000) === false);
+check("Quarterfinals not revealed before its Jun 17 13:45Z reveal", isBracketRevealed(108, Date.parse("2026-06-17T12:00:00Z")) === false);
+check("Quarterfinals revealed once its 24h window opens", isBracketRevealed(108, Date.parse("2026-06-17T14:00:00Z")) === true);
 
 console.log("\nlock-schedule - refresh window opens at reveal, closes at competition end (PHA-943)");
 
@@ -183,6 +194,31 @@ check("section with no lock time -> falls back to match-window gate (open inside
   isWithinRefreshWindow(1, D("2026-06-01T00:00:00Z"), {}, { 1: { start: "2026-06-01T00:00:00Z", end: "2026-06-01T23:59:59Z" } }) === true);
 check("section with no lock and no window -> fail open",
   isWithinRefreshWindow(999, D("2026-06-01T00:00:00Z"), {}, {}) === true);
+
+console.log("\nlock-schedule - per-game playoff schedule (PHA-1007): committed from the published bracket");
+
+// Committed from Liquipedia / ESL Pro Tour (IEM Cologne 2026 playoffs Jun 18–21,
+// CEST→UTC). Each game time echoes back and the playoff lock derives from the
+// earliest quarterfinal (= when the bracket's Pick'Em window closes).
+check("playoff schedule committed for QF/SF/GF (3 rounds)", Object.keys(COLOGNE_PLAYOFF_SCHEDULE).length === 3);
+check("QF1 game time = Jun 18 13:45Z", playoffGameTime(108, 0) === "2026-06-18T13:45:00Z");
+check("QF4 game time = Jun 19 17:00Z", playoffGameTime(108, 3) === "2026-06-19T17:00:00Z");
+check("108 lock derives from earliest QF (Jun 18 13:45Z)", lockTimeForSection(108) === "2026-06-18T13:45:00Z");
+check("110 GF lock = Jun 21 15:00Z", lockTimeForSection(110) === "2026-06-21T15:00:00Z");
+
+// Inject a populated schedule (independent of the committed data): each game
+// echoes its instant, the lock derives from the EARLIEST game even out of order,
+// a missing index / unknown section / bad ISO → null (never a fabricated time).
+const injected = {
+  108: ["2026-06-18T14:00:00Z", "2026-06-18T10:30:00Z"], // intentionally out of order
+  110: ["2026-06-21T13:00:00Z"],
+} as const;
+check("injected QF game 1 echoes its instant", playoffGameTime(108, 0, injected) === "2026-06-18T14:00:00Z");
+check("injected GF game echoes its instant", playoffGameTime(110, 0, injected) === "2026-06-21T13:00:00Z");
+check("missing game index → null", playoffGameTime(108, 5, injected) === null);
+check("unknown playoff section → null", playoffGameTime(109, 0, injected) === null);
+check("bad ISO in schedule → null (no fabricated time)",
+  playoffGameTime(108, 0, { 108: ["not-a-date"] }) === null);
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);

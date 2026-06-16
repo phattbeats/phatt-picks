@@ -12,7 +12,8 @@ import {
   type StagePickability,
 } from "@/lib/stage-gate-core";
 import { LockCountdown } from "@/components/heat/LockCountdown";
-import { lockTimeForSection, isLockTimePassed, isBracketRevealed } from "@/lib/lock-schedule-core";
+import { PlayoffScheduleStrip } from "@/components/heat/PlayoffScheduleStrip";
+import { lockTimeForSection, isLockTimePassed, isBracketRevealed, playoffGameTime } from "@/lib/lock-schedule-core";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { isSwissSection, bucketSwissSlots } from "@/lib/swiss-bucket-core";
 import {
@@ -131,6 +132,18 @@ export default async function PicksPage({
   const anyPlayoffPickable = playoffSections.some(
     (s) => sectionPickability.get(s.sectionid)?.pickable,
   );
+
+  // Per-game playoff schedule (PHA-1007): each round's games with their committed
+  // date/time, fed to the schedule strip. Dark until COLOGNE_PLAYOFF_SCHEDULE is
+  // filled (the strip renders nothing while every iso is null).
+  const playoffScheduleRounds = PLAYOFF_ROUNDS.map((def) => {
+    const sec = playoffSections.find((s) => s.sectionid === def.sectionId);
+    const games = (sec?.groups ?? []).map((_g, i) => ({
+      label: def.key === "GF" ? "Grand Final" : `Match ${i + 1}`,
+      iso: playoffGameTime(def.sectionId, i),
+    }));
+    return { short: def.short, label: def.label, games };
+  });
 
   const myPicks: Record<number, Record<number, number>> = {};
   if (session) {
@@ -436,6 +449,9 @@ export default async function PicksPage({
         // (they all lock together); until then an honest status strip. The
         // full QF → SF → GF tree renders beneath either way.
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          {/* Per-game date/time schedule (PHA-1007) — above the bracket in both
+              the pre-lock picker and the locked tree; dark until times publish. */}
+          <PlayoffScheduleStrip rounds={playoffScheduleRounds} />
           {anyPlayoffPickable && playoffPickModel ? (
             // PHA-1204: ONE bracket, placed at once. The interactive QF→SF→GF
             // tree replaces the three stacked round-pickers — crown a winner and
