@@ -461,7 +461,6 @@ export default async function PlayerProfilePage({
                                     slotIndex={slot.index}
                                     initialTally={tallyFor(section.sectionid, group.groupid, slot.index)}
                                     canReact={canReact}
-                                    unmasked={winner !== undefined}
                                   />
                                 )}
                               </div>

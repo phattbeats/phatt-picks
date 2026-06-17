@@ -1603,33 +1603,20 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 }
 
 /* ── THE BLEACHERS — semi-anonymous pick reactions (PHA-1211) ───────────────
-   Sits under a revealed pick on a player's profile. Anonymous tally + drop row;
-   masked until the stage resolves. Tuned to read as a quiet sub-row beneath the
-   pickcard, not a competing card. */
+   Sits under a revealed pick on a player's profile. Wordless by design (Brandon):
+   just the anonymous stamp tally + the drop affordance. Senders stay masked
+   until the stage resolves (enforced server-side). Reads as a quiet sub-row
+   beneath the pick, not a competing card. */
 .bleachers {
   margin-top: 8px;
-  padding: 10px 12px 9px;
+  padding: 9px 12px;
   background: var(--surf-2);
   border: 1px solid var(--hair);
   border-radius: var(--r-md);
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
-}
-.bleachers-head { display: flex; align-items: center; gap: 8px; }
-.bleachers-eyebrow {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--heat);
-}
-.bleachers-count {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--ink-low);
-  margin-left: auto;
-  letter-spacing: 0.08em;
 }
 .bleachers-tally { display: flex; flex-wrap: wrap; gap: 6px; }
 .bleach-stamp {
@@ -1651,12 +1638,6 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   box-shadow: 0 0 0 1px var(--heat-glow);
 }
 .bleach-glyph { font-size: 13px; line-height: 1; }
-.bleachers-empty {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--ink-low);
-  letter-spacing: 0.04em;
-}
 .bleachers-drop { display: flex; }
 .bleach-add {
   font-family: var(--font-mono);
@@ -1693,13 +1674,6 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .bleach-opt.active { border-color: var(--heat); color: var(--ink-hi); box-shadow: 0 0 0 1px var(--heat-glow); }
 .bleach-opt:disabled { opacity: 0.5; cursor: default; }
 .bleach-opt-lbl { white-space: nowrap; }
-.bleachers-foot {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.06em;
-  color: var(--ink-low);
-  line-height: 1.5;
-}
 
 /* Player-profile playoff picks as full-width blocks (PHA-1211) — a pick header
    row with the Bleachers strip beneath, replacing the tight pickcards grid on

@@ -4,12 +4,13 @@
  * The Bleachers strip (PHA-1211, concept A) — renders under a single revealed
  * pick on a player's profile. Shows the anonymous running tally of reaction
  * stamps and, for a signed-in viewer who isn't the profile owner, a drop row to
- * add/swap their own stamp. Senders are masked until the stage resolves; the
- * `unmasked` flag flips the footer copy once the tape has dropped.
+ * add/swap their own stamp. Senders stay masked until the stage resolves (the
+ * reveal is enforced server-side / in bleachers-core; this strip is intentionally
+ * wordless — just the stamps and the drop affordance, per Brandon).
  *
  * Optimistic: a drop updates the local tally immediately, then reconciles with
  * the server's authoritative tally. One stamp per viewer per pick — tapping a
- * different stamp swaps; tapping your active stamp again clears it (toggle).
+ * different stamp swaps it.
  */
 
 import { useState, useTransition } from "react";
@@ -31,7 +32,6 @@ export function BleachersStrip({
   slotIndex,
   initialTally,
   canReact,
-  unmasked,
 }: {
   targetPlayerId: string;
   sectionId: number;
@@ -40,15 +40,12 @@ export function BleachersStrip({
   initialTally: TallyLine[];
   /** signed in AND not viewing own profile */
   canReact: boolean;
-  /** stage resolved → senders named (footer copy only for now) */
-  unmasked: boolean;
 }) {
   const [tally, setTally] = useState<TallyLine[]>(initialTally);
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
 
   const myStampId = tally.find((t) => t.mine)?.id ?? null;
-  const total = tally.reduce((n, t) => n + t.count, 0);
 
   function drop(stampId: string) {
     if (!canReact || pending) return;
@@ -68,14 +65,12 @@ export function BleachersStrip({
     });
   }
 
+  // Nothing to show: no reactions and the viewer can't add one.
+  if (tally.length === 0 && !canReact) return null;
+
   return (
     <div className="bleachers">
-      <div className="bleachers-head">
-        <span className="bleachers-eyebrow">THE BLEACHERS</span>
-        {total > 0 && <span className="bleachers-count">{total}</span>}
-      </div>
-
-      {tally.length > 0 ? (
+      {tally.length > 0 && (
         <div className="bleachers-tally">
           {tally.map((t) => (
             <span
@@ -88,8 +83,6 @@ export function BleachersStrip({
             </span>
           ))}
         </div>
-      ) : (
-        <div className="bleachers-empty">No reactions yet. Be the first to talk.</div>
       )}
 
       {canReact && (
@@ -117,12 +110,6 @@ export function BleachersStrip({
           )}
         </div>
       )}
-
-      <div className="bleachers-foot">
-        {unmasked
-          ? "The tape dropped — tap a stamp to see who called it."
-          : "Anonymous until the stage resolves. Then the masks come off."}
-      </div>
     </div>
   );
 }
