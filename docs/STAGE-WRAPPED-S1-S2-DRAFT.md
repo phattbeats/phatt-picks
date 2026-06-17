@@ -1,9 +1,16 @@
 # Stage Wrapped — Stage 1 + Stage 2 Recap **DRAFT**
 
+> **STATUS — SHIPPED (content record).** This draft's Stage I/II narratives are live, authored in
+> `src/lib/stage-wrapped-content.ts` as `AUTHORED[105]` / `AUTHORED[106]`; PHA-1052's shell merged.
+> Kept for the source narratives + research trail. Two things below are **superseded**: (1) the
+> `WrappedMoment[]` arrays in §3 are not the shipped shape — the implemented type is `AuthoredMoment`
+> (no `link`/`source` fields), keyed by section id; (2) the **Suno** soundtrack in §4 was abandoned —
+> the shipped audio is "The Descent" by Kevin MacLeod (CC-BY), see `public/audio/CREDITS.md`.
+
 **Issue:** PHA-1054 (Stage 1 recap content + launch trigger) · **Epic:** PHA-1051 Stage Wrapped
-**Depends on:** PHA-1052 shell (framework, *in_review*) · **Content model:** PHA-1053 (`docs/STAGE-WRAPPED-CONTENT-MODEL.md`)
+**Depends on:** PHA-1052 shell (framework, *merged*) · **Content model:** PHA-1053 (`docs/STAGE-WRAPPED-CONTENT-MODEL.md`)
 **Event:** IEM Cologne 2026 CS2 Major — Stage 1 (HLTV 9028, Jun 2–5) + Stage 2 (HLTV 9029, Jun 6–9)
-**Author:** Vision Quest · **Date:** 2026-06-13 · **Status:** DRAFT for Brandon review
+**Author:** Vision Quest · **Date:** 2026-06-13 · **Status:** SHIPPED (was: DRAFT for Brandon review)
 
 > Brandon asked: *"stage 1 + 2 already wrapped for this major, do this for both: do a fan out > fan in
 > searches to get the narratives for the teams; create a draft, with music from suno included."*
