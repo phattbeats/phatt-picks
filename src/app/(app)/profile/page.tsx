@@ -78,13 +78,43 @@ export default async function ProfilePage() {
           </div>
         </div>
         {!connected && (
-          <a href="/api/auth/steam" className="btn-ghost" style={{
-            marginTop: 14,
-            justifyContent: "center",
-            width: "100%",
-          }}>
-            Connect Steam to sync official picks
-          </a>
+          <>
+            {/* PHA-1213: a local player has no Steam identity to push to —
+                /api/auth/steam would sign them in as a SEPARATE Steam account
+                and strand the picks they made here. So Steam sync is shown
+                disabled, not as an active CTA. Reassurance lives below. */}
+            <button
+              type="button"
+              disabled
+              aria-disabled="true"
+              className="btn-ghost"
+              title="Steam sync is only available on Steam-linked accounts."
+              style={{
+                marginTop: 14,
+                justifyContent: "center",
+                width: "100%",
+                opacity: 0.45,
+                cursor: "not-allowed",
+              }}
+            >
+              Steam sync — Steam accounts only
+            </button>
+            <p style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              letterSpacing: "0.06em",
+              color: "var(--tac-green, #22c55e)",
+              margin: "10px 0 0",
+            }}>
+              <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Saved — your picks are recorded automatically. No Steam needed.
+            </p>
+          </>
         )}
       </section>
 
