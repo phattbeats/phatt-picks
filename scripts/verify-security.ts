@@ -12,6 +12,7 @@
 import {
   parseAllowedOrigins,
   isAllowedOrigin,
+  hostOriginVariants,
   clientIpFromForwarded,
   createCooldownStore,
   checkCooldown,
@@ -84,6 +85,43 @@ check(
 check(
   "no configured origins → no-op (dev) allows",
   isAllowedOrigin(null, null, []) === true,
+);
+
+console.log("\nsecurity-core - forwarded host origin variants (PHA-1225)");
+check(
+  "host → both https and http variants",
+  JSON.stringify(hostOriginVariants("hotline.phatt.vip")) ===
+    JSON.stringify(["https://hotline.phatt.vip", "http://hotline.phatt.vip"]),
+);
+check(
+  "https browser Origin matches when only http NEXTAUTH_URL is configured",
+  isAllowedOrigin(
+    "https://hotline.phatt.vip",
+    null,
+    parseAllowedOrigins(
+      "http://localhost:3000",
+      "http://hotline.phatt.vip",
+      ...hostOriginVariants("hotline.phatt.vip"),
+    ),
+  ) === true,
+);
+check(
+  "foreign host still rejected even with variant expansion",
+  isAllowedOrigin(
+    "https://evil.example",
+    null,
+    parseAllowedOrigins("http://hotline.phatt.vip", ...hostOriginVariants("hotline.phatt.vip")),
+  ) === false,
+);
+check(
+  "host with port keeps the port in both variants",
+  JSON.stringify(hostOriginVariants("hotline.phatt.vip:8443")) ===
+    JSON.stringify(["https://hotline.phatt.vip:8443", "http://hotline.phatt.vip:8443"]),
+);
+check("empty/absent host → no variants", hostOriginVariants(null).length === 0);
+check(
+  "malformed host (contains path) → no variants",
+  hostOriginVariants("hotline.phatt.vip/evil").length === 0,
 );
 
 console.log("\nsecurity-core - trusted-proxy client IP");
