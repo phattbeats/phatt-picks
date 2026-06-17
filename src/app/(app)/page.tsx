@@ -479,7 +479,7 @@ function LeaderRow({
       href={`/players/${encodeURIComponent(row.playerId)}`}
       style={{
         display: "grid",
-        gridTemplateColumns: "24px 26px 1fr auto",
+        gridTemplateColumns: "24px 34px 1fr auto",
         gap: 11,
         alignItems: "center",
         padding: "10px 13px",
@@ -497,8 +497,8 @@ function LeaderRow({
         {String(rank).padStart(2, "0")}
       </span>
       <span style={{
-        width: 26,
-        height: 26,
+        width: 34,
+        height: 34,
         borderRadius: "var(--r-sm)",
         background: row.avatarUrl
           ? `center/cover no-repeat url(${JSON.stringify(row.avatarUrl)})`
