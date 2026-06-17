@@ -14,15 +14,33 @@
  */
 
 import { NextRequest } from "next/server";
-import { isAllowedOrigin, parseAllowedOrigins } from "@/lib/security-core";
+import {
+  isAllowedOrigin,
+  parseAllowedOrigins,
+  hostOriginVariants,
+} from "@/lib/security-core";
 
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 
-/** True when the request's Origin/Referer is one of our own origins. */
+/**
+ * True when the request's Origin/Referer is one of our own origins.
+ *
+ * The allowed set blends three sources so the guard tracks how the app is really
+ * reached: the request's own origin, the configured NEXTAUTH_URL, and BOTH
+ * scheme variants of the forwarded Host. The last one matters behind the TLS-
+ * terminating proxy (PHA-1225): the container sees http while the browser uses
+ * https, so without the https variant a genuine same-origin sign-out 403'd.
+ */
 export function isSameOrigin(req: NextRequest): boolean {
+  const forwardedHost =
+    req.headers.get("x-forwarded-host") ?? req.headers.get("host");
   return isAllowedOrigin(
     req.headers.get("origin"),
     req.headers.get("referer"),
-    parseAllowedOrigins(req.nextUrl.origin, BASE_URL),
+    parseAllowedOrigins(
+      req.nextUrl.origin,
+      BASE_URL,
+      ...hostOriginVariants(forwardedHost),
+    ),
   );
 }
