@@ -10,9 +10,11 @@ app *work* for the new event. The rest sharpens it.
 > **The registry (PHA-948).** `src/lib/events-core.ts` is the committed index of
 > events: `EVENTS[eventId] → { slug, name, status, dates, lockSchedule,
 > matchWindows, sectionSources, sectionNames, fixtures, teamMaps }`, plus
-> `resolveActiveEvent()` / `getEventConfig(id)` / `ACTIVE_EVENT_ID`. Every page
-> and API route reads `ACTIVE_EVENT_ID` instead of a hardcoded `26`, so the
-> active event is decided in **one place**. With the self-sustaining lifecycle
+> `resolveActiveEvent(now)` / `getEventConfig(id)` / `currentEventId(now)`. Every page
+> and API route resolves `currentEventId(now)` **per request** instead of a hardcoded
+> `26`, so the active event is decided in **one place** (PHA-1046 removed the
+> module-load-bound `ACTIVE_EVENT_ID` and `SECTION_SOURCES` — never cache the active
+> id at module scope). With the self-sustaining lifecycle
 > (PHA-950) you no longer flip `status` by hand on go-live day: stage the new
 > entry as `status: "upcoming"` with real `dates` + `lockSchedule` and it goes
 > live on its staging lead while the old one archives at its `dates.end` — see
@@ -108,9 +110,10 @@ and reveals/scores against the Valve answer key. **This is the minimum viable re
 ## Phase 2 — the live boards (HLTV scrape)
 
 ### 2a. Section → HLTV event URL — `src/lib/events-core.ts` (registry)
-After PHA-948, `SECTION_SOURCES` lives in the event registry (`events-core.ts →
-EventConfig.sectionSources`), not in `swiss-results.ts` — `swiss-results.ts` now
-imports `SECTION_SOURCES` from the registry via `getEventConfig(ACTIVE_EVENT_ID)`. Add
+After PHA-948, the per-section HLTV URLs live in the event registry (`events-core.ts →
+EventConfig.sectionSources`), not in `swiss-results.ts` — there is no `SECTION_SOURCES`
+constant anymore (removed in PHA-1046). `swiss-results.ts` resolves them per request via
+its `sectionSourcesFor(eventId)` helper (`getEventConfig(eventId).sectionSources`). Add
 each Swiss section's URL to the registry entry for the new event:
 ```ts
 sectionSources: {
@@ -173,7 +176,8 @@ Once live, each stage start is a small recurring routine:
 ## The "did I get them all?" checklist
 
 ```
-[ ] events-core.ts EVENTS      → new registry entry + flip status:live  (PHA-948)
+[ ] events-core.ts EVENTS      → new registry entry, status:"upcoming"  (PHA-948)
+                                  (no hand flip — the lifecycle lights it live, PHA-950)
 [ ] cologne-layout.json        → new event's sections + pickids        (Phase 1a)
 [ ] cologne-items/predictions  → refreshed from same capture           (Phase 1a)
 [ ] COLOGNE_LOCK_SCHEDULE      → each stage's first-match instant       (Phase 1b)

@@ -58,9 +58,11 @@ leaves / pure helpers) or the verifier can't load it standalone.
               /api/picks/sync-stage      write : UploadTournamentPredictions  (WRITE_ENABLED gate)
                          │
                          ▼
-   OUTCOMES (two independent sources)
+   OUTCOMES (resolved into StageOutcome rows)
      1. Valve oracle  : fetchTournamentLayout → resolveOutcomesFromLayout   (the answer key)
      2. on-read driver: refreshOutcomesOnRead (atomic claim + after())  → StageOutcome rows
+     3. live HLTV bridge: bridgeSwissOutcomes / refreshLiveResultsTick — score live 3-0/0-3
+                          Swiss clinches before Valve seeds the key (PHA-918/1109)
                          │
                          ▼
    SCORING  scoring.ts  ──►  /api/leaderboard   (bucket-aware weighting; picks hidden until lock)
@@ -74,7 +76,8 @@ leaves / pure helpers) or the verifier can't load it standalone.
                                gated by isWithinRefreshWindow (opens 24h before lock → match-window end)
      Team dossier (Last-5)   : HLTV profiles → crawl4ai (batch 32, retry) → TeamStatsCache (team-stats.ts)
                                gated by isWithinAnyMatchWindow; merged over the frozen snapshot
-     Playoff bracket         : committed layout (108/109/110) + StageOutcome, NO crawl; ??? until seeded
+     Playoff bracket         : committed layout (108/109/110) + StageOutcome, NO crawl;
+                               ONE interactive QF→SF→GF picker (PHA-1204), QF field seeded from the layout
 ```
 
 ## The subsystems
@@ -88,7 +91,10 @@ leaves / pure helpers) or the verifier can't load it standalone.
 
 ### Picks
 - `/picks` renders Swiss stages as **2 / 6 / 2 buckets** (advance 3-0 / advance / eliminated 0-3),
-  computed by `swiss-bucket-core`. Playoffs render as bracket slots.
+  computed by `swiss-bucket-core`. Playoffs render as **one interactive QF→SF→GF bracket**
+  (`PlayoffBracketPicker` + `playoff-bracket-core.ts`: `buildPlayoffPickTree` / `resolveBracketPicks`
+  / `playoffFieldTeams`, PHA-1204) — tap a winner and they advance; `POST /api/picks` accepts the
+  downstream SF/GF picks against the QF field.
 - A pick is writable only if the stage is **pickable** (`stage-gate-core`: `picks_allowed` +
   `isSectionSeeded`) **and** not past its **lock time** (`lock-schedule-core`).
 - **A schedule lock has three surfaces**: the picker (UI), the write-guard (`POST /api/picks`
@@ -120,7 +126,8 @@ leaves / pure helpers) or the verifier can't load it standalone.
   locks** (the bracket-reveal lead, PHA-943) and runs through the stage's match-window end, so the
   live bracket can appear before the first match. (Was `isWithinMatchWindow` = match-days-only.)
 - The **playoff bracket** needs no crawl: its tree comes from the committed layout and fills
-  from `StageOutcome`. It honestly shows `???` until Stage 3 seeds the quarterfinals.
+  from `StageOutcome`. It is the interactive QF→SF→GF picker (see Picks above); the QF field is
+  seeded from the committed layout once Stage 3 resolves, and tapping a winner advances them.
 - **Team dossier (Last-5):** the roster + world-rank ship as a frozen snapshot (`team-stats-core`),
   but the **recent results auto-refresh live** — `refreshTeamStatsOnRead` (`team-stats.ts`) runs the
   same atomic-claim + `after()` deferred crawl as the standings/outcomes drivers, batching all 32 HLTV
@@ -143,14 +150,41 @@ leaves / pure helpers) or the verifier can't load it standalone.
   bracket shows only public HLTV match data + the viewer's own picks. The early bracket reveal does
   not touch the `revealed === !writable` invariant.
 
+### Event registry & lifecycle (multi-major)
+- `events-core.ts` holds the `EVENTS` registry; **every RSC and API route resolves the active
+  event per request** via `currentEventId(now)` — never a module-level constant. PHA-1046 removed
+  the module-load-bound `ACTIVE_EVENT_ID` / `SECTION_SOURCES` precisely so a long-lived process
+  can't pin yesterday's event.
+- `event-lifecycle-core.ts` derives `upcoming → live → archived` from the clock
+  (`resolveEffectiveStatus` / `selectCurrentEvent`). `ANTICIPATION_LEAD_MS` (~45d) keeps the
+  just-archived Major as the face of the site through the off-season until the next is near go-live;
+  `GRAND_FINAL_ARCHIVE_GRACE_MS` (48h) delays archive after the Grand Final. Seeding a new Major as
+  `status:"upcoming"` with real dates is all it takes — no hand flip. PGL Singapore 2026 (eventId 27)
+  is already seeded this way. See [ROADMAP-MULTI-MAJOR.md](ROADMAP-MULTI-MAJOR.md).
+
+### Playoff Spotlight odds (PHA-1066)
+- `spotlight-odds.ts` runs the same on-read atomic-claim + `after()` driver to pull **Polymarket
+  gamma-api moneyline** lines into the playoff Spotlight modal, warmable via `GET /api/odds/refresh`.
+  Gated empty until the `PLAYOFF_MARKET_SLUGS` registry (`spotlight-odds-core.ts`) is seeded.
+  Display-only — never touches scoring.
+
+### Stage Wrapped (recap)
+- A click-through "Stage Wrapped" recap popup driven by `stage-wrapped-core.ts` (data-driven
+  `WrappedSlide[]`) + `stage-wrapped-launch(-core).ts`, gated app-wide by `StageWrappedGate` in
+  `(app)/layout.tsx` (PHA-1051/1052). Content lives in `stage-wrapped-content.ts`. Presentational —
+  no scoring path. Content model: [STAGE-WRAPPED-CONTENT-MODEL.md](STAGE-WRAPPED-CONTENT-MODEL.md).
+
 ## Where the per-major seams are
 
 Everything that changes for the *next* Major is committed config, not fetched. The
 full list and the order to change it is in **[NEXT-MAJOR.md](NEXT-MAJOR.md)**. The
 short version:
 
-- `lock-schedule-core.ts` — `COLOGNE_LOCK_SCHEDULE` (section → lock instant) + `COLOGNE_MATCH_WINDOWS`.
-- `swiss-results.ts` — `SECTION_SOURCES` (section → HLTV event URL).
+- `lock-schedule-core.ts` — `COLOGNE_LOCK_SCHEDULE` (section → lock instant) + `COLOGNE_MATCH_WINDOWS`
+  + `COLOGNE_PLAYOFF_SCHEDULE` (per-game playoff times that derive the playoff locks, PHA-1007).
+- `events-core.ts` — the per-section HLTV event URLs live in the `EventConfig.sectionSources` registry
+  (the old module-level `SECTION_SOURCES` const in `swiss-results.ts` was removed in PHA-1046; resolved
+  per request via `sectionSourcesFor(eventId)`).
 - Team / pickid / region / logo / stats maps — one file each, keyed by Valve pickid.
 - The committed bracket layout (sections 105–110).
 
@@ -166,9 +200,9 @@ short version:
 - **The data pipeline is deterministic scraping, not AI.** The only external calls are
   the Steam Web API (`api.steampowered.com`), HLTV (fetched through `crawl4ai` purely to
   bypass Cloudflare — `cache_mode: "BYPASS"`, **no** LLM extraction strategy; the app
-  parses the raw markdown/HTML itself with committed regex), Liquipedia, and Cloudflare
-  Turnstile (CAPTCHA). Outcomes come from Valve's tournament layout + the HLTV parse;
-  scoring is pure code (`scoring.ts`).
+  parses the raw markdown/HTML itself with committed regex), Liquipedia, Cloudflare
+  Turnstile (CAPTCHA), and **Polymarket gamma-api** (display-only Spotlight odds, PHA-1066).
+  Outcomes come from Valve's tournament layout + the HLTV parse; scoring is pure code (`scoring.ts`).
 - **What needs an *operator* (a human — or, conveniently, an agent — but never an LLM at
   runtime):**
   - **Deploy** a new image → Brandon's Unraid Force Update.
