@@ -221,20 +221,15 @@ export function PlayoffBracketPicker({
         <Tree model={model} resolved={resolved} teamMap={teamMap} geo={GEO_DESKTOP} enabled={enabled} dragOver={dragOver} setDragOver={setDragOver} onCrown={crown} onSpotlight={setStatsTeam} />
       </div>
 
-      {/* The altar (v3 Cathedral, PHA-1065): your champion crowned under a
-          pointed arch — the reverent apex you climb the bracket toward. */}
+      {/* Your champion (PHA-1007): the floating arch outline above the card read
+          goofy, so it's gone — the champion is now carried by a big, legible team
+          logo instead. Clean card, logo forward. */}
       {champion && (
         <div className="cath-altar">
-          <svg className="cath-altar-arch" viewBox="0 0 232 56" fill="none" aria-hidden="true">
-            <path d="M3 56 L3 28 Q3 4 116 4 Q229 4 229 28 L229 56" stroke="rgba(240,163,0,0.34)" strokeWidth="1" />
-            <line x1="116" y1="7" x2="116" y2="56" stroke="rgba(240,163,0,0.16)" strokeWidth="1" />
-          </svg>
           <div className="cath-altar-card">
             <div className="cath-altar-lab">Your champion</div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 8 }}>
-              <TeamLogo tiers={resolveLogoTiers(champion)} teamName={champion.name} size={30} />
-              <div className="cath-altar-who">{champion.name}</div>
-            </div>
+            <TeamLogo tiers={resolveLogoTiers(champion)} teamName={champion.name} size={72} />
+            <div className="cath-altar-who">{champion.name}</div>
             <div className="cath-altar-note">Crowned at the Cathedral</div>
           </div>
         </div>
