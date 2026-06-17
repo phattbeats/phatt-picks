@@ -1053,16 +1053,18 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 
 /* The altar: the champion, crowned under a pointed arch (the reverent apex). */
 .cath-altar { text-align: center; margin-top: 16px; }
-.cath-altar-arch { display: block; margin: 0 auto -7px; width: 232px; height: 56px; }
+/* PHA-1007: floating arch outline retired (read goofy). Champion card is a clean
+   centered column with a big team logo front and center. */
 .cath-altar-card {
+  display: flex; flex-direction: column; align-items: center;
   border: 1px solid color-mix(in srgb, var(--heat) 40%, transparent);
   border-radius: 13px;
   background: radial-gradient(120% 90% at 50% 0%, rgba(240,163,0,0.12), transparent 70%), var(--surf-2);
-  padding: 14px 16px 16px;
+  padding: 18px 16px 18px;
 }
-.cath-altar-lab { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--heat); }
-.cath-altar-who { font-family: var(--font-display); font-weight: 800; font-size: 26px; text-transform: uppercase; color: var(--ink-hi); line-height: 0.95; margin-top: 6px; }
-.cath-altar-note { font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-low); margin-top: 8px; }
+.cath-altar-lab { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--heat); margin-bottom: 14px; }
+.cath-altar-who { font-family: var(--font-display); font-weight: 800; font-size: 30px; text-transform: uppercase; color: var(--ink-hi); line-height: 0.95; margin-top: 12px; }
+.cath-altar-note { font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-low); margin-top: 10px; }
 
 .tsd-backdrop {
   position: fixed; inset: 0; z-index: 200;
