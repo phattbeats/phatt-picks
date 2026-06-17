@@ -26,6 +26,8 @@ interface Props {
   enabled: boolean;
   eventId: number;
   steamLinked: boolean;
+  /** Server-derived: every stored pick for this stage is already on Steam (PHA-1214). */
+  initiallySynced?: boolean;
   /**
    * Live per-stage dossier map (PHA-921), pickid → stats with `recent[]` pulled
    * live. Optional: undefined off-window / cold start, in which case the drawer
@@ -57,6 +59,7 @@ export function PicksBoard({
   enabled,
   eventId,
   steamLinked,
+  initiallySynced,
   liveTeamStats,
   liveStatsAsOf,
   spotlightMarket,
@@ -426,6 +429,7 @@ export function PicksBoard({
         <LockInStage
           sectionId={isPlayoffSection(section.sectionid) ? "playoff" : section.sectionid}
           unsavedSinceSync={unsavedSinceSync}
+          initiallySynced={initiallySynced}
           onSynced={() => setUnsavedSinceSync(false)}
         />
       )}
