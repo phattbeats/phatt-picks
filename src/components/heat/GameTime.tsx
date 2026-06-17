@@ -45,11 +45,13 @@ export function GameTime({
         display: "flex",
         justifyContent: align === "center" ? "center" : "flex-start",
         gap: 6,
+        /* PHA-1007: bumped from a tiny 9.5px to a legible 12.5px (Brandon: the
+           small robotic times were hard to read). Mono kept for tabular dates. */
         fontFamily: "var(--font-mono)",
-        fontSize: 9.5,
-        letterSpacing: "0.08em",
+        fontSize: 12.5,
+        letterSpacing: "0.04em",
         textTransform: "uppercase",
-        color: "var(--ink-low)",
+        color: "var(--ink-mid)",
       }}
     >
       <span>{day}</span>
