@@ -38,10 +38,10 @@ export type LockSchedule = Readonly<Record<number, string>>;
  * Stage 3's date is Liquipedia/cs.money's Jun 11 (Wikipedia says Jun 12) —
  * confirmed with Brandon on PHA-865 before go-live.
  *
- * PLAYOFF sections (108/109/110) stay DARK on purpose: the bracket runs in the
- * Jun 18–21 window but the per-round day + start time are still TBD on every
- * source. A null value renders no countdown — the truthful default until the
- * playoff schedule is published. Fill these in once authoritative.
+ * PLAYOFF sections (108/109/110) are NOT in this Swiss map — their per-game times
+ * live in COLOGNE_PLAYOFF_SCHEDULE below (committed from the published bracket,
+ * PHA-1007) and fold into COLOGNE_LOCK_SCHEDULE via derivePlayoffLocks. A section
+ * with no committed game time still renders no countdown — the truthful default.
  */
 const COLOGNE_SWISS_LOCKS: LockSchedule = {
   105: "2026-06-02T10:30:00Z", // Stage I  — Jun 2, 12:30 CEST first match

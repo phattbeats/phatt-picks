@@ -73,14 +73,18 @@ list and a sample predictions blob — refresh them from the same capture.
 > leave two events' fixtures both wired in.
 
 ### 1b. Lock schedule + match windows — `src/lib/lock-schedule-core.ts`
-Two committed constants:
+Three committed constants:
 - **`COLOGNE_LOCK_SCHEDULE`**: `sectionId → ISO-8601 lock instant (UTC)`. This is when each
-  stage's picker freezes and picks reveal. Set it to each stage's **first-match** time.
+  stage's picker freezes and picks reveal. Set the **Swiss** stages to each stage's
+  **first-match** time (the playoff locks are derived — see the third constant below).
   ```ts
   105: "2026-06-02T10:30:00Z", // Stage I — Jun 2, 12:30 CEST first match
   ```
-  Playoff sections (108/109/110) are intentionally left **dark** (no entry) — their
-  per-round times are TBD; the bracket runs off the layout, not the clock.
+- **`COLOGNE_PLAYOFF_SCHEDULE`**: `sectionId → [game-start ISO instants]` for the playoff
+  sections (108/109/110), committed from the published bracket (PHA-1007). `derivePlayoffLocks`
+  folds the earliest game of each into `COLOGNE_LOCK_SCHEDULE`, so the whole bracket locks at the
+  first quarterfinal. Leave it **empty** and the playoffs stay dark (bracket runs off the layout,
+  not the clock); fill it and the schedule + countdown + reminders light up everywhere at once.
 - **`COLOGNE_MATCH_WINDOWS`**: `sectionId → { start, end }`. The date span each stage is
   *played*. Together with the lock schedule this drives the crawl window
   (`isWithinRefreshWindow`): it **opens 24h before the stage's lock** and **closes at the
@@ -180,7 +184,8 @@ Once live, each stage start is a small recurring routine:
                                   (no hand flip — the lifecycle lights it live, PHA-950)
 [ ] cologne-layout.json        → new event's sections + pickids        (Phase 1a)
 [ ] cologne-items/predictions  → refreshed from same capture           (Phase 1a)
-[ ] COLOGNE_LOCK_SCHEDULE      → each stage's first-match instant       (Phase 1b)
+[ ] COLOGNE_LOCK_SCHEDULE      → each Swiss stage's first-match instant  (Phase 1b)
+[ ] COLOGNE_PLAYOFF_SCHEDULE   → per-game playoff times (derives locks)  (Phase 1b)
 [ ] COLOGNE_MATCH_WINDOWS      → each stage's played date-span          (Phase 1b)
 [ ] sectionSources (events-core.ts registry) → HLTV event URL per Swiss stage (Phase 2a)
 [ ] verify-events.ts GREEN     → reveal config consistent (lock∩window⊇source) (PHA-943)
