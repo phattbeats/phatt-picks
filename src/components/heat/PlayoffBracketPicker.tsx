@@ -67,6 +67,7 @@ export function PlayoffBracketPicker({
   eventId,
   signedIn,
   steamLinked,
+  initiallySynced,
   liveTeamStats,
   liveStatsAsOf,
   spotlightMarket,
@@ -79,6 +80,8 @@ export function PlayoffBracketPicker({
   eventId: number;
   signedIn: boolean;
   steamLinked: boolean;
+  /** Server-derived: every saved bracket pick is already on Steam (PHA-1214). */
+  initiallySynced?: boolean;
   liveTeamStats?: Record<number, TeamStats>;
   liveStatsAsOf?: string;
   spotlightMarket?: Record<number, SpotlightMarketLine>;
@@ -236,7 +239,7 @@ export function PlayoffBracketPicker({
       )}
 
       {enabled && steamLinked && (
-        <LockInStage sectionId="playoff" unsavedSinceSync={unsavedSinceSync} onSynced={() => setUnsavedSinceSync(false)} />
+        <LockInStage sectionId="playoff" unsavedSinceSync={unsavedSinceSync} initiallySynced={initiallySynced} onSynced={() => setUnsavedSinceSync(false)} />
       )}
 
       {statsTeam && (

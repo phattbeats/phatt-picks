@@ -146,6 +146,10 @@ export default async function PicksPage({
   });
 
   const myPicks: Record<number, Record<number, number>> = {};
+  // PHA-1214: true when every non-empty pick this stage holds is already on
+  // Steam (isLocal === false) — drives the Lock In button green on page load
+  // and keeps it green across reloads until the player changes a pick.
+  let mySectionSynced = false;
   if (session) {
     const picks = await prisma.pick.findMany({
       where: { playerId: session.playerId, eventId: EVENT_ID, sectionId: activeSectionId },
@@ -154,6 +158,8 @@ export default async function PicksPage({
       myPicks[pick.groupId] ??= {};
       myPicks[pick.groupId][pick.slotIndex] = pick.pickId;
     }
+    const placed = picks.filter((p) => p.pickId !== 0);
+    mySectionSynced = placed.length > 0 && placed.every((p) => !p.isLocal);
   }
 
   // Live Swiss lineup (PHA-898): once a Swiss stage locks we show the standings
@@ -232,6 +238,8 @@ export default async function PicksPage({
   // bracket that replaces the stacked round-pickers.
   let playoffPickModel: ReturnType<typeof buildPlayoffPickTree> | null = null;
   const playoffInitialPicks: Record<number, number> = {};
+  // PHA-1214: every saved bracket pick already on Steam → Lock In stays green.
+  let playoffSynced = false;
   if (playoffActive) {
     // Viewer's call per match (one pick slot per match group, slot 0).
     const userPickByGroup = new Map<number, number>();
@@ -245,6 +253,8 @@ export default async function PicksPage({
           playoffInitialPicks[p.groupId] = p.pickId;
         }
       }
+      const placed = myPlayoffPicks.filter((p) => p.pickId !== 0);
+      playoffSynced = placed.length > 0 && placed.every((p) => !p.isLocal);
     }
     playoffPickModel = buildPlayoffPickTree(playoffSections);
     // Resolved winners per match.
@@ -461,6 +471,7 @@ export default async function PicksPage({
               eventId={EVENT_ID}
               signedIn={!!session}
               steamLinked={!!session?.steamId}
+              initiallySynced={playoffSynced}
               liveTeamStats={liveTeamStats?.byPickid}
               liveStatsAsOf={liveTeamStats?.asOf}
               spotlightMarket={spotlightMarket}
@@ -501,6 +512,7 @@ export default async function PicksPage({
             enabled={!!session}
             eventId={EVENT_ID}
             steamLinked={!!session?.steamId}
+            initiallySynced={mySectionSynced}
             liveTeamStats={liveTeamStats?.byPickid}
             liveStatsAsOf={liveTeamStats?.asOf}
           />
