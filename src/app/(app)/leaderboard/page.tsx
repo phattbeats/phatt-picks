@@ -358,7 +358,7 @@ function LeaderRow({
       href={`/players/${encodeURIComponent(row.playerId)}`}
       style={{
         display: "grid",
-        gridTemplateColumns: showDelta ? "32px 40px 1fr auto auto" : "32px 40px 1fr auto",
+        gridTemplateColumns: showDelta ? "32px 48px 1fr auto auto" : "32px 48px 1fr auto",
         gap: 12,
         alignItems: "center",
         padding: "12px 16px",
@@ -383,8 +383,8 @@ function LeaderRow({
       </span>
 
       <div style={{
-        width: 40,
-        height: 40,
+        width: 48,
+        height: 48,
         borderRadius: "var(--r-sm)",
         border: "1px solid var(--hair-2)",
         overflow: "hidden",
@@ -397,8 +397,8 @@ function LeaderRow({
           <Image
             src={row.avatarUrl}
             alt=""
-            width={40}
-            height={40}
+            width={48}
+            height={48}
             unoptimized
             style={{ objectFit: "cover", width: "100%", height: "100%" }}
           />
