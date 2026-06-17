@@ -58,12 +58,20 @@ check(
   isAllowedOrigin("https://evil.example", null, ALLOWED) === false,
 );
 check(
-  "absent origin AND referer rejected (fail closed)",
-  isAllowedOrigin(null, null, ALLOWED) === false,
+  "absent origin AND referer allowed (iOS WebKit same-origin form POST — PHA-1225)",
+  isAllowedOrigin(null, null, ALLOWED) === true,
 );
 check(
-  "literal 'null' origin rejected",
+  "literal 'null' origin rejected (opaque origin IS a present header, fail closed)",
   isAllowedOrigin("null", null, ALLOWED) === false,
+);
+check(
+  "opaque 'null' origin still rejected even when referer is absent",
+  isAllowedOrigin("null", null, ALLOWED) === false,
+);
+check(
+  "foreign origin with absent referer still rejected",
+  isAllowedOrigin("https://evil.example", null, ALLOWED) === false,
 );
 check(
   "falls back to same-origin referer when origin absent",
