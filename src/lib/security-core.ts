@@ -33,6 +33,28 @@ export function parseAllowedOrigins(
   return out;
 }
 
+/**
+ * Both scheme variants of a trusted Host header, e.g. "hotline.phatt.vip" →
+ * ["https://hotline.phatt.vip", "http://hotline.phatt.vip"].
+ *
+ * WHY (PHA-1225): the app runs behind a TLS-terminating proxy (swag/nginx) and
+ * is reached over https, but NEXTAUTH_URL is http://hotline.phatt.vip and the
+ * request reaches the container over plain http — so both `req.nextUrl.origin`
+ * and BASE_URL are http-scheme. A real browser on the https site sends
+ * `Origin: https://hotline.phatt.vip`, which matched NEITHER → sign-out 403'd.
+ * The HOST is what identifies an origin as ours; accepting either scheme for the
+ * forwarded host fixes the drift without trusting a foreign host (evil.example
+ * still fails) and without touching the deployment's env.
+ *
+ * Reject values carrying a path/space/backslash (a malformed or injected Host)
+ * so we only ever emit a clean scheme://host[:port].
+ */
+export function hostOriginVariants(host: string | null | undefined): string[] {
+  const h = host?.trim();
+  if (!h || h.includes("/") || h.includes(" ") || h.includes("\\")) return [];
+  return [`https://${h}`, `http://${h}`];
+}
+
 function originOf(url: string | null): string | null {
   if (!url) return null;
   try {
