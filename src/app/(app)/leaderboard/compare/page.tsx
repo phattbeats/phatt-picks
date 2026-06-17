@@ -125,7 +125,7 @@ function PickTile({
       }}
     >
       {team ? (
-        <TeamLogo tiers={resolveLogoTiers(team)} teamName={name} size={26} />
+        <TeamLogo tiers={resolveLogoTiers(team)} teamName={name} size={32} />
       ) : (
         <div style={{ width: 26, height: 26, borderRadius: "50%", background: "var(--bg3)", flexShrink: 0 }} />
       )}

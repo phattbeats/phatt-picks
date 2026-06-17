@@ -112,7 +112,7 @@ export function LiveSwissStandings({
               {/* team */}
               <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
                 {team ? (
-                  <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={24} />
+                  <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={32} />
                 ) : (
                   <span aria-hidden="true" style={monogramStyle}>{row.name.slice(0, 2).toUpperCase()}</span>
                 )}
