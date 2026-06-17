@@ -694,14 +694,14 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 }
 .podium-slot.first .podium-rank { font-size: 12px; }
 .podium-av {
-  width: 44px; height: 44px; border-radius: var(--r-sm);
+  width: 56px; height: 56px; border-radius: var(--r-sm);
   border: 1px solid var(--hair-2);
   background: linear-gradient(135deg, var(--surf-3), var(--surf-2));
   flex-shrink: 0; overflow: hidden;
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-display); font-weight: 800; font-size: 15px; color: var(--ink-mid);
+  font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--ink-mid);
 }
-.podium-slot.first .podium-av { width: 52px; height: 52px; border-color: var(--heat-deep); }
+.podium-slot.first .podium-av { width: 68px; height: 68px; border-color: var(--heat-deep); }
 .podium-name {
   font-size: 13px; font-weight: 500; color: var(--ink-hi);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px;
