@@ -3,7 +3,8 @@
  *
  * Validates a local-player login token from Player.loginToken, mints a new
  * session cookie, and redirects home. If the token is unknown or the player
- * is not local, redirects to /login/auth with an error query param.
+ * is not local, redirects to /login/local with an error query param (that page
+ * hosts the token-input field, so the user can retry immediately).
  *
  * Tokens are intentionally NOT invalidated on use — they persist until the
  * player regenerates via POST /api/auth/local/token, so the same link works
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
   try {
     const t = req.nextUrl.searchParams.get("t");
     if (!t) {
-      return NextResponse.redirect(new URL("/login/auth?error=no_token", BASE_URL));
+      return NextResponse.redirect(new URL("/login/local?error=no_token", BASE_URL));
     }
 
     const player = await prisma.player.findUnique({
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (!player || !player.isLocal) {
-      return NextResponse.redirect(new URL("/login/auth?error=invalid_token", BASE_URL));
+      return NextResponse.redirect(new URL("/login/local?error=invalid_token", BASE_URL));
     }
 
     const token = await signSessionToken(
@@ -52,6 +53,6 @@ export async function GET(req: NextRequest) {
     return response;
   } catch (err) {
     console.error("Token login error:", err);
-    return NextResponse.redirect(new URL("/login/auth?error=token_login_failed", BASE_URL));
+    return NextResponse.redirect(new URL("/login/local?error=token_login_failed", BASE_URL));
   }
 }
