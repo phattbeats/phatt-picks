@@ -23,13 +23,16 @@ It's deliberately grounded in what already exists — this is an *evolution*, no
 
 ## What was missing (now closed)
 
-*Updated 2026-06-12 — all three workstreams shipped during Cologne 2026.*
+*Updated 2026-06-16 — all three workstreams shipped during Cologne 2026; PGL Singapore 2026
+(eventId 27) is already seeded as an `upcoming` registry entry (PHA-1055), so "adding the next
+Major is a new registry entry" has been exercised end-to-end.*
 
 1. ~~**No "active event" — `EVENT_ID = 26` hardcoded in ~15 files.**~~ **Done — PHA-948.**
-   `src/lib/events-core.ts` is the committed registry: `EVENTS[id]`, `resolveActiveEvent()`,
-   `getEventConfig(id)`, `ACTIVE_EVENT_ID`. The singleton `COLOGNE_*` constants remain in
-   their files but are referenced by the registry, not scattered. Adding the next Major is a
-   new registry entry.
+   `src/lib/events-core.ts` is the committed registry: `EVENTS[id]`, `resolveActiveEvent(now)`,
+   `getEventConfig(id)`, `currentEventId(now)` (the module-level `ACTIVE_EVENT_ID` was later
+   removed in PHA-1046 in favour of per-request resolution). The singleton `COLOGNE_*` constants
+   remain in their files but are referenced by the registry, not scattered. Adding the next Major
+   is a new registry entry.
 2. ~~**No archive / history surface.**~~ **Done — PHA-949.** `/majors` route shows "Your Majors" —
    every event you played, your score, your finish, linked into that event's full profile.
    Data was already persisted per `eventId`; this was a read + UI problem.
@@ -39,7 +42,7 @@ It's deliberately grounded in what already exists — this is an *evolution*, no
    net). Drivers skip non-live events; reminders/watchers iterate from the registry.
 
 **Remaining — PHA-952 (cutover):** the full inversion of domain-module defaults — so every
-page/API reads `getEventConfig(ACTIVE_EVENT_ID)` instead of its local `COLOGNE_*` constant.
+page/API reads `getEventConfig(currentEventId())` instead of its local `COLOGNE_*` constant.
 Deliberately deferred until after Cologne's Grand Final (Jun 21). That cutover makes adding the
 next Major truly turnkey: drop in a registry entry and all surfaces update automatically.
 Cologne becomes event #1 in the archive the moment it ends.
@@ -47,9 +50,10 @@ Cologne becomes event #1 in the archive the moment it ends.
 ## The plan — three workstreams
 
 ### A. Event registry & "active event" — **DONE (PHA-948)**
-The registry (`events-core.ts`) is the single source of truth. `resolveActiveEvent()` /
-`getEventConfig(id)` / `ACTIVE_EVENT_ID` replace the old hardcoded `= 26`. Adding a Major is
-one new registry entry. Full domain-module cutover deferred to PHA-952 post-GF.
+The registry (`events-core.ts`) is the single source of truth. `resolveActiveEvent(now)` /
+`getEventConfig(id)` / `currentEventId(now)` replace the old hardcoded `= 26` (resolved
+per-request — PHA-1046 removed the module-level `ACTIVE_EVENT_ID`). Adding a Major is one new
+registry entry. Full domain-module cutover deferred to PHA-952 post-GF.
 
 ### B. Historic scores & "look back" — **DONE (PHA-949)**
 `/majors` route: every event you played, your score and finish, linked into its full profile.
