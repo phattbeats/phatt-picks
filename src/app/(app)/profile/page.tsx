@@ -3,6 +3,7 @@ import { PushToggle } from "@/components/PushToggle";
 import { InviteLink } from "@/components/InviteLink";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { AdminLocalPlayers } from "@/components/AdminLocalPlayers";
+import { LoginTokenPanel } from "@/components/LoginTokenPanel";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { getReferralStats } from "@/lib/invite";
@@ -22,7 +23,7 @@ export default async function ProfilePage() {
   // Local players can set a photo; Steam players show their Steam avatar.
   const playerRow = await prisma.player.findUnique({
     where: { id: session.playerId },
-    select: { avatarUrl: true },
+    select: { avatarUrl: true, loginToken: true },
   });
 
   return (
@@ -86,6 +87,19 @@ export default async function ProfilePage() {
           </a>
         )}
       </section>
+
+      {/* Cross-device login — local players only */}
+      {!connected && (
+        <section className="panel brk">
+          <span className="br-tr" />
+          <span className="br-bl" />
+          <div className="panel-title">[ Login from another device ]</div>
+          <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "0 0 12px", lineHeight: 1.55 }}>
+            Copy this link and open it on any browser to sign in as you — no password needed.
+          </p>
+          <LoginTokenPanel initialToken={playerRow?.loginToken ?? null} />
+        </section>
+      )}
 
       {/* Notifications */}
       <section className="panel brk">
