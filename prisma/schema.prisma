@@ -20,6 +20,7 @@ model Player {
   coinTier      String?           // "bronze" | "silver" | "gold" | "diamond" — null unless hasValveCoin
   synced        Boolean  @default(false) // true when picks confirmed synced from Valve
   inviteCode    String?  @unique
+  loginToken    String?  @unique   // opaque token for cross-device login (local players only)
   invitedById   String?           // referral attribution: the player whose invite link onboarded this one
   createdFromIp String?           // captured at local-account creation for IP rate-limit enforcement
   createdAt     DateTime @default(now())
