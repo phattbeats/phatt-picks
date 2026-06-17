@@ -7,6 +7,13 @@ interface Props {
   sectionId: number | "playoff";
   /** Any local autosave since the last successful sync surfaces a "needs sync" hint. */
   unsavedSinceSync: boolean;
+  /**
+   * Server-derived on first render: true when every pick this section holds is
+   * already on Steam (no `isLocal` rows). Lets the button render green on page
+   * load — and stay green across reloads — until the player makes a change,
+   * without waiting for an in-session sync click (PHA-1214 follow-up).
+   */
+  initiallySynced?: boolean;
   onSynced: () => void;
 }
 
@@ -29,11 +36,14 @@ interface UIState {
   pillTone: "ok" | "warn" | "error" | "info";
 }
 
-function describe(r: WriteResult | null, unsaved: boolean): UIState {
+function describe(r: WriteResult | null, unsaved: boolean, initiallySynced: boolean): UIState {
   if (!r) {
-    return unsaved
-      ? { pill: "Saved locally — not yet on Steam", pillTone: "warn" }
-      : { pill: "Saved locally", pillTone: "info" };
+    // No sync click this session (e.g. a fresh page load). Local edits always
+    // win → yellow. Otherwise honor the server's "already on Steam" signal so
+    // the button stays green across reloads (PHA-1214 follow-up).
+    if (unsaved) return { pill: "Saved locally — not yet on Steam", pillTone: "warn" };
+    if (initiallySynced) return { pill: "Synced to Steam", pillTone: "ok" };
+    return { pill: "Saved locally", pillTone: "info" };
   }
   if (r.ok && !r.degraded && !r.escalate) {
     // A prior sync fully succeeded — but only call it "synced" while nothing
@@ -75,7 +85,7 @@ function describe(r: WriteResult | null, unsaved: boolean): UIState {
   return { pill: "Saved locally", pillTone: "info" };
 }
 
-export function LockInStage({ sectionId, unsavedSinceSync, onSynced }: Props) {
+export function LockInStage({ sectionId, unsavedSinceSync, initiallySynced = false, onSynced }: Props) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [result, setResult] = useState<WriteResult | null>(null);
 
@@ -105,7 +115,7 @@ export function LockInStage({ sectionId, unsavedSinceSync, onSynced }: Props) {
     }
   };
 
-  const state = describe(result, unsavedSinceSync);
+  const state = describe(result, unsavedSinceSync, initiallySynced);
   const toneColor: Record<UIState["pillTone"], string> = {
     ok: "var(--correct, #22c55e)",
     warn: "var(--accent)",
