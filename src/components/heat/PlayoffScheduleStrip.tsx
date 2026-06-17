@@ -28,35 +28,39 @@ export function PlayoffScheduleStrip({ rounds }: { rounds: ScheduleRound[] }) {
   if (withTimes.length === 0) return null; // no published times yet — stay dark
 
   return (
-    <div className="panel" style={{ padding: "14px 16px 12px" }}>
+    <div className="panel" style={{ padding: "16px 18px 16px" }}>
+      {/* PHA-1007: section labels were tiny robotic mono and hard to read; now
+          the display font at a legible size — proper headings, not micro-tags. */}
       <div
         style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: 10,
-          letterSpacing: "0.16em",
+          fontFamily: "var(--font-display)",
+          fontWeight: 800,
+          fontSize: 18,
+          letterSpacing: "0.04em",
           textTransform: "uppercase",
-          color: "var(--ink-mid)",
-          marginBottom: 10,
+          color: "var(--ink-hi)",
+          marginBottom: 14,
         }}
       >
         Schedule
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {withTimes.map((r) => (
           <div key={r.short}>
             <div
               style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: 9.5,
-                letterSpacing: "0.12em",
+                fontFamily: "var(--font-display)",
+                fontWeight: 700,
+                fontSize: 16,
+                letterSpacing: "0.04em",
                 textTransform: "uppercase",
-                color: "var(--ink-low)",
-                marginBottom: 6,
+                color: "var(--heat)",
+                marginBottom: 8,
               }}
             >
               {r.label}
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               {r.games.map((g, i) => (
                 <div
                   key={i}
@@ -65,11 +69,11 @@ export function PlayoffScheduleStrip({ rounds }: { rounds: ScheduleRound[] }) {
                     alignItems: "center",
                     justifyContent: "space-between",
                     gap: 12,
-                    padding: "5px 0",
+                    padding: "8px 0",
                     borderTop: i === 0 ? "none" : "1px solid var(--hair)",
                   }}
                 >
-                  <span style={{ fontSize: 13, color: "var(--ink-hi)" }}>{g.label}</span>
+                  <span style={{ fontSize: 15, fontWeight: 500, color: "var(--ink-hi)" }}>{g.label}</span>
                   <GameTime iso={g.iso} align="left" />
                 </div>
               ))}
