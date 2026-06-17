@@ -449,9 +449,6 @@ export default async function PicksPage({
         // (they all lock together); until then an honest status strip. The
         // full QF → SF → GF tree renders beneath either way.
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          {/* Per-game date/time schedule (PHA-1007) — above the bracket in both
-              the pre-lock picker and the locked tree; dark until times publish. */}
-          <PlayoffScheduleStrip rounds={playoffScheduleRounds} />
           {anyPlayoffPickable && playoffPickModel ? (
             // PHA-1204: ONE bracket, placed at once. The interactive QF→SF→GF
             // tree replaces the three stacked round-pickers — crown a winner and
@@ -490,6 +487,9 @@ export default async function PicksPage({
               )}
             </>
           )}
+          {/* Per-game schedule (PHA-1007) — BELOW the bracket + lock-in button:
+              the bracket is the focus, the schedule is reference underneath. */}
+          <PlayoffScheduleStrip rounds={playoffScheduleRounds} />
           <AutoRefresh intervalMs={60_000} />
         </div>
       ) : activePickability.pickable ? (
