@@ -23,6 +23,7 @@ export function AvatarUpload({
 }) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl);
   const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false); // PHA-1213: green "Saved" flash after a change
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -42,6 +43,8 @@ export function AvatarUpload({
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error ?? "Upload failed");
       setAvatarUrl(dataUrl);
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 2400);
       router.refresh(); // update the top-bar avatar + anywhere else it shows
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
@@ -137,10 +140,22 @@ export function AvatarUpload({
             fontSize: 9,
             letterSpacing: "0.12em",
             textTransform: "uppercase",
-            color: error ? "var(--ember)" : "var(--ink-low)",
+            color: error
+              ? "var(--ember)"
+              : saved
+                ? "var(--tac-green, #22c55e)"
+                : "var(--ink-low)",
           }}
         >
-          {busy ? "Saving…" : error ? error : avatarUrl ? "Change photo" : "Add photo"}
+          {busy
+            ? "Saving…"
+            : error
+              ? error
+              : saved
+                ? "✓ Saved"
+                : avatarUrl
+                  ? "Change photo"
+                  : "Add photo"}
         </button>
       )}
 
