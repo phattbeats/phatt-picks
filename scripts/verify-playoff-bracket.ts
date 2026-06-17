@@ -70,7 +70,11 @@ check("found all three playoff sections in the committed layout", playoffSection
   `got ${playoffSections.length}`);
 
 console.log("\nplayoff-bracket - honest EMPTY state (pre-seeding, the `???` tree)");
-const empty = buildPlayoffBracket({ sections: playoffSections });
+// The committed fixture now seeds the QF (PHA-1007), so the pre-seeding empty
+// state is verified against an explicitly unseeded clone.
+const unseeded = clone(playoffSections);
+for (const s of unseeded) for (const g of s.groups) g.teams = g.teams.map(() => ({ pickid: 0 }));
+const empty = buildPlayoffBracket({ sections: unseeded });
 check("3 rounds in QF→SF→GF order", empty.rounds.map((r) => r.key).join(",") === "QF,SF,GF");
 check("QF has 4 matches", empty.rounds[0].matches.length === 4, `got ${empty.rounds[0].matches.length}`);
 check("SF has 2 matches", empty.rounds[1].matches.length === 2);
