@@ -109,7 +109,13 @@ console.log("\npick-tree - playoffFieldTeams = the eight QF survivors");
 const field = playoffFieldTeams(seeded);
 check("field has 8 teams", field.size === 8, `got ${field.size}`);
 check("field = T0..T7", T.every((t) => field.has(t)));
-check("empty field pre-seeding", playoffFieldTeams(playoffSections).size === 0);
+// The committed fixture now seeds the QF (PHA-1007), so "empty field pre-seeding"
+// is verified against an explicitly unseeded clone; the committed field is the 8.
+const tbd = clone(playoffSections);
+for (const s of tbd) for (const g of s.groups) g.teams = g.teams.map(() => ({ pickid: 0 }));
+check("empty field pre-seeding", playoffFieldTeams(tbd).size === 0);
+check("committed layout now seeds the 8 QF teams", playoffFieldTeams(playoffSections).size === 8,
+  `got ${playoffFieldTeams(playoffSections).size}`);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);
