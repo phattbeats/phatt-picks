@@ -3,11 +3,15 @@ import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { randomName, DISPLAY_NAME_MAX } from "@/lib/local-auth-core";
 import { HeatMark, HeatWordmark } from "@/components/heat/HeatMark";
+import { TokenSignInPanel } from "@/components/TokenSignInPanel";
 
 const ERROR_MESSAGES: Record<string, string> = {
   ip_limit:
     "Too many accounts created from this network. Sign in with Steam instead.",
   captcha: "Bot check failed. Please try again.",
+  invalid_token: "That login link or token isn't valid. Check it and try again.",
+  no_token: "No login token found in that link.",
+  token_login_failed: "Couldn't sign you in. Please try again.",
 };
 
 export default async function LocalSignInPage({
@@ -148,6 +152,21 @@ export default async function LocalSignInPage({
             ← Back
           </Link>
         </form>
+
+        {/* Returning player — sign back in with a saved login token/link */}
+        <div
+          style={{
+            marginTop: 20,
+            paddingTop: 18,
+            borderTop: "1px solid var(--hair-2)",
+          }}
+        >
+          <p className="eyebrow-mono" style={{ marginBottom: 6 }}>RETURNING?</p>
+          <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "0 0 14px", lineHeight: 1.55 }}>
+            Already have a login link from another device? Paste it to pick up where you left off.
+          </p>
+          <TokenSignInPanel />
+        </div>
       </div>
 
       {siteKey && (
