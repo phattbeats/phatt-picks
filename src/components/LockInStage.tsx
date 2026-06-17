@@ -32,11 +32,16 @@ interface UIState {
 function describe(r: WriteResult | null, unsaved: boolean): UIState {
   if (!r) {
     return unsaved
-      ? { pill: "Saved locally — not yet on Steam", pillTone: "info" }
+      ? { pill: "Saved locally — not yet on Steam", pillTone: "warn" }
       : { pill: "Saved locally", pillTone: "info" };
   }
   if (r.ok && !r.degraded && !r.escalate) {
-    return { pill: `Synced to Steam (${r.synced} pick${r.synced === 1 ? "" : "s"})`, pillTone: "ok" };
+    // A prior sync fully succeeded — but only call it "synced" while nothing
+    // has changed since. Any local edit since then means there are picks not
+    // yet on Steam, so fall back to the yellow "needs sync" state.
+    return unsaved
+      ? { pill: "Saved locally — not yet on Steam", pillTone: "warn" }
+      : { pill: `Synced to Steam (${r.synced} pick${r.synced === 1 ? "" : "s"})`, pillTone: "ok" };
   }
   if (r.skipped === "no-auth-code") {
     return { pill: "Add your Steam auth code to sync", pillTone: "warn" };
@@ -107,12 +112,19 @@ export function LockInStage({ sectionId, unsavedSinceSync, onSynced }: Props) {
     error: "var(--accent)",
     info: "var(--text-mid)",
   };
+  // Green once everything the player has picked is on Steam; yellow (the accent
+  // call-to-action) the moment there are local changes still to push. PHA-1214.
+  const isSynced = state.pillTone === "ok";
   const label =
     phase === "syncing"
       ? "Locking in…"
-      : sectionId === "playoff"
-        ? "Lock In Playoffs to Steam"
-        : "Lock In to Steam";
+      : isSynced
+        ? sectionId === "playoff"
+          ? "Playoffs Synced ✓"
+          : "Synced to Steam ✓"
+        : sectionId === "playoff"
+          ? "Lock In Playoffs to Steam"
+          : "Lock In to Steam";
 
   return (
     <div
@@ -145,8 +157,8 @@ export function LockInStage({ sectionId, unsavedSinceSync, onSynced }: Props) {
         onClick={onClick}
         disabled={phase === "syncing"}
         style={{
-          background: "var(--accent)",
-          color: "#fff",
+          background: isSynced ? "var(--tac-green)" : "var(--accent)",
+          color: isSynced ? "var(--void)" : "#fff",
           borderRadius: "var(--radius-md)",
           padding: "12px",
           border: "none",
@@ -158,6 +170,7 @@ export function LockInStage({ sectionId, unsavedSinceSync, onSynced }: Props) {
           letterSpacing: "0.05em",
           textTransform: "uppercase",
           opacity: phase === "syncing" ? 0.75 : 1,
+          transition: "background 250ms var(--ease), color 250ms var(--ease)",
           width: "100%",
           minHeight: 44,
         }}
