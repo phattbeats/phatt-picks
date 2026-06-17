@@ -68,22 +68,41 @@ check(
 
 console.log("\nstage-gate - playoff bracket stays locked while teams are TBD");
 
-const qfs = isStagePickable(layout, 108);
+// The committed fixture now seeds the Quarterfinals (PHA-1007 — Valve won't seed
+// this event's bracket, so the matchups are committed directly). The
+// "all TBD → teams-not-set" behavior is verified against an explicitly unseeded
+// clone so the gate logic stays covered regardless of the fixture's seed state.
+const tbdLayout: Layout = {
+  ...layout,
+  sections: layout.sections.map((s) =>
+    ![108, 109, 110].includes(s.sectionid)
+      ? s
+      : { ...s, groups: s.groups.map((g) => ({ ...g, teams: g.teams.map((t) => ({ ...t, pickid: 0 })) })) },
+  ),
+};
+
+const qfs = isStagePickable(tbdLayout, 108);
 check(
   "section 108 (Quarterfinals) locked — teams-not-set (all TBD)",
   qfs.pickable === false && qfs.reason === "teams-not-set",
 );
 
-const sfs = isStagePickable(layout, 109);
+const sfs = isStagePickable(tbdLayout, 109);
 check(
   "section 109 (Semifinals) locked — teams-not-set (all TBD)",
   sfs.pickable === false && sfs.reason === "teams-not-set",
 );
 
-const final = isStagePickable(layout, 110);
+const final = isStagePickable(tbdLayout, 110);
 check(
   "section 110 (Grand Final) locked — teams-not-set (all TBD)",
   final.pickable === false && final.reason === "teams-not-set",
+);
+
+// The committed fixture's Quarterfinals are now seeded → open for picks.
+check(
+  "section 108 (Quarterfinals) is seeded in the committed layout → open",
+  isStagePickable(layout, 108).pickable === true,
 );
 
 console.log("\nstage-gate - a seeded playoff section opens");
