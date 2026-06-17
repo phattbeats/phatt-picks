@@ -85,8 +85,8 @@ a release tag for rollback:
 
 ```bash
 docker pull ghcr.io/phattbeats/phatt-picks:latest      # always-current main
-docker pull ghcr.io/phattbeats/phatt-picks:v0.9.0      # pinnable release
-docker pull ghcr.io/phattbeats/phatt-picks:0.9         # latest patch in the 0.9 line
+docker pull ghcr.io/phattbeats/phatt-picks:vX.Y.Z      # pinnable release (e.g. v0.1.0)
+docker pull ghcr.io/phattbeats/phatt-picks:X.Y         # latest patch in that minor line
 ```
 
 Cutting a release = push a `vX.Y.Z` git tag; CI publishes `:vX.Y.Z`, `:X.Y`, and updates `:latest`.
