@@ -43,12 +43,21 @@ function originOf(url: string | null): string | null {
 }
 
 /**
- * Same-origin guard for a state-changing request. A cross-site <img>/<form>/fetch
- * either omits the Origin header or carries a foreign one; a genuine same-origin
- * POST always sends an Origin (and we fall back to the Referer's origin). We
- * REQUIRE that origin to match one we own, so an absent origin fails closed —
- * the only requests with no Origin are non-browser or cross-site, neither of
- * which should be able to mutate a cookie-authed session.
+ * Same-origin guard for a state-changing request. A cross-site <form>/fetch
+ * carries a foreign Origin; a genuine same-origin POST either sends a matching
+ * Origin (we fall back to the Referer's origin) OR — on iOS WebKit (Safari,
+ * Brave, every iOS browser) — sends NEITHER header on a top-level same-origin
+ * form-POST navigation. That headerless case is exactly what "profile › Sign
+ * out" is, and PHA-1225 caught it failing closed with {"error":"Bad origin"}.
+ *
+ * So we fail OPEN only when BOTH Origin and Referer are entirely absent. This is
+ * safe because every route behind this guard is authed by a SameSite=Lax session
+ * cookie: a cross-site POST never sends that cookie, and a cross-site form POST
+ * always carries an Origin header — so the only requests that reach the both-
+ * absent branch are same-origin navigations (or cookieless non-browser callers,
+ * which can't mutate anything). An OPAQUE origin arrives as the literal string
+ * "null" (a header that IS present), which is NOT this case and still fails
+ * closed below.
  *
  * If no allowed origins are configured (e.g. a bare local-dev run with nothing
  * to compare against) the check is a no-op so it never blocks development; the
@@ -61,6 +70,8 @@ export function isAllowedOrigin(
   allowed: string[],
 ): boolean {
   if (allowed.length === 0) return true;
+  // iOS WebKit same-origin form POST: no Origin AND no Referer. See above.
+  if (origin == null && referer == null) return true;
   const candidate = origin && origin !== "null" ? origin : originOf(referer);
   if (!candidate) return false;
   return allowed.includes(candidate);
