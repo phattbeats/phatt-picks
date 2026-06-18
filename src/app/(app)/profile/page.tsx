@@ -4,6 +4,7 @@ import { InviteLink } from "@/components/InviteLink";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { AdminLocalPlayers } from "@/components/AdminLocalPlayers";
 import { LoginTokenPanel } from "@/components/LoginTokenPanel";
+import { ClaimLocalPicksPanel } from "@/components/ClaimLocalPicksPanel";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { getReferralStats } from "@/lib/invite";
@@ -128,6 +129,23 @@ export default async function ProfilePage() {
             Copy this link and open it on any browser to sign in as you — no password needed.
           </p>
           <LoginTokenPanel initialToken={playerRow?.loginToken ?? null} />
+        </section>
+      )}
+
+      {/* Bring over guest picks — Steam players only (PHA-1232). The Steam
+          callback never merges a pre-existing guest account, so picks made
+          before signing in with Steam would otherwise be stranded. */}
+      {connected && (
+        <section className="panel brk">
+          <span className="br-tr" />
+          <span className="br-bl" />
+          <div className="panel-title">[ Bring over guest picks ]</div>
+          <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "0 0 12px", lineHeight: 1.55 }}>
+            Made picks as a guest before signing in with Steam? Paste that guest
+            login link to move those picks onto this Steam account. Picks already
+            set here are kept.
+          </p>
+          <ClaimLocalPicksPanel />
         </section>
       )}
 
