@@ -21,6 +21,7 @@ model Player {
   synced        Boolean  @default(false) // true when picks confirmed synced from Valve
   inviteCode    String?  @unique
   loginToken    String?  @unique   // opaque token for cross-device login (local players only)
+  reactionsSeenAt DateTime?        // PHA-1211: last time this player opened their Bleachers notifications; reactions newer than this are "unread"
   invitedById   String?           // referral attribution: the player whose invite link onboarded this one
   createdFromIp String?           // captured at local-account creation for IP rate-limit enforcement
   createdAt     DateTime @default(now())
