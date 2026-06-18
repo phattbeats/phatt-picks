@@ -54,11 +54,18 @@ export interface ReminderTime {
   label: string;
 }
 
+export interface PushAction {
+  action: string;
+  title: string;
+}
+
 export interface PreLockPayload {
   title: string;
   body: string;
   url: string;
   tag: string;
+  /** Notification action buttons surfaced by the browser (desktop/Android). */
+  actions?: PushAction[];
 }
 
 /**
@@ -139,6 +146,52 @@ export function buildPreLockPayload(args: {
     body: `${stageName} picks lock in ${eta} — set yours now.`,
     url,
     tag: `prelock-${stageName.toLowerCase().replace(/\s+/g, "-")}`,
+    actions: [{ action: "picks", title: "Set picks" }],
+  };
+}
+
+/** Build the push payload for a Bleachers reaction. */
+export function buildReactionPayload(args: {
+  stampGlyph: string;
+  stampLabel: string;
+  targetPlayerId: string;
+}): PreLockPayload {
+  return {
+    title: "Someone's in your bleachers.",
+    body: `A ${args.stampGlyph} ${args.stampLabel} just landed on one of your picks.`,
+    url: "/picks",
+    tag: `bleachers:${args.targetPlayerId}`,
+    actions: [{ action: "view", title: "View picks" }],
+  };
+}
+
+/** Build the push payload for a stage recap becoming available. */
+export function buildRecapPayload(args: {
+  stageName: string;
+  sectionId: number;
+}): PreLockPayload {
+  return {
+    title: "HOTLINE",
+    body: `Your ${args.stageName} recap is ready — see how you stacked up.`,
+    url: "/",
+    tag: `recap:${args.sectionId}`,
+    actions: [{ action: "view", title: "See recap" }],
+  };
+}
+
+/** Build the push payload for a broadcast announcement. */
+export function buildAnnouncementPayload(args: {
+  title: string;
+  body: string;
+  href: string;
+  id: string;
+}): PreLockPayload {
+  return {
+    title: args.title,
+    body: args.body,
+    url: args.href,
+    tag: `announce:${args.id}`,
+    actions: [{ action: "view", title: "View" }],
   };
 }
 
