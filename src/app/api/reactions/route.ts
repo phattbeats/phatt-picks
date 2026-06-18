@@ -22,6 +22,8 @@ import { isValidStampId, getStamp, tallyReactions } from "@/lib/bleachers-core";
 import { isLockTimePassed } from "@/lib/lock-schedule-core";
 import { currentEventId } from "@/lib/events-core";
 import { isPushConfigured, sendPushToPlayer } from "@/lib/notify";
+import { buildReactionPayload } from "@/lib/notify-core";
+import { parseNotifPrefs } from "@/lib/notifications-core";
 
 const DROP_COOLDOWN_MS = 3_000;
 const cooldown = createCooldownStore();
@@ -132,15 +134,21 @@ export async function POST(req: NextRequest) {
     mine: t.mine,
   }));
 
-  // Ping the target — anonymous by design ("someone"), the name lands at resolve.
+  // Ping the target — only when push is configured AND the target has opted in.
+  // Anonymous by design ("someone"), the name lands at resolve.
   if (isPushConfigured()) {
-    const stamp = getStamp(stampId)!;
-    void sendPushToPlayer(targetPlayerId, {
-      title: "Someone's in your bleachers.",
-      body: `A ${stamp.glyph} ${stamp.label} just landed on one of your picks. Tap to see the heat.`,
-      url: `/players/${targetPlayerId}`,
-      tag: `bleachers:${targetPlayerId}`,
-    }).catch(() => {});
+    const targetPlayer = await prisma.player.findUnique({
+      where: { id: targetPlayerId },
+      select: { notifPrefs: true },
+    });
+    const prefs = parseNotifPrefs(targetPlayer?.notifPrefs);
+    if (prefs.reactions.push) {
+      const stamp = getStamp(stampId)!;
+      void sendPushToPlayer(
+        targetPlayerId,
+        buildReactionPayload({ stampGlyph: stamp.glyph, stampLabel: stamp.label, targetPlayerId }),
+      ).catch(() => {});
+    }
   }
 
   return NextResponse.json({ ok: true, tally });
