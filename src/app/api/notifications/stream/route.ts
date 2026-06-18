@@ -14,8 +14,19 @@
  * unread count or the set of item ids + their isNew flags — generatedAtMs is
  * excluded from the fingerprint so a no-op tick doesn't spam the wire.
  *
- * Client disconnects are detected via req.signal. On abort the while-loop exits
- * on the next iteration (max 8s latency before cleanup).
+ * CPU SAFETY (PHA-1244). A previous version's poll loop exited ONLY on
+ * req.signal.aborted, and its sole controller.enqueue() lived inside the same
+ * try/catch that swallowed "transient DB errors" — so a write to an already-
+ * disconnected client was silently ignored and the loop polled the DB forever.
+ * Every EventSource reconnect (full reload, tab close, mobile backgrounding,
+ * network blip) leaked another immortal loop, and on a single-threaded Node
+ * process the accumulated zombies pinned the CPU. Hardening, in layers:
+ *   1. cancel() flips `closed` — the most reliable disconnect signal in the
+ *      Next.js standalone runtime (fires when the response body is torn down).
+ *   2. Every enqueue goes through safeEnqueue(); a throw means the peer is gone,
+ *      so we mark `closed` and break instead of treating it as a DB hiccup.
+ *   3. MAX_LIFETIME_MS caps any single connection; the browser's EventSource
+ *      auto-reconnects, so even if (1) and (2) ever failed, loops self-terminate.
  */
 
 import { NextRequest } from "next/server";
@@ -28,6 +39,9 @@ export const dynamic = "force-dynamic";
 
 const POLL_MS = 8_000;
 const KEEPALIVE_MS = 25_000;
+// Recycle every connection after this long so a missed disconnect signal can
+// never produce an immortal poll loop. EventSource reconnects automatically.
+const MAX_LIFETIME_MS = 10 * 60_000;
 
 const enc = new TextEncoder();
 
@@ -49,57 +63,106 @@ export async function GET(req: NextRequest) {
 
   const playerId = session.playerId;
 
-  const abortPromise = new Promise<void>((resolve) => {
-    req.signal.addEventListener("abort", () => resolve(), { once: true });
-  });
+  // `closed` is the single source of truth for "stop polling". It is flipped by
+  // cancel() (client disconnect), by req.signal abort, by a failed enqueue, and
+  // by the lifetime cap. The loop and the sleep both observe it.
+  let closed = false;
+  let wakeFromSleep: (() => void) | null = null;
+  const markClosed = () => {
+    closed = true;
+    wakeFromSleep?.();
+  };
+
+  req.signal.addEventListener("abort", markClosed, { once: true });
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      // Send initial feed immediately so the bell loads fast.
+      const startedAt = Date.now();
       let lastFingerprint = "";
       let lastKeepaliveAt = Date.now();
 
+      // Enqueue that reports failure instead of throwing. A throw here means the
+      // consumer is gone (controller errored/closed) — the definitive "client
+      // disconnected" signal — so we shut the loop down.
+      const safeEnqueue = (chunk: Uint8Array): boolean => {
+        if (closed) return false;
+        try {
+          controller.enqueue(chunk);
+          return true;
+        } catch {
+          markClosed();
+          return false;
+        }
+      };
+
+      // Sleep that resolves early the instant the connection closes, so a
+      // disconnect is acted on immediately rather than after up to POLL_MS.
+      const sleep = (ms: number) =>
+        new Promise<void>((resolve) => {
+          if (closed) return resolve();
+          const t = setTimeout(() => {
+            wakeFromSleep = null;
+            resolve();
+          }, ms);
+          wakeFromSleep = () => {
+            clearTimeout(t);
+            wakeFromSleep = null;
+            resolve();
+          };
+        });
+
+      // Initial feed — fast first paint for the bell.
       try {
         const feed = await buildPlayerFeed(playerId, 30);
         lastFingerprint = feedFingerprint(feed);
-        controller.enqueue(sseEvent("init", feed));
+        if (!safeEnqueue(sseEvent("init", feed))) {
+          try { controller.close(); } catch { /* already closed */ }
+          return;
+        }
       } catch {
-        controller.close();
+        try { controller.close(); } catch { /* already closed */ }
         return;
       }
 
-      // Poll loop: check for changes, send update or keepalive.
-      while (!req.signal.aborted) {
-        // Wait POLL_MS or until the client disconnects — whichever comes first.
-        await Promise.race([
-          new Promise<void>((r) => setTimeout(r, POLL_MS)),
-          abortPromise,
-        ]);
+      while (!closed) {
+        await sleep(POLL_MS);
+        if (closed) break;
 
-        if (req.signal.aborted) break;
+        // Bound total connection lifetime regardless of disconnect detection.
+        if (Date.now() - startedAt >= MAX_LIFETIME_MS) break;
 
         const now = Date.now();
+        let feed: FeedView;
         try {
-          const feed = await buildPlayerFeed(playerId, 30);
-          const fp = feedFingerprint(feed);
-          if (fp !== lastFingerprint) {
-            lastFingerprint = fp;
-            lastKeepaliveAt = now;
-            controller.enqueue(sseEvent("update", feed));
-          } else if (now - lastKeepaliveAt >= KEEPALIVE_MS) {
-            lastKeepaliveAt = now;
-            controller.enqueue(ssePing());
-          }
+          feed = await buildPlayerFeed(playerId, 30);
         } catch {
-          // Transient DB error: send a ping to stay alive and retry next tick.
+          // Genuine DB hiccup: stay alive, retry next tick. A failed keepalive
+          // enqueue (peer gone) trips safeEnqueue → closed → loop exits.
           if (now - lastKeepaliveAt >= KEEPALIVE_MS) {
             lastKeepaliveAt = now;
-            try { controller.enqueue(ssePing()); } catch { break; }
+            if (!safeEnqueue(ssePing())) break;
           }
+          continue;
+        }
+
+        const fp = feedFingerprint(feed);
+        if (fp !== lastFingerprint) {
+          lastFingerprint = fp;
+          lastKeepaliveAt = now;
+          if (!safeEnqueue(sseEvent("update", feed))) break;
+        } else if (now - lastKeepaliveAt >= KEEPALIVE_MS) {
+          lastKeepaliveAt = now;
+          if (!safeEnqueue(ssePing())) break;
         }
       }
 
       try { controller.close(); } catch { /* already closed */ }
+    },
+
+    // Fires when the client disconnects and the response body is torn down —
+    // the most reliable disconnect signal in the standalone runtime.
+    cancel() {
+      markClosed();
     },
   });
 
