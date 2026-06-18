@@ -114,9 +114,13 @@ export async function register(): Promise<void> {
 
   // Import lazily so the heavy DB/web-push module graph loads only when armed.
   const { runPreLockReminders } = await import("@/lib/prelock-reminders");
+  const { runRecapPushes } = await import("@/lib/recap-pushes");
+  const { runAnnouncementPushes } = await import("@/lib/announcement-pushes");
 
   const tick = (): void => {
     runPreLockReminders().catch((err) => console.error("[prelock] tick failed:", err));
+    runRecapPushes().catch((err) => console.error("[recap-push] tick failed:", err));
+    runAnnouncementPushes().catch((err) => console.error("[announce-push] tick failed:", err));
   };
 
   setTimeout(tick, FIRST_TICK_DELAY_MS);
@@ -124,5 +128,5 @@ export async function register(): Promise<void> {
   // Don't keep the process alive solely for this timer.
   if (typeof timer.unref === "function") timer.unref();
 
-  console.log(`[prelock] scheduler armed — every ${TICK_MS / 60_000} min`);
+  console.log(`[prelock] scheduler armed — every ${TICK_MS / 60_000} min (+ recap + announce pushes)`);
 }
