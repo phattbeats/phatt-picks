@@ -51,19 +51,25 @@ export async function GET(req: NextRequest) {
   const limitParam = req.nextUrl.searchParams.get("limit");
   const limit = limitParam ? Math.max(1, Math.min(200, Number.parseInt(limitParam, 10) || DEFAULT_LIMIT)) : DEFAULT_LIMIT;
 
+  return NextResponse.json(await buildPlayerFeed(session.playerId, limit));
+}
+
+/** Build the notification feed for a player. Exported for the SSE stream
+ *  (/stream/route.ts) so both endpoints deliver identical payloads. */
+export async function buildPlayerFeed(playerId: string, limit: number = DEFAULT_LIMIT) {
   const eventId = currentEventId();
   const nowMs = Date.now();
   const [reactions, player, myPicks, outcomes, reads] = await Promise.all([
     prisma.reaction.findMany({
-      where: { eventId, targetPlayerId: session.playerId },
+      where: { eventId, targetPlayerId: playerId },
       select: { stampId: true, sectionId: true, groupId: true, slotIndex: true, createdAt: true },
     }),
     prisma.player.findUnique({
-      where: { id: session.playerId },
+      where: { id: playerId },
       select: { notificationsSeenAt: true, notifPrefs: true },
     }),
     prisma.pick.findMany({
-      where: { eventId, playerId: session.playerId },
+      where: { eventId, playerId },
       select: { sectionId: true, groupId: true, slotIndex: true, pickId: true },
     }),
     prisma.stageOutcome.findMany({
@@ -71,7 +77,7 @@ export async function GET(req: NextRequest) {
       select: { sectionId: true, groupId: true, slotIndex: true, winnerPickId: true, resolvedAt: true },
     }),
     prisma.notificationRead.findMany({
-      where: { playerId: session.playerId },
+      where: { playerId },
       select: { entryId: true, readAt: true },
     }),
   ]);
@@ -96,10 +102,8 @@ export async function GET(req: NextRequest) {
 
   const rawEntries = [];
 
-  // 0. Broadcast announcements (everyone sees the same active set).
   rawEntries.push(...announcementEntries(nowMs));
 
-  // 1. Reactions on your picks (team name resolved from the slot you picked).
   const pickByKey = new Map<string, number>();
   for (const p of myPicks) pickByKey.set(`${p.sectionId}:${p.groupId}:${p.slotIndex}`, p.pickId);
   const label: PickLabeller = (sectionId, groupId, slotIndex) => {
@@ -116,7 +120,6 @@ export async function GET(req: NextRequest) {
   }));
   rawEntries.push(...reactionEntries(reactionRows, label));
 
-  // 2. Upcoming stage locks (only future locks inside the lead window).
   for (const s of layout.sections) {
     const iso = lockTimeForSection(s.sectionid);
     if (!iso) continue;
@@ -127,7 +130,6 @@ export async function GET(req: NextRequest) {
     if (e) rawEntries.push(e);
   }
 
-  // 3. "Your recap is ready" for the latest resolved + authored stage.
   const outcomeMap: OutcomeMap = {};
   const resolvedAtBySection = new Map<number, number>();
   for (const o of outcomes) {
@@ -152,7 +154,7 @@ export async function GET(req: NextRequest) {
     if (e) rawEntries.push(e);
   }
 
-  return NextResponse.json(assembleFeed(filterEntriesByPrefs(rawEntries, prefs), rc, limit, nowMs));
+  return assembleFeed(filterEntriesByPrefs(rawEntries, prefs), rc, limit, nowMs);
 }
 
 export async function POST(req: NextRequest) {
