@@ -14,6 +14,19 @@ entire mobile story (no native apps).
 > [hard-won gotchas](docs/GOTCHAS.md). Start there before changing the system or
 > standing up a new Major. **Keep it true: update the relevant doc in the same PR.**
 
+## What's inside
+
+- **Per-stage picks** — Swiss stages as 2 / 6 / 2 buckets, plus **one interactive QF→SF→GF
+  playoff bracket** you place at once (tap a winner, they advance).
+- **Steam mirror** — pull your live Valve Pick'Em and (optionally) push locally-set picks back up.
+- **Shared leaderboard** — scored on Valve's own weighting; picks hidden until each stage locks.
+- **Stage Reveal & Wrapped** — per-stage reveal boards and a click-through "Stage Wrapped" recap.
+- **The Bleachers** — drop a fixed reaction stamp on someone's revealed pick; anonymous in the moment, unmasked when the stage resolves.
+- **Playoff Spotlight** — per-team narrative + highlight, with live Polymarket implied odds.
+- **PWA + Web Push** — installable, with opt-in 24h/1h pre-lock reminders.
+- **Multi-Major by design** — an event registry + clock-derived lifecycle re-points the app at the
+  next Major from committed config (PGL Singapore 2026 is already seeded).
+
 ## Getting started (local dev)
 
 ```bash
@@ -39,7 +52,7 @@ See `.env.example`. Summary:
 | `WRITE_ENABLED` | `"true"` enables the stage-batched write-back to Valve (**destructive** — overwrites the owner's live picks). Defaults `false`; leave off for the first tournament run, flip on only for deploy-smoke. |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web Push keypair. Generate: `npx web-push generate-vapid-keys`. |
 | `VAPID_SUBJECT` | `mailto:` contact for push. |
-| `PRELOCK_REMINDERS_ENABLED` | (optional) `1`/`true` arms the in-process pre-lock reminder scheduler; off by default. |
+| `PRELOCK_REMINDERS_DISABLED` | (optional) `1`/`true` turns OFF the in-process pre-lock reminder scheduler. It is **ON by default** (PHA-996) with no env required. |
 | `STAGE_LOCKS_JSON` | (optional) **override** for the reminder cutoffs; defaults to the committed `COLOGNE_LOCK_SCHEDULE` when unset. |
 
 ## PWA install & push reminders
@@ -73,8 +86,8 @@ a release tag for rollback:
 
 ```bash
 docker pull ghcr.io/phattbeats/phatt-picks:latest      # always-current main
-docker pull ghcr.io/phattbeats/phatt-picks:v0.9.0      # pinnable release
-docker pull ghcr.io/phattbeats/phatt-picks:0.9         # latest patch in the 0.9 line
+docker pull ghcr.io/phattbeats/phatt-picks:vX.Y.Z      # pinnable release (e.g. v0.1.0)
+docker pull ghcr.io/phattbeats/phatt-picks:X.Y         # latest patch in that minor line
 ```
 
 Cutting a release = push a `vX.Y.Z` git tag; CI publishes `:vX.Y.Z`, `:X.Y`, and updates `:latest`.

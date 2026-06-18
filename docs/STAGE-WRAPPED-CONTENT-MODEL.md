@@ -1,5 +1,13 @@
 # Stage Wrapped — "Craziest Moments" Content Model & Media Recommendation
 
+> **STATUS — SHIPPED (design record).** Stage Wrapped is live: `src/lib/stage-wrapped-content.ts`
+> (`buildStageWrappedDeck()`, authored `AUTHORED[105]`/`[106]`/`[107]` decks) + `stage-wrapped-core.ts`,
+> gated app-wide by `StageWrappedGate`. This doc is the **design rationale**, kept for the *why*. The
+> shipped data model **differs from the §1/§4/§6 proposals**: the implemented type is `AuthoredMoment`
+> (`kind: "stat" | "moment"`, no `link`/`source`/media-deep-link fields), keyed by section id in
+> `AUTHORED`. Treat §1's `WrappedMoment`/`MomentType` types and the news-recap/"Watch" link tracks as
+> *unbuilt proposals*, not the current schema.
+
 **Issue:** PHA-1053 (research) · **Epic:** PHA-1051 Stage Wrapped · **Feeds:** PHA-1052 shell (done), PHA-1054 Stage 1 content
 **Date:** 2026-06-13 · **Rev:** 2026-06-14 (review & upgrade — see §6) · **Author:** Vision Quest
 
@@ -223,11 +231,11 @@ real, exported function.** One ref correction:
 | `RawStandingRow.seed` (upset) | ✅ `swiss-results-core.ts:28` (`number \| null`) | none |
 | `buildBucketConsensus` / `bucketShareFor` (contrarian) | ✅ `consensus-core.ts:171` | none |
 | `rankDelta` (rank-climber) | ✅ `rank-snapshot-core.ts:109` | none |
-| `buildSnapshotRows` (rank-climber) | ⚠️ lives in **`rank-snapshot.ts`**, not `-core` | fix ref in §2 #6 |
+| `buildSnapshotRows` (rank-climber) | ✅ `rank-snapshot-core.ts:79` (imported into `rank-snapshot.ts`) | none |
 | `ScoreBreakdown.bySection[]` (personal) | ✅ `scoring.ts` | none |
 
 Net: the model is buildable as written; PHA-1054 wired real moments to these exact functions
-without inventing new plumbing. The only edit is the `buildSnapshotRows` module path.
+without inventing new plumbing — every source function is in its `-core` leaf, no path edits needed.
 
 ### 6.2 The model missed a second media track: **editorial news-recap links**
 

@@ -62,7 +62,8 @@ new major you need, per team: the pickid (from Valve's layout), the HLTV team id
       (PHA-921) crawl, so they can never point at different profiles.
 - [ ] Refresh the other pickid-keyed maps for the new field:
       `src/lib/regions-core.ts` (region per team) and the logo manifest
-      (`scripts/build-logos.ts` → `public/logos/`, re-run when the feed rotates).
+      (`scripts/build-logos.ts` → `src/fixtures/<event>-logos.json`, re-run when the
+      feed rotates; `public/logos/` is only the optional manual SVG fallback).
 
 ## 3. Seed the frozen stats snapshot
 
@@ -113,12 +114,14 @@ frozen snapshot is what renders until the first live crawl lands.
 
 ## 5. Go-live config sanity pass
 
-- [ ] `COLOGNE_LOCK_SCHEDULE` has every dated stage; playoffs filled once known.
+- [ ] `COLOGNE_LOCK_SCHEDULE` has every dated stage; playoff per-game times go in
+      `COLOGNE_PLAYOFF_SCHEDULE` and fold in automatically (Cologne's are committed, PHA-1007).
 - [ ] `COLOGNE_MATCH_WINDOWS` covers every stage that should crawl live.
 - [ ] `WRITE_ENABLED`, `STEAM_API_KEY`, CAPTCHA + VAPID keys set (see
       [OPERATIONS.md](OPERATIONS.md)).
-- [ ] Logos present in `public/logos/` (monograms = stale manifest → re-run
-      `scripts/build-logos.ts`).
+- [ ] Logo manifest `src/fixtures/<event>-logos.json` built (monograms site-wide =
+      stale manifest → re-run `scripts/build-logos.ts`); `public/logos/` is only the
+      optional self-host SVG fallback.
 - [ ] `verify-team-stats`, `verify-team-stats-live`, `verify-lock-schedule`,
       `verify-regions` all green.
 - [ ] `prisma db push` ran on the deploy (creates `TeamStatsCache` +
@@ -133,8 +136,8 @@ frozen snapshot is what renders until the first live crawl lands.
 |---|---|---|---|---|
 | Stage I (Swiss) | 9028 | 105 | Jun 2–5 | 2026-06-02 10:30Z |
 | Stage II (Swiss) | 9029 | 106 | Jun 6–9 | 2026-06-06 10:30Z |
-| Stage III (Swiss) | hub 8301 (no dedicated sub-event) | 107 | Jun 11–14 | 2026-06-11 10:30Z |
-| Playoffs (QF/SF/GF) | n/a (bracket from layout + StageOutcome) | 108/109/110 | Jun 18–21 | _per-round tbd_ |
+| Stage III (Swiss) | hub 8301 (no dedicated sub-event) | 107 | Jun 11–15 | 2026-06-11 10:30Z |
+| Playoffs (QF/SF/GF) | n/a (bracket from layout + StageOutcome) | 108/109/110 | Jun 18–21 | QF Jun 18 13:45Z (committed, PHA-1007) |
 
-The 32 pickid → HLTV id mapping lives in `scripts/gather-team-stats.ts`
-(`TEAM_SOURCES`).
+The 32 pickid → HLTV id mapping lives in `src/lib/team-stats-sources.ts`
+(`TEAM_SOURCES`); `scripts/gather-team-stats.ts` just imports it.
