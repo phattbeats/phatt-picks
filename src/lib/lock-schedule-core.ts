@@ -136,6 +136,31 @@ export const COLOGNE_LOCK_SCHEDULE: LockSchedule = {
 };
 
 /**
+ * The single instant the whole playoff bracket closes = the EARLIEST committed
+ * playoff game across all rounds (they lock together at the first quarterfinal).
+ * This is also when the playoffs' matches go live — the moment The Bleachers
+ * reactions on revealed picks unlock (PHA-1211) — so a broadcast can flip its
+ * copy from "coming soon" to "live" off this same instant (PHA-1245 follow-up).
+ * Returns `null` when no playoff games are committed (empty schedule / a future
+ * major before its bracket publishes). Pure; schedule + ids injectable.
+ */
+export function playoffLockTime(
+  schedule: LockSchedule = COLOGNE_LOCK_SCHEDULE,
+  playoffIds: ReadonlySet<number> = playoffSectionIds(),
+): string | null {
+  let best: { iso: string; ms: number } | null = null;
+  for (const key of Object.keys(schedule)) {
+    const sid = Number(key);
+    if (!playoffIds.has(sid)) continue;
+    const iso = lockTimeForSection(sid, schedule);
+    if (iso === null) continue;
+    const ms = Date.parse(iso);
+    if (best === null || ms < best.ms) best = { iso, ms };
+  }
+  return best?.iso ?? null;
+}
+
+/**
  * The committed start instant (UTC ISO) of a single playoff game, or `null` when
  * that game has no published time yet. `matchIndex` is the game's position in its
  * round (0-based, bracket order). Pure; lets the bracket render a per-game
