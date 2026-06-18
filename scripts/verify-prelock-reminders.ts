@@ -41,21 +41,39 @@ function check(name: string, cond: boolean) {
 
 console.log("\nstageLocksFromSchedule — single source of truth");
 const locks = stageLocksFromSchedule();
-check("derives all six committed stages (Swiss 105/106/107 + playoffs 108/109/110)",
-  Object.keys(locks).sort((a, b) => Number(a) - Number(b)).join(",") === "105,106,107,108,109,110");
+// PHA-1245: the three playoff rounds (108/109/110) share ONE bracket picker that
+// locks together at the first QF, so reminders collapse them into a single
+// "Playoffs" cutoff — four stages total, not six.
+check("derives 3 Swiss stages + ONE collapsed playoffs cutoff (4 total)",
+  Object.keys(locks).sort((a, b) => Number(a) - Number(b)).join(",") === "105,106,107,108");
 check("Stage III (107) name + lockAt come from the committed schedule",
   locks[107]?.name === "Stage III" && locks[107]?.lockAt === COLOGNE_LOCK_SCHEDULE[107]);
 check("Stage I / II names resolve from COLOGNE_SECTION_NAMES",
   locks[105]?.name === COLOGNE_SECTION_NAMES[105] && locks[106]?.name === COLOGNE_SECTION_NAMES[106]);
-check("playoff sections now derive a reminder cutoff from their committed lock (PHA-1007)",
-  locks[108]?.lockAt === COLOGNE_LOCK_SCHEDULE[108] && locks[108]?.name === "Quarterfinals" &&
-  locks[110]?.lockAt === COLOGNE_LOCK_SCHEDULE[110]);
+check("playoffs collapse to ONE 'Playoffs' reminder keyed at the earliest game (QF1)",
+  locks[108]?.name === "Playoffs" && locks[108]?.lockAt === COLOGNE_LOCK_SCHEDULE[108]);
+check("no separate Semifinals / Grand Final reminders (109/110 folded in)",
+  locks[109] === undefined && locks[110] === undefined);
 check("every derived lock is a valid ISO instant",
   Object.values(locks).every((l) => !Number.isNaN(Date.parse(l.lockAt))));
 
 // A section with a lock but no name falls back rather than dropping the reminder.
 const named = stageLocksFromSchedule({ 999: "2026-07-01T10:30:00Z" }, {});
 check("missing name falls back to 'Section {id}'", named[999]?.name === "Section 999");
+
+// Future-major injectability: a different playoff id set collapses on those ids,
+// keys the single cutoff on the earliest, and leaves Swiss stages untouched.
+const fmSchedule = {
+  205: "2026-12-01T10:30:00Z", // Swiss
+  208: "2026-12-12T18:00:00Z", // QF (later)
+  207: "2026-12-11T14:00:00Z", // QF (earliest)
+};
+const fmLocks = stageLocksFromSchedule(fmSchedule, { 205: "Stage I" }, new Set([207, 208]));
+check("future major: Swiss stage passes through untouched", fmLocks[205]?.name === "Stage I");
+check("future major: playoffs collapse onto the earliest of their ids (207)",
+  fmLocks[207]?.name === "Playoffs" && fmLocks[207]?.lockAt === "2026-12-11T14:00:00Z" && fmLocks[208] === undefined);
+check("empty playoff id set ⇒ no collapse (every section kept)",
+  Object.keys(stageLocksFromSchedule(fmSchedule, {}, new Set())).length === 3);
 
 // Shape parity: an env override (STAGE_LOCKS_JSON) decodes to the same {name,lockAt} shape.
 const override = JSON.parse('{"107":{"name":"Stage III","lockAt":"2026-06-11T10:30:00Z"}}') as Record<

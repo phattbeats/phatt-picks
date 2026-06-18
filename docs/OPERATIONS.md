@@ -151,8 +151,13 @@ If it shows `Add your Steam auth code to sync`, hit `/help/auth-code` and paste.
   `COLOGNE_PLAYOFF_SCHEDULE` (`lock-schedule-core.ts`) — QF Jun 18–19, SF Jun 20, GF Jun 21 —
   and fold into `COLOGNE_LOCK_SCHEDULE` via `derivePlayoffLocks`. The whole bracket locks at the
   first quarterfinal (Jun 18 13:45 UTC); the `/picks` page renders a per-game schedule + countdown
-  below the bracket, and pre-lock reminders fire off the derived lock. (Truthful-by-construction:
-  a section with no committed game time stays dark, so removing a time degrades gracefully.)
+  below the bracket. (Truthful-by-construction: a section with no committed game time stays dark,
+  so removing a time degrades gracefully.)
+- **One playoff reminder, not three (PHA-1245):** because the bracket is a single Pick'Em that
+  locks all at once, `stageLocksFromSchedule` collapses sections 108/109/110 into a single
+  **"Playoffs"** pre-lock cutoff (keyed at the first QF), so an opted-in player gets one
+  "Playoffs picks lock in …" warning (24h + 1h) — not a separate Quarterfinals / Semifinals /
+  Grand Final ping. Per-round locks remain in `COLOGNE_LOCK_SCHEDULE` for the countdown/reveal.
 - **Deferred polish:** the HLTV map-score overlay on the playoff bracket was a PHA-903
   follow-up — pick up if desired once the bracket is live.
 
