@@ -162,6 +162,22 @@ leaves / pure helpers) or the verifier can't load it standalone.
   `status:"upcoming"` with real dates is all it takes — no hand flip. PGL Singapore 2026 (eventId 27)
   is already seeded this way. See [ROADMAP-MULTI-MAJOR.md](ROADMAP-MULTI-MAJOR.md).
 
+### The Bleachers — semi-anonymous pick reactions (PHA-1211)
+- On a **revealed** pick, players drop a fixed **stamp** (one of `bleachers-core.ts` `STAMPS`) via
+  `POST /api/reactions` → a `Reaction` row. Pure tally/sort logic is in `bleachers-core.ts`; the
+  `BleachersStrip` component renders the public count per stamp. **One stamp per sender per pick**
+  (`@@unique([senderId,eventId,sectionId,groupId,slotIndex])`, a repeat is a swap), and the **sender
+  stays masked** in the UI until the stage resolves — anonymous in the moment, unmasked at resolve.
+  Unknown `stampId`s are rejected at the API boundary and skipped on read.
+
+### Cross-device local login + local→Steam claim (PHA-1210 / 1232)
+- A local (no-Steam) player can play on a second device without re-onboarding: `POST /api/auth/local/token`
+  mints an opaque `Player.loginToken`; `GET /api/auth/token-login?t=…` validates it and issues a session
+  (panels: `LoginTokenPanel` on `/profile`, `TokenSignInPanel` on `/login/local`).
+- If a guest later signs in with Steam, their guest picks would be stranded (the Steam callback upserts by
+  `steamId` only). `POST /api/auth/local/claim` merges the guest/local account's picks onto the signed-in
+  Steam account (origin-guarded). Core merge logic in `local-merge-core.ts`.
+
 ### Playoff Spotlight odds (PHA-1066)
 - `spotlight-odds.ts` runs the same on-read atomic-claim + `after()` driver to pull **Polymarket
   gamma-api moneyline** lines into the playoff Spotlight modal, warmable via `GET /api/odds/refresh`.
