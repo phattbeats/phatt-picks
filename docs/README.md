@@ -19,6 +19,11 @@ Read these in roughly this order. Each is self-contained.
 | **[GOTCHAS.md](GOTCHAS.md)** | Hard-won lessons. The bugs that cost hours, why they happened, and the rule that prevents the repeat. | Something is behaving strangely, or you're touching iOS / crawl4ai / browserless / deploy / the shared checkout. |
 | **[ROADMAP-MULTI-MAJOR.md](ROADMAP-MULTI-MAJOR.md)** | The forward plan: make HOTLINE self-sustaining, turnkey for every Major, with historic scores you can look back on. Grounded in the already-event-scoped data model. | You're thinking about the next Major, the event registry, or the history/archive feature. |
 
+**Also in this directory** (reference / design records, not part of the core runbook):
+
+- **[STAGE-WRAPPED-CONTENT-MODEL.md](STAGE-WRAPPED-CONTENT-MODEL.md)** / **[STAGE-WRAPPED-S1-S2-DRAFT.md](STAGE-WRAPPED-S1-S2-DRAFT.md)** — design rationale + authored content behind the shipped "Stage Wrapped" recap (`src/lib/stage-wrapped-*.ts`). The shipped data model differs from the early proposals — see the banner atop each.
+- **[AUDIT-2026-06-13.md](AUDIT-2026-06-13.md)** — a dated point-in-time repo audit (PHA-1015). A historical snapshot, not a live reference; most findings have since shipped fixes.
+
 ## What this app is, in three sentences
 
 A CS2 Major **Pick'Em companion** for a small private group. Members log in with
@@ -27,7 +32,8 @@ mirror them up to Valve, and compete on a shared leaderboard scored on Valve's o
 weighting. Built **generically** so it can be re-pointed at the next Major by
 editing a handful of committed config seams.
 
-Live target as of this writing: **IEM Cologne 2026** (June 2–21).
+Live target as of this writing: **IEM Cologne 2026** (June 2–21); the next Major,
+**PGL Singapore 2026**, is already seeded in the event registry (eventId 27).
 
 ## Why the docs live here
 
