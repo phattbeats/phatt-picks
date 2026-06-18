@@ -57,6 +57,15 @@ These cost real hours. Add to this file whenever a bug burns you.
   from the CSS/DOM and code-reviewed; the UI should self-report failure reasons where it can
   (e.g. the push toggle surfaces the concrete error instead of swallowing it).
 
+### Sign-out (and other POSTs) 403 on iOS WebKit — the CSRF origin guard
+- **Cause:** the CSRF same-origin guard (`isSameOrigin` in `src/lib/csrf.ts`) checks `Origin`/`Referer`.
+  iOS Safari/Brave send **neither** on a same-origin form POST, so a strict guard 403s real users
+  (PHA-1225). Second trap: SWAG terminates TLS, so the inbound `x-forwarded-host` is **https** while
+  the internal `NEXTAUTH_URL` may be **http** — comparing against the wrong scheme also 403s.
+- **Rule:** the guard **fails open** when both `Origin` and `Referer` are absent (no header = can't be a
+  cross-site form), and it accepts the forwarded-host origin via `hostOriginVariants()` (both schemes),
+  not just `NEXTAUTH_URL`. Mutating routes call `isSameOrigin` — keep that helper as the single source.
+
 ---
 
 ## crawl4ai / HLTV scraping

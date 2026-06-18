@@ -24,12 +24,13 @@ missing.
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | optional | `src/lib/notify.ts` | Web Push keys. Pre-generated and paired in the template. Generate a fresh pair with `npx web-push generate-vapid-keys` — rotating invalidates every push subscription (users have to re-opt-in). When either is missing, `/api/push/public-key` returns `{ key: null }` and the UI hides the opt-in. |
 | `VAPID_SUBJECT` | optional | `src/lib/notify.ts:39` | Contact URI sent with every push. Defaults to `mailto:admin@phatt.vip` when unset. Required by the Web Push spec; web-push will throw without a value. |
 | `NODE_ENV` | optional, default `production` in image | `src/app/api/auth/steam/callback/route.ts:103` | Leave as `production` in the deployed container. Gates the session cookie's `secure` flag (`secure: NODE_ENV === "production"`) — set non-`production` only for local HTTP dev. |
-| `CRAWL4AI_URL` | optional, default `http://crawl4ai:11235` | `src/lib/swiss-results.ts:43` | Endpoint for the crawl4ai service that fetches HLTV (bypasses Cloudflare). Override only if the container name/port differs. |
-| `CRAWL4AI_API_TOKEN` | optional | `src/lib/team-stats.ts:40`, `scripts/gather-team-stats.ts` | Bearer token for crawl4ai. Read by the gather tooling **and** the live on-read team-stats refresh (`/api/team-stats/refresh`). Both default to `Phatt-tech-2026` when unset. |
-| `TURNSTILE_SECRET_KEY` | optional | `src/lib/captcha.ts:22` | Cloudflare Turnstile secret for the local-signup CAPTCHA. When unset, CAPTCHA enforcement is **skipped** (signups still work, no challenge). |
+| `CRAWL4AI_URL` | optional, default `http://crawl4ai:11235` | `src/lib/swiss-results.ts:66` | Endpoint for the crawl4ai service that fetches HLTV (bypasses Cloudflare). Override only if the container name/port differs. |
+| `CRAWL4AI_API_TOKEN` | optional | `src/lib/team-stats.ts:47`, `scripts/gather-team-stats.ts` | Bearer token for crawl4ai. Read by the gather tooling **and** the live on-read team-stats refresh (`/api/team-stats/refresh`). Both default to `Phatt-tech-2026` when unset. |
+| `TURNSTILE_SECRET_KEY` | optional | `src/lib/captcha.ts:27` | Cloudflare Turnstile secret for the local-signup CAPTCHA. When unset, CAPTCHA enforcement is **skipped** (signups still work, no challenge). |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | optional | `src/app/login/local/page.tsx` | Public Turnstile site key for the CAPTCHA widget. Name must match **exactly** (a misspelled var = silent no-widget — see GOTCHAS). |
+| `TRUSTED_PROXY_HOPS` | optional, default `1` | `src/app/api/auth/local/route.ts:47` | Number of trusted reverse-proxy hops when deriving the client IP from `X-Forwarded-For` for the local-signup per-IP account limit (PHA-1045). Unset / blank / non-positive → `1` (the single SWAG hop). Raise only if you add another trusted proxy in front of SWAG. |
 | `STAGE_LOCKS_JSON` | optional | `src/lib/prelock-reminders.ts` | Per-section pick cutoffs for the pre-lock reminder scheduler, e.g. `{"105":{"name":"Stage I","lockAt":"2026-06-02T10:30:00Z"}}`. When unset, uses the committed `COLOGNE_LOCK_SCHEDULE`. |
-| `EVENT_ID` | optional, default `26` | `src/lib/prelock-reminders.ts` | Valve tournament event id (the layout's internal id, **not** the HLTV event id). Read by the in-process reminder scheduler. |
+| `EVENT_ID` | optional, default = clock-derived current event | `src/lib/prelock-reminders.ts:67` | Valve tournament event id (the layout's internal id, **not** the HLTV event id). Read by the in-process reminder scheduler. When unset it pins to the registry's current event via `currentEventId(now)` (PHA-1046 removed the old hardcoded `26` default); set it only to pin one specific event for a pre-go-live dry run. |
 | `PRELOCK_REMINDERS_DISABLED` | optional, default off | `src/instrumentation.ts` | Set to `1` to turn OFF the in-process pre-lock reminder scheduler. Since PHA-996 the scheduler is **ON by default** with no env required — the old opt-in (`PRELOCK_REMINDERS_ENABLED=1`) lived only on the container and a template Force-Update silently dropped it. A leftover explicit `PRELOCK_REMINDERS_ENABLED=0` also disables. |
 
 ### Common tweaks
@@ -58,6 +59,8 @@ missing.
 | `/players/[id]` | open | `src/app/(app)/players/[id]/page.tsx` |
 | `/profile` | session-gated | `src/app/(app)/profile/page.tsx` |
 | `/faq` | open | `src/app/(app)/faq/page.tsx` |
+| `/how-to-play` | open (rules explainer for newcomers — PHA-987) | `src/app/(app)/how-to-play/page.tsx` |
+| `/majors` | open (per-player Major history — PHA-949) | `src/app/(app)/majors/page.tsx` |
 | `/pwa` | open (install help) | `src/app/(app)/pwa/page.tsx` |
 | `/help/auth-code` | open (instructions for capturing the Steam Pick'Em code) | `src/app/(app)/help/auth-code/page.tsx` |
 | `/join/[code]` | open (invite-link landing → onboards to a Steam or local session) | `src/app/join/[code]/page.tsx` |
@@ -75,6 +78,10 @@ missing.
 | `GET` | `/api/auth/steam/callback` | open | OpenID callback. Verifies assertion, upserts Player, issues session cookie. Bigint-safe SteamID64 handling (rule #2). |
 | `POST` | `/api/auth/steam/authcode` | session | Capture + AES-256-GCM-encrypt the player's per-user Steam Pick'Em auth code. Body `{ authCode }`. Never echoed back. |
 | `GET` / `POST` | `/api/auth/local` | open (POST creates session) | Local-player onboarding. PHA-839 dedup rules in `src/lib/local-auth-core.ts`. |
+| `POST` | `/api/auth/local/token` | session (local players only) | Mint/rotate the caller's cross-device login token (`Player.loginToken`). Returns `{ token }`. Lets a local player sign in on another device without Steam (PHA-1210). Surfaced as the "Sign in on another device" panel on `/profile`. |
+| `GET` | `/api/auth/token-login?t=…` | open | Validate a local-player `loginToken`, mint a session cookie, redirect home. Unknown/invalid token → back to login. Paired with the token-paste panel on `/login/local` (PHA-1225). |
+| `POST` | `/api/auth/local/claim` | session (Steam) + same-origin | Bring a guest/local account's picks onto the signed-in **Steam** account (local→Steam merge, PHA-1232). The Steam callback never merges a pre-existing local player, so picks made as a guest would otherwise be stranded; this claims them. Origin-guarded (403 on bad origin). |
+| `POST` | `/api/reactions` | session + same-origin | Drop a **Bleachers** stamp on another player's revealed pick (PHA-1211). Body identifies the pick slot + `stampId` (validated against `bleachers-core` `STAMPS`). One stamp per sender per pick — the `@@unique([senderId,eventId,sectionId,groupId,slotIndex])` upsert makes a repeat a **swap**, not additive spam. Sender stays masked in the UI until the stage resolves. 403 on bad origin. |
 | `POST` | `/api/auth/logout` | same-origin | Clear session cookie, 303 redirect to `/login`. POST-only + Origin/Referer guard (PHA-1045 CSRF); a cross-site GET can no longer force a logout. |
 | `GET` | `/api/invite` | session | Mint/return the session player's stable invite code + absolute `/join` URL. |
 | `GET` | `/api/picks?sectionId=…` | session | List the session player's stored picks. |
@@ -85,6 +92,7 @@ missing.
 | `POST` | `/api/outcomes/ingest` | session (operational) | Pull stage results from Liquipedia / Valve, write `StageOutcome` rows. Event-gated (PHA-844) — responds `reason: "no-locked-unresolved"` when nothing's resolvable; callers MUST back off. |
 | `GET` / `POST` | `/api/standings/refresh` | **open (safe by construction)** | Synchronously warm the live Swiss `SwissStandingsCache` by crawling the committed HLTV event pages. Takes no user input (no SSRF), only writes our public standings cache, and the crawl is rate-limited by the ~1h `SourceState` floor (off-window sections no-op; a cold cache always crawls so a stamped-empty slot self-heals). **It then resolves outcomes from the freshly-warmed cache (`bridgeSwissOutcomes`, PHA-937)** — so a headless poke keeps the leaderboard *scoring* through a stage's final matches, not just the standings table, independent of page traffic. The resolve self-gates on each stage's published lock time (no-op before a stage starts) and writes only terminal, layout-validated, idempotent `StageOutcome` rows; a bridge failure never breaks the warm. Hit it after a deploy during a live stage. See `docs/GOTCHAS.md` → "Live bracket renders blank on a freshly deployed container". |
 | `GET` / `POST` | `/api/team-stats/refresh` | **open (safe by construction)** | Synchronously warm the team-dossier `TeamStatsCache` by batch-crawling the committed field's HLTV **profiles** (one crawl4ai request for all 32, up to 3 retry passes for Cloudflare-challenged teams). No user input (no SSRF — only the hard-coded `TEAM_SOURCES` profiles), writes only our public dossier cache, gated by the same ~1h `SourceState` floor + `isWithinAnyMatchWindow`. Hit it after a deploy during a stage so the dossier "Last 5" is live (PHA-921). Mirrors `/api/standings/refresh`. |
+| `GET` / `POST` | `/api/odds/refresh` | **open (safe by construction)** | Synchronously warm the playoff-Spotlight `SpotlightOddsCache` by fetching the committed bracket matchups from Polymarket gamma-api moneyline markets (PHA-1066). No user input (no SSRF — only the hard-coded `PLAYOFF_MARKET_SLUGS` registry in `src/lib/spotlight-odds-core.ts`), writes only our public odds cache, ~1h `SourceState`-floored. Returns `{ status: "gated" }` while that registry is empty. Display-only — never touches scoring. Mirrors `/api/standings/refresh`. |
 | `POST` | `/api/avatar` | session | Upload a (client-resized) profile picture for the session player. |
 | `POST` | `/api/news/ingest` | session (operational) | Pull/refresh the committed news feed. Back-off semantics like the other ingest routes. |
 | `GET` | `/api/push/public-key` | open | VAPID public key for browser subscribe. Returns `{ key: null }` when push isn't configured. |
@@ -110,6 +118,7 @@ You only need to run anything by hand to **warm caches** (optional, skips first-
 node scripts/build-logos.ts                       # warm the team logo manifest
 curl http://localhost:3000/api/standings/refresh  # warm live Swiss standings + resolve outcomes during a stage
 curl http://localhost:3000/api/team-stats/refresh # warm live team-dossier "Last 5" during a stage
+curl http://localhost:3000/api/odds/refresh       # warm playoff Spotlight odds (no-op while PLAYOFF_MARKET_SLUGS is empty)
 ```
 
 ## Smoke after a config flip
@@ -126,21 +135,24 @@ If it shows `Add your Steam auth code to sync`, hit `/help/auth-code` and paste.
 
 ## Remaining stages — playoffs readiness
 
-> Snapshot as of **2026-06-12** (Stages I, II, III complete; playoffs Jun 18–21). Sections:
+> Snapshot as of **2026-06-16** (Stages I, II, III complete; playoffs Jun 18–21). Sections:
 > `108` QF · `109` SF · `110` GF.
 
 ### Stage III (section 107) — **COMPLETE** (locked Jun 11, 10:30 UTC)
 - Locked + scored. Source = HLTV event hub `8301` (`events-core.ts` → `sectionSources[107]`).
-  Match window `COLOGNE_MATCH_WINDOWS[107]` covers Jun 11–14. Stage III outcomes seeded the
+  Match window `COLOGNE_MATCH_WINDOWS[107]` covers Jun 11–15. Stage III outcomes seeded the
   QF bracket via the committed layout + `StageOutcome` on-read resolve.
 
-### Playoffs (sections 108/109/110) — **Jun 18–21**
-- **READY now:** the single-elim QF→SF→GF bracket renders from committed layout +
-  `StageOutcome` (no crawl needed). QF seeds filled from Stage III outcomes.
-- **PENDING — lock times:** sections 108/109/110 are intentionally **dark** in
-  `COLOGNE_LOCK_SCHEDULE` / `COLOGNE_MATCH_WINDOWS` (per-round day + time TBD). Fill them in
-  once HLTV/Valve publishes the bracket schedule, so the picker locks + reminders fire per
-  round. (No fabricated dates — an undated section degrades gracefully, never falsely freezes.)
+### Playoffs (sections 108/109/110) — **Jun 18–21, SEEDED**
+- **Bracket:** the single interactive QF→SF→GF picker (`PlayoffBracketPicker` +
+  `playoff-bracket-core.ts`) renders from the committed layout + `StageOutcome` (no crawl).
+  The eight QF matchups are committed (PHA-1007); tap a winner and they advance to the GF.
+- **Schedule is live (PHA-1007):** the per-game playoff times are committed in
+  `COLOGNE_PLAYOFF_SCHEDULE` (`lock-schedule-core.ts`) — QF Jun 18–19, SF Jun 20, GF Jun 21 —
+  and fold into `COLOGNE_LOCK_SCHEDULE` via `derivePlayoffLocks`. The whole bracket locks at the
+  first quarterfinal (Jun 18 13:45 UTC); the `/picks` page renders a per-game schedule + countdown
+  below the bracket, and pre-lock reminders fire off the derived lock. (Truthful-by-construction:
+  a section with no committed game time stays dark, so removing a time degrades gracefully.)
 - **Deferred polish:** the HLTV map-score overlay on the playoff bracket was a PHA-903
   follow-up — pick up if desired once the bracket is live.
 
