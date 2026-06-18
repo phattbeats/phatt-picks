@@ -10,7 +10,7 @@
  *   event: update data: <FeedView JSON>   — sent when the feed fingerprint changes
  *   ": ping\n\n"                          — keepalive comment every 25s
  *
- * The stream polls the DB every 8 seconds. A "change" is any difference in the
+ * The stream polls the DB every 30 seconds. A "change" is any difference in the
  * unread count or the set of item ids + their isNew flags — generatedAtMs is
  * excluded from the fingerprint so a no-op tick doesn't spam the wire.
  *
@@ -37,7 +37,7 @@ import type { FeedView } from "@/lib/notifications-core";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const POLL_MS = 8_000;
+const POLL_MS = 30_000;
 const KEEPALIVE_MS = 25_000;
 // Recycle every connection after this long so a missed disconnect signal can
 // never produce an immortal poll loop. EventSource reconnects automatically.
