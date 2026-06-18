@@ -37,11 +37,27 @@ function check(name: string, cond: boolean) {
 }
 const near = (a: number, b: number) => Math.abs(a - b) < 1e-6;
 
-console.log("\nspotlight-odds - gated registry invariant (PHA-1066/993)");
-check(
-  "PLAYOFF_MARKET_SLUGS ships EMPTY (no matchup authored before Valve seeds)",
-  Object.keys(PLAYOFF_MARKET_SLUGS).length === 0,
-);
+console.log("\nspotlight-odds - authored registry well-formed (PHA-1066/993)");
+{
+  const entries = Object.entries(PLAYOFF_MARKET_SLUGS);
+  check(
+    "every entry has a non-empty slug + teamName",
+    entries.length > 0 &&
+      entries.every(([, t]) => typeof t.slug === "string" && t.slug.length > 0 && typeof t.teamName === "string" && t.teamName.length > 0),
+  );
+  check(
+    "every pickid key is a positive integer",
+    entries.every(([pid]) => Number.isInteger(Number(pid)) && Number(pid) > 0),
+  );
+  // A matchup is two pickids sharing one slug — so each authored slug must be
+  // referenced by an EVEN count (both sides present), never an orphaned single.
+  const bySlug: Record<string, number> = {};
+  for (const [, t] of entries) bySlug[t.slug] = (bySlug[t.slug] ?? 0) + 1;
+  check(
+    "each slug is referenced by exactly 2 pickids (both sides of the matchup)",
+    Object.values(bySlug).every((n) => n === 2),
+  );
+}
 check(
   "gammaEventUrl encodes the slug into the events query",
   gammaEventUrl("furia-vs-the-mongolz") ===
