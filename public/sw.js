@@ -22,7 +22,8 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(fetch(event.request).catch(() => Response.error()));
 });
 
-// Web Push — render a pre-lock reminder. Payload shape comes from notify-core.
+// Web Push — all notification kinds share this handler. Payload shape: PreLockPayload
+// from notify-core (title, body, url, tag, actions?).
 self.addEventListener("push", (event) => {
   let data = {};
   try {
@@ -40,12 +41,14 @@ self.addEventListener("push", (event) => {
     renotify: Boolean(data.tag),
     data: { url: data.url || "/picks" },
     requireInteraction: false,
+    actions: Array.isArray(data.actions) ? data.actions : [],
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// Focus an existing tab on the target URL, or open one.
+// Navigate to the notification's target URL — whether the user tapped the body
+// or one of the action buttons (all actions deep-link to the same url).
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const target = (event.notification.data && event.notification.data.url) || "/";
