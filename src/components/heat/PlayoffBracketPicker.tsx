@@ -203,19 +203,21 @@ export function PlayoffBracketPicker({
           spent on the live counter, not the label. */}
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--ink-mid)" }}>
-          Place the whole bracket
+          {enabled ? "Place the whole bracket" : "Your bracket"}
         </span>
         <span className="last-updated">
           {pickCount}/{totalMatches} called{saveState === "saving" ? " · saving…" : saveState === "saved" ? " · saved" : saveState === "error" ? " · retry" : ""}
         </span>
       </div>
-      <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "10px 0 0", lineHeight: 1.5 }}>
-        One stage, one bracket. Tap the team you call to win each match — they
-        advance up the nave to the next round. Tap{" "}
-        <span style={{ color: "var(--heat)", fontWeight: 600 }}>★ SPOTLIGHT</span> on any
-        team for its story. Change your mind upstream and the rounds below re-open.
-        {!steamLinked && signedIn ? " Saves as you go." : null}
-      </p>
+      {enabled && (
+        <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "10px 0 0", lineHeight: 1.5 }}>
+          One stage, one bracket. Tap the team you call to win each match — they
+          advance up the nave to the next round. Tap{" "}
+          <span style={{ color: "var(--heat)", fontWeight: 600 }}>★ SPOTLIGHT</span> on any
+          team for its story. Change your mind upstream and the rounds below re-open.
+          {!steamLinked && signedIn ? " Saves as you go." : null}
+        </p>
+      )}
 
       <div className="po-tree-compact">
         <Tree model={model} resolved={resolved} teamMap={teamMap} geo={GEO_COMPACT} enabled={enabled} dragOver={dragOver} setDragOver={setDragOver} onCrown={crown} onSpotlight={setStatsTeam} />

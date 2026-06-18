@@ -132,6 +132,13 @@ export default async function PicksPage({
   const anyPlayoffPickable = playoffSections.some(
     (s) => sectionPickability.get(s.sectionid)?.pickable,
   );
+  // True once Valve has seeded at least one playoff slot (pickid > 0). Before
+  // seeding every section has reason "teams-not-set"; after lock the reason is
+  // "locked-time-passed" or "locked-by-valve" — still seeded.
+  const playoffSeeded = playoffSections.some((s) => {
+    const p = sectionPickability.get(s.sectionid);
+    return p?.reason === "locked-time-passed" || p?.reason === "locked-by-valve" || p?.pickable;
+  });
 
   // Per-game playoff schedule (PHA-1007): each round's games with their committed
   // date/time, fed to the schedule strip. Dark until COLOGNE_PLAYOFF_SCHEDULE is
@@ -459,23 +466,30 @@ export default async function PicksPage({
         // (they all lock together); until then an honest status strip. The
         // full QF → SF → GF tree renders beneath either way.
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          {anyPlayoffPickable && playoffPickModel ? (
+          {playoffPickModel && (anyPlayoffPickable || playoffSeeded) ? (
             // PHA-1204: ONE bracket, placed at once. The interactive QF→SF→GF
-            // tree replaces the three stacked round-pickers — crown a winner and
-            // they advance into the round they feed.
-            <PlayoffBracketPicker
-              model={playoffPickModel}
-              teams={layout.teams}
-              initialPicks={playoffInitialPicks}
-              enabled={!!session}
-              eventId={EVENT_ID}
-              signedIn={!!session}
-              steamLinked={!!session?.steamId}
-              initiallySynced={playoffSynced}
-              liveTeamStats={liveTeamStats?.byPickid}
-              liveStatsAsOf={liveTeamStats?.asOf}
-              spotlightMarket={spotlightMarket}
-            />
+            // tree replaces the three stacked round-pickers. When picks are still
+            // open, enabled=true lets users crown winners. After lock (PHA-1263),
+            // enabled=false keeps the bracket visible read-only so players can
+            // still see what they called — the bracket never disappears.
+            <>
+              {!anyPlayoffPickable && (
+                <LockedStageCard pickability={activePickability} compact />
+              )}
+              <PlayoffBracketPicker
+                model={playoffPickModel}
+                teams={layout.teams}
+                initialPicks={playoffInitialPicks}
+                enabled={anyPlayoffPickable && !!session}
+                eventId={EVENT_ID}
+                signedIn={!!session}
+                steamLinked={!!session?.steamId}
+                initiallySynced={playoffSynced}
+                liveTeamStats={liveTeamStats?.byPickid}
+                liveStatsAsOf={liveTeamStats?.asOf}
+                spotlightMarket={spotlightMarket}
+              />
+            </>
           ) : (
             <>
               {/* PHA-1043: before Valve seeds, the picker is empty, so a
