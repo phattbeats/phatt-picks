@@ -52,16 +52,17 @@ function check(name: string, cond: boolean) {
 console.log("\nlock-schedule - committed Cologne schedule (PHA-865)");
 
 // Swiss stages are lit with their day-1 first-match instant (12:30 CEST =
-// 10:30 UTC). Playoff sections are now lit too: each section's lock derives from
-// its earliest committed game (108 = first QF, 109 = first SF, 110 = the GF) —
-// PHA-1007, from the published Cologne bracket.
+// 10:30 UTC). Playoff sections are now lit too: ALL playoff sections (QF/SF/GF)
+// share the SAME bracket-wide lock = earliest game across all rounds = QF1 —
+// PHA-1007/PHA-1262. The whole bracket is one Pick'Em window that closes at
+// QF1; using per-section times left SF/GF picks unrevealed after QF1 locked.
 const COMMITTED_LIT: Readonly<Record<number, string>> = {
   105: "2026-06-02T10:30:00Z",
   106: "2026-06-06T10:30:00Z",
   107: "2026-06-11T10:30:00Z",
-  108: "2026-06-18T13:45:00Z", // earliest QF (Jun 18 15:45 CEST)
-  109: "2026-06-20T13:45:00Z", // earliest SF (Jun 20 15:45 CEST)
-  110: "2026-06-21T15:00:00Z", // GF (Jun 21 17:00 CEST)
+  108: "2026-06-18T13:45:00Z", // bracket-wide lock = earliest QF (Jun 18 15:45 CEST)
+  109: "2026-06-18T13:45:00Z", // same bracket-wide lock (SF submits at QF1 too)
+  110: "2026-06-18T13:45:00Z", // same bracket-wide lock (GF submits at QF1 too)
 };
 
 for (const s of layout.sections) {
@@ -204,7 +205,7 @@ check("playoff schedule committed for QF/SF/GF (3 rounds)", Object.keys(COLOGNE_
 check("QF1 game time = Jun 18 13:45Z", playoffGameTime(108, 0) === "2026-06-18T13:45:00Z");
 check("QF4 game time = Jun 19 17:00Z", playoffGameTime(108, 3) === "2026-06-19T17:00:00Z");
 check("108 lock derives from earliest QF (Jun 18 13:45Z)", lockTimeForSection(108) === "2026-06-18T13:45:00Z");
-check("110 GF lock = Jun 21 15:00Z", lockTimeForSection(110) === "2026-06-21T15:00:00Z");
+check("109/110 SF+GF lock = bracket-wide QF1 lock (PHA-1262)", lockTimeForSection(109) === "2026-06-18T13:45:00Z" && lockTimeForSection(110) === "2026-06-18T13:45:00Z");
 
 // Inject a populated schedule (independent of the committed data): each game
 // echoes its instant, the lock derives from the EARLIEST game even out of order,
