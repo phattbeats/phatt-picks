@@ -80,22 +80,40 @@ export const COLOGNE_PLAYOFF_SCHEDULE: Readonly<Record<number, readonly string[]
 };
 
 /**
- * Derive each playoff section's lock instant = its EARLIEST committed game time.
- * The bracket is one Pick'Em stage that closes at the first quarterfinal, so the
- * countdown keys off section 108's earliest game; 109/110 carry their own
- * earliest only for completeness. A section with no committed games contributes
- * nothing (stays dark), so an empty COLOGNE_PLAYOFF_SCHEDULE is a no-op.
+ * Derive each playoff section's lock instant = the bracket-wide minimum game
+ * time across ALL playoff rounds. The whole bracket is a single Pick'Em window
+ * that closes when the FIRST quarterfinal begins — all sections (QF/SF/GF) lock
+ * together at that instant. Using each section's own earliest game (the old
+ * behaviour) left SF/GF picks unrevealed on player profiles after QF1 locked,
+ * and caused the Bleachers reaction API to reject those picks as "not-revealed"
+ * (PHA-1262). A section with no committed games contributes nothing (stays dark),
+ * so an empty COLOGNE_PLAYOFF_SCHEDULE is still a no-op.
  */
 function derivePlayoffLocks(
   schedule: Readonly<Record<number, readonly string[]>>,
 ): LockSchedule {
-  const out: Record<number, string> = {};
+  // Find the single bracket-wide lock: earliest game across every playoff round.
+  let bracketLock: string | null = null;
   for (const key of Object.keys(schedule)) {
     const sectionId = Number(key);
     const times = (schedule[sectionId] ?? [])
       .filter((iso) => typeof iso === "string" && !Number.isNaN(Date.parse(iso)))
       .sort((a, b) => Date.parse(a) - Date.parse(b));
-    if (times.length > 0) out[sectionId] = times[0];
+    if (times.length > 0) {
+      const earliest = times[0];
+      if (bracketLock === null || Date.parse(earliest) < Date.parse(bracketLock)) {
+        bracketLock = earliest;
+      }
+    }
+  }
+  // Assign the bracket-wide lock to every playoff section so isLockTimePassed,
+  // arePicksRevealed, and the reaction gate all agree that the whole bracket
+  // reveals at QF1 time — not at each round's own first game.
+  const out: Record<number, string> = {};
+  if (bracketLock !== null) {
+    for (const key of Object.keys(schedule)) {
+      out[Number(key)] = bracketLock;
+    }
   }
   return out;
 }
