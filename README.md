@@ -21,6 +21,7 @@ entire mobile story (no native apps).
 - **Steam mirror** — pull your live Valve Pick'Em and (optionally) push locally-set picks back up.
 - **Shared leaderboard** — scored on Valve's own weighting; picks hidden until each stage locks.
 - **Stage Reveal & Wrapped** — per-stage reveal boards and a click-through "Stage Wrapped" recap.
+- **The Bleachers** — drop a fixed reaction stamp on someone's revealed pick; anonymous in the moment, unmasked when the stage resolves.
 - **Playoff Spotlight** — per-team narrative + highlight, with live Polymarket implied odds.
 - **PWA + Web Push** — installable, with opt-in 24h/1h pre-lock reminders.
 - **Multi-Major by design** — an event registry + clock-derived lifecycle re-points the app at the
