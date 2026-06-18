@@ -21,6 +21,7 @@
 import { prisma } from "@/lib/db";
 import { sendPushToPlayer } from "@/lib/notify";
 import { buildPreLockPayload, dueReminders, isReminderRecipient, reminderFireKey } from "@/lib/notify-core";
+import { parseNotifPrefs } from "@/lib/notifications-core";
 import { stageLocksFromSchedule, type StageLock } from "@/lib/lock-schedule-core";
 import { currentEventId, getEventConfig, liveEvents } from "@/lib/events-core";
 
@@ -126,14 +127,21 @@ export async function runPreLockReminders(now: number = Date.now()): Promise<voi
       );
       if (due.length === 0) continue;
 
-      // Opted-in players = those with at least one push subscription.
+      // Opted-in players = those with at least one push subscription AND
+      // stage push not disabled in their notification prefs (PHA-1240).
       const subbed = await prisma.pushSubscription.findMany({
         select: { playerId: true },
         distinct: ["playerId"],
       });
+      const playerPrefs = await prisma.player.findMany({
+        where: { id: { in: subbed.map((s) => s.playerId) } },
+        select: { id: true, notifPrefs: true },
+      });
+      const prefsById = new Map(playerPrefs.map((p) => [p.id, parseNotifPrefs(p.notifPrefs)]));
 
       let sent = 0;
       for (const { playerId } of subbed) {
+        if (!prefsById.get(playerId)?.stage.push) continue;
         const locked = await prisma.pick.count({
           where: { playerId, eventId, sectionId, pickId: { not: 0 } },
         });

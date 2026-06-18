@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PushToggle } from "@/components/PushToggle";
+import { NotifPrefsPanel } from "@/components/NotifPrefsPanel";
 import { InviteLink } from "@/components/InviteLink";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { AdminLocalPlayers } from "@/components/AdminLocalPlayers";
@@ -9,6 +10,7 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { getReferralStats } from "@/lib/invite";
 import { isOwner } from "@/lib/owner";
+import { parseNotifPrefs } from "@/lib/notifications-core";
 
 /** Profile / settings hub — identity, push opt-in, invite, install, account. */
 export default async function ProfilePage() {
@@ -24,8 +26,12 @@ export default async function ProfilePage() {
   // Local players can set a photo; Steam players show their Steam avatar.
   const playerRow = await prisma.player.findUnique({
     where: { id: session.playerId },
-    select: { avatarUrl: true, loginToken: true },
+    select: { avatarUrl: true, loginToken: true, notifPrefs: true },
   });
+  const hasPushSubscription = (await prisma.pushSubscription.count({
+    where: { playerId: session.playerId },
+  })) > 0;
+  const notifPrefs = parseNotifPrefs(playerRow?.notifPrefs);
 
   return (
     <>
@@ -153,8 +159,24 @@ export default async function ProfilePage() {
       <section className="panel brk">
         <span className="br-tr" />
         <span className="br-bl" />
-        <div className="panel-title">Pick-lock reminders</div>
-        <PushToggle />
+        <div className="panel-title">Notifications</div>
+        <NotifPrefsPanel
+          initialPrefs={notifPrefs}
+          hasPushSubscription={hasPushSubscription}
+        />
+        <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--hair)" }}>
+          <div style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 9,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color: "var(--heat)",
+            marginBottom: 10,
+          }}>
+            Push reminders
+          </div>
+          <PushToggle />
+        </div>
       </section>
 
       {/* Invite */}
