@@ -85,6 +85,19 @@ Three committed constants:
   folds the earliest game of each into `COLOGNE_LOCK_SCHEDULE`, so the whole bracket locks at the
   first quarterfinal. Leave it **empty** and the playoffs stay dark (bracket runs off the layout,
   not the clock); fill it and the schedule + countdown + reminders light up everywhere at once.
+  **This constant's keys also define the playoff section set** (`playoffSectionIds()`), which is
+  how the rest of the app knows QF/SF/GF are one bracket — so just filling it is enough; you do
+  not maintain a separate playoff-id list for the reminders.
+
+  > **Playoffs are ONE Pick'Em stage — ONE reminder (PHA-1245).** The QF/SF/GF rounds share a
+  > single bracket picker that all locks together at the first quarterfinal, so the pre-lock
+  > reminder job (`stageLocksFromSchedule`) **collapses every playoff section into a single
+  > "Playoffs" cutoff** keyed at the earliest playoff game. A player gets one "Playoffs picks
+  > lock in …" warning (24h + 1h), not one each for Quarterfinals, Semifinals and Grand Final.
+  > Per-round locks still exist in `COLOGNE_LOCK_SCHEDULE` for the countdown/reveal — only the
+  > reminders collapse. A future major inherits this automatically as long as its playoff rounds
+  > are the keys of its per-game playoff schedule; if you rename the stage, change
+  > `PLAYOFF_STAGE_NAME`. Guarded by `verify-prelock-reminders.ts`.
 - **`COLOGNE_MATCH_WINDOWS`**: `sectionId → { start, end }`. The date span each stage is
   *played*. Together with the lock schedule this drives the crawl window
   (`isWithinRefreshWindow`): it **opens 24h before the stage's lock** and **closes at the

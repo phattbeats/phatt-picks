@@ -101,6 +101,29 @@ function derivePlayoffLocks(
 }
 
 /**
+ * The section ids that make up the single playoff bracket — derived from the
+ * per-game playoff schedule (its keys ARE the playoff rounds). The whole bracket
+ * is ONE Pick'Em stage: a player taps QF→SF→GF in one picker and it all locks
+ * together when the first quarterfinal begins (see COLOGNE_PLAYOFF_SCHEDULE).
+ *
+ * This is the seam the pre-lock reminders use to treat the playoffs as a single
+ * stage (one "Playoffs lock soon" warning) instead of three separate ones. A
+ * future major inherits it for free by filling its own per-game playoff schedule.
+ */
+export function playoffSectionIds(
+  schedule: Readonly<Record<number, readonly string[]>> = COLOGNE_PLAYOFF_SCHEDULE,
+): Set<number> {
+  return new Set(Object.keys(schedule).map(Number));
+}
+
+/**
+ * Display name for the collapsed playoff Pick'Em stage in reminder copy. The
+ * bracket has no single committed "stage name" the way a Swiss stage does
+ * (it spans QF/SF/GF), so the one reminder reads "Playoffs picks lock in …".
+ */
+export const PLAYOFF_STAGE_NAME = "Playoffs";
+
+/**
  * The full committed lock schedule: the Swiss stage locks plus the playoff
  * section locks derived from the per-game playoff schedule. Folding them here
  * means the countdown, `isLockTimePassed`, the bracket-reveal window and the
@@ -160,20 +183,42 @@ export interface StageLock {
  * instant the countdown clock and the pick lock-gate already use.
  *
  * Only sections with a valid published lock instant are included — a section
- * without one (the playoff sections) is skipped, never handed a fabricated
- * cutoff. A section missing a name falls back to "Section {id}". Pure; injectable
- * for tests and for future majors.
+ * without one is skipped, never handed a fabricated cutoff. A section missing a
+ * name falls back to "Section {id}". Pure; injectable for tests and future majors.
+ *
+ * PLAYOFFS COLLAPSE TO ONE STAGE (PHA-1245). The playoff rounds (QF/SF/GF) share
+ * a single bracket picker that all locks together when the FIRST quarterfinal
+ * begins, so they are ONE Pick'Em stage — not three. The schedule still carries a
+ * per-round lock (108=QF1, 109=SF1, 110=GF) for the countdown/reveal, but for
+ * reminders we emit exactly ONE "Playoffs" cutoff at the earliest playoff game.
+ * Otherwise an opted-in player got three "locks soon" pings (Quarterfinals,
+ * Semifinals, Grand Final) for picks they actually lock in a single submission.
+ * The single playoff lock is keyed on its own (earliest) section id so the
+ * fired-key dedup in the reminder job stays stable.
  */
 export function stageLocksFromSchedule(
   schedule: LockSchedule = COLOGNE_LOCK_SCHEDULE,
   names: Readonly<Record<number, string>> = COLOGNE_SECTION_NAMES,
+  playoffIds: ReadonlySet<number> = playoffSectionIds(),
 ): Record<number, StageLock> {
   const out: Record<number, StageLock> = {};
+  let earliestPlayoff: { sectionId: number; lockAt: string; lockAtMs: number } | null = null;
   for (const key of Object.keys(schedule)) {
     const sectionId = Number(key);
     const lockAt = lockTimeForSection(sectionId, schedule);
     if (lockAt === null) continue;
+    if (playoffIds.has(sectionId)) {
+      // Fold every playoff round into the single bracket cutoff = earliest game.
+      const lockAtMs = Date.parse(lockAt);
+      if (earliestPlayoff === null || lockAtMs < earliestPlayoff.lockAtMs) {
+        earliestPlayoff = { sectionId, lockAt, lockAtMs };
+      }
+      continue;
+    }
     out[sectionId] = { name: names[sectionId] ?? `Section ${sectionId}`, lockAt };
+  }
+  if (earliestPlayoff !== null) {
+    out[earliestPlayoff.sectionId] = { name: PLAYOFF_STAGE_NAME, lockAt: earliestPlayoff.lockAt };
   }
   return out;
 }
