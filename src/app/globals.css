@@ -1601,3 +1601,94 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   .spot-clip-play { animation: none; }
   .spot-clip::after { animation: none; display: none; }
 }
+
+/* ── THE BLEACHERS — semi-anonymous pick reactions (PHA-1211) ───────────────
+   Sits under a revealed pick on a player's profile. Wordless by design (Brandon):
+   just the anonymous stamp tally + the drop affordance. Senders stay masked
+   until the stage resolves (enforced server-side). Reads as a quiet sub-row
+   beneath the pick, not a competing card. */
+.bleachers {
+  margin-top: 8px;
+  padding: 9px 12px;
+  background: var(--surf-2);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-md);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.bleachers-tally { display: flex; flex-wrap: wrap; gap: 6px; }
+.bleach-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: var(--surf-3);
+  border: 1px solid var(--hair-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.bleach-stamp .bleach-ct { font-weight: 700; color: var(--heat); }
+.bleach-stamp.heat .bleach-ct { color: var(--heat-hot); }
+.bleach-stamp.props .bleach-ct { color: var(--tac-green); }
+.bleach-stamp.mine {
+  border-color: var(--hair-3);
+  box-shadow: 0 0 0 1px var(--heat-glow);
+}
+.bleach-glyph { font-size: 13px; line-height: 1; }
+.bleachers-drop { display: flex; }
+.bleach-add {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+  background: transparent;
+  border: 1px dashed var(--hair-3);
+  border-radius: 18px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease);
+}
+.bleach-add:hover { color: var(--ink-hi); border-color: var(--heat); }
+.bleach-add:disabled { opacity: 0.5; cursor: default; }
+.bleach-options { display: flex; flex-wrap: wrap; gap: 6px; }
+.bleach-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 18px;
+  background: transparent;
+  border: 1px solid var(--hair-2);
+  color: var(--ink-mid);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease);
+}
+.bleach-opt:hover { color: var(--ink-hi); border-color: var(--heat); }
+.bleach-opt.active { border-color: var(--heat); color: var(--ink-hi); box-shadow: 0 0 0 1px var(--heat-glow); }
+.bleach-opt:disabled { opacity: 0.5; cursor: default; }
+.bleach-opt-lbl { white-space: nowrap; }
+
+/* Player-profile playoff picks as full-width blocks (PHA-1211) — a pick header
+   row with the Bleachers strip beneath, replacing the tight pickcards grid on
+   the revealed playoff sections only. */
+.pickbleach-list { display: flex; flex-direction: column; gap: 10px; }
+.pickbleach-item {
+  background: var(--surf-1);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+}
+.pickbleach-head { display: flex; align-items: center; gap: 10px; }
+.pickbleach-head.correct .pickbleach-team { color: var(--ink-hi); }
+.pickbleach-head.wrong { opacity: 0.7; }
+.pickbleach-team {
+  font-size: 13px; font-weight: 600; color: var(--ink-hi);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}

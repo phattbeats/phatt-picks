@@ -29,6 +29,8 @@ import { buildBucketConsensus, bucketShareFor } from "@/lib/consensus-core";
 import type { Section } from "@/lib/layout";
 import { currentEventId } from "@/lib/events-core";
 import { isRevealForcedById } from "@/lib/event-freeze";
+import { BleachersStrip, type TallyLine } from "@/components/heat/BleachersStrip";
+import { tallyReactions, pickTargetKey, type ReactionLike } from "@/lib/bleachers-core";
 
 function ordSuffix(n: number): string {
   const v = n % 100;
@@ -104,6 +106,28 @@ export default async function PlayerProfilePage({
     pickMap[p.sectionId][p.groupId] ??= {};
     pickMap[p.sectionId][p.groupId][p.slotIndex] = p.pickId;
   }
+
+  // The Bleachers (PHA-1211): every reaction landed on THIS player's picks, one
+  // query, indexed by pick. Senders ride along for the viewer's own "mine" flag
+  // and the resolve-time unmask, but tallyReactions only ever emits public counts
+  // for everyone else. A signed-in viewer who isn't the owner can drop a stamp.
+  const viewerId = session?.playerId ?? null;
+  const canReact = !!session && !isSelf;
+  const reactionRows = await prisma.reaction.findMany({
+    where: { eventId: EVENT_ID, targetPlayerId: player.id },
+    select: { stampId: true, senderId: true, sectionId: true, groupId: true, slotIndex: true },
+  });
+  const reactionsByPick = new Map<string, ReactionLike[]>();
+  for (const r of reactionRows) {
+    const k = pickTargetKey(r.sectionId, r.groupId, r.slotIndex);
+    const list = reactionsByPick.get(k);
+    if (list) list.push(r);
+    else reactionsByPick.set(k, [r]);
+  }
+  const tallyFor = (sectionId: number, groupId: number, slotIndex: number): TallyLine[] =>
+    tallyReactions(reactionsByPick.get(pickTargetKey(sectionId, groupId, slotIndex)) ?? [], viewerId).map(
+      (t) => ({ id: t.stamp.id, glyph: t.stamp.glyph, label: t.stamp.label, kind: t.stamp.kind, count: t.count, mine: t.mine }),
+    );
 
   const score = scorePlayer(layout, pickMap, outcomeMap).total;
   const coinTier = visibleCoinTier(player);
@@ -375,7 +399,9 @@ export default async function PlayerProfilePage({
                       </div>
                     ) : (
                       <div style={{ padding: 14 }}>
-                        <div className="pickcards">
+                        {/* Revealed playoff picks render as full-width blocks so the
+                            Bleachers strip (PHA-1211) sits beneath each pick. */}
+                        <div className="pickbleach-list">
                           {group.picks.map((slot) => {
                             const pick = groupPicks[slot.index];
                             const team = pick ? teamMap.get(pick) : null;
@@ -390,49 +416,53 @@ export default async function PlayerProfilePage({
                             const share = pick && lockRevealed
                               ? bucketShareFor(consensus, section.sectionid, group.groupid, slot.index, pick)
                               : null;
+                            const shareLabel = (() => {
+                              if (!share) return null;
+                              const total = share.total;
+                              if (total < 2) return null;
+                              const lone = share.count === 1;
+                              return {
+                                lone,
+                                text: lone
+                                  ? "Lone call"
+                                  : share.count === total
+                                    ? "Whole board"
+                                    : `${share.count} of ${total} picked`,
+                                title: `${share.count} of ${total} players made this same call`,
+                              };
+                            })();
                             return (
-                              <div
-                                key={slot.index}
-                                className={`pickcard${hit ? " correct" : wrong ? " wrong" : ""}`}
-                              >
-                                {team ? (
-                                  <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={44} />
-                                ) : (
-                                  <div style={{ width: 44, height: 44, display: "grid", placeItems: "center", color: "var(--ink-low)", fontFamily: "var(--font-mono)", fontSize: 18 }}>—</div>
-                                )}
-                                <span className="pickcard-team">{team ? team.name : "—"}</span>
-                                <span className="pickcard-row">
+                              <div key={slot.index} className="pickbleach-item">
+                                <div className={`pickbleach-head${hit ? " correct" : wrong ? " wrong" : ""}`}>
+                                  {team ? (
+                                    <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={36} />
+                                  ) : (
+                                    <div style={{ width: 36, height: 36, display: "grid", placeItems: "center", color: "var(--ink-low)", fontFamily: "var(--font-mono)", fontSize: 16 }}>—</div>
+                                  )}
+                                  <span className="pickbleach-team">{team ? team.name : "—"}</span>
                                   {typeLabel && <span className="pickcard-type">{typeLabel}</span>}
+                                  {shareLabel && (
+                                    <span className={`pickcard-share${shareLabel.lone ? " lone" : ""}`} title={shareLabel.title}>
+                                      {shareLabel.text}
+                                    </span>
+                                  )}
                                   {winner !== undefined && (
-                                    <span className={`pickcard-icon ${hit ? "correct" : "wrong"}`}>
+                                    <span className={`pickcard-icon ${hit ? "correct" : "wrong"}`} style={{ marginLeft: "auto" }}>
                                       {hit ? "✓" : "✗"}
                                     </span>
                                   )}
-                                </span>
-                                {share && (() => {
-                                  // Consensus, told as a story instead of a stat. "20% of field"
-                                  // read like a bug at a 5-player table (every value rounds to a
-                                  // multiple of 20) and "of field" is jargon. Raw counts are honest
-                                  // at any size; the lone call is the contrarian flex PHA-900 is after.
-                                  // share is bucket-level: how many called this team to go 3:0 /
-                                  // advance / 0:3, not how many used this exact slot.
-                                  const total = share.total;
-                                  if (total < 2) return null; // no consensus to speak of with a field of one
-                                  const lone = share.count === 1;
-                                  const label = lone
-                                    ? "Lone call"
-                                    : share.count === total
-                                      ? "Whole board"
-                                      : `${share.count} of ${total} picked`;
-                                  return (
-                                    <span
-                                      className={`pickcard-share${lone ? " lone" : ""}`}
-                                      title={`${share.count} of ${total} players made this same call`}
-                                    >
-                                      {label}
-                                    </span>
-                                  );
-                                })()}
+                                </div>
+                                {/* Bleachers only on a publicly-revealed pick that exists. */}
+                                {lockRevealed && pick != null && (
+                                  <BleachersStrip
+                                    targetPlayerId={player.id}
+                                    sectionId={section.sectionid}
+                                    groupId={group.groupid}
+                                    slotIndex={slot.index}
+                                    initialTally={tallyFor(section.sectionid, group.groupid, slot.index)}
+                                    canReact={canReact}
+                                  />
+                                )}
                               </div>
                             );
                           })}
