@@ -192,6 +192,31 @@ model SpotlightOddsCache {
   updatedAt DateTime @updatedAt
 }
 
+// The Bleachers — semi-anonymous reactions on another player's pick (PHA-1211).
+// One row per (sender, pick): a sender drops exactly ONE fixed STAMP on a given
+// revealed pick, replaceable (the @@unique key makes the drop a toggle/swap, not
+// an additive spam vector). `targetPlayerId` is denormalized off the pick so the
+// profile page can fetch every reaction landed on a player in one query. The
+// sender stays masked in the UI until the stage resolves (see bleachers-core
+// bleachersUnmasked) — the column is always stored, the reveal is a render gate.
+// Stamp vocabulary is a fixed set (bleachers-core STAMPS); stampId is validated
+// at the API boundary, so no free text ever reaches the table = no moderation.
+model Reaction {
+  id             String   @id @default(cuid())
+  eventId        Int
+  sectionId      Int
+  groupId        Int
+  slotIndex      Int
+  targetPlayerId String   // whose pick this lands on (denormalized for fast profile read)
+  senderId       String   // who dropped it — hidden in UI until the stage resolves
+  stampId        String   // one of bleachers-core STAMPS (validated server-side)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([senderId, eventId, sectionId, groupId, slotIndex])
+  @@index([eventId, targetPlayerId])
+}
+
 // PWA push subscriptions
 model PushSubscription {
   id       String   @id @default(cuid())
