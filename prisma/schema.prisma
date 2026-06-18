@@ -22,6 +22,7 @@ model Player {
   inviteCode    String?  @unique
   loginToken    String?  @unique   // opaque token for cross-device login (local players only)
   notificationsSeenAt DateTime?    // PHA-1211: last time this player opened the notifications panel; anything newer is "unread"
+  notifPrefs    String?           // PHA-1240: JSON NotifPrefs — per-type in-app + push toggles
   invitedById   String?           // referral attribution: the player whose invite link onboarded this one
   createdFromIp String?           // captured at local-account creation for IP rate-limit enforcement
   createdAt     DateTime @default(now())
@@ -32,6 +33,7 @@ model Player {
   picks             Pick[]
   pushSubscriptions PushSubscription[]
   rankSnapshots     RankSnapshot[]
+  notificationReads NotificationRead[]
 }
 
 // Individual slot picks — one row per (player, event, section, group, slotIndex)
@@ -228,4 +230,25 @@ model PushSubscription {
   createdAt DateTime @default(now())
 
   @@index([playerId])
+}
+
+// Per-notification read state (PHA-1237). Universal-feed entries are DERIVED
+// (no Notification table) so this is a per-player join keyed on the stable
+// entry id from notifications-core (e.g. "reaction:108:276:0", "stage:107",
+// "recap:107", "announce:compare-surprise"). The player's notificationsSeenAt
+// watermark is still the cheap bulk-clear on bell open, and is the source of
+// truth for entries that pre-date this table — this table only adds explicit
+// per-item granularity. No FK on entryId because the id is computed at read
+// time from derived inputs; an id collision across events/sections is bounded
+// by the construction rules in notifications-core and harmless (worst case: a
+// read row applies to a future generated entry with the same id, which can
+// only happen if the source record for that entry is also unchanged).
+model NotificationRead {
+  playerId String
+  player   Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  entryId  String // stable id from notifications-core.assembleFeed
+  readAt   DateTime @default(now())
+
+  @@id([playerId, entryId])
+  @@index([playerId, readAt])
 }

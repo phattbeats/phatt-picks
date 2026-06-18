@@ -3,15 +3,14 @@
  * message that rides the universal notification feed AND surfaces once as a
  * little popup. Authored in-code (like the curated NewsItem seed), so there's no
  * table and no fan-out: every signed-in player derives the same active set from
- * the clock, and "unread" is the same notificationsSeenAt watermark the rest of
- * the feed uses. No backfill — an announcement only shows between its publish and
- * expiry instants.
+ * the clock. "Unread" is the per-item read state (PHA-1237), so an announcement
+ * stays in the feed until the player opens the bell, marks it individually, or
+ * marks all read. No backfill — an announcement only shows between its publish
+ * and expiry instants.
  *
  * Pure module (no DB / network / React). To send a new broadcast, add an entry
  * to ANNOUNCEMENTS with a publish/expiry window and ship it.
  */
-
-import type { NotifEntry } from "./notifications-core";
 
 export interface Announcement {
   id: string;
@@ -54,8 +53,9 @@ export function latestActiveAnnouncement(nowMs: number): Announcement | null {
   return activeAnnouncements(nowMs)[0] ?? null;
 }
 
-/** Active announcements as universal-feed entries (unread vs the seen watermark). */
-export function announcementEntries(nowMs: number, seenAtMs: number): NotifEntry[] {
+/** Active announcements as universal-feed entries (no read state — the API
+ *  layer applies withReadState after assembly). */
+export function announcementEntries(nowMs: number): Omit<import("./notifications-core").NotifEntry, "isNew" | "readAt">[] {
   return activeAnnouncements(nowMs).map((a) => {
     const atMs = Date.parse(a.publishedAt);
     return {
@@ -66,7 +66,6 @@ export function announcementEntries(nowMs: number, seenAtMs: number): NotifEntry
       body: a.body,
       href: a.href,
       atMs,
-      isNew: atMs > seenAtMs,
     };
   });
 }
