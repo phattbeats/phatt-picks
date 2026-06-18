@@ -1692,3 +1692,114 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   font-size: 13px; font-weight: 600; color: var(--ink-hi);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+
+/* ── NOTIFICATION BELL — Bleachers notifications (PHA-1211 follow-up) ────────
+   Header bell + unread badge + dropdown listing reactions on your picks. */
+.topnav-you, .apphead-you { display: flex; align-items: center; gap: 10px; }
+.notifbell { position: relative; }
+.notifbell-btn {
+  position: relative;
+  display: grid; place-items: center;
+  width: 34px; height: 34px;
+  border: 1px solid var(--hair-2);
+  border-radius: 50%;
+  background: var(--surf-1);
+  color: var(--ink-mid);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease);
+}
+.notifbell-btn:hover { color: var(--ink-hi); border-color: var(--hair-3); }
+.notifbell-badge {
+  position: absolute; top: -3px; right: -3px;
+  min-width: 16px; height: 16px; padding: 0 4px;
+  display: grid; place-items: center;
+  background: var(--ember);
+  color: #fff;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  border-radius: 9px;
+  border: 1.5px solid var(--void);
+  line-height: 1;
+}
+.notifbell-panel {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  width: min(340px, 92vw);
+  max-height: 70vh; overflow-y: auto;
+  background: linear-gradient(180deg, var(--surf-1), var(--base));
+  border: 1px solid var(--hair-3);
+  border-radius: var(--r-lg);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(240,163,0,0.08);
+  z-index: 60;
+  padding: 6px;
+}
+.notifbell-head {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--heat);
+  padding: 8px 10px 6px;
+}
+.notifbell-empty {
+  padding: 16px 12px 18px; text-align: center;
+  font-family: var(--font-mono); font-size: 11px; color: var(--ink-low);
+}
+.notifbell-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.notifbell-item { position: relative; border-radius: var(--r-md); }
+.notifbell-item.fresh { background: rgba(240,163,0,0.06); }
+.notifbell-item:hover { background: var(--surf-2); }
+.notifbell-link {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 10px;
+  text-decoration: none; color: inherit;
+}
+.notifbell-icon {
+  flex: 0 0 auto; width: 28px; height: 28px;
+  display: grid; place-items: center;
+  font-size: 15px; line-height: 1;
+  background: var(--surf-3); border: 1px solid var(--hair-2);
+  border-radius: 8px;
+}
+.notifbell-icon.stage { border-color: var(--hair-3); }
+.notifbell-text { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.notifbell-title { font-size: 12.5px; font-weight: 600; color: var(--ink-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.notifbell-body { font-size: 11.5px; color: var(--ink-mid); }
+.notifbell-stamps { display: flex; gap: 4px; flex-wrap: wrap; }
+.notifbell-stamp {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 6px; border-radius: 12px;
+  background: var(--surf-3); border: 1px solid var(--hair-2);
+  font-family: var(--font-mono); font-size: 11px;
+}
+.notifbell-stamp .notifbell-ct { font-weight: 700; color: var(--heat); }
+.notifbell-stamp.heat .notifbell-ct { color: var(--heat-hot); }
+.notifbell-stamp.props .notifbell-ct { color: var(--tac-green); }
+.notifbell-meta { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.04em; color: var(--ink-low); }
+.notifbell-dot {
+  position: absolute; top: 12px; right: 10px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--ember);
+}
+
+/* ── BROADCAST POPUP — one-time announcement (PHA-1211) ─────────────────────── */
+.notifbell-icon.announcement { border-color: var(--hair-3); }
+.announce-pop {
+  position: fixed; z-index: 80;
+  left: 50%; bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  width: min(420px, calc(100vw - 28px));
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 14px 14px 16px;
+  background: linear-gradient(180deg, var(--surf-1), var(--base));
+  border: 1px solid var(--hair-3);
+  border-left: 3px solid var(--heat);
+  border-radius: var(--r-lg);
+  box-shadow: 0 14px 44px rgba(0,0,0,0.55), 0 0 0 1px rgba(240,163,0,0.10);
+  animation: announce-rise var(--duration-slow) var(--ease);
+}
+@keyframes announce-rise { from { opacity: 0; transform: translate(-50%, 14px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (min-width: 720px) { .announce-pop { left: auto; right: 20px; transform: none; bottom: 20px; } @keyframes announce-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } } }
+.announce-pop-icon { font-size: 22px; line-height: 1; flex: 0 0 auto; margin-top: 1px; }
+.announce-pop-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.announce-pop-title { font-family: var(--font-display); font-weight: 800; font-size: 16px; letter-spacing: 0.01em; color: var(--ink-hi); text-transform: uppercase; }
+.announce-pop-body { font-size: 13px; color: var(--ink-mid); line-height: 1.45; }
+.announce-pop-cta { margin-top: 4px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--heat); text-decoration: none; width: fit-content; }
+.announce-pop-cta:hover { color: var(--heat-hot); }
+.announce-pop-x { flex: 0 0 auto; background: transparent; border: 0; color: var(--ink-low); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 2px; }
+.announce-pop-x:hover { color: var(--ink-hi); }
