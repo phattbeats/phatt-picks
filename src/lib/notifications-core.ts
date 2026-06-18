@@ -340,7 +340,11 @@ export function recapEntry(
     icon: "🎬",
     title: `${stageName} recap`,
     body: "Your stage recap is ready — see how you stacked up.",
-    href: "/",
+    // Deep-link to the stage's own reveal page (the actual recap), with
+    // ?wrapped=1 so the cinematic deck re-opens even on a device that already
+    // dismissed the once-per-stage auto-popup (PHA-1245 follow-up). Landing on
+    // "/" did nothing once the localStorage seen-flag was set.
+    href: `/reveal/${sectionId}?wrapped=1`,
     atMs: resolvedAtMs,
   };
 }

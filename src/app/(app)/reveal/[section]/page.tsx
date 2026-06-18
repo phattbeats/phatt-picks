@@ -58,13 +58,20 @@ function bucketLabelFor(sectionId: number, group: Section["groups"][number], slo
 
 export default async function StageRevealPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ section: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
   const { section: sectionParam } = await params;
   const sectionId = Number(sectionParam);
   if (!Number.isInteger(sectionId)) notFound();
+
+  // ?wrapped=1 — arrived from the recap notification; force-open the cinematic
+  // deck once even if this device already dismissed the auto-popup (PHA-1245).
+  const sp = await searchParams;
+  const wantsWrapped = sp.wrapped === "1";
 
   const layout = getCommittedLayout();
   const teamMap = buildTeamMap(layout);
@@ -184,6 +191,7 @@ export default async function StageRevealPage({
           slides={buildStageWrappedDeck(sectionId, stageLabel, null, wrappedAssets)}
           title={stageLabel}
           resolved
+          forceOpen={wantsWrapped}
         />
         <RevealEyebrow stageIdx={stageIdx} />
         <h1 className="font-display" style={heroTitle}>{stageLabel}</h1>
@@ -299,6 +307,7 @@ export default async function StageRevealPage({
         }, wrappedAssets)}
         title={stageLabel}
         resolved={false}
+        forceOpen={wantsWrapped}
       />
       <RevealEyebrow stageIdx={stageIdx} />
       <h1 className="font-display" style={heroTitle}>{stageLabel}</h1>
