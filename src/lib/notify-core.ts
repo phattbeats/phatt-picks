@@ -173,7 +173,10 @@ export function buildRecapPayload(args: {
   return {
     title: "HOTLINE",
     body: `Your ${args.stageName} recap is ready — see how you stacked up.`,
-    url: "/",
+    // Deep-link to the stage reveal page + re-open the cinematic deck (PHA-1245
+    // follow-up). "/" only re-showed the popup on a device that hadn't dismissed
+    // it; the reveal page always renders the recap.
+    url: `/reveal/${args.sectionId}?wrapped=1`,
     tag: `recap:${args.sectionId}`,
     actions: [{ action: "view", title: "See recap" }],
   };

@@ -575,6 +575,13 @@ interface AnnounceProps {
   resolved?: boolean;
   /** Show the loading skeleton (data still fetching). */
   loading?: boolean;
+  /**
+   * Force the deck open once on mount, bypassing the once-per-stage seen-flag.
+   * Set when the viewer arrived via the recap notification deep-link
+   * (`/reveal/<id>?wrapped=1`) so the cinematic recap re-opens even on a device
+   * that already dismissed the auto-popup (PHA-1245 follow-up).
+   */
+  forceOpen?: boolean;
 }
 
 /**
@@ -590,6 +597,7 @@ export function StageWrappedAnnounce({
   title = "Stage",
   resolved = true,
   loading = false,
+  forceOpen = false,
 }: AnnounceProps) {
   const [open, setOpen] = useState(false);
   const deck = slides ?? buildPlaceholderSlides(title);
@@ -604,6 +612,22 @@ export function StageWrappedAnnounce({
       // Storage blocked (private mode) — skip the auto-popup, replay still works.
     }
   }, [resolved, loading, seenKey]);
+
+  // Deep-link force-open (PHA-1245 follow-up): the recap notification lands here
+  // with ?wrapped=1, so re-open the deck once even if this device already saw it.
+  // Also stamp the seen-flag so the app-wide auto-launcher (StageWrappedGate)
+  // won't pop a second copy for this same stage.
+  const forcedRef = useRef(false);
+  useEffect(() => {
+    if (!forceOpen || loading || forcedRef.current) return;
+    forcedRef.current = true;
+    try {
+      localStorage.setItem(seenKey, "1");
+    } catch {
+      /* storage blocked — still open below */
+    }
+    setOpen(true);
+  }, [forceOpen, loading, seenKey]);
 
   // Replay from any entry point re-opens regardless of seen-state.
   useEffect(() => {
