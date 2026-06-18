@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { HeatMark, HeatWordmark } from "./HeatMark";
+import { NotificationBell } from "./NotificationBell";
 
 const NAV_LINKS = [
   { href: "/", label: "Home", match: (p: string) => p === "/" },
@@ -44,7 +45,10 @@ export function HeatHeader({ topbar, profileHref = "/profile" }: { topbar: Topba
               </Link>
             ))}
           </div>
-          <YouChip topbar={topbar} variant="desktop" href={profileHref} />
+          <div className="topnav-you">
+            {topbar.kind !== "anonymous" && <NotificationBell />}
+            <YouChip topbar={topbar} variant="desktop" href={profileHref} />
+          </div>
         </div>
       </nav>
 
@@ -54,7 +58,10 @@ export function HeatHeader({ topbar, profileHref = "/profile" }: { topbar: Topba
           <HeatMark size={26} />
           <HeatWordmark size={18} />
         </Link>
-        <YouChip topbar={topbar} variant="mobile" href={profileHref} />
+        <div className="apphead-you">
+          {topbar.kind !== "anonymous" && <NotificationBell />}
+          <YouChip topbar={topbar} variant="mobile" href={profileHref} />
+        </div>
       </header>
     </>
   );
