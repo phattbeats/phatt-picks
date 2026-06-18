@@ -24,6 +24,9 @@ import {
   emptyReadContext,
   isRead,
   withReadState,
+  filterEntriesByPrefs,
+  parseNotifPrefs,
+  DEFAULT_NOTIF_PREFS,
   type NotifReaction,
   type NotifEntry,
   type PickLabeller,
@@ -160,6 +163,47 @@ check("isRead: explicit set wins", isRead(probe, { seenAtMs: 0, readSet: new Set
 check("isRead: watermark covers older entry", isRead(probe, { seenAtMs: NOW, readSet: new Set(), readAtByEntry: new Map() }) === true);
 check("isRead: future entry vs old watermark is unread", isRead({ id: "x", atMs: NOW + HOUR }, { seenAtMs: NOW - DAY, readSet: new Set(), readAtByEntry: new Map() }) === false);
 check("isRead: fresh entry, no watermark, no explicit set → unread", isRead(probe, emptyReadContext(0)) === false);
+
+// ── parseNotifPrefs + filterEntriesByPrefs (PHA-1240) ──────────────────────────
+const allEntries: Omit<NotifEntry, "isNew" | "readAt">[] = [
+  { id: "reaction:1:1:0", kind: "reaction", icon: "🔥", title: "t", body: "b", href: "/", atMs: NOW, stamps: [] },
+  { id: "stage:107", kind: "stage", icon: "⏰", title: "t", body: "b", href: "/", atMs: NOW },
+  { id: "recap:106", kind: "recap", icon: "🎬", title: "t", body: "b", href: "/", atMs: NOW },
+  { id: "announce:x", kind: "announcement", icon: "📢", title: "t", body: "b", href: "/", atMs: NOW },
+];
+
+check("parseNotifPrefs: null → defaults", (() => {
+  const p = parseNotifPrefs(null);
+  return p.reactions.inApp && p.stage.push && !p.reactions.push && p.stage.inApp;
+})());
+check("parseNotifPrefs: partial JSON merged with defaults", (() => {
+  const p = parseNotifPrefs(JSON.stringify({ reactions: { inApp: false, push: false } }));
+  return !p.reactions.inApp && p.stage.inApp && p.stage.push;
+})());
+check("parseNotifPrefs: invalid JSON → defaults", (() => {
+  const p = parseNotifPrefs("{bad json");
+  return p.reactions.inApp && p.stage.push;
+})());
+check("filterEntriesByPrefs: all on → 4 entries", filterEntriesByPrefs(allEntries, DEFAULT_NOTIF_PREFS).length === 4);
+check("filterEntriesByPrefs: reactions.inApp=false removes reaction", (() => {
+  const p = parseNotifPrefs(JSON.stringify({ reactions: { inApp: false, push: false } }));
+  const f = filterEntriesByPrefs(allEntries, p);
+  return f.length === 3 && f.every((e) => e.kind !== "reaction");
+})());
+check("filterEntriesByPrefs: stage.inApp=false removes stage", (() => {
+  const p = parseNotifPrefs(JSON.stringify({ stage: { inApp: false, push: false } }));
+  const f = filterEntriesByPrefs(allEntries, p);
+  return f.length === 3 && f.every((e) => e.kind !== "stage");
+})());
+check("filterEntriesByPrefs: all inApp=false → empty feed", (() => {
+  const p = parseNotifPrefs(JSON.stringify({
+    reactions: { inApp: false, push: false },
+    stage:     { inApp: false, push: false },
+    recap:     { inApp: false, push: false },
+    announce:  { inApp: false, push: false },
+  }));
+  return filterEntriesByPrefs(allEntries, p).length === 0;
+})());
 
 console.log(`\nverify-notifications: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

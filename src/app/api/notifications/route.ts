@@ -1,6 +1,6 @@
 /**
  * Universal in-app notifications (PHA-1211 follow-up; PHA-1237 per-item read
- * state; PHA-1236 inbox page support).
+ * state; PHA-1236 inbox page support; PHA-1241 SSE delivery).
  *
  * GET  /api/notifications?limit=N  → { unread, total, generatedAtMs, items[] }
  *   for the signed-in player. One feed across kinds: reactions on their picks,
@@ -16,6 +16,8 @@
  *   → per-entry explicit read: upserts a NotificationRead row (PHA-1237).
  *
  * Both POST variants are same-origin guarded (isSameOrigin).
+ *
+ * buildPlayerFeed is exported for the SSE stream handler (/stream/route.ts).
  */
 
 import { NextRequest, NextResponse } from "next/server";
