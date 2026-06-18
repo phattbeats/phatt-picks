@@ -32,7 +32,6 @@ import {
   type GammaEvent,
   type SpotlightMarketLine,
 } from "./spotlight-odds-core";
-import { isWithinAnyMatchWindow } from "./lock-schedule-core";
 import { isEventFrozenById } from "./event-freeze";
 
 const ODDS_REFRESH_SOURCE = "polymarket-spotlight-odds";
@@ -211,8 +210,15 @@ function runDeferred(task: () => Promise<unknown>): void {
 
 /**
  * On-read self-refresh (mirrors refreshTeamStatsOnRead). One atomic ~1h claim
- * gates the whole refresh; the fetch is DEFERRED past the response. Off-window /
- * frozen / empty-registry → no-op. Never throws. No cron needed.
+ * gates the whole refresh; the fetch is DEFERRED past the response. Frozen /
+ * empty-registry → no-op. Never throws. No cron needed.
+ *
+ * Deliberately NOT gated on isWithinAnyMatchWindow (unlike the dossier/standings
+ * crawls): odds are most useful BEFORE a match (the pre-game line), and the Swiss
+ * match-window map doesn't even cover playoff days — a window gate would keep the
+ * line dark exactly when people want it. The ~1h claim + per-event frozen check
+ * are the throttle; four tiny gamma fetches/hour during the live event is
+ * negligible (PHA-1066, found at go-live).
  */
 export async function refreshSpotlightOddsOnRead(
   eventId: number,
@@ -220,7 +226,6 @@ export async function refreshSpotlightOddsOnRead(
 ): Promise<void> {
   if (Object.keys(PLAYOFF_MARKET_SLUGS).length === 0) return; // gated — no matchups authored
   if (await isEventFrozenById(eventId, nowMs)) return; // archived Majors never re-fetch
-  if (!isWithinAnyMatchWindow(nowMs)) return; // off-day — serve cache
   if (!(await claimRefreshSlot())) return; // within floor or lost the race
   runDeferred(() => ingestSpotlightOdds(eventId, nowMs));
 }
@@ -239,7 +244,7 @@ async function hasCache(eventId: number): Promise<boolean> {
 }
 
 export interface WarmSpotlightOddsResult {
-  status: "gated" | "off-window" | "fresh" | "ingested" | "kept-cache";
+  status: "gated" | "frozen" | "fresh" | "ingested" | "kept-cache";
   lines: number;
 }
 
@@ -247,15 +252,16 @@ export interface WarmSpotlightOddsResult {
  * Synchronously warm the odds cache (deploy-reliability, mirrors warmTeamStats).
  * The on-read driver defers its fetch, so a freshly deployed (empty-cache)
  * container has no odds until one lands; this is the awaited path the refresh
- * route calls. Gated/off-window → no-op; a warm cache is bounded by the same ~1h
- * claim; a COLD cache always fetches so a stamped-but-empty slot self-heals.
+ * route calls. Empty-registry → "gated"; frozen event → "frozen"; a warm cache is
+ * bounded by the same ~1h claim; a COLD cache always fetches so a stamped-but-
+ * empty slot self-heals. Not match-window gated (see refreshSpotlightOddsOnRead).
  */
 export async function warmSpotlightOdds(
   eventId: number,
   nowMs: number = Date.now(),
 ): Promise<WarmSpotlightOddsResult> {
   if (Object.keys(PLAYOFF_MARKET_SLUGS).length === 0) return { status: "gated", lines: 0 };
-  if (!isWithinAnyMatchWindow(nowMs)) return { status: "off-window", lines: 0 };
+  if (await isEventFrozenById(eventId, nowMs)) return { status: "frozen", lines: 0 };
   const cold = !(await hasCache(eventId));
   if (!cold && !(await claimRefreshSlot())) return { status: "fresh", lines: 0 };
   const lines = await ingestSpotlightOdds(eventId, nowMs);
