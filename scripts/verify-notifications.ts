@@ -81,6 +81,10 @@ check("lock too far out → null", stageLockEntry({ sectionId: 106, stageName: "
 const recentRecap = recapEntry({ sectionId: 107, stageName: "Stage III", resolvedAtMs: NOW - DAY }, NOW);
 check("recent recap → entry", recentRecap !== null && recentRecap.kind === "recap");
 check("stale recap → null (no backfill)", recapEntry({ sectionId: 105, stageName: "Stage I", resolvedAtMs: NOW - 30 * DAY }, NOW) === null);
+// PHA-1245 follow-up: recap deep-links to the stage's reveal page + force-opens
+// the cinematic deck (clicking "/" did nothing once the device dismissed it).
+check("recap href deep-links to the reveal page with ?wrapped=1",
+  recentRecap?.href === "/reveal/107?wrapped=1");
 
 // ── ReadContext: explicit per-entry read beats the watermark (PHA-1237) ──
 const explicitReadAt = NOW - 6 * HOUR; // player marked read 6h ago
