@@ -20,6 +20,7 @@ import { currentEventId, currentEvent } from "@/lib/events-core";
 import { getCommittedLayout, buildTeamMap } from "@/lib/layout";
 import { lockTimeForSection } from "@/lib/lock-schedule-core";
 import { latestWrappedSectionId } from "@/lib/stage-wrapped-launch-core";
+import { announcementEntries } from "@/lib/announcements-core";
 import type { OutcomeMap } from "@/lib/scoring";
 import {
   reactionEntries,
@@ -64,6 +65,9 @@ export async function GET() {
     "Stage";
 
   const entries: NotifEntry[] = [];
+
+  // 0. Broadcast announcements (everyone sees the same active set).
+  entries.push(...announcementEntries(nowMs, seenAtMs));
 
   // 1. Reactions on your picks (team name resolved from the slot you picked).
   const pickByKey = new Map<string, number>();

@@ -22,7 +22,7 @@
 import { getStamp } from "./bleachers-core";
 import { humanizeLockEta, DEFAULT_REMINDER_OFFSETS_MS } from "./notify-core";
 
-export type NotifKind = "reaction" | "stage" | "recap";
+export type NotifKind = "reaction" | "stage" | "recap" | "announcement";
 
 export interface NotifStamp {
   id: string;
