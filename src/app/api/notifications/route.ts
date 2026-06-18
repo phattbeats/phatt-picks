@@ -26,7 +26,7 @@ import { prisma } from "@/lib/db";
 import { isSameOrigin } from "@/lib/csrf";
 import { currentEventId, currentEvent } from "@/lib/events-core";
 import { getCommittedLayout, buildTeamMap } from "@/lib/layout";
-import { lockTimeForSection } from "@/lib/lock-schedule-core";
+import { lockTimeForSection, playoffSectionIds, PLAYOFF_STAGE_NAME } from "@/lib/lock-schedule-core";
 import { latestWrappedSectionId } from "@/lib/stage-wrapped-launch-core";
 import { announcementEntries } from "@/lib/announcements-core";
 import type { OutcomeMap } from "@/lib/scoring";
@@ -120,11 +120,30 @@ export async function buildPlayerFeed(playerId: string, limit: number = DEFAULT_
   }));
   rawEntries.push(...reactionEntries(reactionRows, label));
 
+  // Playoffs are ONE bracket Pick'Em (QF/SF/GF lock together at the first QF), so
+  // they get a SINGLE "Playoffs locks soon" entry, not one per round (PHA-1245) —
+  // mirrors the push reminder collapse in stageLocksFromSchedule.
+  const playoffIds = playoffSectionIds();
+  let earliestPlayoff: { sectionId: number; lockAtMs: number } | null = null;
   for (const s of layout.sections) {
     const iso = lockTimeForSection(s.sectionid);
     if (!iso) continue;
+    const lockAtMs = Date.parse(iso);
+    if (playoffIds.has(s.sectionid)) {
+      if (earliestPlayoff === null || lockAtMs < earliestPlayoff.lockAtMs) {
+        earliestPlayoff = { sectionId: s.sectionid, lockAtMs };
+      }
+      continue;
+    }
     const e = stageLockEntry(
-      { sectionId: s.sectionid, stageName: stageName(s.sectionid), lockAtMs: Date.parse(iso) },
+      { sectionId: s.sectionid, stageName: stageName(s.sectionid), lockAtMs },
+      nowMs,
+    );
+    if (e) rawEntries.push(e);
+  }
+  if (earliestPlayoff !== null) {
+    const e = stageLockEntry(
+      { sectionId: earliestPlayoff.sectionId, stageName: PLAYOFF_STAGE_NAME, lockAtMs: earliestPlayoff.lockAtMs },
       nowMs,
     );
     if (e) rawEntries.push(e);
