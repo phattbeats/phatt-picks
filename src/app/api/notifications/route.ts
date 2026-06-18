@@ -1,73 +1,119 @@
 /**
- * Bleachers notifications (PHA-1211 follow-up).
+ * Universal in-app notifications (PHA-1211 follow-up).
  *
- * GET  /api/notifications  → { unread, items[] } for the signed-in player: the
- *   reactions other players dropped on THEIR picks, grouped by pick, with the
- *   team name + stage label resolved from the layout. "unread" counts reactions
- *   newer than the player's reactionsSeenAt watermark (the header bell badge).
+ * GET  /api/notifications  → { unread, items[] } for the signed-in player. One
+ *   feed across kinds: reactions on their picks, upcoming stage locks, and "your
+ *   recap is ready". Everything is DERIVED (reaction rows + clock + committed
+ *   lock schedule + latest resolved stage) — no Notification table. "unread"
+ *   counts entries newer than the player's notificationsSeenAt watermark, so the
+ *   feed never backfills passed stages or stale recaps.
  *
- * POST /api/notifications  → marks everything seen (sets reactionsSeenAt = now),
- *   returns { ok, unread: 0 }. Same-origin guarded; it's a state change.
- *
- * Derived from Reaction rows — no Notification table (see notifications-core).
+ * POST /api/notifications  → marks everything seen (notificationsSeenAt = now).
+ *   Same-origin guarded.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { isSameOrigin } from "@/lib/csrf";
-import { currentEventId } from "@/lib/events-core";
+import { currentEventId, currentEvent } from "@/lib/events-core";
 import { getCommittedLayout, buildTeamMap } from "@/lib/layout";
-import { buildNotifications, type NotifReaction } from "@/lib/notifications-core";
-import { pickTargetKey } from "@/lib/bleachers-core";
+import { lockTimeForSection } from "@/lib/lock-schedule-core";
+import { latestWrappedSectionId } from "@/lib/stage-wrapped-launch-core";
+import type { OutcomeMap } from "@/lib/scoring";
+import {
+  reactionEntries,
+  stageLockEntry,
+  recapEntry,
+  assembleFeed,
+  type NotifEntry,
+  type NotifReaction,
+  type PickLabeller,
+} from "@/lib/notifications-core";
 
 export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
   const eventId = currentEventId();
-  const [rows, player, myPicks] = await Promise.all([
+  const nowMs = Date.now();
+  const [reactions, player, myPicks, outcomes] = await Promise.all([
     prisma.reaction.findMany({
       where: { eventId, targetPlayerId: session.playerId },
       select: { stampId: true, sectionId: true, groupId: true, slotIndex: true, createdAt: true },
     }),
-    prisma.player.findUnique({ where: { id: session.playerId }, select: { reactionsSeenAt: true } }),
+    prisma.player.findUnique({ where: { id: session.playerId }, select: { notificationsSeenAt: true } }),
     prisma.pick.findMany({
       where: { eventId, playerId: session.playerId },
       select: { sectionId: true, groupId: true, slotIndex: true, pickId: true },
     }),
+    prisma.stageOutcome.findMany({
+      where: { eventId },
+      select: { sectionId: true, groupId: true, slotIndex: true, winnerPickId: true, resolvedAt: true },
+    }),
   ]);
 
-  const seenAtMs = player?.reactionsSeenAt ? player.reactionsSeenAt.getTime() : 0;
-  const notifRows: NotifReaction[] = rows.map((r) => ({
+  const seenAtMs = player?.notificationsSeenAt ? player.notificationsSeenAt.getTime() : 0;
+
+  const layout = getCommittedLayout();
+  const teamMap = buildTeamMap(layout);
+  const event = currentEvent(nowMs);
+  const stageName = (sectionId: number): string =>
+    event.sectionNames[sectionId] ??
+    layout.sections.find((s) => s.sectionid === sectionId)?.name.split(" | ")[0] ??
+    "Stage";
+
+  const entries: NotifEntry[] = [];
+
+  // 1. Reactions on your picks (team name resolved from the slot you picked).
+  const pickByKey = new Map<string, number>();
+  for (const p of myPicks) pickByKey.set(`${p.sectionId}:${p.groupId}:${p.slotIndex}`, p.pickId);
+  const label: PickLabeller = (sectionId, groupId, slotIndex) => {
+    const pickId = pickByKey.get(`${sectionId}:${groupId}:${slotIndex}`);
+    const team = pickId ? teamMap.get(pickId) : undefined;
+    return { teamName: team?.name ?? null, stageLabel: stageName(sectionId) };
+  };
+  const reactionRows: NotifReaction[] = reactions.map((r) => ({
     stampId: r.stampId,
     sectionId: r.sectionId,
     groupId: r.groupId,
     slotIndex: r.slotIndex,
     createdAtMs: r.createdAt.getTime(),
   }));
-  const view = buildNotifications(notifRows, seenAtMs);
+  entries.push(...reactionEntries(reactionRows, seenAtMs, label));
 
-  // Resolve team name (the team the viewer picked on that slot) + stage label.
-  const layout = getCommittedLayout();
-  const teamMap = buildTeamMap(layout);
-  const pickByKey = new Map<string, number>();
-  for (const p of myPicks) pickByKey.set(pickTargetKey(p.sectionId, p.groupId, p.slotIndex), p.pickId);
-  const stageLabelById = new Map<number, string>(
-    layout.sections.map((s) => [s.sectionid, s.name.split(" | ")[0]] as const),
-  );
+  // 2. Upcoming stage locks (only future locks within the lead window).
+  for (const s of layout.sections) {
+    const iso = lockTimeForSection(s.sectionid);
+    if (!iso) continue;
+    const e = stageLockEntry(
+      { sectionId: s.sectionid, stageName: stageName(s.sectionid), lockAtMs: Date.parse(iso) },
+      nowMs,
+      seenAtMs,
+    );
+    if (e) entries.push(e);
+  }
 
-  const items = view.items.map((it) => {
-    const pickId = pickByKey.get(it.key);
-    const team = pickId ? teamMap.get(pickId) : undefined;
-    return {
-      ...it,
-      teamName: team?.name ?? null,
-      stageLabel: stageLabelById.get(it.sectionId) ?? "",
-    };
-  });
+  // 3. "Your recap is ready" for the latest resolved + authored stage.
+  const outcomeMap: OutcomeMap = {};
+  const resolvedAtBySection = new Map<number, number>();
+  for (const o of outcomes) {
+    outcomeMap[o.sectionId] ??= {};
+    outcomeMap[o.sectionId][o.groupId] ??= {};
+    outcomeMap[o.sectionId][o.groupId][o.slotIndex] = o.winnerPickId;
+    resolvedAtBySection.set(o.sectionId, Math.max(resolvedAtBySection.get(o.sectionId) ?? 0, o.resolvedAt.getTime()));
+  }
+  const recapSection = latestWrappedSectionId(layout, outcomeMap);
+  if (recapSection != null) {
+    const e = recapEntry(
+      { sectionId: recapSection, stageName: stageName(recapSection), resolvedAtMs: resolvedAtBySection.get(recapSection) ?? 0 },
+      nowMs,
+      seenAtMs,
+    );
+    if (e) entries.push(e);
+  }
 
-  return NextResponse.json({ unread: view.unread, items });
+  return NextResponse.json(assembleFeed(entries));
 }
 
 export async function POST(req: NextRequest) {
@@ -79,7 +125,7 @@ export async function POST(req: NextRequest) {
 
   await prisma.player.update({
     where: { id: session.playerId },
-    data: { reactionsSeenAt: new Date() },
+    data: { notificationsSeenAt: new Date() },
   });
   return NextResponse.json({ ok: true, unread: 0 });
 }
