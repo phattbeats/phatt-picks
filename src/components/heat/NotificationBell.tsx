@@ -10,10 +10,27 @@
  *
  * Self-contained client component (owns its own fetch/poll). The parent only
  * mounts it when signed in.
+ *
+ * PHA-1238: the live unread count is also mirrored OUTSIDE the app so it's
+ * visible without opening it — `navigator.setAppBadge()` paints the count on
+ * the installed PWA icon (high value mobile-first), and the browser tab title
+ * gets an "(N) " prefix. Both are driven off this component's `unread` state,
+ * the single source of truth, so marking-read clears them instantly (no poll
+ * lag). The bell is the only app-wide always-mounted unread surface for a
+ * signed-in user, which makes it the right home for this.
  */
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+
+/** App-badge API (Badging API) — not yet in the default DOM lib typings. */
+type BadgeNavigator = Navigator & {
+  setAppBadge?: (count?: number) => Promise<void>;
+  clearAppBadge?: () => Promise<void>;
+};
+
+/** Strip a leading "(N) " unread prefix so we never stack/duplicate it. */
+const TITLE_PREFIX_RE = /^\(\d+\)\s+/;
 
 interface NotifStamp { id: string; glyph: string; label: string; kind: "props" | "heat"; count: number }
 interface NotifEntry {
@@ -68,6 +85,55 @@ export function NotificationBell() {
     const t = setInterval(load, POLL_MS);
     return () => clearInterval(t);
   }, [load]);
+
+  // PHA-1238 — paint the unread count on the installed PWA app icon.
+  // setAppBadge(n) shows the number; setAppBadge() (no arg) shows a generic
+  // dot; clearAppBadge() removes it. Feature-detected: a no-op everywhere the
+  // Badging API isn't supported (most desktop browsers, iOS Safari tabs).
+  useEffect(() => {
+    const nav = typeof navigator !== "undefined" ? (navigator as BadgeNavigator) : undefined;
+    if (!nav?.setAppBadge) return;
+    if (unread > 0) nav.setAppBadge(unread).catch(() => {});
+    else nav.clearAppBadge?.().catch(() => {});
+  }, [unread]);
+
+  // PHA-1238 — prefix the browser tab title with "(N) ". Pages set their own
+  // titles ("Wire · HOTLINE", "Notifications · HOTLINE", …) so we PREFIX the
+  // live title rather than clobber it, and re-apply on every Next-driven title
+  // change via a MutationObserver on <title>. Re-prefixing is idempotent (the
+  // regex strips any existing "(N) " first), so the observer settles in one
+  // pass with no feedback loop.
+  const unreadRef = useRef(unread);
+  useEffect(() => {
+    unreadRef.current = unread;
+  }, [unread]);
+  useEffect(() => {
+    const titleEl = document.querySelector("title");
+    if (!titleEl) return;
+    const apply = () => {
+      const base = document.title.replace(TITLE_PREFIX_RE, "");
+      const next = unreadRef.current > 0 ? `(${unreadRef.current}) ${base}` : base;
+      if (next !== document.title) document.title = next;
+    };
+    apply();
+    const obs = new MutationObserver(apply);
+    obs.observe(titleEl, { childList: true });
+    return () => {
+      obs.disconnect();
+      // Bell unmounting (sign-out): drop the prefix and clear the app badge so
+      // a stale count can't linger on the tab or icon.
+      document.title = document.title.replace(TITLE_PREFIX_RE, "");
+      const nav = navigator as BadgeNavigator;
+      nav.clearAppBadge?.().catch(() => {});
+    };
+  }, []);
+
+  // Re-apply the title prefix the moment the count changes (the observer only
+  // fires on Next's own title writes, not on our state updates).
+  useEffect(() => {
+    const base = document.title.replace(TITLE_PREFIX_RE, "");
+    document.title = unread > 0 ? `(${unread}) ${base}` : base;
+  }, [unread]);
 
   useEffect(() => {
     if (!open) return;
