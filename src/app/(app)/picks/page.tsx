@@ -466,29 +466,37 @@ export default async function PicksPage({
         // (they all lock together); until then an honest status strip. The
         // full QF → SF → GF tree renders beneath either way.
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          {playoffPickModel && (anyPlayoffPickable || playoffSeeded) ? (
-            // PHA-1204: ONE bracket, placed at once. The interactive QF→SF→GF
-            // tree replaces the three stacked round-pickers. When picks are still
-            // open, enabled=true lets users crown winners. After lock (PHA-1263),
-            // enabled=false keeps the bracket visible read-only so players can
-            // still see what they called — the bracket never disappears.
+          {anyPlayoffPickable && playoffPickModel ? (
+            // PHA-1204: picks OPEN — interactive QF→SF→GF bracket. Crown a
+            // winner and they advance into the round they feed.
+            <PlayoffBracketPicker
+              model={playoffPickModel}
+              teams={layout.teams}
+              initialPicks={playoffInitialPicks}
+              enabled={!!session}
+              eventId={EVENT_ID}
+              signedIn={!!session}
+              steamLinked={!!session?.steamId}
+              initiallySynced={playoffSynced}
+              liveTeamStats={liveTeamStats?.byPickid}
+              liveStatsAsOf={liveTeamStats?.asOf}
+              spotlightMarket={spotlightMarket}
+            />
+          ) : playoffSeeded ? (
+            // PHA-1263: bracket seeded + picks locked — show the live bracket
+            // with actual match results filling in (LivePlayoffBracket overlays
+            // the viewer's calls as rings so they can see hits/misses in real
+            // time without being able to change their picks).
             <>
-              {!anyPlayoffPickable && (
-                <LockedStageCard pickability={activePickability} compact />
+              <LockedStageCard pickability={activePickability} compact />
+              {playoffBracket && (
+                <LivePlayoffBracket
+                  bracket={playoffBracket}
+                  teamMap={buildTeamMap(layout)}
+                  signedIn={!!session}
+                  resolvedAtIso={playoffResolvedAtIso}
+                />
               )}
-              <PlayoffBracketPicker
-                model={playoffPickModel}
-                teams={layout.teams}
-                initialPicks={playoffInitialPicks}
-                enabled={anyPlayoffPickable && !!session}
-                eventId={EVENT_ID}
-                signedIn={!!session}
-                steamLinked={!!session?.steamId}
-                initiallySynced={playoffSynced}
-                liveTeamStats={liveTeamStats?.byPickid}
-                liveStatsAsOf={liveTeamStats?.asOf}
-                spotlightMarket={spotlightMarket}
-              />
             </>
           ) : (
             <>
