@@ -632,7 +632,7 @@ export default async function ComparePage({
                                   >
                                     <div>
                                       <PickTile team={team(aPick)} state={aState} align="left" steal={aSteal} />
-                                      {aPick && aPick !== 0 && !groupClosed && (
+                                      {aPick && aPick !== 0 && (
                                         <BleachersStrip
                                           targetPlayerId={aId}
                                           sectionId={section.sectionid}
@@ -646,7 +646,7 @@ export default async function ComparePage({
                                     <span style={{ textAlign: "center", color: "var(--text-low)", fontFamily: "var(--font-mono)", fontSize: 10, paddingTop: 10 }}>·</span>
                                     <div>
                                       <PickTile team={team(bPick)} state={bState} align="right" steal={bSteal} />
-                                      {bPick && bPick !== 0 && !groupClosed && (
+                                      {bPick && bPick !== 0 && (
                                         <BleachersStrip
                                           targetPlayerId={bId}
                                           sectionId={section.sectionid}

@@ -357,9 +357,9 @@ export default async function PlayerProfilePage({
                 recordByTeam={recordsBySection.get(section.sectionid)}
                 resolvedAtIso={null}
                 title={`${stageLabel}`}
-                reactions={!isSelf && !groupResolved ? {
+                reactions={!isSelf ? {
                   targetPlayerId: player.id,
-                  canReact,
+                  canReact: canReact && !groupResolved,
                   tallyFor: (groupId, slotIndex) => tallyFor(section.sectionid, groupId, slotIndex),
                 } : undefined}
               />
@@ -459,14 +459,14 @@ export default async function PlayerProfilePage({
                                     </span>
                                   )}
                                 </div>
-                                {lockRevealed && pick != null && !groupClosed && (
+                                {lockRevealed && pick != null && (
                                   <BleachersStrip
                                     targetPlayerId={player.id}
                                     sectionId={section.sectionid}
                                     groupId={group.groupid}
                                     slotIndex={slot.index}
                                     initialTally={tallyFor(section.sectionid, group.groupid, slot.index)}
-                                    canReact={canReact}
+                                    canReact={canReact && !groupClosed}
                                   />
                                 )}
                               </div>
