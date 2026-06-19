@@ -544,6 +544,9 @@ export default async function ComparePage({
                 const aGroup = aPicksMap[section.sectionid]?.[group.groupid] ?? {};
                 const bGroup = bPicksMap[section.sectionid]?.[group.groupid] ?? {};
                 const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
+                // "Closed" = every pick slot in the group has a resolved winner.
+                // Reactions on fully-resolved groups are pointless — the moment passed.
+                const groupClosed = Object.keys(groupOutcomes).length >= group.picks.length;
 
                 return (
                   <div
@@ -622,43 +625,40 @@ export default async function ComparePage({
                                 const bSteal = bState === "hit" && bPick !== undefined && !aScope.has(bPick);
                                 const aInitialTally = tallyFor(aId, section.sectionid, group.groupid, slotIndex);
                                 const bInitialTally = tallyFor(bId, section.sectionid, group.groupid, slotIndex);
-                                const showStrips = (aPick && aPick !== 0) || (bPick && bPick !== 0);
+                                const effectiveCanReactA = canReactA && !groupClosed;
+                                const effectiveCanReactB = canReactB && !groupClosed;
                                 return (
-                                  <div key={slotIndex} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 22px 1fr", alignItems: "center", gap: "var(--space-2)" }}>
+                                  <div
+                                    key={slotIndex}
+                                    style={{ display: "grid", gridTemplateColumns: "1fr 22px 1fr", alignItems: "start", gap: "var(--space-2)" }}
+                                  >
+                                    <div>
                                       <PickTile team={team(aPick)} state={aState} align="left" steal={aSteal} />
-                                      <span style={{ textAlign: "center", color: "var(--text-low)", fontFamily: "var(--font-mono)", fontSize: 10 }}>·</span>
-                                      <PickTile team={team(bPick)} state={bState} align="right" steal={bSteal} />
+                                      {aPick && aPick !== 0 && (
+                                        <BleachersStrip
+                                          targetPlayerId={aId}
+                                          sectionId={section.sectionid}
+                                          groupId={group.groupid}
+                                          slotIndex={slotIndex}
+                                          initialTally={aInitialTally}
+                                          canReact={effectiveCanReactA}
+                                        />
+                                      )}
                                     </div>
-                                    {showStrips && (
-                                      <div style={{ display: "grid", gridTemplateColumns: "1fr 22px 1fr", gap: "var(--space-2)" }}>
-                                        <div>
-                                          {aPick && aPick !== 0 && (
-                                            <BleachersStrip
-                                              targetPlayerId={aId}
-                                              sectionId={section.sectionid}
-                                              groupId={group.groupid}
-                                              slotIndex={slotIndex}
-                                              initialTally={aInitialTally}
-                                              canReact={canReactA}
-                                            />
-                                          )}
-                                        </div>
-                                        <div />
-                                        <div>
-                                          {bPick && bPick !== 0 && (
-                                            <BleachersStrip
-                                              targetPlayerId={bId}
-                                              sectionId={section.sectionid}
-                                              groupId={group.groupid}
-                                              slotIndex={slotIndex}
-                                              initialTally={bInitialTally}
-                                              canReact={canReactB}
-                                            />
-                                          )}
-                                        </div>
-                                      </div>
-                                    )}
+                                    <span style={{ textAlign: "center", color: "var(--text-low)", fontFamily: "var(--font-mono)", fontSize: 10, paddingTop: 10 }}>·</span>
+                                    <div>
+                                      <PickTile team={team(bPick)} state={bState} align="right" steal={bSteal} />
+                                      {bPick && bPick !== 0 && (
+                                        <BleachersStrip
+                                          targetPlayerId={bId}
+                                          sectionId={section.sectionid}
+                                          groupId={group.groupid}
+                                          slotIndex={slotIndex}
+                                          initialTally={bInitialTally}
+                                          canReact={effectiveCanReactB}
+                                        />
+                                      )}
+                                    </div>
                                   </div>
                                 );
                               })}
