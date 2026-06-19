@@ -189,11 +189,18 @@ export function NotificationBell() {
     document.title = unread > 0 ? `(${unread}) ${base}` : base;
   }, [unread]);
 
-  // PHA-1241 — SSE connection, with polling fallback after 3 failed attempts
+  // PHA-1241 — SSE connection, with polling fallback after 3 failed attempts.
+  // PHA-1267 — the stream is paused while the tab is hidden. A backgrounded tab
+  // or installed PWA otherwise holds an open SSE connection that the server
+  // re-polls every 30s and recycles every 10 min — sustained client + server
+  // churn for a view nobody is looking at, multiplied across every open tab.
+  // Urgent delivery is covered by web-push (PHA-1239); on returning to the tab
+  // we reconnect immediately and the `init` event repaints the badge in full.
   useEffect(() => {
     if (typeof EventSource === "undefined") {
-      load();
-      const t = setInterval(load, FALLBACK_POLL_MS);
+      const tick = () => { if (document.visibilityState === "visible") load(); };
+      tick();
+      const t = setInterval(tick, FALLBACK_POLL_MS);
       return () => clearInterval(t);
     }
 
@@ -243,8 +250,24 @@ export function NotificationBell() {
       };
     }
 
-    connectSSE();
-    return cleanup;
+    // Only hold a live stream while the tab is actually visible.
+    function start() {
+      if (!es && document.visibilityState === "visible") {
+        retries = 0;
+        connectSSE();
+      }
+    }
+    function onVisibility() {
+      if (document.visibilityState === "visible") start();
+      else cleanup();
+    }
+
+    start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      cleanup();
+    };
   }, [applyFeed, load]);
 
   // Auto-dismiss toasts
