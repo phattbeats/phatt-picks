@@ -199,12 +199,18 @@ export function NotificationBell() {
 
     let es: EventSource | null = null;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
+    // Pending reconnect handle — MUST be cleared on cleanup, otherwise an
+    // unmount mid-backoff lets the timer fire connectSSE() on a dead closure,
+    // spawning an EventSource (and eventually a 45s poll loop) that nothing can
+    // ever close — a detached leak that survives the component. (PHA-1267)
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let retries = 0;
 
     function cleanup() {
       es?.close();
       es = null;
       if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
     }
 
     function connectSSE() {
@@ -226,7 +232,10 @@ export function NotificationBell() {
         if (es === src) es = null;
         retries++;
         if (retries <= 3) {
-          setTimeout(connectSSE, Math.min(retries * 3_000, 15_000));
+          reconnectTimer = setTimeout(() => {
+            reconnectTimer = null;
+            connectSSE();
+          }, Math.min(retries * 3_000, 15_000));
         } else {
           load();
           if (!pollTimer) pollTimer = setInterval(load, FALLBACK_POLL_MS);
