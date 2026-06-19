@@ -523,8 +523,13 @@ export default async function PicksPage({
           {/* Per-game schedule (PHA-1007) — BELOW the bracket + lock-in button:
               the bracket is the focus, the schedule is reference underneath. */}
           <PlayoffScheduleStrip rounds={playoffScheduleRounds} />
-          {/* Stop refreshing once the champion is decided — nothing changes. */}
-          {!playoffBracket?.championPickid && <AutoRefresh intervalMs={60_000} />}
+          {/* Stop refreshing once the champion is decided — nothing changes.
+              A SEALED bracket (not pickable) is a results-only view, so let the
+              poller periodically reclaim the heap (PHA-1268); while it's still
+              pickable a hard reload could drop an unsaved bracket edit. */}
+          {!playoffBracket?.championPickid && (
+            <AutoRefresh intervalMs={60_000} reclaimSafe={!anyPlayoffPickable} />
+          )}
         </div>
       ) : activePickability.pickable ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -658,8 +663,10 @@ export default async function PicksPage({
               fetchedAtIso={liveStandings.fetchedAtIso}
             />
           )}
-          {/* Poll while the stage is live; stop once all slots are resolved. */}
-          {!stageComplete && <AutoRefresh intervalMs={60_000} />}
+          {/* Poll while the stage is live; stop once all slots are resolved.
+              This is the locked, results-only lineup (no picker), so the poller
+              can safely reclaim the heap on a long live session (PHA-1268). */}
+          {!stageComplete && <AutoRefresh intervalMs={60_000} reclaimSafe />}
         </div>
       ) : (
         <LockedStageCard pickability={activePickability} />
