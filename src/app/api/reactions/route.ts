@@ -21,6 +21,7 @@ import { createCooldownStore, checkCooldown } from "@/lib/security-core";
 import { isValidStampId, getStamp, tallyReactions } from "@/lib/bleachers-core";
 import { isLockTimePassed } from "@/lib/lock-schedule-core";
 import { currentEventId } from "@/lib/events-core";
+import { getCommittedLayout } from "@/lib/layout";
 import { isPushConfigured, sendPushToPlayer } from "@/lib/notify";
 import { buildReactionPayload } from "@/lib/notify-core";
 import { parseNotifPrefs } from "@/lib/notifications-core";
@@ -71,6 +72,18 @@ export async function POST(req: NextRequest) {
   // blocked above, so this is purely the public-reveal gate.
   if (!isLockTimePassed(sId, Date.now())) {
     return NextResponse.json({ ok: false, reason: "not-revealed" }, { status: 409 });
+  }
+
+  const layout = getCommittedLayout();
+  const section = layout.sections.find((s) => s.sectionid === sId);
+  const group = section?.groups.find((g) => g.groupid === gId);
+  if (group) {
+    const outcomeCount = await prisma.stageOutcome.count({
+      where: { eventId, sectionId: sId, groupId: gId },
+    });
+    if (outcomeCount >= group.picks.length) {
+      return NextResponse.json({ ok: false, reason: "resolved" }, { status: 409 });
+    }
   }
 
   const pick = await prisma.pick.findUnique({
