@@ -544,9 +544,6 @@ export default async function ComparePage({
                 const aGroup = aPicksMap[section.sectionid]?.[group.groupid] ?? {};
                 const bGroup = bPicksMap[section.sectionid]?.[group.groupid] ?? {};
                 const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
-                // "Closed" = every pick slot in the group has a resolved winner.
-                // Reactions on fully-resolved groups are pointless — the moment passed.
-                const groupClosed = Object.keys(groupOutcomes).length >= group.picks.length;
 
                 return (
                   <div
@@ -625,8 +622,8 @@ export default async function ComparePage({
                                 const bSteal = bState === "hit" && bPick !== undefined && !aScope.has(bPick);
                                 const aInitialTally = tallyFor(aId, section.sectionid, group.groupid, slotIndex);
                                 const bInitialTally = tallyFor(bId, section.sectionid, group.groupid, slotIndex);
-                                const effectiveCanReactA = canReactA && !groupClosed;
-                                const effectiveCanReactB = canReactB && !groupClosed;
+                                const effectiveCanReactA = canReactA;
+                                const effectiveCanReactB = canReactB;
                                 return (
                                   <div
                                     key={slotIndex}
