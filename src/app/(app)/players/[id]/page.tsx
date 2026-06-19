@@ -346,6 +346,7 @@ export default async function PlayerProfilePage({
               (pickMap[section.sectionid] ?? {}) as SlotPickMap,
             );
             const teamStatus = new Map(swiss.teams.map((t) => [t.pickid, t.status] as const));
+            const groupResolved = Object.keys(outcomeMap[section.sectionid]?.[group.groupid] ?? {}).length >= group.picks.length;
             return (
               <LockedPicksBoard
                 key={section.sectionid}
@@ -356,7 +357,7 @@ export default async function PlayerProfilePage({
                 recordByTeam={recordsBySection.get(section.sectionid)}
                 resolvedAtIso={null}
                 title={`${stageLabel}`}
-                reactions={!isSelf ? {
+                reactions={!isSelf && !groupResolved ? {
                   targetPlayerId: player.id,
                   canReact,
                   tallyFor: (groupId, slotIndex) => tallyFor(section.sectionid, groupId, slotIndex),
@@ -382,6 +383,7 @@ export default async function PlayerProfilePage({
                 const revealed = isSelf || lockRevealed;
                 const groupPicks = pickMap[section.sectionid]?.[group.groupid] ?? {};
                 const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
+                const groupClosed = Object.keys(groupOutcomes).length >= group.picks.length;
 
                 return (
                   <div
@@ -457,8 +459,7 @@ export default async function PlayerProfilePage({
                                     </span>
                                   )}
                                 </div>
-                                {/* Bleachers only on a publicly-revealed pick that exists. */}
-                                {lockRevealed && pick != null && (
+                                {lockRevealed && pick != null && !groupClosed && (
                                   <BleachersStrip
                                     targetPlayerId={player.id}
                                     sectionId={section.sectionid}
