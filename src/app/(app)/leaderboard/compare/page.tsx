@@ -544,6 +544,7 @@ export default async function ComparePage({
                 const aGroup = aPicksMap[section.sectionid]?.[group.groupid] ?? {};
                 const bGroup = bPicksMap[section.sectionid]?.[group.groupid] ?? {};
                 const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
+                const groupClosed = Object.keys(groupOutcomes).length >= group.picks.length;
 
                 return (
                   <div
@@ -622,8 +623,8 @@ export default async function ComparePage({
                                 const bSteal = bState === "hit" && bPick !== undefined && !aScope.has(bPick);
                                 const aInitialTally = tallyFor(aId, section.sectionid, group.groupid, slotIndex);
                                 const bInitialTally = tallyFor(bId, section.sectionid, group.groupid, slotIndex);
-                                const effectiveCanReactA = canReactA;
-                                const effectiveCanReactB = canReactB;
+                                const effectiveCanReactA = canReactA && !groupClosed;
+                                const effectiveCanReactB = canReactB && !groupClosed;
                                 return (
                                   <div
                                     key={slotIndex}
@@ -631,7 +632,7 @@ export default async function ComparePage({
                                   >
                                     <div>
                                       <PickTile team={team(aPick)} state={aState} align="left" steal={aSteal} />
-                                      {aPick && aPick !== 0 && (
+                                      {aPick && aPick !== 0 && !groupClosed && (
                                         <BleachersStrip
                                           targetPlayerId={aId}
                                           sectionId={section.sectionid}
@@ -645,7 +646,7 @@ export default async function ComparePage({
                                     <span style={{ textAlign: "center", color: "var(--text-low)", fontFamily: "var(--font-mono)", fontSize: 10, paddingTop: 10 }}>·</span>
                                     <div>
                                       <PickTile team={team(bPick)} state={bState} align="right" steal={bSteal} />
-                                      {bPick && bPick !== 0 && (
+                                      {bPick && bPick !== 0 && !groupClosed && (
                                         <BleachersStrip
                                           targetPlayerId={bId}
                                           sectionId={section.sectionid}
