@@ -356,6 +356,11 @@ export default async function PlayerProfilePage({
                 recordByTeam={recordsBySection.get(section.sectionid)}
                 resolvedAtIso={null}
                 title={`${stageLabel}`}
+                reactions={!isSelf ? {
+                  targetPlayerId: player.id,
+                  canReact,
+                  tallyFor: (groupId, slotIndex) => tallyFor(section.sectionid, groupId, slotIndex),
+                } : undefined}
               />
             );
           }

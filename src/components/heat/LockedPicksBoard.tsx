@@ -28,6 +28,7 @@ import {
   type TeamRecord,
 } from "@/lib/swiss-standings-core";
 import { LastUpdated } from "@/components/LastUpdated";
+import { BleachersStrip, type TallyLine } from "@/components/heat/BleachersStrip";
 
 const LOGO = 56;
 
@@ -45,6 +46,7 @@ export function LockedPicksBoard({
   recordByTeam,
   resolvedAtIso,
   title = "YOUR LOCKED PICKS",
+  reactions,
 }: {
   section: Section;
   teamMap: Map<number, TeamDef>;
@@ -59,6 +61,12 @@ export function LockedPicksBoard({
   resolvedAtIso: string | null;
   /** Header label — overridden on the player-profile page (e.g. "STAGE I"). */
   title?: string;
+  /** When viewing another player's picks: render BleachersStrip under each slot. */
+  reactions?: {
+    targetPlayerId: string;
+    canReact: boolean;
+    tallyFor: (groupId: number, slotIndex: number) => TallyLine[];
+  };
 }) {
   return (
     <div className="panel brk" style={{ padding: "18px 16px 20px" }}>
@@ -128,6 +136,16 @@ export function LockedPicksBoard({
                               >
                                 {meta.mark}
                               </span>
+                            )}
+                            {reactions && (
+                              <BleachersStrip
+                                targetPlayerId={reactions.targetPlayerId}
+                                sectionId={section.sectionid}
+                                groupId={group.groupid}
+                                slotIndex={slotIndex}
+                                initialTally={reactions.tallyFor(group.groupid, slotIndex)}
+                                canReact={reactions.canReact}
+                              />
                             )}
                           </div>
                         );
