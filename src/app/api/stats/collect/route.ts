@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { isSameOrigin } from "@/lib/csrf";
-import { clientIpFromForwarded } from "@/lib/security-core";
+import { clientIpFromForwarded, trustedProxyHops } from "@/lib/security-core";
 import { prisma } from "@/lib/db";
 import {
   deviceClass,
@@ -37,18 +37,23 @@ import {
 
 const MAX_BODY_BYTES = 2_048; // a beacon is ~100 bytes; nothing legitimate is bigger
 const RATE_WINDOW_MS = 60_000;
-const RATE_MAX = 60; // inserts per visitor per minute — far above real navigation
+const RATE_MAX = 60; // inserts per IP per minute — far above real navigation
 
 const rate = new Map<string, { window: number; count: number }>();
-/** Fixed-window per-visitor limiter. Returns true if this insert is allowed.
- *  Header-less spam all hashes to the same visitor bucket, so it self-throttles;
- *  real users have distinct hashes and are unaffected. */
-function allow(visitor: string, now: number): boolean {
+/** Fixed-window per-IP limiter. Returns true if this insert is allowed. Keyed on
+ *  the raw IP (not the IP+UA visitor hash) so rotating the User-Agent from one IP
+ *  can't mint a fresh bucket per request. Memory is bounded by evicting only
+ *  stale-window keys — never by clearing live counters, which would briefly lift
+ *  the cap for everyone under spam. The key is in-memory + ephemeral, never
+ *  stored. CF's edge WAF remains the primary volumetric DoS defense. */
+function allow(key: string, now: number): boolean {
   const window = Math.floor(now / RATE_WINDOW_MS);
-  if (rate.size > 5_000) rate.clear(); // bound memory; resets counts, harmless
-  const cur = rate.get(visitor);
+  if (rate.size > 5_000) {
+    for (const [k, v] of rate) if (v.window < window) rate.delete(k);
+  }
+  const cur = rate.get(key);
   if (!cur || cur.window !== window) {
-    rate.set(visitor, { window, count: 1 });
+    rate.set(key, { window, count: 1 });
     return true;
   }
   if (cur.count >= RATE_MAX) return false;
@@ -76,7 +81,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: "bad-origin" }, { status: 403 });
   }
 
-  // Reject oversized bodies before buffering/parsing them.
+  // Reject oversized bodies. Content-Length is the fast path (present on most
+  // clients); sendBeacon Blobs may omit it, so raw.length below is the real
+  // backstop after reading.
   const len = Number(req.headers.get("content-length") ?? "0");
   if (Number.isFinite(len) && len > MAX_BODY_BYTES) {
     return NextResponse.json({ ok: false, reason: "too-large" }, { status: 413 });
@@ -109,29 +116,40 @@ export async function POST(req: NextRequest) {
 
   // Real client IP (Cloudflare's cf-connecting-ip is the most reliable behind CF
   // and is overwritten by CF for public traffic; fall back to the right-most
-  // trusted XFF / x-real-ip). Used ONLY to derive the daily hash — never stored.
+  // trusted XFF / x-real-ip, using the same hop count as the rest of the app).
+  // Used ONLY to derive the daily hash + rate-limit key — never stored.
   const ip =
     req.headers.get("cf-connecting-ip") ??
-    clientIpFromForwarded(req.headers.get("x-forwarded-for"), req.headers.get("x-real-ip"), 1) ??
+    clientIpFromForwarded(
+      req.headers.get("x-forwarded-for"),
+      req.headers.get("x-real-ip"),
+      trustedProxyHops(),
+    ) ??
     "0.0.0.0";
-  const visitor = visitorHash(ip, ua);
 
-  if (!allow(visitor, Date.now())) {
+  if (!allow(ip, Date.now())) {
     return new NextResponse(null, { status: 204 }); // silently drop spam
   }
 
-  // External referrer host only — null for any of our own hosts (same-site nav).
-  let refHost = sanitizeReferrer(referrer, "");
-  if (refHost && SELF_HOSTS.has(refHost)) refHost = null;
-
-  // A named event (disclosure_open, scroll, …) or a plain pageview.
+  // A named event (disclosure_open, scroll, …) or a plain pageview. If the client
+  // sent an `event` field that fails validation, drop it — don't silently record
+  // it as a phantom pageview.
   const evName = sanitizeEvent(event);
+  if (event != null && event !== "" && !evName) {
+    return new NextResponse(null, { status: 204 });
+  }
   let evLabel = sanitizeLabel(label);
   if (evName === "scroll") {
     const b = scrollBucket(scroll);
     if (!b) return new NextResponse(null, { status: 204 }); // sub-25% → not worth a row
     evLabel = String(b);
   }
+
+  // External referrer host only — null for any of our own hosts (same-site nav).
+  let refHost = sanitizeReferrer(referrer, "");
+  if (refHost && SELF_HOSTS.has(refHost)) refHost = null;
+
+  const visitor = visitorHash(ip, ua);
 
   await prisma.pageView.create({
     data: {
