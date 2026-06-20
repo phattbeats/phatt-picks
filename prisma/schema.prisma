@@ -270,9 +270,22 @@ model PageView {
   id        String   @id @default(cuid())
   path      String
   device    String // mobile | tablet | desktop
+  browser   String? // coarse family: chrome | safari | firefox | edge | samsung | opera | other
+  os        String? // coarse family: ios | android | windows | macos | linux | other
+  country   String? // 2-letter ISO from CF-IPCountry; never an IP
   referrer  String? // external host only; null for direct / internal nav
+  // event = null → a pageview. Non-null → a named anonymous in-app event
+  // (e.g. "disclosure_open", "scroll"); `label` is its optional detail.
+  event     String?
+  label     String?
+  // Cookieless visitor/session id: a daily-rotating salted hash of IP+UA. One-way
+  // and reset every day, so it counts unique visitors / sessions without being
+  // able to track anyone across days. The raw IP is never stored.
+  visitor   String?
   createdAt DateTime @default(now())
 
   @@index([createdAt])
   @@index([path])
+  @@index([event])
+  @@index([visitor])
 }
