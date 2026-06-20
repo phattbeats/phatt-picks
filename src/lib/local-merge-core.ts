@@ -32,7 +32,8 @@ export function pickSlotKey(s: PickSlot): string {
 /**
  * Extract a login token from a pasted value. The user may paste the full
  * cross-device login link (`…/api/auth/token-login?t=<token>`) or the raw
- * token; mirror TokenSignInPanel's client-side extraction so both inputs work.
+ * token. Shared by the server claim route and TokenSignInPanel's client-side
+ * extraction so both inputs work identically from one definition.
  */
 export function extractLoginToken(raw: string): string {
   const s = raw.trim();
