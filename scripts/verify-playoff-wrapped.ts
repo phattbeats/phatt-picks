@@ -161,6 +161,14 @@ check("stinger is the post-credits 'will return'", /will return/i.test(out.find(
 check("stinger teases the next Major (Singapore)", /Singapore/i.test(out.find((s) => s.id === "po-stinger")?.body ?? ""));
 check("thanks comes before the stinger", outIds.indexOf("po-thanks") < outIds.indexOf("po-stinger"));
 
+// ---- PHA-1274 scope correction: this is the *Major* Wrapped, not just Playoffs. ----
+check("cover frames the whole Major (32 walked in)", /thirty-two walked in/i.test(out[0].headline));
+check("cover eyebrow reads MAJOR, not PLAYOFFS", /MAJOR/.test(out[0].eyebrow ?? "") && !/PLAYOFFS/.test(out[0].eyebrow ?? ""));
+check("historic moments span the Major (Swiss-stage beats present)",
+  COLOGNE_PLAYOFF_MOMENTS.some((m) => m.id === "po-m-donk") && COLOGNE_PLAYOFF_MOMENTS.some((m) => m.id === "po-m-woxic"));
+check("nations bridge carries the 32→8 arc", /32/.test(out.find((s) => s.id === "po-nations")?.figure ?? ""));
+check("all eight playoff-team pages survive the rescope", COLOGNE_PLAYOFF_TEAMS.every((t) => outIds.includes(`po-team-${t.pickId}`)));
+
 // ---- Invariant 4 (negative): wrong title pick must NOT light the reward. ----
 const missedPersonal: PlayoffWrappedPersonal = {
   displayName: "Emily",
