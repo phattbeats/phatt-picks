@@ -106,7 +106,7 @@ export default async function AnalyticsPage({
     prisma.pageView.groupBy({ by: ["country"], _count: { _all: true }, where: { ...pvWhere, country: { not: null } }, orderBy: { _count: { country: "desc" } }, take: 15 }),
     prisma.pageView.groupBy({ by: ["referrer"], _count: { _all: true }, where: { ...pvWhere, referrer: { not: null } }, orderBy: { _count: { referrer: "desc" } }, take: 10 }),
     prisma.pageView.count({ where: pvWhere }),
-    prisma.pageView.findMany({ where: pvWhere, select: { visitor: true, path: true, createdAt: true }, orderBy: { createdAt: "asc" }, take: 50_000 }),
+    prisma.pageView.findMany({ where: pvWhere, select: { visitor: true, path: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 50_000 }),
     prisma.pageView.groupBy({ by: ["event", "label"], _count: { _all: true }, where: { ...where, event: { not: null } }, orderBy: { _count: { event: "desc" } }, take: 60 }),
     prisma.player.count(),
     prisma.player.count({ where: { steamId: { not: null } } }),
@@ -116,6 +116,9 @@ export default async function AnalyticsPage({
   ]);
 
   // Sessions from cookieless visitor hashes → unique visitors, bounce, duration.
+  // viewsForSessions is capped at 50k rows; past that, session-derived metrics
+  // (visitors/bounce/duration/entry/exit) are computed on a sample, so flag it.
+  const truncated = viewsForSessions.length >= 50_000;
   const sessions = sessionize(viewsForSessions);
   const visitors = new Set(sessions.map((s) => s.visitor)).size;
   const bounces = sessions.filter((s) => s.views === 1).length;
@@ -140,7 +143,17 @@ export default async function AnalyticsPage({
       <p style={{ opacity: 0.7, margin: "0 0 1rem", fontSize: ".9rem" }}>
         Anonymous, cookieless, self-hosted in this app. No PII — path + coarse
         device/browser/OS + country (no IP) + external referrer. Honors Do-Not-Track.
+        Visitors/bounce/sessions use a daily-rotating id, so a visit crossing
+        midnight (UTC) counts as two.
       </p>
+
+      {truncated && (
+        <p style={{ margin: "0 0 1rem", padding: ".5rem .75rem", borderRadius: 8, background: "rgba(255,180,80,.12)", border: "1px solid rgba(255,180,80,.4)", fontSize: ".85rem" }}>
+          Over 50,000 pageviews in this range — visitor, bounce, session and
+          entry/exit figures are computed on the most recent sample and are
+          approximate. (View counts and breakdowns are exact.)
+        </p>
+      )}
 
       <div style={{ display: "flex", gap: ".5rem", marginBottom: "1rem" }}>
         {RANGES.map((r) => (

@@ -127,9 +127,11 @@ export function sanitizeEvent(raw: unknown): string | null {
   return e;
 }
 
-/** Optional event label (e.g. a disclosure's summary text). Collapses
- *  whitespace + control chars and caps length — the caller only ever passes UI
- *  strings, so this is descriptive, not PII. */
+/** Optional event label (e.g. a disclosure's summary text). The event NAME is a
+ *  strict slug (see sanitizeEvent); the label is free-form by design but is
+ *  collapsed-whitespace + capped at 80 chars and rendered escaped on the
+ *  owner-only dashboard. Callers must only pass static UI strings here — never
+ *  user-derived content — so labels carry no PII. */
 export function sanitizeLabel(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
   const l = raw.replace(/\s+/g, " ").trim();
