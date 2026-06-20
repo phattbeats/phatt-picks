@@ -20,7 +20,6 @@
  * repeatedly.
  */
 
-import { after } from "next/server";
 import { prisma } from "./db";
 import {
   type WireItem,
@@ -29,6 +28,7 @@ import {
   sortWire,
 } from "./news-core";
 import { claimRefreshSlot, fetchHltvWire, stampRefreshSlot } from "./hltv";
+import { runDeferred } from "./source-refresh";
 
 /**
  * Read the wire, newest-first, capped at `limit`. Never throws.
@@ -145,23 +145,6 @@ async function refreshWireOnRead(): Promise<void> {
   if (!(await claimRefreshSlot())) return; // within floor or lost the race — no-op
   await upsertWireItems(seedWireItems()).catch(() => {}); // local + fast; skips when empty
   runDeferred(() => ingestAutomated()); // slow network pull — off the render path
-}
-
-/**
- * Run a best-effort background task without blocking (or coupling latency to) the
- * current render. Prefers Next's `after` so the work runs past the response and
- * isn't cut off; falls back to a floating promise when called outside a request
- * scope (e.g. tests). Errors are swallowed — callers are all best-effort.
- */
-function runDeferred(task: () => Promise<unknown>): void {
-  const run = () => {
-    void task().catch(() => {});
-  };
-  try {
-    after(run);
-  } catch {
-    run();
-  }
 }
 
 /**
