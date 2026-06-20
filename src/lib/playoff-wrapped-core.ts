@@ -583,7 +583,7 @@ export function buildPlayoffWrappedDeck(
     id: "po-stinger",
     kind: "outro",
     eyebrow: "POST-CREDITS",
-    headline: "phaTT Picks will return.",
+    headline: "Hotline will return.",
     body: "Next stop: PGL Major Singapore 2026. New bracket, new Cinderellas, new history — same room, same game, same world. See you there. 🌏",
     brandLogo: gameBrand,
     stageBadge: { numeral: "?", label: "NEXT", sub: "MAJOR" },

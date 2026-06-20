@@ -158,6 +158,7 @@ check("finale is a big finish (15–20+ slides signed-out)", out.length >= 15 &&
 check("heartfelt thank-you is from -phaTT", /from -?phaTT/i.test(out.find((s) => s.id === "po-thanks")?.eyebrow ?? "") || /phaTT/.test(out.find((s) => s.id === "po-thanks")?.body ?? ""));
 check("thank-you speaks to the community + the world", /communit|world|planet/i.test(out.find((s) => s.id === "po-thanks")?.body ?? ""));
 check("stinger is the post-credits 'will return'", /will return/i.test(out.find((s) => s.id === "po-stinger")?.headline ?? ""));
+check("stinger uses the Hotline brand, not the old name", /Hotline/.test(out.find((s) => s.id === "po-stinger")?.headline ?? "") && !/phaTT Picks/i.test(out.find((s) => s.id === "po-stinger")?.headline ?? ""));
 check("stinger teases the next Major (Singapore)", /Singapore/i.test(out.find((s) => s.id === "po-stinger")?.body ?? ""));
 check("thanks comes before the stinger", outIds.indexOf("po-thanks") < outIds.indexOf("po-stinger"));
 
