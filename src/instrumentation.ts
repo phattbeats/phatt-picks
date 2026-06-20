@@ -85,8 +85,11 @@ export async function register(): Promise<void> {
       liveTickInFlight = true;
       try {
         const r = await refreshLiveResultsTick(currentEventId());
-        if (r.ingested > 0 || r.resolved > 0) {
-          console.log(`[live-tick] event ${r.eventId}: ingested ${r.ingested}, resolved ${r.resolved} slot(s)`);
+        if (r.ingested > 0 || r.resolved > 0 || r.stale > 0) {
+          console.log(
+            `[live-tick] event ${r.eventId}: ingested ${r.ingested}, resolved ${r.resolved} slot(s)` +
+              (r.stale > 0 ? `, ${r.stale} playoff match(es) OVERDUE` : ""),
+          );
         }
       } catch (err) {
         console.error("[live-tick] tick failed:", err);
