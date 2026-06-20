@@ -27,7 +27,37 @@ import {
  *     IP), and external referrer host only.
  * Honors Do-Not-Track server-side as a backstop to the tracker. Self-hosted: a
  * route in the app itself, so the whole stack stays in the one app container.
+ *
+ * Abuse controls (this is a public endpoint and isSameOrigin fails open when both
+ * Origin and Referer are absent, so it can't be the only gate): a small body-size
+ * cap rejects oversized payloads before parsing, and a per-visitor fixed-window
+ * limit bounds insert spam. Cloudflare's edge WAF is the primary DoS defense;
+ * these are defense-in-depth so a header-less curl loop can't fill the SQLite db.
  */
+
+const MAX_BODY_BYTES = 2_048; // a beacon is ~100 bytes; nothing legitimate is bigger
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX = 60; // inserts per visitor per minute — far above real navigation
+
+const rate = new Map<string, { window: number; count: number }>();
+/** Fixed-window per-visitor limiter. Returns true if this insert is allowed.
+ *  Header-less spam all hashes to the same visitor bucket, so it self-throttles;
+ *  real users have distinct hashes and are unaffected. */
+function allow(visitor: string, now: number): boolean {
+  const window = Math.floor(now / RATE_WINDOW_MS);
+  if (rate.size > 5_000) rate.clear(); // bound memory; resets counts, harmless
+  const cur = rate.get(visitor);
+  if (!cur || cur.window !== window) {
+    rate.set(visitor, { window, count: 1 });
+    return true;
+  }
+  if (cur.count >= RATE_MAX) return false;
+  cur.count += 1;
+  return true;
+}
+
+// Internal hosts whose referrers are same-site navigation, not a real referrer.
+const SELF_HOSTS = new Set(["hotline.phatt.vip", "pickems.phatt.vip"]);
 
 /** Daily-rotating one-way visitor id. The date in the salt means yesterday's
  *  hash can't be reproduced today, so visitors aren't linkable across days. */
@@ -46,9 +76,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: "bad-origin" }, { status: 403 });
   }
 
+  // Reject oversized bodies before buffering/parsing them.
+  const len = Number(req.headers.get("content-length") ?? "0");
+  if (Number.isFinite(len) && len > MAX_BODY_BYTES) {
+    return NextResponse.json({ ok: false, reason: "too-large" }, { status: 413 });
+  }
+
+  let raw: string;
+  try {
+    raw = await req.text();
+  } catch {
+    return NextResponse.json({ ok: false, reason: "bad-body" }, { status: 400 });
+  }
+  if (raw.length > MAX_BODY_BYTES) {
+    return NextResponse.json({ ok: false, reason: "too-large" }, { status: 413 });
+  }
+
   let body: unknown;
   try {
-    body = await req.json();
+    body = JSON.parse(raw);
   } catch {
     return NextResponse.json({ ok: false, reason: "bad-json" }, { status: 400 });
   }
@@ -60,17 +106,23 @@ export async function POST(req: NextRequest) {
   }
 
   const ua = req.headers.get("user-agent") ?? "";
-  const selfHost = (req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "")
-    .split(":")[0]
-    .toLowerCase();
 
-  // Real client IP (Cloudflare's cf-connecting-ip is the most reliable behind
-  // CF; fall back to the right-most trusted XFF / x-real-ip). Used ONLY to derive
-  // the daily hash — never stored.
+  // Real client IP (Cloudflare's cf-connecting-ip is the most reliable behind CF
+  // and is overwritten by CF for public traffic; fall back to the right-most
+  // trusted XFF / x-real-ip). Used ONLY to derive the daily hash — never stored.
   const ip =
     req.headers.get("cf-connecting-ip") ??
     clientIpFromForwarded(req.headers.get("x-forwarded-for"), req.headers.get("x-real-ip"), 1) ??
     "0.0.0.0";
+  const visitor = visitorHash(ip, ua);
+
+  if (!allow(visitor, Date.now())) {
+    return new NextResponse(null, { status: 204 }); // silently drop spam
+  }
+
+  // External referrer host only — null for any of our own hosts (same-site nav).
+  let refHost = sanitizeReferrer(referrer, "");
+  if (refHost && SELF_HOSTS.has(refHost)) refHost = null;
 
   // A named event (disclosure_open, scroll, …) or a plain pageview.
   const evName = sanitizeEvent(event);
@@ -88,10 +140,10 @@ export async function POST(req: NextRequest) {
       browser: browserFamily(ua),
       os: osFamily(ua),
       country: sanitizeCountry(req.headers.get("cf-ipcountry")),
-      referrer: sanitizeReferrer(referrer, selfHost || undefined),
+      referrer: refHost,
       event: evName,
       label: evName ? evLabel : null,
-      visitor: visitorHash(ip, ua),
+      visitor,
     },
   });
 
