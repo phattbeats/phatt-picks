@@ -1,28 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import {
-  assembleFeed,
-  emptyReadContext,
-  type NotifEntry,
-  type ReadContext,
-} from "@/lib/notifications-core";
-import { announcementEntries } from "@/lib/announcements-core";
-import { prisma } from "@/lib/db";
-import { currentEventId, currentEvent } from "@/lib/events-core";
-import { getCommittedLayout, buildTeamMap } from "@/lib/layout";
-import { lockTimeForSection } from "@/lib/lock-schedule-core";
-import { latestWrappedSectionId } from "@/lib/stage-wrapped-launch-core";
-import type { OutcomeMap } from "@/lib/scoring";
-import {
-  reactionEntries,
-  stageLockEntry,
-  recapEntry,
-  filterEntriesByPrefs,
-  parseNotifPrefs,
-  type NotifReaction,
-  type PickLabeller,
-} from "@/lib/notifications-core";
+import { type NotifEntry } from "@/lib/notifications-core";
+import { buildPlayerFeed } from "@/lib/notifications-feed";
 import { InboxControls } from "./InboxControls";
 
 export const metadata = { title: "Notifications · HOTLINE" };
@@ -70,9 +50,7 @@ export default async function NotificationsPage({
   const groups = groupByTime(pageItems, all.generatedAtMs);
 
   // The client component handles per-item click and Mark-all-read, and toggles
-  // the All/Unread tab. We pass the visible ids down so the bulk action knows
-  // which rows to mark without a second round trip.
-  const visibleIds = pageItems.map((it) => it.id);
+  // the All/Unread tab.
 
   return (
     <>
@@ -106,7 +84,6 @@ export default async function NotificationsPage({
       <InboxControls
         filter={filter}
         unread={all.unread}
-        visibleIds={visibleIds}
         page={page}
       />
 
@@ -269,108 +246,6 @@ function EmptyInbox() {
 }
 
 // ── HELPERS (server-only) ─────────────────────────────────────────────────────
-
-async function buildPlayerFeed(playerId: string, limit: number) {
-  const eventId = currentEventId();
-  // eslint-disable-next-line react-hooks/purity
-  const nowMs = Date.now();
-  const [reactions, player, myPicks, outcomes, reads] = await Promise.all([
-    prisma.reaction.findMany({
-      where: { eventId, targetPlayerId: playerId },
-      select: { stampId: true, sectionId: true, groupId: true, slotIndex: true, createdAt: true },
-    }),
-    prisma.player.findUnique({
-      where: { id: playerId },
-      select: { notificationsSeenAt: true, notifPrefs: true },
-    }),
-    prisma.pick.findMany({
-      where: { eventId, playerId },
-      select: { sectionId: true, groupId: true, slotIndex: true, pickId: true },
-    }),
-    prisma.stageOutcome.findMany({
-      where: { eventId },
-      select: { sectionId: true, groupId: true, slotIndex: true, winnerPickId: true, resolvedAt: true },
-    }),
-    prisma.notificationRead.findMany({
-      where: { playerId },
-      select: { entryId: true, readAt: true },
-    }),
-  ]);
-
-  const seenAtMs = player?.notificationsSeenAt ? player.notificationsSeenAt.getTime() : 0;
-  const readSet = new Set<string>();
-  const readAtByEntry = new Map<string, number>();
-  for (const r of reads) {
-    readSet.add(r.entryId);
-    readAtByEntry.set(r.entryId, r.readAt.getTime());
-  }
-  const rc: ReadContext = { seenAtMs, readSet, readAtByEntry };
-  const prefs = parseNotifPrefs(player?.notifPrefs);
-
-  const layout = getCommittedLayout();
-  const teamMap = buildTeamMap(layout);
-  const event = currentEvent(nowMs);
-  const stageName = (sectionId: number): string =>
-    event.sectionNames[sectionId] ??
-    layout.sections.find((s) => s.sectionid === sectionId)?.name.split(" | ")[0] ??
-    "Stage";
-
-  const rawEntries: Omit<NotifEntry, "isNew" | "readAt">[] = [];
-
-  rawEntries.push(...announcementEntries(nowMs));
-
-  const pickByKey = new Map<string, number>();
-  for (const p of myPicks) pickByKey.set(`${p.sectionId}:${p.groupId}:${p.slotIndex}`, p.pickId);
-  const label: PickLabeller = (sectionId, groupId, slotIndex) => {
-    const pickId = pickByKey.get(`${sectionId}:${groupId}:${slotIndex}`);
-    const team = pickId ? teamMap.get(pickId) : undefined;
-    return { teamName: team?.name ?? null, stageLabel: stageName(sectionId) };
-  };
-  const reactionRows: NotifReaction[] = reactions.map((r) => ({
-    stampId: r.stampId,
-    sectionId: r.sectionId,
-    groupId: r.groupId,
-    slotIndex: r.slotIndex,
-    createdAtMs: r.createdAt.getTime(),
-  }));
-  rawEntries.push(...reactionEntries(reactionRows, label));
-
-  for (const s of layout.sections) {
-    const iso = lockTimeForSection(s.sectionid);
-    if (!iso) continue;
-    const e = stageLockEntry(
-      { sectionId: s.sectionid, stageName: stageName(s.sectionid), lockAtMs: Date.parse(iso) },
-      nowMs,
-    );
-    if (e) rawEntries.push(e);
-  }
-
-  const outcomeMap: OutcomeMap = {};
-  const resolvedAtBySection = new Map<number, number>();
-  for (const o of outcomes) {
-    outcomeMap[o.sectionId] ??= {};
-    outcomeMap[o.sectionId][o.groupId] ??= {};
-    outcomeMap[o.sectionId][o.groupId][o.slotIndex] = o.winnerPickId;
-    resolvedAtBySection.set(
-      o.sectionId,
-      Math.max(resolvedAtBySection.get(o.sectionId) ?? 0, o.resolvedAt.getTime()),
-    );
-  }
-  const recapSection = latestWrappedSectionId(layout, outcomeMap);
-  if (recapSection != null) {
-    const e = recapEntry(
-      {
-        sectionId: recapSection,
-        stageName: stageName(recapSection),
-        resolvedAtMs: resolvedAtBySection.get(recapSection) ?? 0,
-      },
-      nowMs,
-    );
-    if (e) rawEntries.push(e);
-  }
-
-  return assembleFeed(filterEntriesByPrefs(rawEntries, prefs), rc, limit, nowMs);
-}
 
 const DAY_MS = 24 * 60 * 60_000;
 
