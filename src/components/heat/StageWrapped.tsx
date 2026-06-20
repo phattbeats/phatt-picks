@@ -399,6 +399,21 @@ function SlideCard({ slide }: { slide: WrappedSlide }) {
   const badge = slide.stageBadge;
   return (
     <div className={`sw-slide sw-kind-${slide.kind} sw-enter`}>
+      {/* Documentary photo (PHA-1274 "dank HLTV photo" twist) — a hero band that
+          leads the slide: the Cologne cathedral, the arena crowd, a player
+          mid-scream. Sits above the copy with a fade into the deck so the text
+          stays legible; credit rides along the bottom edge. */}
+      {slide.photo && (
+        <figure className="sw-photo">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={slide.photo.src}
+            alt={slide.photo.alt}
+            style={{ objectPosition: slide.photo.focus ?? "50% 50%" }}
+          />
+          {slide.photo.credit && <figcaption>{slide.photo.credit}</figcaption>}
+        </figure>
+      )}
       {/* Brand mark (major / game logo) — cover + closer slides. Smaller when a
           stage badge is the hero so the STAGE logo leads. */}
       {slide.brandLogo && (
