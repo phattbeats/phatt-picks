@@ -276,7 +276,7 @@ export default async function PicksPage({
       if (t > latest) latest = t;
     }
     playoffResolvedAtIso = latest > 0 ? new Date(latest).toISOString() : null;
-    playoffBracket = buildPlayoffBracket({ sections: playoffSections, userPickByGroup, winnerByGroup });
+    playoffBracket = buildPlayoffBracket({ sections: playoffSections, userPickByGroup, winnerByGroup, nowMs });
   }
 
   // Live dossier map for the picker's [i] affordance (PHA-921). Only read when
