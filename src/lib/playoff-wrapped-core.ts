@@ -57,6 +57,20 @@ export const COLOGNE_PHOTOS = {
     credit: "ESL One Cologne · Wikimedia · CC BY-SA",
     focus: "50% 30%",
   },
+  /**
+   * RESERVED (PHA-1274, Brandon): the magixx 1v4 — hand on his head in disbelief.
+   * The licensed HLTV/press reaction still is a follow-up (same licensing path as
+   * the venue stills above). The spot is reserved by pointing here: drop the
+   * licensed file in at /public/wrapped/magixx-1v4.jpg and the slide's photo band
+   * lights up with ZERO code change (PhotoFigure hides gracefully until it
+   * exists). Until then the beat rides its copy + Spirit logo.
+   */
+  magixx: {
+    src: "/wrapped/magixx-1v4.jpg",
+    alt: "magixx, hand on his head in disbelief after his 1v4 clutch",
+    credit: "magixx 1v4 · IEM Cologne — reaction still",
+    focus: "50% 26%",
+  },
 } satisfies Record<string, WrappedPhoto>;
 
 /**
@@ -140,6 +154,20 @@ export const COLOGNE_PLAYOFF_MOMENTS: readonly PlayoffMoment[] = [
     body: "9z (#13) knocked out top-seeded Vitality to make it on a negative round diff, and BetBoom (#15) swept title contender Falcons. Nobody had this bracket — and now they're in the Cathedral.",
     logoPickIds: [112, 137],
     photo: COLOGNE_PHOTOS.player,
+  },
+  {
+    // RESERVED (PHA-1274, Brandon, 2026-06-20): "reserve a spot for magixx 1v4
+    // with a pic of his hand on his head in disbelief." Spirit = pickid 81. The
+    // reaction still is licensed-follow-up (COLOGNE_PHOTOS.magixx → drop file in,
+    // zero code change). Copy + Spirit logo carry the beat until it lands.
+    id: "po-m-magixx-1v4",
+    eyebrow: "HISTORIC MOMENT",
+    headline: "magixx, one man against four — and still standing.",
+    figure: "1v4",
+    figureCaption: "Spirit's round out of nothing",
+    body: "Last man alive, the round already written off, magixx turned a 1v4 into a win — then froze, hand on his head, not quite believing it himself. The Cathedral lost its mind.",
+    logoPickIds: [81],
+    photo: COLOGNE_PHOTOS.magixx,
   },
 ] as const;
 
