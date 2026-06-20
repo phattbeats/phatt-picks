@@ -73,7 +73,7 @@ export interface PreLockPayload {
  * Sub-day offsets read in hours/minutes; we only switch to days at >= 2 days,
  * so the spec's "24-hour" warning labels "24h" (not "1d").
  */
-export function offsetLabel(offsetMs: number): string {
+function offsetLabel(offsetMs: number): string {
   if (offsetMs >= 2 * DAY_MS && offsetMs % DAY_MS === 0) return `${offsetMs / DAY_MS}d`;
   if (offsetMs % HOUR_MS === 0) return `${offsetMs / HOUR_MS}h`;
   return `${Math.round(offsetMs / MINUTE_MS)}m`;

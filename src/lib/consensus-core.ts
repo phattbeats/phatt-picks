@@ -142,7 +142,7 @@ function bucketGrain(sectionId: number, slotIndex: number): string {
 }
 
 /** Composite key at bucket grain — section + group + (bucket | slot). */
-export function bucketConsensusKey(sectionId: number, groupId: number, slotIndex: number): string {
+function bucketConsensusKey(sectionId: number, groupId: number, slotIndex: number): string {
   return `${sectionId}:${groupId}:${bucketGrain(sectionId, slotIndex)}`;
 }
 

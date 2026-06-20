@@ -58,7 +58,7 @@ export interface Prediction {
  * integer range is accepted; anything larger has already lost digits and is
  * rejected rather than silently mislocking an item.
  */
-export function toItemIdString(itemid: RawPrediction["itemid"]): string | null {
+function toItemIdString(itemid: RawPrediction["itemid"]): string | null {
   if (itemid === null || itemid === undefined || itemid === 0 || itemid === "0") return null;
   if (typeof itemid === "string") return assertDigitString(itemid, "itemid");
   // typeof === "number"
