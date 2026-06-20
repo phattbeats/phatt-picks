@@ -116,14 +116,19 @@ export async function POST(req: NextRequest) {
   }
 
   // One drop per sender per pick — swap the stamp on a repeat instead of stacking.
+  // The key includes targetPlayerId because playoff groups are shared across all
+  // players (group 274 = QF1 for everyone, slot 0); without it a repeat drop on a
+  // DIFFERENT player at the same (section, group, slot) collided and silently
+  // re-stamped the first target instead of landing on the new pick (PHA-1262).
   await prisma.reaction.upsert({
     where: {
-      senderId_eventId_sectionId_groupId_slotIndex: {
+      senderId_eventId_sectionId_groupId_slotIndex_targetPlayerId: {
         senderId: session.playerId,
         eventId,
         sectionId: sId,
         groupId: gId,
         slotIndex: slot,
+        targetPlayerId,
       },
     },
     create: {
