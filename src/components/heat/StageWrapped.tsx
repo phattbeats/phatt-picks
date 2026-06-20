@@ -394,6 +394,31 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
 /* Slide renderers                                                      */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The documentary photo band (PHA-1274 "dank HLTV photo" twist). If the image
+ * fails to load it hides itself rather than leaving a broken-image icon — this
+ * is what lets us *reserve a spot* for a still that isn't licensed/dropped in
+ * yet (e.g. the magixx 1v4 reaction): author the beat now, drop the file into
+ * /public/wrapped later, and the band appears with zero code change. Until then
+ * the slide's copy + logos carry it.
+ */
+function PhotoFigure({ photo }: { photo: NonNullable<WrappedSlide["photo"]> }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return (
+    <figure className="sw-photo">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={photo.src}
+        alt={photo.alt}
+        style={{ objectPosition: photo.focus ?? "50% 50%" }}
+        onError={() => setFailed(true)}
+      />
+      {photo.credit && <figcaption>{photo.credit}</figcaption>}
+    </figure>
+  );
+}
+
 function SlideCard({ slide }: { slide: WrappedSlide }) {
   const logos = slide.teamLogos ?? [];
   const badge = slide.stageBadge;
@@ -403,17 +428,7 @@ function SlideCard({ slide }: { slide: WrappedSlide }) {
           leads the slide: the Cologne cathedral, the arena crowd, a player
           mid-scream. Sits above the copy with a fade into the deck so the text
           stays legible; credit rides along the bottom edge. */}
-      {slide.photo && (
-        <figure className="sw-photo">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={slide.photo.src}
-            alt={slide.photo.alt}
-            style={{ objectPosition: slide.photo.focus ?? "50% 50%" }}
-          />
-          {slide.photo.credit && <figcaption>{slide.photo.credit}</figcaption>}
-        </figure>
-      )}
+      {slide.photo && <PhotoFigure photo={slide.photo} />}
       {/* Brand mark (major / game logo) — cover + closer slides. Smaller when a
           stage badge is the hero so the STAGE logo leads. */}
       {slide.brandLogo && (
