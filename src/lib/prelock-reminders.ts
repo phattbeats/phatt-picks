@@ -64,7 +64,7 @@ function loadOverrideLocks(): Record<number, StageLock> | null {
  *   • `EVENT_ID` — pin to one specific event from the registry, even if the
  *     clock wouldn't call it live yet (a manual pre-go-live dry run).
  */
-export function reminderTargets(now: number = Date.now()): ReminderTarget[] {
+function reminderTargets(now: number = Date.now()): ReminderTarget[] {
   const envPin = process.env.EVENT_ID ? Number(process.env.EVENT_ID) : null;
   const override = loadOverrideLocks();
 

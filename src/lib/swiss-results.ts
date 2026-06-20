@@ -110,7 +110,7 @@ export interface LiveBracket {
   fetchedAtIso: string;
 }
 
-export function hasStandingsSource(eventId: number, sectionId: number): boolean {
+function hasStandingsSource(eventId: number, sectionId: number): boolean {
   return sectionId in sectionSourcesFor(eventId);
 }
 
