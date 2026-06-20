@@ -27,16 +27,45 @@ self.addEventListener("install", () => {
 });
 
 self.addEventListener("activate", (event) => {
-  // Purge ALL Cache Storage on every activation. This app is deliberately
-  // cache-light and stores nothing, but a prior SW iteration (or any future
-  // regression) that did cache would otherwise leave stale entries that survive
-  // reloads and deploys — the "saved cached version" Brandon flagged (PHA-1269).
-  // Deleting unconditionally guarantees no stale build can ever be served.
   event.waitUntil(
     (async () => {
+      // Purge ALL Cache Storage on activation. This app is deliberately
+      // cache-light and stores nothing, but a prior SW iteration (or any future
+      // regression) that cached would otherwise leave stale entries that survive
+      // reloads and deploys — the "saved cached version" Brandon flagged.
       const keys = await caches.keys();
       await Promise.all(keys.map((k) => caches.delete(k)));
       await self.clients.claim();
+
+      // BROADCAST RECOVERY (PHA-1269). A fresh worker means a new deploy. Bounce
+      // every open client to the current build so anyone stuck on an old cached
+      // version is pulled onto the fix — this is the one mechanism that reaches an
+      // installed PWA / SW-controlled tab even when its HTML is cached, because the
+      // worker updates independently of the page's HTTP cache. We navigate with a
+      // one-shot cache-busting `_v` param so the reload is GUARANTEED to fetch the
+      // current HTML from the network (bypassing a stale cached copy) rather than
+      // re-serving the broken one. Once per activation (once per deploy) → no loop;
+      // `_v` is ignored by the app and invisible in a standalone PWA (no URL bar).
+      try {
+        const wins = await self.clients.matchAll({ type: "window" });
+        await Promise.all(
+          wins.map((c) => {
+            if (typeof c.navigate !== "function") return undefined;
+            let href;
+            try {
+              const u = new URL(c.url);
+              u.searchParams.set("_v", String(Date.now()));
+              href = u.href;
+            } catch {
+              href = c.url;
+            }
+            return c.navigate(href).catch(() => {});
+          }),
+        );
+      } catch {
+        // navigate() unsupported (e.g. iOS Safari) — clients still got the purge +
+        // claim, and the no-store HTML + ChunkLoadError self-heal recover them.
+      }
     })(),
   );
 });
