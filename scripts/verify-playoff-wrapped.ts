@@ -22,6 +22,9 @@
 import {
   buildPlayoffWrappedDeck,
   playoffWrappedHasContent,
+  COLOGNE_PHOTOS,
+  COLOGNE_PLAYOFF_MOMENTS,
+  COLOGNE_PLAYOFF_TEAMS,
   type PlayoffWrappedAssets,
   type PlayoffWrappedFacts,
   type PlayoffWrappedPersonal,
@@ -41,6 +44,8 @@ function check(name: string, cond: boolean) {
 
 // A tiny logo table for the Cologne field (pickId → name). Only these resolve.
 const NAMES: Record<number, string> = {
+  59: "G2",
+  81: "Spirit",
   85: "FURIA",
   89: "Vitality",
   112: "9z Team",
@@ -98,7 +103,8 @@ check("signed-out has champion slide", outIds.includes("po-champion"));
 check("signed-out has the run", outIds.includes("po-run"));
 check("signed-out has the buster", outIds.includes("po-buster"));
 check("signed-out has NO personal slides", !outIds.some((id) => id.startsWith("po-your") || id === "po-rank" || id === "po-bleachers"));
-check("signed-out outro prompts sign-in", out[out.length - 1].id === "po-outro" && /sign in/i.test(out[out.length - 1].body ?? ""));
+check("signed-out closes on the post-credits stinger", out[out.length - 1].id === "po-stinger");
+check("signed-out thank-you prompts sign-in", /sign in/i.test(out.find((s) => s.id === "po-thanks")?.body ?? ""));
 check("champion slide names FURIA", /FURIA/.test(out.find((s) => s.id === "po-champion")?.headline ?? ""));
 check("champion slide carries the trophy figure", out.find((s) => s.id === "po-champion")?.figure === "🏆");
 check("run slide lists beaten teams", /9z Team/.test(out.find((s) => s.id === "po-run")?.body ?? "") && /Vitality/.test(out.find((s) => s.id === "po-run")?.body ?? ""));
@@ -139,7 +145,30 @@ const yourChamp = mine.find((s) => s.id === "po-your-champion");
 check("matched champion lights YOU CALLED THE CHAMPION", yourChamp?.calledIt?.label === "YOU CALLED THE CHAMPION");
 check("matched champion headline reads 'crowned'", /crowned/i.test(yourChamp?.headline ?? ""));
 check("rank slide shows upward move", mine.find((s) => s.id === "po-rank")?.figure === "▲4");
-check("personal outro does NOT prompt sign-in", !/sign in/i.test(mine[mine.length - 1].body ?? ""));
+check("personal thank-you does NOT prompt sign-in", !/sign in/i.test(mine.find((s) => s.id === "po-thanks")?.body ?? ""));
+check("personal deck still closes on the stinger", mine[mine.length - 1].id === "po-stinger");
+
+// ---- PHA-1274 "big finish": every team gets a slide + heartfelt closer + stinger. ----
+check("all eight playoff teams are authored", COLOGNE_PLAYOFF_TEAMS.length === 8);
+check("every team gets its own slide", COLOGNE_PLAYOFF_TEAMS.every((t) => outIds.includes(`po-team-${t.pickId}`)));
+check("nations bridge precedes the team tributes", outIds.indexOf("po-nations") < outIds.indexOf(`po-team-${COLOGNE_PLAYOFF_TEAMS[0].pickId}`));
+check("team slide carries its region chip", out.find((s) => s.id === "po-team-85")?.figureCaption === "South America");
+check("team slide carries its logo", (out.find((s) => s.id === "po-team-81")?.teamLogos ?? []).length === 1);
+check("finale is a big finish (15–20+ slides signed-out)", out.length >= 15 && out.length <= 22);
+check("heartfelt thank-you is from -phaTT", /from -?phaTT/i.test(out.find((s) => s.id === "po-thanks")?.eyebrow ?? "") || /phaTT/.test(out.find((s) => s.id === "po-thanks")?.body ?? ""));
+check("thank-you speaks to the community + the world", /communit|world|planet/i.test(out.find((s) => s.id === "po-thanks")?.body ?? ""));
+check("stinger is the post-credits 'will return'", /will return/i.test(out.find((s) => s.id === "po-stinger")?.headline ?? ""));
+check("stinger uses the Hotline brand, not the old name", /Hotline/.test(out.find((s) => s.id === "po-stinger")?.headline ?? "") && !/phaTT Picks/i.test(out.find((s) => s.id === "po-stinger")?.headline ?? ""));
+check("stinger teases the next Major (Singapore)", /Singapore/i.test(out.find((s) => s.id === "po-stinger")?.body ?? ""));
+check("thanks comes before the stinger", outIds.indexOf("po-thanks") < outIds.indexOf("po-stinger"));
+
+// ---- PHA-1274 scope correction: this is the *Major* Wrapped, not just Playoffs. ----
+check("cover frames the whole Major (32 walked in)", /thirty-two walked in/i.test(out[0].headline));
+check("cover eyebrow reads MAJOR, not PLAYOFFS", /MAJOR/.test(out[0].eyebrow ?? "") && !/PLAYOFFS/.test(out[0].eyebrow ?? ""));
+check("historic moments span the Major (Swiss-stage beats present)",
+  COLOGNE_PLAYOFF_MOMENTS.some((m) => m.id === "po-m-donk") && COLOGNE_PLAYOFF_MOMENTS.some((m) => m.id === "po-m-woxic"));
+check("nations bridge carries the 32→8 arc", /32/.test(out.find((s) => s.id === "po-nations")?.figure ?? ""));
+check("all eight playoff-team pages survive the rescope", COLOGNE_PLAYOFF_TEAMS.every((t) => outIds.includes(`po-team-${t.pickId}`)));
 
 // ---- Invariant 4 (negative): wrong title pick must NOT light the reward. ----
 const missedPersonal: PlayoffWrappedPersonal = {
@@ -155,6 +184,55 @@ const missedChamp = missed.find((s) => s.id === "po-your-champion");
 check("wrong title pick → no reward", missedChamp?.calledIt === undefined);
 check("wrong title pick headline reads 'had'", /had/i.test(missedChamp?.headline ?? ""));
 check("no reactions → no bleachers slide", !missed.some((s) => s.id === "po-bleachers"));
+
+// ---- PHA-1274 followup: historic moments + the "dank photo" twist. ----
+
+// Every authored moment ships a real, credited photo (no bare/uncredited stills).
+check("authored moments exist", COLOGNE_PLAYOFF_MOMENTS.length >= 2);
+check("every authored moment has a credited photo",
+  COLOGNE_PLAYOFF_MOMENTS.every((m) => !!m.photo && !!m.photo.src && !!m.photo.credit));
+check("photo catalog is credited", Object.values(COLOGNE_PHOTOS).every((p) => !!p.src && !!p.alt && !!p.credit));
+
+// Mid-bracket (NO champion) but authored moments → the deck now tells a story
+// instead of waiting for the Final.
+const midFacts: PlayoffWrappedFacts = {
+  championPickId: null,
+  moments: COLOGNE_PLAYOFF_MOMENTS,
+  totalMatches: 7,
+  decidedMatches: 2,
+};
+check("moments-only → hasContent true", playoffWrappedHasContent(midFacts));
+const mid = buildPlayoffWrappedDeck(midFacts, null, assets);
+const midIds = mid.map((s) => s.id);
+check("mid-bracket deck is non-empty", mid.length > 0);
+check("mid-bracket cover adapts copy", /Cathedral is loud/i.test(mid[0].headline));
+check("cover carries the cover photo", mid[0].photo?.src === COLOGNE_PHOTOS.cover.src);
+check("authored moment slides present", midIds.includes("po-m-cathedral") && midIds.includes("po-m-cinderellas"));
+check("authored moment carries its photo", mid.find((s) => s.id === "po-m-cathedral")?.photo?.src === COLOGNE_PHOTOS.cathedral.src);
+check("mid-bracket has NO champion slide", !midIds.includes("po-champion"));
+check("mid-bracket still has no personal slides (signed-out)", !midIds.some((id) => id.startsWith("po-your") || id === "po-rank"));
+
+// Mid-bracket personal: title pick is a live call, not a settled verdict.
+const midPersonal: PlayoffWrappedPersonal = {
+  displayName: "DJCeee",
+  bracketHits: 1,
+  bracketResolved: 2,
+  championPickId: 85, // still alive, no champion crowned yet
+  rankAfter: 7,
+  rankMove: { delta: 2, direction: "up" },
+};
+const midMine = buildPlayoffWrappedDeck(midFacts, midPersonal, assets);
+const midChamp = midMine.find((s) => s.id === "po-your-champion");
+check("undecided title pick → no reward", midChamp?.calledIt === undefined);
+check("undecided title pick reads as a live call", /pick to lift it/i.test(midChamp?.headline ?? ""));
+check("undecided rank slide reads 'where you stand'", /where you stand/i.test(midMine.find((s) => s.id === "po-rank")?.headline ?? ""));
+
+// Decided deck WITH authored moments → moments slot in before the champion.
+const decidedWithMoments = buildPlayoffWrappedDeck({ ...resolved, moments: COLOGNE_PLAYOFF_MOMENTS }, null, assets);
+const dwmIds = decidedWithMoments.map((s) => s.id);
+check("decided+moments: moments come before champion",
+  dwmIds.indexOf("po-m-cathedral") < dwmIds.indexOf("po-champion"));
+check("decided champion slide carries a photo", decidedWithMoments.find((s) => s.id === "po-champion")?.photo?.src === COLOGNE_PHOTOS.champion.src);
 
 console.log(`\nverify-playoff-wrapped: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

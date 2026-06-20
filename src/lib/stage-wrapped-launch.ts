@@ -34,6 +34,9 @@ import {
   type StageWrappedPersonal,
 } from "@/lib/stage-wrapped-content";
 import { latestWrappedSectionId } from "@/lib/stage-wrapped-launch-core";
+import { buildPlayoffBracket, PLAYOFF_ROUNDS } from "@/lib/playoff-bracket-core";
+import { isPlayoffWrapped, derivePlayoffStorylines } from "@/lib/playoff-wrapped-derive";
+import { buildPlayoffWrappedDeck, COLOGNE_PLAYOFF_MOMENTS } from "@/lib/playoff-wrapped-core";
 
 export interface StageWrappedAutoDeck {
   /** Stable per-stage id (event:section), drives the localStorage seen-key. */
@@ -203,4 +206,62 @@ export async function prepareStageWrappedAutoDeck(
 
   const slides = buildStageWrappedDeck(sectionId, stageLabel, personal, wrappedAssets);
   return slides.length ? { stageKey, eventId, sectionId, title: stageLabel, slides } : null;
+}
+
+/**
+ * The Hotline (Major) Wrapped auto-deck (PHA-1274). Mirrors the stage launcher
+ * above but for the single-elim finale: it builds the live playoff bracket the
+ * exact way the picks page does (committed playoff sections + the resolved
+ * StageOutcome winners), then HARD-GATES on `isPlayoffWrapped` — the deck is
+ * `null` until the Grand Final has crowned a champion, so it can never open
+ * before the final is in. Once wrapped, it derives the finale storylines, folds
+ * in the curated historic-moment photos, and builds the deck.
+ *
+ * v1 is the field deck (everyone sees the champion recap); the personal bracket
+ * slides are a fast-follow. Cheap: a single playoff StageOutcome query, and it
+ * bails immediately when the GF hasn't resolved.
+ */
+export async function prepareMajorWrappedAutoDeck(
+  eventId: number,
+  _playerId: string | null,
+): Promise<StageWrappedAutoDeck | null> {
+  const layout = getCommittedLayout();
+  const playoffSectionIds = PLAYOFF_ROUNDS.map((r) => r.sectionId);
+  const playoffSections = layout.sections.filter((s) => playoffSectionIds.includes(s.sectionid));
+  if (playoffSections.length === 0) return null;
+
+  // Cheap gate: one query scoped to the playoff sections.
+  const outcomes = await prisma.stageOutcome.findMany({
+    where: { eventId, sectionId: { in: playoffSectionIds } },
+  });
+  if (outcomes.length === 0) return null;
+
+  const winnerByGroup = new Map<number, number>();
+  for (const o of outcomes) if (o.slotIndex === 0) winnerByGroup.set(o.groupId, o.winnerPickId);
+
+  const bracket = buildPlayoffBracket({ sections: playoffSections, winnerByGroup });
+  // THE GATE: nothing until the Grand Final has a champion.
+  if (!isPlayoffWrapped(bracket)) return null;
+
+  const teamMap = buildTeamMap(layout);
+  const assets = buildWrappedAssets(teamMap);
+  const facts = derivePlayoffStorylines(bracket, {
+    nameOf: (pid: number) => teamMap.get(pid)?.name ?? null,
+  });
+  // Lead with the curated historic-moment photo beats (cathedral, donk, woxic,
+  // the Cinderellas, magixx) rather than the seed-derived stub; the champion /
+  // road / runner-up stay computed from the bracket.
+  facts.moments = COLOGNE_PLAYOFF_MOMENTS;
+
+  const slides = buildPlayoffWrappedDeck(facts, null, assets);
+  if (slides.length === 0) return null;
+
+  const gfSectionId = PLAYOFF_ROUNDS.find((r) => r.key === "GF")?.sectionId ?? 110;
+  return {
+    stageKey: `${eventId}:major-wrapped`,
+    eventId,
+    sectionId: gfSectionId,
+    title: "Cologne Major",
+    slides,
+  };
 }

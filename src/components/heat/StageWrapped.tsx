@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { Component, useCallback, useEffect, useReducer, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   buildPlaceholderSlides,
@@ -10,6 +10,7 @@ import {
   progressLabel,
   resolveAutoAdvanceMs,
   wrappedSeenKey,
+  WRAPPED_TRACKS,
   type DeckState,
   type WrappedSlide,
 } from "@/lib/stage-wrapped-core";
@@ -37,6 +38,26 @@ import { StageLogo } from "@/components/heat/StageLogo";
 /* ------------------------------------------------------------------ */
 
 const REPLAY_EVENT = "stage-wrapped:replay";
+
+/**
+ * Ironclad guard (PHA-1274): the Wrapped deck is the only thing that auto-opens
+ * app-wide, so a render fault inside it must NEVER take down the page (a white
+ * screen would block the whole app — exactly the class of failure PHA-1269
+ * fought). If the deck throws, we render nothing and the rest of the app is
+ * untouched.
+ */
+class WrappedBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch() {
+    /* swallowed on purpose — the recap is non-essential chrome */
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
 
 /** Fire from any "Replay the recap" button; the matching launcher re-opens. */
 export function replayStageWrapped(stageKey: string): void {
@@ -135,6 +156,9 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
   // royalty-free theme; closing the deck stops it.
   const audioRef = useRef<HTMLAudioElement>(null);
   const [soundOn, setSoundOn] = useState(false);
+  // Which backing track is selected (PHA-1274 — multiple moods, see WRAPPED_TRACKS).
+  const [trackIndex, setTrackIndex] = useState(0);
+  const track = WRAPPED_TRACKS[trackIndex] ?? WRAPPED_TRACKS[0];
   const toggleSound = useCallback(() => {
     const el = audioRef.current;
     if (!el) return;
@@ -148,6 +172,23 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
       return true;
     });
   }, []);
+  // Cycle to the next mood. If sound is already on, swap the source and keep
+  // playing from the top of the new track; if it's off, just arm the choice.
+  const cycleTrack = useCallback(() => {
+    setTrackIndex((i) => (i + 1) % WRAPPED_TRACKS.length);
+  }, []);
+  // When the track changes mid-play, reload the <audio> to the new src and
+  // resume (the src prop change alone doesn't restart a playing element).
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    el.load();
+    if (soundOn) {
+      el.volume = 0.55;
+      void el.play().catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trackIndex]);
   // Stop + reset the track whenever the deck closes.
   useEffect(() => {
     if (open) return;
@@ -271,15 +312,12 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
         <span className="br-tr" />
         <span className="br-bl" />
 
-        {/* Epic royalty-free soundtrack — "The Descent" by Kevin MacLeod (CC-BY 3.0). */}
-        <audio ref={audioRef} src="/audio/wrapped-theme.mp3" loop preload="none" aria-hidden="true" />
-        <button
-          className="sw-sound"
-          type="button"
-          aria-pressed={soundOn}
-          aria-label={soundOn ? "Mute soundtrack" : "Play epic soundtrack"}
-          title={soundOn ? "Mute" : "Play epic soundtrack — 'The Descent', Kevin MacLeod (CC-BY)"}
-          onClick={toggleSound}
+        {/* Royalty-free soundtrack — Kevin MacLeod (CC-BY 3.0). Multiple moods
+            (PHA-1274): the sound button plays/mutes; the mood button cycles
+            epic → bittersweet → somber. `key` remounts the element on track
+            change so the new src is picked up cleanly. */}
+        <audio key={track.id} ref={audioRef} src={track.src} loop preload="none" aria-hidden="true" />
+        <div
           style={{
             position: "absolute",
             top: 10,
@@ -288,32 +326,78 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
             display: "inline-flex",
             alignItems: "center",
             gap: 6,
-            padding: "5px 9px",
-            background: soundOn ? "rgba(240,163,0,0.14)" : "transparent",
-            border: "1px solid var(--hair-2)",
-            borderColor: soundOn ? "var(--heat)" : "var(--hair-2)",
-            color: soundOn ? "var(--heat)" : "var(--ink-mid)",
-            borderRadius: 4,
-            cursor: "pointer",
-            font: "inherit",
           }}
         >
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" />
-            {soundOn ? (
-              <>
-                <path d="M15.5 8.5a5 5 0 0 1 0 7" />
-                <path d="M18.5 5.5a9 9 0 0 1 0 13" />
-              </>
-            ) : (
-              <line x1="16" y1="9" x2="22" y2="15" />
-            )}
-            {!soundOn && <line x1="22" y1="9" x2="16" y2="15" />}
-          </svg>
-          <span className="eyebrow-mono" style={{ fontSize: 9, letterSpacing: "0.12em" }}>
-            {soundOn ? "SOUND ON" : "MUSIC"}
-          </span>
-        </button>
+          <button
+            className="sw-sound"
+            type="button"
+            aria-pressed={soundOn}
+            aria-label={soundOn ? "Mute soundtrack" : `Play soundtrack — ${track.title}`}
+            title={soundOn ? "Mute" : `Play soundtrack — ${track.credit}`}
+            onClick={toggleSound}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "5px 9px",
+              background: soundOn ? "rgba(240,163,0,0.14)" : "transparent",
+              border: "1px solid var(--hair-2)",
+              borderColor: soundOn ? "var(--heat)" : "var(--hair-2)",
+              color: soundOn ? "var(--heat)" : "var(--ink-mid)",
+              borderRadius: 4,
+              cursor: "pointer",
+              font: "inherit",
+            }}
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" />
+              {soundOn ? (
+                <>
+                  <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+                  <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+                </>
+              ) : (
+                <line x1="16" y1="9" x2="22" y2="15" />
+              )}
+              {!soundOn && <line x1="22" y1="9" x2="16" y2="15" />}
+            </svg>
+            <span className="eyebrow-mono" style={{ fontSize: 9, letterSpacing: "0.12em" }}>
+              {soundOn ? "SOUND ON" : "MUSIC"}
+            </span>
+          </button>
+          {/* Mood cycle — only worth showing when there's more than one track. */}
+          {WRAPPED_TRACKS.length > 1 && (
+            <button
+              className="sw-track"
+              type="button"
+              aria-label={`Change soundtrack mood (now: ${track.title} — ${track.mood})`}
+              title={`${track.title} — ${track.mood}. Tap for the next mood.`}
+              onClick={cycleTrack}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "5px 9px",
+                background: "transparent",
+                border: "1px solid var(--hair-2)",
+                color: "var(--ink-mid)",
+                borderRadius: 4,
+                cursor: "pointer",
+                font: "inherit",
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M17 1l4 4-4 4" />
+                <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                <path d="M7 23l-4-4 4-4" />
+                <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+              </svg>
+              <span className="eyebrow-mono" style={{ fontSize: 9, letterSpacing: "0.12em" }}>
+                {track.mood.toUpperCase()}
+              </span>
+            </button>
+          )}
+        </div>
 
         <button className="tsd-close" type="button" aria-label="Close" onClick={onClose}>
           <svg viewBox="0 0 24 24">
@@ -394,11 +478,41 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
 /* Slide renderers                                                      */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The documentary photo band (PHA-1274 "dank HLTV photo" twist). If the image
+ * fails to load it hides itself rather than leaving a broken-image icon — this
+ * is what lets us *reserve a spot* for a still that isn't licensed/dropped in
+ * yet (e.g. the magixx 1v4 reaction): author the beat now, drop the file into
+ * /public/wrapped later, and the band appears with zero code change. Until then
+ * the slide's copy + logos carry it.
+ */
+function PhotoFigure({ photo }: { photo: NonNullable<WrappedSlide["photo"]> }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return (
+    <figure className="sw-photo">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={photo.src}
+        alt={photo.alt}
+        style={{ objectPosition: photo.focus ?? "50% 50%" }}
+        onError={() => setFailed(true)}
+      />
+      {photo.credit && <figcaption>{photo.credit}</figcaption>}
+    </figure>
+  );
+}
+
 function SlideCard({ slide }: { slide: WrappedSlide }) {
   const logos = slide.teamLogos ?? [];
   const badge = slide.stageBadge;
   return (
     <div className={`sw-slide sw-kind-${slide.kind} sw-enter`}>
+      {/* Documentary photo (PHA-1274 "dank HLTV photo" twist) — a hero band that
+          leads the slide: the Cologne cathedral, the arena crowd, a player
+          mid-scream. Sits above the copy with a fade into the deck so the text
+          stays legible; credit rides along the bottom edge. */}
+      {slide.photo && <PhotoFigure photo={slide.photo} />}
       {/* Brand mark (major / game logo) — cover + closer slides. Smaller when a
           stage badge is the hero so the STAGE logo leads. */}
       {slide.brandLogo && (
@@ -582,12 +696,23 @@ interface AnnounceProps {
    * that already dismissed the auto-popup (PHA-1245 follow-up).
    */
   forceOpen?: boolean;
+  /**
+   * Opt-in app-wide auto-open (PHA-1274 — the Major Wrapped finale). OFF by
+   * default so stage recaps stay explicit-intent only (PHA-1269). When true the
+   * deck pops once per viewer, but IRONCLAD against the prior mobile-freeze:
+   * the open is deferred to idle (never blocks first paint / site access), the
+   * seen-flag is stamped before opening (a reload never re-pops), and the deck
+   * itself carries no GPU blur (PHA-1269) and fits mobile (PHA-1276). A render
+   * fault is swallowed by the boundary below, so it can never block the app.
+   */
+  autoOpen?: boolean;
 }
 
 /**
- * Drop-in launcher that mirrors `HowToPlayAnnounce`: auto-opens the deck once
- * per stage (localStorage keyed by event+stage), remembers dismissal, and
- * re-opens on a `replayStageWrapped(stageKey)` event from any entry point.
+ * Drop-in launcher that mirrors `HowToPlayAnnounce`: opens the deck on explicit
+ * intent (notification deep-link `forceOpen`, or a replay event), and — when
+ * `autoOpen` is set — pops it once per viewer, deferred to idle so it never
+ * blocks the page.
  */
 export function StageWrappedAnnounce({
   stageKey,
@@ -598,19 +723,50 @@ export function StageWrappedAnnounce({
   resolved = true,
   loading = false,
   forceOpen = false,
+  autoOpen = false,
 }: AnnounceProps) {
   const [open, setOpen] = useState(false);
   const deck = slides ?? buildPlaceholderSlides(title);
   const seenKey = wrappedSeenKey(eventId, sectionId);
 
-  // Auto-open on resolve was REMOVED (PHA-1269). The recap is a full-screen,
-  // animated takeover; popping it up unprompted on login froze low-end mobile
-  // (Android) and didn't fit small screens, blocking access to the rest of the
-  // app. The deck now opens ONLY on explicit intent: the recap notification
-  // deep link (?wrapped=1 → forceOpen below) or a "Replay the recap" button.
-  // `resolved` stays in the props for call-site compatibility but no longer
-  // triggers an auto-popup.
-  void resolved;
+  // App-wide auto-open is OFF for stage recaps (PHA-1269): popping the full-screen
+  // animated takeover unprompted on login froze low-end Android. It returns ONLY
+  // as an explicit opt-in for the Major Wrapped finale (`autoOpen`), and even
+  // then it is deferred + once-per-viewer + boundary-guarded (see below), and
+  // the deck no longer carries the GPU blur that caused the freeze. Stage recaps
+  // still open only via explicit intent (notification deep-link / replay button).
+  const autoRef = useRef(false);
+  useEffect(() => {
+    if (!autoOpen || !resolved || loading || autoRef.current) return;
+    let seen = false;
+    try {
+      seen = localStorage.getItem(seenKey) === "1";
+    } catch {
+      /* storage blocked — treat as unseen, still open once below */
+    }
+    if (seen) return;
+    autoRef.current = true;
+    // Defer to idle so the popup NEVER blocks first paint or access to the app
+    // (the prior freeze blocked the whole site). Falls back to a short timeout.
+    const ric: (cb: () => void) => number =
+      typeof window !== "undefined" && "requestIdleCallback" in window
+        ? (cb) => (window as unknown as { requestIdleCallback: (c: () => void, o?: { timeout: number }) => number }).requestIdleCallback(cb, { timeout: 1500 })
+        : (cb) => window.setTimeout(cb, 400);
+    const cancel: (id: number) => void =
+      typeof window !== "undefined" && "cancelIdleCallback" in window
+        ? (id) => (window as unknown as { cancelIdleCallback: (i: number) => void }).cancelIdleCallback(id)
+        : (id) => window.clearTimeout(id);
+    const id = ric(() => {
+      // Stamp BEFORE opening so a reload mid-deck never re-pops.
+      try {
+        localStorage.setItem(seenKey, "1");
+      } catch {
+        /* ignore */
+      }
+      setOpen(true);
+    });
+    return () => cancel(id);
+  }, [autoOpen, resolved, loading, seenKey]);
 
   // Deep-link force-open (PHA-1245 follow-up): the recap notification lands here
   // with ?wrapped=1, so open the deck once even if this device already saw it.
@@ -647,5 +803,9 @@ export function StageWrappedAnnounce({
     setOpen(false);
   }, [seenKey]);
 
-  return <StageWrapped open={open} onClose={close} slides={deck} title={title} loading={loading} />;
+  return (
+    <WrappedBoundary>
+      <StageWrapped open={open} onClose={close} slides={deck} title={title} loading={loading} />
+    </WrappedBoundary>
+  );
 }
