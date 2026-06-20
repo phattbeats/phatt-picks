@@ -100,6 +100,11 @@ export interface WrappedSlide {
   /** Personal reward: set when the viewer's pick matched this narrative moment. */
   calledIt?: { label: string; sub?: string };
   /**
+   * Optional call-to-action link rendered as a button on the slide (PHA-1274 —
+   * e.g. "See your coin" → /profile). Navigating away naturally closes the deck.
+   */
+  cta?: { href: string; label: string };
+  /**
    * Per-slide auto-advance, in ms. Falsy / omitted => this slide waits for the
    * user. The shell clamps to a sane floor so a stray `1` can't strobe.
    */

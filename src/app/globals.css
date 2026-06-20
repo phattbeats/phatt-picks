@@ -1547,6 +1547,17 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   margin: 13px auto 0; max-width: 32ch;
   font-size: 14px; line-height: 1.55; color: var(--ink-mid); text-wrap: pretty;
 }
+/* PHA-1274: a slide CTA button (e.g. "See your coin" → /profile). Mirrors the
+   primary nav button; navigating closes the deck. */
+.sw-cta {
+  position: relative; display: inline-flex; align-items: center; gap: 7px;
+  margin: 16px auto 2px; padding: 10px 20px; border-radius: 4px;
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none;
+  color: var(--surf-1); border: 1px solid transparent;
+  background: linear-gradient(120deg, var(--heat), var(--heat-hot));
+  box-shadow: 0 4px 18px var(--heat-glow);
+}
 
 /* PHA-1276: shave the tallest elements on small/short phones so a typical slide
    fits the viewport without needing to scroll the stage. The scroll fallback
