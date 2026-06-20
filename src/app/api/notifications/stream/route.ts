@@ -31,7 +31,7 @@
 
 import { NextRequest } from "next/server";
 import { getSession } from "@/lib/session";
-import { buildPlayerFeed } from "../route";
+import { buildPlayerFeed } from "@/lib/notifications-feed";
 import type { FeedView } from "@/lib/notifications-core";
 
 export const runtime = "nodejs";
