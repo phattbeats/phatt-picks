@@ -184,3 +184,43 @@ These cost real hours. Add to this file whenever a bug burns you.
   alone — the `hotline_entered` cookie bypass present in dev is not the live behavior.
 - **Rule:** to review a session-gated page on live, **mint a session JWT** (read
   `NEXTAUTH_SECRET` from the container env) rather than relying on the cookie bypass.
+
+### Playoff (and off-roster Swiss) winners never turn green — the seed-swap / off-roster rejection class
+This is the single most-repeated outcome bug in this repo: a match clearly finished, the
+source clearly has the winner, but the bracket/leaderboard never scores it. It bit Swiss as
+**PHA-1109** and the playoffs as **PHA-1273** (Cologne QF1/QF2 sat unresolved while QF3/QF4
+resolved — "temporally backwards", which is the tell that it's the validator, not the clock).
+
+**How outcome resolution actually works.** A `StageOutcome` row is written only after
+`normalizeOutcomes` (`src/lib/outcomes-core.ts`) accepts a candidate winner. There are three
+sources, and they are **not** validated the same way:
+- **`hltv`** (Swiss bridge) and **`valve`** (playoff answer key) read the winner from the
+  **live** tournament structure, so the winner is by construction a real, current team. Both
+  validate against the **global** event roster (`layout.teams`) — `trustsLiveField`.
+- **`liquipedia`** keeps the strict **per-group** check: its parse is name-matched and it
+  can't know Valve's live slot/seed order, so an out-of-group team really is a parse error.
+
+**Why the strict per-group check is wrong for live sources.** The committed per-group roster
+in the fixture is only a **pre-seed guess**. Two ways it legitimately drifts from reality:
+- *Swiss (PHA-1109):* the pick'em group carries 8 teams but the live Swiss runs 16, so a real
+  clinch by an "off-roster" team (B8 0:3 / Spirit 3:0) was rejected "not eligible for group".
+- *Playoffs (PHA-1273):* the bracket is **dynamically seeded**. Cologne's fixture seeded
+  groups 274/275 as Aurora–BetBoom / 9z–FURIA, but Valve's real bracket had them **swapped**
+  (274 = 9z–FURIA → FURIA 85, 275 = Aurora–BetBoom → Aurora 134). The picks UI overlays
+  Valve's live teams (`mergeLiveLayout` by `sectionid:groupid`), so players picked into
+  Valve's arrangement — yet the per-group check validated against the stale committed roster
+  and rejected 85/134 forever.
+- **Rule:** for `source=hltv`/`valve` validate against the **global** field, not the committed
+  per-group roster. Do **not** "fix" a missing playoff winner by editing the fixture seeds to
+  match Valve — the dynamic seed is Valve's to own; trust the live layout instead.
+
+**Who pokes the oracle (headless).** Swiss outcomes resolve from the on-read
+`/api/standings/refresh` warm (`bridgeSwissOutcomes`). **Playoff** outcomes come **only** from
+the Valve answer key (`ingestOutcomes` → `GetTournamentLayout`), which historically ran only on
+the owner's manual `POST /api/outcomes/ingest` or an unreliable `after()`-deferred read path —
+so nothing headless poked it after the owner's last run. **PHA-1273** wired `ingestOutcomes`
+into `refreshLiveResultsTick` (`src/lib/outcomes.ts`), the same traffic-independent in-process
+tick that resolves Swiss clinches. It's idempotent and self-gating (only locked groups with a
+single resolved pickid; already-resolved slots filtered before persist), so QF/SF/GF now turn
+green within a tick without any owner action. If a future major's playoffs still don't resolve,
+check that tick is wired and that the bracket sections are reachable by `ingestOutcomes`.
