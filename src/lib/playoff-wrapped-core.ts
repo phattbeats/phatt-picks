@@ -559,6 +559,21 @@ export function buildPlayoffWrappedDeck(
     slides.push(rankSlide(eyebrow, personal, decided));
   }
 
+  // Send them to their challenge coin (PHA-1274, Brandon: "make a note to have
+  // the player checkout the challenge coin"). A Major mints a collectible coin
+  // (PHA-1278) once it's archived — exactly when this finale fires — so the
+  // recap points them to their shelf. One-tap CTA closes the deck en route.
+  slides.push({
+    id: "po-coin",
+    kind: "moment",
+    eyebrow: "YOUR CHALLENGE COIN",
+    headline: "You earned the Cologne coin.",
+    body: "Playing the Major mints you a collectible challenge coin — its tier set by where you finished. Cologne's is on your shelf now. Go give it a spin.",
+    brandLogo: majorBrand,
+    cta: { href: "/profile", label: "See your coin →" },
+    autoAdvanceMs: AUTO_MS,
+  });
+
   // Closer, part 1 — the heartfelt thank-you from -phaTT (Brandon: "a very
   // heartfelt thank you from -phaTT ... love for the community of cs and the
   // unity of all the different countries in the world participating and the

@@ -602,6 +602,13 @@ function SlideCard({ slide }: { slide: WrappedSlide }) {
         </div>
       )}
       {slide.body && <p className="sw-body">{slide.body}</p>}
+      {slide.cta && (
+        <a className="sw-cta brk" href={slide.cta.href}>
+          <span className="br-tr" />
+          <span className="br-bl" />
+          {slide.cta.label}
+        </a>
+      )}
     </div>
   );
 }
