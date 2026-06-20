@@ -76,6 +76,7 @@ const CHUNK_RECOVERY = `(function(){
  *   plus window.__hlTrack(name,label) for explicit events. All cookieless.
  */
 const ANALYTICS = `(function(){
+  if(window.__hlInit) return; window.__hlInit=1; // guard against double-injection (HMR / cached dupe)
   try{ if(navigator.doNotTrack==='1'||window.doNotTrack==='1'||navigator.msDoNotTrack==='1') return; }catch(e){}
   var h=location.hostname;
   if(h==='localhost'||h==='127.0.0.1'||h==='0.0.0.0'||h==='::1'||h.indexOf('.')===-1||h.slice(-6)==='.local') return;
@@ -88,12 +89,15 @@ const ANALYTICS = `(function(){
     }catch(e){}
   }
   window.__hlTrack=function(name,label){ if(name) post({event:String(name),label:label?String(label):''}); };
-  var last='', maxScroll=0;
+  var last='', maxScroll=0, firstView=true;
   function flushScroll(){ if(maxScroll>=25){ post({event:'scroll',scroll:maxScroll}); maxScroll=0; } }
   function view(){
     var p=location.pathname; if(p===last) return; last=p;
     flushScroll(); maxScroll=0;
-    post({referrer:document.referrer||''});
+    // document.referrer is the ORIGINAL external referrer for the whole document
+    // and never changes on SPA nav — only attribute it to the first pageview, or
+    // every in-app click re-counts the same referrer.
+    post({referrer:firstView?(document.referrer||''):''}); firstView=false;
   }
   function wrap(m){ var o=history[m]; if(typeof o!=='function') return; history[m]=function(){ var r=o.apply(this,arguments); view(); return r; }; }
   wrap('pushState'); wrap('replaceState');
@@ -106,10 +110,16 @@ const ANALYTICS = `(function(){
       post({event:'disclosure_open',label:(s&&s.textContent||'').slice(0,80)});
     }
   }, true);
-  // Max scroll depth, flushed on leave.
+  // Max scroll depth, flushed on leave. rAF-gated so the layout read
+  // (scrollHeight) happens at most once per frame — this app is GPU-sensitive.
+  var ticking=false;
   window.addEventListener('scroll', function(){
-    var d=document.documentElement, sh=d.scrollHeight-d.clientHeight;
-    if(sh>0){ var pct=Math.round((d.scrollTop||document.body.scrollTop)/sh*100); if(pct>maxScroll) maxScroll=pct; }
+    if(ticking) return; ticking=true;
+    requestAnimationFrame(function(){
+      ticking=false;
+      var d=document.documentElement, sh=d.scrollHeight-d.clientHeight;
+      if(sh>0){ var pct=Math.round((d.scrollTop||document.body.scrollTop)/sh*100); if(pct>maxScroll) maxScroll=pct; }
+    });
   }, {passive:true});
   window.addEventListener('visibilitychange', function(){ if(document.visibilityState==='hidden') flushScroll(); });
   window.addEventListener('pagehide', flushScroll);

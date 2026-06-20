@@ -29,7 +29,7 @@ import { getSession } from "@/lib/session";
 import { verifyTurnstile } from "@/lib/captcha";
 import { attributeReferral } from "@/lib/invite";
 import { signSessionToken, sessionCookieOptions } from "@/lib/session-core";
-import { clientIpFromForwarded } from "@/lib/security-core";
+import { clientIpFromForwarded, trustedProxyHops } from "@/lib/security-core";
 import {
   decideLocalAuthAction,
   randomName,
@@ -40,19 +40,10 @@ import {
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 const IP_ACCOUNT_LIMIT = 5;
 
-// PHA-1045: how many reverse proxies sit in front of us. The right-most
-// X-Forwarded-For entries are the only ones added by infrastructure we control;
-// the left-most is client-settable and would let an attacker spoof a fresh IP
-// to dodge the per-IP account cap. Default 1 (our single Unraid proxy).
-const TRUSTED_PROXY_HOPS = (() => {
-  // Treat unset OR set-but-blank (a Force-Update drift outcome) as the default,
-  // and reject negatives — Number("") is 0, which would silently disable XFF
-  // trust, so guard the raw string before coercing.
-  const raw = process.env.TRUSTED_PROXY_HOPS?.trim();
-  if (!raw) return 1;
-  const n = Number(raw);
-  return Number.isFinite(n) && n >= 0 ? n : 1;
-})();
+// PHA-1045: how many reverse proxies sit in front of us — see trustedProxyHops()
+// in security-core. The right-most X-Forwarded-For entries are the only ones
+// added by infrastructure we control; the left-most is client-settable.
+const TRUSTED_PROXY_HOPS = trustedProxyHops();
 
 function requireSecret(): string {
   const secret = process.env.NEXTAUTH_SECRET;
