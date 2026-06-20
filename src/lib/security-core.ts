@@ -131,6 +131,19 @@ export function clientIpFromForwarded(
 }
 
 /**
+ * Number of trusted reverse-proxy hops, from TRUSTED_PROXY_HOPS (default 1).
+ * Treats unset/blank as the default and rejects negatives — `Number("")` is 0,
+ * which would silently disable XFF trust. Shared by every caller of
+ * clientIpFromForwarded so they all derive the client IP the same way.
+ */
+export function trustedProxyHops(): number {
+  const raw = process.env.TRUSTED_PROXY_HOPS?.trim();
+  if (!raw) return 1;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : 1;
+}
+
+/**
  * Fixed-window per-key cooldown. In-memory by design: the production image is a
  * single standalone Node server, so a module-level store is the whole fleet's
  * view. Pure given an injected `now`, so the verify harness can prove the
