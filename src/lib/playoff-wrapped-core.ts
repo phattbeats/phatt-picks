@@ -31,46 +31,81 @@ const AUTO_MS = 6000;
 /* ------------------------------------------------------------------------- *
  * The "dank HLTV photo" twist (PHA-1274).
  *
- * Brandon: "the twist for this wrapped is we include DANK photos from HLTV —
- * niko screaming, the cologne cathedral, etc." Photos live under /public/wrapped
- * and every one carries a real, licensable credit (the POC ships Wikimedia
- * Commons stills of the actual venue; HLTV/match-specific stills are a licensing
- * follow-up — see the PR). The marks below are the reusable handles the authored
- * moments and the champion slide reference, so swapping in a licensed HLTV still
- * later is a one-line change.
+ * Brandon: "the twist for this wrapped is we include DANK photos from HLTV."
+ * These are the real photographer stills from the IEM Cologne Major 2026 sets,
+ * curated from the official HLTV galleries and placed per slide (Brandon picked
+ * the "license + wire these in" route, 2026-06-20). Each lives under
+ * /public/wrapped and carries an HLTV credit; see public/wrapped/CREDITS.md for
+ * the per-file source + the rights note. Filenames are stable handles so a
+ * future major just drops its own set in.
  * ------------------------------------------------------------------------- */
 export const COLOGNE_PHOTOS = {
-  cathedral: {
-    src: "/wrapped/cologne-cathedral.jpg",
-    alt: "Cologne Cathedral towering over the city skyline",
-    credit: "Cologne Cathedral · Wikimedia · CC BY-SA",
-    focus: "50% 38%",
+  /** Cover — the packed LANXESS arena, "thirty-two walked in". */
+  cover: {
+    src: "/wrapped/major-cover.jpg",
+    alt: "The packed LANXESS Arena crowd at the IEM Cologne Major 2026",
+    credit: "IEM Cologne Major 2026 · HLTV",
+    focus: "50% 45%",
   },
-  arena: {
-    src: "/wrapped/cologne-arena.jpg",
-    alt: "A packed Counter-Strike arena in Cologne, the main stage lit blue",
-    credit: "ESL One Cologne · Wikimedia · CC BY-SA",
+  /** The Cathedral — the main stage, wide. */
+  cathedral: {
+    src: "/wrapped/major-cathedral.jpg",
+    alt: "The IEM Cologne Major 2026 main stage, the Cathedral of Counter-Strike",
+    credit: "IEM Cologne Major 2026 · HLTV",
     focus: "50% 42%",
   },
-  player: {
-    src: "/wrapped/cologne-player.jpg",
-    alt: "A Counter-Strike pro on the Cologne stage",
-    credit: "ESL One Cologne · Wikimedia · CC BY-SA",
+  /** donk / Spirit's Swiss dominance — moody hero portrait. */
+  donk: {
+    src: "/wrapped/major-donk.jpg",
+    alt: "A Team Spirit player on stage at the IEM Cologne Major 2026",
+    credit: "IEM Cologne Major 2026 · HLTV",
     focus: "50% 30%",
   },
+  /** woxic's clinch — a player draped in the Turkish flag. */
+  woxic: {
+    src: "/wrapped/major-woxic.jpg",
+    alt: "An Aurora player draped in the Turkish flag at the IEM Cologne Major 2026",
+    credit: "IEM Cologne Major 2026 · HLTV",
+    focus: "50% 35%",
+  },
+  /** The Cinderellas — arms-up celebration to the crowd. */
+  cinderella: {
+    src: "/wrapped/major-cinderella.jpg",
+    alt: "A player celebrating with arms raised to the crowd at the IEM Cologne Major 2026",
+    credit: "IEM Cologne Major 2026 · HLTV",
+    focus: "50% 35%",
+  },
   /**
-   * RESERVED (PHA-1274, Brandon): the magixx 1v4 — hand on his head in disbelief.
-   * The licensed HLTV/press reaction still is a follow-up (same licensing path as
-   * the venue stills above). The spot is reserved by pointing here: drop the
-   * licensed file in at /public/wrapped/magixx-1v4.jpg and the slide's photo band
-   * lights up with ZERO code change (PhotoFigure hides gracefully until it
-   * exists). Until then the beat rides its copy + Spirit logo.
+   * magixx 1v4 — the hand-to-face disbelief reaction (the QF vs G2 on Mirage).
+   * Stand-in reaction still from the HLTV set; swap to the exact magixx frame if
+   * we get it (same filename → zero code change).
    */
   magixx: {
     src: "/wrapped/magixx-1v4.jpg",
-    alt: "magixx, hand on his head in disbelief after his 1v4 clutch",
-    credit: "magixx 1v4 · IEM Cologne — reaction still",
-    focus: "50% 26%",
+    alt: "A player, hand to his face in disbelief, at the IEM Cologne Major 2026",
+    credit: "IEM Cologne Major 2026 · HLTV",
+    focus: "50% 30%",
+  },
+  /** Champion — the trophy. */
+  champion: {
+    src: "/wrapped/major-champion.jpg",
+    alt: "The IEM Cologne Major 2026 champions' trophy on stage",
+    credit: "IEM Cologne Major 2026 · HLTV",
+    focus: "50% 45%",
+  },
+  /** The Last Eight / nations — the crowd, hands up. */
+  nations: {
+    src: "/wrapped/major-nations.jpg",
+    alt: "Fans in the stands at the IEM Cologne Major 2026",
+    credit: "IEM Cologne Major 2026 · HLTV",
+    focus: "50% 45%",
+  },
+  /** Thank you from -phaTT — the fans. */
+  thanks: {
+    src: "/wrapped/major-thanks.jpg",
+    alt: "The IEM Cologne Major 2026 crowd packed into the arena",
+    credit: "IEM Cologne Major 2026 · HLTV",
+    focus: "50% 45%",
   },
 } satisfies Record<string, WrappedPhoto>;
 
@@ -144,7 +179,7 @@ export const COLOGNE_PLAYOFF_MOMENTS: readonly PlayoffMoment[] = [
     eyebrow: "THE CATHEDRAL",
     headline: "Welcome to the Cathedral of Counter-Strike.",
     body: "Thirty-two of the best teams in the world came to Cologne to fight through three Swiss stages for one of eight Playoff tickets — into the loudest building in Counter-Strike, the one every player wants to win in.",
-    photo: COLOGNE_PHOTOS.arena,
+    photo: COLOGNE_PHOTOS.cathedral,
   },
   {
     id: "po-m-donk",
@@ -152,7 +187,7 @@ export const COLOGNE_PLAYOFF_MOMENTS: readonly PlayoffMoment[] = [
     headline: "donk turned the Swiss into a highlight reel.",
     body: "Spirit barely conceded a round on the way through Cologne — a clean 3-0 over NaVi, Aurora and 9z, with donk, the Major MVP at sixteen, posting one of the most dominant individual runs the Major has seen. For a stretch, the rest of the field was playing for second.",
     logoPickIds: [81],
-    photo: COLOGNE_PHOTOS.cathedral,
+    photo: COLOGNE_PHOTOS.donk,
   },
   {
     id: "po-m-woxic",
@@ -162,7 +197,7 @@ export const COLOGNE_PLAYOFF_MOMENTS: readonly PlayoffMoment[] = [
     figureCaption: "Aurora clinch on Dust2, Stage 3",
     body: "With the Playoff berth on the line, woxic stood up in a 1v4 on Dust2 and won it — sealing Aurora's first run to a Major playoff stage since Copenhagen 2024, and the Turkish core back among the last eight.",
     logoPickIds: [134],
-    photo: COLOGNE_PHOTOS.player,
+    photo: COLOGNE_PHOTOS.woxic,
   },
   {
     id: "po-m-cinderellas",
@@ -172,13 +207,13 @@ export const COLOGNE_PLAYOFF_MOMENTS: readonly PlayoffMoment[] = [
     figureCaption: "9z and BetBoom booked Playoff tickets",
     body: "9z (#13) knocked out top-seeded Vitality to make it on a negative round diff, and BetBoom (#15) swept title contender Falcons. Nobody had this bracket — and now they're in the Cathedral.",
     logoPickIds: [112, 137],
-    photo: COLOGNE_PHOTOS.arena,
+    photo: COLOGNE_PHOTOS.cinderella,
   },
   {
-    // RESERVED (PHA-1274, Brandon, 2026-06-20): "reserve a spot for magixx 1v4
-    // with a pic of his hand on his head in disbelief." Spirit = pickid 81. The
-    // reaction still is licensed-follow-up (COLOGNE_PHOTOS.magixx → drop file in,
-    // zero code change). Copy + Spirit logo carry the beat until it lands.
+    // PHA-1274 (Brandon): "reserve a spot for magixx 1v4 with a pic of his hand
+    // on his head in disbelief." Spirit = pickid 81. Wired to a hand-to-face
+    // disbelief still from the HLTV set (COLOGNE_PHOTOS.magixx); swap to the
+    // exact magixx frame anytime — same filename, zero code change.
     id: "po-m-magixx-1v4",
     eyebrow: "HISTORIC MOMENT",
     headline: "magixx, one man against four — and still standing.",
@@ -348,7 +383,7 @@ export function buildPlayoffWrappedDeck(
       ? "Three Swiss gauntlets, a single-elimination bracket, and the loudest building in Counter-Strike named its champion. Before you see how you called it — here's how the Cologne Major went down."
       : "The Cologne Major is underway — thirty-two teams, three Swiss stages, and it's already made history. Here's the run so far.",
     brandLogo: majorBrand,
-    photo: COLOGNE_PHOTOS.cathedral,
+    photo: COLOGNE_PHOTOS.cover,
     stageBadge: { numeral: "MAJOR", label: "COLOGNE", sub: "WRAPPED" },
     autoAdvanceMs: AUTO_MS,
   });
@@ -389,7 +424,7 @@ export function buildPlayoffWrappedDeck(
           : "Champions of IEM Cologne 2026",
       body: `Eight teams entered the single-elim bracket. ${championName} ran the table${overRunnerUp} to be the last team standing in the Cathedral of Counter-Strike.`,
       teamLogos: logo(champId),
-      photo: COLOGNE_PHOTOS.arena,
+      photo: COLOGNE_PHOTOS.champion,
       autoAdvanceMs: AUTO_MS,
     });
   }
@@ -446,7 +481,7 @@ export function buildPlayoffWrappedDeck(
     figure: "32 → 8",
     figureCaption: "three Swiss gauntlets, eight survivors",
     body: "Brazil and Argentina, France and Turkey, Russia and Kazakhstan, the rebuilt and the unheralded — the eight that walked out of the gauntlet came from every corner of the world. One bracket, one server, the planet watching the same rounds at once. This is what Counter-Strike does.",
-    photo: COLOGNE_PHOTOS.arena,
+    photo: COLOGNE_PHOTOS.nations,
     autoAdvanceMs: AUTO_MS,
   });
   for (const t of COLOGNE_PLAYOFF_TEAMS) {
@@ -537,7 +572,7 @@ export function buildPlayoffWrappedDeck(
     body: !personal
       ? "Every pick, every reaction, every 3am refresh to catch a clutch from the other side of the world — that's what makes this. Counter-Strike puts the whole planet in one room, and you were in it. Sign in next time and we'll keep your card. From all of us at phaTT: thank you. We love this game, and we love this community. ♥"
       : "Every pick you made, every reaction you dropped, every late night you spent watching strangers from across the world play the game we all love — thank you. Counter-Strike puts the whole planet in one room, and you spent this Major in it with us. From all of us at phaTT: we love this game, and we love you. ♥",
-    photo: COLOGNE_PHOTOS.arena,
+    photo: COLOGNE_PHOTOS.thanks,
     stageBadge: { numeral: "♥", label: "FROM", sub: "phaTT" },
   });
 
