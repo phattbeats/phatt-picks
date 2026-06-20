@@ -180,7 +180,14 @@ Once live, each stage start is a small recurring routine:
 
 1. **Stage opens** → confirm Valve has seeded the next section's `picks_allowed` and the
    answer key resolves (the on-read outcome driver + Valve oracle handle this; watch a
-   `/leaderboard` load to confirm `StageOutcome` rows appear).
+   `/leaderboard` load to confirm `StageOutcome` rows appear). **Playoffs resolve headlessly**
+   now — `refreshLiveResultsTick` drives `ingestOutcomes` (the Valve answer key) on every tick,
+   so QF/SF/GF turn green without an owner trigger (PHA-1273). **If a winner never turns green
+   while QF1/QF2 lag QF3/QF4** ("temporally backwards"), it's the **seed-swap / off-roster
+   rejection class**, not the clock — the playoff bracket is dynamically seeded so the committed
+   fixture roster can drift from Valve's live bracket. Trust the live field; do **not** patch the
+   fixture seeds. Full mechanism + the PHA-1109 (Swiss) / PHA-1273 (playoff) history in
+   `docs/GOTCHAS.md` → "Playoff (and off-roster Swiss) winners never turn green".
 2. **Add the stage's HLTV URL** to `sectionSources` in the event registry entry (`events-core.ts`) if not already mapped.
 3. **Warm the caches** after any deploy during the stage — `GET /api/standings/refresh`
    (standings + outcome resolve) **and** `GET /api/team-stats/refresh` (dossier Last-5).
