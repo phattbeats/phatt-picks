@@ -161,32 +161,23 @@ export function NotificationBell() {
     else nav.clearAppBadge?.().catch(() => {});
   }, [unread]);
 
-  // PHA-1238 — prefix the browser tab title with "(N) ".
-  const unreadRef = useRef(unread);
-  useEffect(() => {
-    unreadRef.current = unread;
-  }, [unread]);
-  useEffect(() => {
-    const titleEl = document.querySelector("title");
-    if (!titleEl) return;
-    const apply = () => {
-      const base = document.title.replace(TITLE_PREFIX_RE, "");
-      const next = unreadRef.current > 0 ? `(${unreadRef.current}) ${base}` : base;
-      if (next !== document.title) document.title = next;
-    };
-    apply();
-    const obs = new MutationObserver(apply);
-    obs.observe(titleEl, { childList: true });
-    return () => {
-      obs.disconnect();
-      document.title = document.title.replace(TITLE_PREFIX_RE, "");
-      const nav = navigator as BadgeNavigator;
-      nav.clearAppBadge?.().catch(() => {});
-    };
-  }, []);
+  // PHA-1238 — prefix the browser tab title with "(N) " when unread.
+  //
+  // PHA-1269 CRITICAL FIX: the previous version watched <title> with a
+  // MutationObserver and re-applied the prefix on every mutation. Next.js/React
+  // also own <title> (route metadata), so the two fought: React reset the title
+  // to the route's value, the observer instantly re-prepended "(N)", React reset
+  // again — a sustained title mutation / re-render loop that pegged the main
+  // thread ~100%. It only ran for signed-in users (the bell renders authed), so
+  // every logged-in page "worked for a second, then froze and crashed Chrome"
+  // on low-RAM Android within ~5-10s. We now just set the title when the unread
+  // count changes — no observer, nothing to fight React with, nothing to loop.
   useEffect(() => {
     const base = document.title.replace(TITLE_PREFIX_RE, "");
     document.title = unread > 0 ? `(${unread}) ${base}` : base;
+    return () => {
+      document.title = document.title.replace(TITLE_PREFIX_RE, "");
+    };
   }, [unread]);
 
   // PHA-1241 — SSE connection, with polling fallback after 3 failed attempts.
