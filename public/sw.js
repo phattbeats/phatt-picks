@@ -27,7 +27,18 @@ self.addEventListener("install", () => {
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+  // Purge ALL Cache Storage on every activation. This app is deliberately
+  // cache-light and stores nothing, but a prior SW iteration (or any future
+  // regression) that did cache would otherwise leave stale entries that survive
+  // reloads and deploys — the "saved cached version" Brandon flagged (PHA-1269).
+  // Deleting unconditionally guarantees no stale build can ever be served.
+  event.waitUntil(
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+      await self.clients.claim();
+    })(),
+  );
 });
 
 // Network passthrough for top-level navigations only; everything else (SSE,
