@@ -10,10 +10,14 @@
  * earning backend: every input here is derived from existing picks/outcomes,
  * exactly like the /majors history view.
  *
- * TIERS (confirmed: "both as tiers"). The two struck finishes are the two tiers:
- *   • GOLD  — a top-fraction finish among the field (and always for the winner).
- *   • STEEL — everyone else who took part.
- * So showing up earns the steel coin; finishing near the top upgrades it to gold.
+ * TIERS (Brandon: "diamond gold silver bronze" — mirror the Viewer Pass coin's
+ * four tiers, but EARNED by finish here rather than mirrored from Valve). The
+ * struck finish is decided by where the player placed among the field:
+ *   • DIAMOND — the very top (the winner, or the top slice).
+ *   • GOLD    — next slice.
+ *   • SILVER  — next slice.
+ *   • BRONZE  — everyone else who took part (the base coin for showing up).
+ * Showing up earns bronze; climbing the board upgrades the finish.
  *
  * Pure module — no `@/` alias, no prisma, no fetch, no JSON import — so the
  * verify harness (scripts/verify-challenge-coin.ts) imports it directly under
@@ -21,14 +25,23 @@
  * database lives in the server module challenge-coins.ts.
  */
 
-export type CoinTier = "steel" | "gold";
+/** The four earned finishes, best → base. Mirrors the Viewer Pass coin names. */
+export type CoinTier = "diamond" | "gold" | "silver" | "bronze";
+
+/** All tiers, best-first — handy for legends/iteration. */
+export const COIN_TIERS: readonly CoinTier[] = ["diamond", "gold", "silver", "bronze"];
 
 /**
- * The top fraction of the field that earns the GOLD finish; everyone else who
- * took part gets STEEL. 0.25 = top quartile. Single knob — change here to retune
- * how hard gold is to earn (the verify harness pins the maths, not the value).
+ * Finish-percentile cutoffs (inclusive upper bound, best → base): a player in
+ * the top 10% strikes diamond, top 25% gold, top 50% silver, the rest bronze.
+ * The outright winner is always diamond regardless of field size. Single knob —
+ * retune here; the verify harness pins the maths, not the values.
  */
-export const GOLD_TOP_FRACTION = 0.25;
+export const TIER_CUTOFFS: Readonly<Record<Exclude<CoinTier, "bronze">, number>> = {
+  diamond: 0.1,
+  gold: 0.25,
+  silver: 0.5,
+};
 
 /** Everything needed to decide one player's coin for one Major. Pure shape. */
 export interface CoinInput {
@@ -66,30 +79,44 @@ export function isCoinEarned(i: { participated: boolean; archived: boolean }): b
 }
 
 /**
- * GOLD for a top-fraction finish (always for the outright winner), STEEL
- * otherwise. An unscored / unknown finish falls back to STEEL — you still earn
- * the coin for taking part, just not the gold tier. `frac` is injectable so the
- * verify harness can pin the cutoff maths independent of the shipped value.
+ * The earned tier for a finish among the field, by percentile (finish/fieldSize)
+ * against TIER_CUTOFFS: diamond → gold → silver → bronze. The outright winner is
+ * always diamond. An unscored / unknown finish falls back to BRONZE — you still
+ * earn the coin for taking part, just the base finish. `cutoffs` is injectable so
+ * the verify harness can pin the maths independent of the shipped values.
  */
 export function coinTierForFinish(
   finish: number | null,
   fieldSize: number,
-  frac: number = GOLD_TOP_FRACTION,
+  cutoffs: Readonly<Record<Exclude<CoinTier, "bronze">, number>> = TIER_CUTOFFS,
 ): CoinTier {
-  if (finish === null || finish < 1 || fieldSize < 1) return "steel";
-  if (finish === 1) return "gold";
-  const cutoff = Math.max(1, Math.ceil(fieldSize * frac));
-  return finish <= cutoff ? "gold" : "steel";
+  if (finish === null || finish < 1 || fieldSize < 1) return "bronze";
+  if (finish === 1) return "diamond";
+  const pct = finish / fieldSize;
+  if (pct <= cutoffs.diamond) return "diamond";
+  if (pct <= cutoffs.gold) return "gold";
+  if (pct <= cutoffs.silver) return "silver";
+  return "bronze";
 }
 
 /**
- * Pre-rendered coin art path for a Major + tier. The renders are generated
- * assets dropped under /public/coins (PHA-1278), so re-skinning a Major is a
- * one-shot asset swap — no code change. Future Majors just need their two PNGs
- * at this path; a missing asset degrades to the <Image> alt, never a crash.
+ * Pre-rendered FRONT art (the Major's logo face) for a Major + tier. The renders
+ * are generated assets dropped under /public/coins (PHA-1278), so re-skinning a
+ * Major is a one-shot asset swap — no code change. Future Majors just need their
+ * four PNGs at this path; a missing asset degrades to the <Image> alt, never a
+ * crash.
  */
 export function coinArtSrc(slug: string, tier: CoinTier): string {
   return `/coins/${slug}-${tier}.png`;
+}
+
+/**
+ * Pre-rendered BACK art for a tier — the generic struck reverse (CS2 mark +
+ * "MAJOR CHALLENGE COIN"), shared across every Major so a new event only needs
+ * its four front faces. Used by the inspect view's flip side.
+ */
+export function coinBackSrc(tier: CoinTier): string {
+  return `/coins/_back-${tier}.png`;
 }
 
 /**
@@ -105,7 +132,7 @@ export function deriveChallengeCoins(inputs: readonly CoinInput[]): ChallengeCoi
       eventId: i.eventId,
       slug: i.slug,
       name: i.name,
-      tier: i.scored ? coinTierForFinish(i.finish, i.fieldSize) : "steel",
+      tier: i.scored ? coinTierForFinish(i.finish, i.fieldSize) : "bronze",
       finish: i.finish,
       fieldSize: i.fieldSize,
     });

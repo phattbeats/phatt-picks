@@ -30,6 +30,9 @@ import {
   isEventArchived,
   type MajorHistoryRow,
 } from "@/lib/majors-core";
+import { getPlayerChallengeCoins } from "@/lib/challenge-coins";
+import { InspectableCoin } from "@/components/heat/CoinInspector";
+import type { ChallengeCoin } from "@/lib/challenge-coin-core";
 
 function ordSuffix(n: number): string {
   const v = n % 100;
@@ -162,6 +165,11 @@ export default async function MajorsPage() {
 
   const history = buildMajorsHistory(rows);
 
+  // Challenge coins (PHA-1278) the signed-in player has earned, indexed by event
+  // so each concluded Major's row can show its inspectable, drag-to-rotate coin.
+  const coins = await getPlayerChallengeCoins(session.playerId);
+  const coinByEvent = new Map<number, ChallengeCoin>(coins.map((c) => [c.eventId, c]));
+
   return (
     <>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -197,19 +205,30 @@ export default async function MajorsPage() {
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
-          {history.map((row) => (
-            <Link
+          {history.map((row) => {
+            const coin = coinByEvent.get(row.eventId);
+            return (
+            <div
               key={row.eventId}
+              style={{
+                display: "flex",
+                alignItems: "stretch",
+                gap: 0,
+                background: "var(--surf-1)",
+                border: "1px solid var(--hair)",
+              }}
+            >
+            <Link
               href={`/players/${encodeURIComponent(session.playerId)}?event=${row.eventId}`}
               className={isEventArchived(row.status) ? "" : "brk"}
               style={{
+                flex: 1,
+                minWidth: 0,
                 display: "grid",
                 gridTemplateColumns: "1fr auto",
                 gap: 12,
                 alignItems: "center",
                 padding: "16px",
-                background: "var(--surf-1)",
-                border: "1px solid var(--hair)",
                 textDecoration: "none",
                 color: "inherit",
               }}
@@ -258,7 +277,15 @@ export default async function MajorsPage() {
                 </span>
               </div>
             </Link>
-          ))}
+            {coin && (
+              <div className="major-row-coin">
+                <InspectableCoin coin={coin} size={60} />
+                <span className={`coin-collectible-tier ${coin.tier}`}>{coin.tier}</span>
+              </div>
+            )}
+            </div>
+            );
+          })}
         </div>
       )}
     </>

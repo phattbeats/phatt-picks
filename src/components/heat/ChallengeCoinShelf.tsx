@@ -9,8 +9,8 @@
  * hidden so a fresh profile isn't cluttered with an empty rack.
  */
 
-import Image from "next/image";
-import { coinArtSrc, type ChallengeCoin } from "@/lib/challenge-coin-core";
+import { type ChallengeCoin } from "@/lib/challenge-coin-core";
+import { InspectableCoin } from "@/components/heat/CoinInspector";
 
 function ordSuffix(n: number): string {
   const v = n % 100;
@@ -53,19 +53,9 @@ export function ChallengeCoinShelf({
       </div>
       <div className="coin-shelf-grid">
         {coins.map((c) => (
-          <div
-            key={c.eventId}
-            className="coin-collectible"
-            title={`${c.name} — ${c.tier} tier`}
-          >
+          <div key={c.eventId} className="coin-collectible">
             <div className="coin-collectible-disc">
-              <Image
-                src={coinArtSrc(c.slug, c.tier)}
-                alt={`${c.name} challenge coin (${c.tier})`}
-                width={112}
-                height={112}
-                unoptimized
-              />
+              <InspectableCoin coin={c} size={112} />
             </div>
             <div className={`coin-collectible-tier ${c.tier}`}>{c.tier}</div>
             <div className="coin-collectible-name">{c.name}</div>
