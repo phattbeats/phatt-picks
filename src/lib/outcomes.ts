@@ -16,8 +16,8 @@
  * already have; it never throws into the request path or wipes stored results.
  */
 
-import { after } from "next/server";
 import { prisma } from "./db";
+import { claimRefreshSlot, runDeferred } from "./source-refresh";
 import { getCommittedLayout } from "./layout";
 import {
   normalizeOutcomes,
@@ -224,41 +224,9 @@ export async function ingestOutcomes(eventId: number): Promise<IngestSummary> {
 const OUTCOMES_REFRESH_SOURCE = "outcomes-refresh";
 const OUTCOMES_REFRESH_MIN_INTERVAL_MS = 30_000;
 
-/**
- * Atomically claim the outcomes refresh slot — mirrors hltv.claimRefreshSlot
- * (PHA-863). Returns true iff the 30s floor has elapsed (or no row exists) AND
- * this caller won the race; under concurrency exactly one caller wins. A single
- * `updateMany` guarded by `lastCallAt < floor` is serialized by SQLite, so only
- * one flips the stamp; a count of 0 is disambiguated by a `create` that succeeds
- * only on the first-ever call. Best-effort: any DB error resolves to "allowed"
- * so a storage hiccup never permanently blocks the driver.
- */
-async function claimOutcomesRefreshSlot(): Promise<boolean> {
-  const now = new Date();
-  const floor = new Date(now.getTime() - OUTCOMES_REFRESH_MIN_INTERVAL_MS);
-  try {
-    const res = await prisma.sourceState.updateMany({
-      where: { source: OUTCOMES_REFRESH_SOURCE, lastCallAt: { lt: floor } },
-      data: { lastCallAt: now },
-    });
-    if (res.count > 0) return true; // won the slot: floor had elapsed
-    // INSERT OR IGNORE is atomic — succeeds only when no row exists, silently
-    // skips otherwise (same fix as hltv.claimRefreshSlot). Avoids the P2002 that
-    // `create` throws (and Prisma logs) when workers race at startup.
-    // NB: id + updatedAt are NOT NULL with only client-side Prisma defaults
-    // (@default(cuid()) / @updatedAt), so a raw insert MUST supply them or the
-    // row silently never inserts (OR IGNORE swallows the NOT NULL violation) —
-    // which would permanently wedge this claim on a fresh DB. Generate the id in
-    // SQL (randomblob) and stamp updatedAt = now.
-    const inserted = await prisma.$executeRaw`
-      INSERT OR IGNORE INTO "SourceState" ("id", "source", "lastCallAt", "updatedAt")
-      VALUES (lower(hex(randomblob(16))), ${OUTCOMES_REFRESH_SOURCE}, ${now}, ${now})
-    `;
-    return inserted > 0; // 1 = first-ever refresh; 0 = within floor or lost the race
-  } catch {
-    return true; // DB hiccup — don't let storage permanently block the driver
-  }
-}
+/** Claim the 30s outcomes refresh slot (shared compare-and-set, PHA-863/866). */
+const claimOutcomesRefreshSlot = (): Promise<boolean> =>
+  claimRefreshSlot(OUTCOMES_REFRESH_SOURCE, OUTCOMES_REFRESH_MIN_INTERVAL_MS);
 
 /**
  * On-read self-refresh of outcomes (PHA-866). The live read surfaces call this so
@@ -287,7 +255,7 @@ export async function refreshOutcomesOnRead(eventId: number): Promise<void> {
     // the live standings already crawled for the picks-page bracket (PHA-918).
     await ingestOutcomes(eventId);
     await bridgeSwissOutcomes(eventId);
-  });
+  }, "outcomes");
 }
 
 /**
@@ -548,23 +516,6 @@ export async function refreshLiveResultsTick(
   }
 
   return { eventId, ingested, resolved, stale };
-}
-
-/**
- * Run a best-effort background task without blocking (or coupling latency to) the
- * current render. Prefers Next's `after` so the work runs past the response and
- * isn't cut off; falls back to a floating promise when called outside a request
- * scope (e.g. tests). Errors are swallowed — the driver is best-effort.
- */
-function runDeferred(task: () => Promise<unknown>): void {
-  const run = () => {
-    void task().catch((e) => console.error("[outcomes] deferred refresh failed (non-fatal):", e));
-  };
-  try {
-    after(run);
-  } catch {
-    run();
-  }
 }
 
 /** Upsert validated outcomes. Resolved rows are immutable — create-or-leave. */

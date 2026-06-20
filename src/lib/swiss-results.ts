@@ -21,8 +21,12 @@
  * into the render — and never fabricates a record.
  */
 
-import { after } from "next/server";
 import { prisma } from "./db";
+import {
+  claimRefreshSlot,
+  stampRefreshSlot,
+  runDeferred,
+} from "./source-refresh";
 import {
   parseHltvSwissStandings,
   matchStandingsToLayout,
@@ -114,49 +118,13 @@ function hasStandingsSource(eventId: number, sectionId: number): boolean {
   return sectionId in sectionSourcesFor(eventId);
 }
 
-/**
- * Atomically claim the standings refresh slot against the ~1h floor — mirrors
- * hltv.claimRefreshSlot / claimOutcomesRefreshSlot. Returns true iff the floor
- * has elapsed (or no row exists yet) AND this caller won the race; under
- * concurrency exactly one wins. Best-effort: a DB hiccup resolves to "allowed"
- * so storage never permanently blocks the driver.
- */
-async function claimStandingsRefreshSlot(): Promise<boolean> {
-  const now = new Date();
-  const floor = new Date(now.getTime() - REFRESH_MIN_INTERVAL_MS);
-  try {
-    const res = await prisma.sourceState.updateMany({
-      where: { source: STANDINGS_REFRESH_SOURCE, lastCallAt: { lt: floor } },
-      data: { lastCallAt: now },
-    });
-    if (res.count > 0) return true; // won the slot: floor had elapsed
-    // id + updatedAt are NOT NULL with only client-side Prisma defaults, so a raw
-    // insert MUST supply them or OR IGNORE silently swallows the NOT NULL violation
-    // and the row never inserts (permanent wedge on a fresh DB). Generate the id in
-    // SQL and stamp updatedAt = now.
-    const inserted = await prisma.$executeRaw`
-      INSERT OR IGNORE INTO "SourceState" ("id", "source", "lastCallAt", "updatedAt")
-      VALUES (lower(hex(randomblob(16))), ${STANDINGS_REFRESH_SOURCE}, ${now}, ${now})
-    `;
-    return inserted > 0; // 1 = first-ever pull; 0 = within floor or lost the race
-  } catch {
-    return true; // DB hiccup — don't let storage block the driver
-  }
-}
+/** Claim the ~1h standings refresh slot (shared compare-and-set). */
+const claimStandingsRefreshSlot = (): Promise<boolean> =>
+  claimRefreshSlot(STANDINGS_REFRESH_SOURCE, REFRESH_MIN_INTERVAL_MS);
 
 /** Unconditionally stamp the refresh slot (owner-forced ingest backs the read path off). */
-async function stampStandingsRefreshSlot(): Promise<void> {
-  const now = new Date();
-  try {
-    await prisma.sourceState.upsert({
-      where: { source: STANDINGS_REFRESH_SOURCE },
-      update: { lastCallAt: now },
-      create: { source: STANDINGS_REFRESH_SOURCE, lastCallAt: now },
-    });
-  } catch {
-    // best-effort — a failed stamp just means the next read may re-pull early
-  }
-}
+const stampStandingsRefreshSlot = (): Promise<void> =>
+  stampRefreshSlot(STANDINGS_REFRESH_SOURCE);
 
 /**
  * Render a page through crawl4ai (bypasses the Cloudflare gate that 403s a direct
@@ -301,7 +269,7 @@ export async function refreshStandingsOnRead(
   if (!hasStandingsSource(eventId, sectionId)) return; // nothing to refresh
   if (!isWithinRefreshWindow(sectionId, nowMs)) return; // outside the reveal→end window — serve cache
   if (!(await claimStandingsRefreshSlot())) return; // within floor or lost the race
-  runDeferred(() => ingestStandings(eventId, sectionId));
+  runDeferred(() => ingestStandings(eventId, sectionId), "standings");
 }
 
 /** Is there already a cached standings blob for this section? (cheap existence check) */
@@ -467,17 +435,3 @@ export async function getSwissBracket(
   };
 }
 
-/**
- * Best-effort background task off the render path (Next `after`, falling back to
- * a floating promise outside a request scope). Errors swallowed — best-effort.
- */
-function runDeferred(task: () => Promise<unknown>): void {
-  const run = () => {
-    void task().catch((e) => console.error("[standings] deferred refresh failed (non-fatal):", e));
-  };
-  try {
-    after(run);
-  } catch {
-    run();
-  }
-}

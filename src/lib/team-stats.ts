@@ -22,8 +22,12 @@
  * drawer never renders empty and never shows a fabricated result.
  */
 
-import { after } from "next/server";
 import { prisma } from "./db";
+import {
+  claimRefreshSlot as claimSourceRefreshSlot,
+  stampRefreshSlot as stampSourceRefreshSlot,
+  runDeferred,
+} from "./source-refresh";
 import {
   TEAM_SOURCES,
   teamStatsCrawlTargets,
@@ -77,48 +81,13 @@ export interface LiveTeamStats {
   fetchedAtIso: string;
 }
 
-/**
- * Atomically claim the refresh slot against the ~1h floor — identical pattern to
- * claimStandingsRefreshSlot / claimOutcomesRefreshSlot. Returns true iff the floor
- * has elapsed (or no row exists) AND this caller won the race. Best-effort: a DB
- * hiccup resolves to "allowed" so storage never permanently blocks the driver.
- */
-async function claimRefreshSlot(): Promise<boolean> {
-  const now = new Date();
-  const floor = new Date(now.getTime() - REFRESH_MIN_INTERVAL_MS);
-  try {
-    const res = await prisma.sourceState.updateMany({
-      where: { source: TEAM_STATS_REFRESH_SOURCE, lastCallAt: { lt: floor } },
-      data: { lastCallAt: now },
-    });
-    if (res.count > 0) return true; // won the slot: floor had elapsed
-    // id + updatedAt are NOT NULL with only client-side Prisma defaults, so a raw
-    // insert MUST supply them or OR IGNORE silently swallows the NOT NULL violation
-    // and the row never inserts (permanent wedge on a fresh DB). Generate the id in
-    // SQL and stamp updatedAt = now.
-    const inserted = await prisma.$executeRaw`
-      INSERT OR IGNORE INTO "SourceState" ("id", "source", "lastCallAt", "updatedAt")
-      VALUES (lower(hex(randomblob(16))), ${TEAM_STATS_REFRESH_SOURCE}, ${now}, ${now})
-    `;
-    return inserted > 0; // 1 = first-ever pull; 0 = within floor or lost the race
-  } catch {
-    return true; // DB hiccup — don't let storage block the driver
-  }
-}
+/** Claim the ~1h team-stats refresh slot (shared compare-and-set). */
+const claimRefreshSlot = (): Promise<boolean> =>
+  claimSourceRefreshSlot(TEAM_STATS_REFRESH_SOURCE, REFRESH_MIN_INTERVAL_MS);
 
 /** Unconditionally stamp the refresh slot (a forced ingest backs the read path off). */
-async function stampRefreshSlot(): Promise<void> {
-  const now = new Date();
-  try {
-    await prisma.sourceState.upsert({
-      where: { source: TEAM_STATS_REFRESH_SOURCE },
-      update: { lastCallAt: now },
-      create: { source: TEAM_STATS_REFRESH_SOURCE, lastCallAt: now },
-    });
-  } catch {
-    // best-effort — a failed stamp just means the next read may re-pull early
-  }
-}
+const stampRefreshSlot = (): Promise<void> =>
+  stampSourceRefreshSlot(TEAM_STATS_REFRESH_SOURCE);
 
 /** crawl4ai result shape we read (markdown can be a string or {raw_markdown}). */
 interface Crawl4aiResult {
@@ -321,7 +290,7 @@ export async function refreshTeamStatsOnRead(
   if (await isEventFrozenById(eventId, nowMs)) return; // PHA-949/954: frozen (effectively archived) Majors never re-crawl
   if (!isWithinAnyMatchWindow(nowMs)) return; // off-day — serve cache, don't crawl
   if (!(await claimRefreshSlot())) return; // within floor or lost the race
-  runDeferred(() => ingestTeamStats(eventId));
+  runDeferred(() => ingestTeamStats(eventId), "team-stats");
 }
 
 /** Is there already a cached blob for this event? (cheap existence check) */
@@ -408,19 +377,4 @@ export async function getLiveTeamStats(eventId: number): Promise<LiveTeamStats |
     asOf: todayUtc(fetchedAt),
     fetchedAtIso: new Date(fetchedAt).toISOString(),
   };
-}
-
-/**
- * Best-effort background task off the render path (Next `after`, falling back to
- * a floating promise outside a request scope). Errors swallowed — best-effort.
- */
-function runDeferred(task: () => Promise<unknown>): void {
-  const run = () => {
-    void task().catch((e) => console.error("[team-stats] deferred refresh failed (non-fatal):", e));
-  };
-  try {
-    after(run);
-  } catch {
-    run();
-  }
 }

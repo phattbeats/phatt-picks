@@ -16,8 +16,8 @@
  * is exactly the prior behavior, never a crash.
  */
 
-import { after } from "next/server";
 import { prisma } from "./db";
+import { claimRefreshSlot, runDeferred } from "./source-refresh";
 import { parseSafeJson } from "./bigint";
 import { getCommittedLayout, type Layout, type LayoutEnvelope } from "./layout";
 import { mergeLiveLayout } from "./layout-merge-core";
@@ -81,35 +81,9 @@ export async function getEffectiveLayout(eventId: number): Promise<Layout> {
 const LAYOUT_REFRESH_SOURCE = "layout-refresh";
 const LAYOUT_REFRESH_MIN_INTERVAL_MS = 30_000;
 
-/**
- * Atomically claim the layout refresh slot — mirrors claimOutcomesRefreshSlot
- * (PHA-866). Returns true iff the 30s floor has elapsed (or no row exists) AND
- * this caller won the race; under concurrency exactly one caller wins. Any DB
- * error resolves to "allowed" so a storage hiccup never permanently blocks the
- * driver.
- */
-async function claimLayoutRefreshSlot(): Promise<boolean> {
-  const now = new Date();
-  const floor = new Date(now.getTime() - LAYOUT_REFRESH_MIN_INTERVAL_MS);
-  try {
-    const res = await prisma.sourceState.updateMany({
-      where: { source: LAYOUT_REFRESH_SOURCE, lastCallAt: { lt: floor } },
-      data: { lastCallAt: now },
-    });
-    if (res.count > 0) return true; // won the slot: floor had elapsed
-    // id + updatedAt are NOT NULL with only client-side Prisma defaults, so a raw
-    // insert MUST supply them or OR IGNORE silently swallows the NOT NULL violation
-    // and the row never inserts (permanent wedge on a fresh DB). Generate the id in
-    // SQL and stamp updatedAt = now.
-    const inserted = await prisma.$executeRaw`
-      INSERT OR IGNORE INTO "SourceState" ("id", "source", "lastCallAt", "updatedAt")
-      VALUES (lower(hex(randomblob(16))), ${LAYOUT_REFRESH_SOURCE}, ${now}, ${now})
-    `;
-    return inserted > 0; // 1 = first-ever refresh; 0 = within floor or lost the race
-  } catch {
-    return true; // DB hiccup — don't let storage permanently block the driver
-  }
-}
+/** Claim the 30s live-layout refresh slot (shared compare-and-set, PHA-866). */
+const claimLayoutRefreshSlot = (): Promise<boolean> =>
+  claimRefreshSlot(LAYOUT_REFRESH_SOURCE, LAYOUT_REFRESH_MIN_INTERVAL_MS);
 
 /**
  * On-read self-refresh of the live layout (mirrors refreshOutcomesOnRead). The
@@ -126,21 +100,5 @@ export async function refreshLayoutOnRead(eventId: number): Promise<void> {
   runDeferred(async () => {
     const envelope = await fetchTournamentLayout(eventId);
     await cacheLiveLayout(eventId, envelope);
-  });
-}
-
-/**
- * Run a best-effort background task without blocking (or coupling latency to)
- * the current render. Prefers Next's `after`; falls back to a floating promise
- * outside a request scope. Errors are swallowed — the driver is best-effort.
- */
-function runDeferred(task: () => Promise<unknown>): void {
-  const run = () => {
-    void task().catch((e) => console.error("[layout-state] deferred refresh failed (non-fatal):", e));
-  };
-  try {
-    after(run);
-  } catch {
-    run();
-  }
+  }, "layout-state");
 }
