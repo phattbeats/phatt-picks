@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { extractLoginToken } from "@/lib/local-merge-core";
+
 /**
  * Lets a returning local player sign back in from another device by pasting
  * their login token (or the full login link). We extract the `t=` value if a
@@ -12,16 +14,9 @@ export function TokenSignInPanel() {
   const [value, setValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  function extractToken(raw: string): string {
-    const s = raw.trim();
-    const m = s.match(/[?&]t=([^&\s]+)/);
-    if (m) return decodeURIComponent(m[1]);
-    return s;
-  }
-
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    const token = extractToken(value);
+    const token = extractLoginToken(value);
     if (!token) return;
     setSubmitting(true);
     window.location.href = `/api/auth/token-login?t=${encodeURIComponent(token)}`;
