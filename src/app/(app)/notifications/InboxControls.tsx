@@ -18,7 +18,6 @@ import Link from "next/link";
 interface Props {
   filter: "all" | "unread";
   unread: number;
-  visibleIds: string[];
   page: number;
 }
 
@@ -34,32 +33,37 @@ async function postMarkOne(entryId: string) {
   }
 }
 
-async function postMarkAll(ids: string[]) {
-  // Server-side readAll already enumerates everything currently visible
-  // (across all sources), but we also pass the visible ids so the bulk
-  // mutation is scoped to this page and the unread tab does not get cleared
-  // by accident when the player only wants to clear what they see.
-  await Promise.all(
-    ids.map((entryId) =>
-      fetch("/api/notifications", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "read", entryId }),
-      }).catch(() => undefined),
-    ),
-  );
+async function postMarkAll() {
+  // "Mark all as read" means ALL of them, across every page — a single
+  // watermark write (action: "readAll"), not one POST per visible row. The
+  // previous per-id loop only marked the current page, so the unread count
+  // snapped back from 0 to the other-page remainder after router.refresh(),
+  // and it cost N requests instead of one.
+  try {
+    await fetch("/api/notifications", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "readAll" }),
+    });
+  } catch {
+    /* will reconcile on next page load */
+  }
 }
 
-export function InboxControls({ filter, unread, visibleIds, page }: Props) {
+export function InboxControls({ filter, unread, page }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [optimisticUnread, setOptimisticUnread] = useState(unread);
 
-  // Keep optimistic count in sync with the SSR pass when the user navigates
-  // pages or toggles tabs.
-  useEffect(() => {
+  // Keep the optimistic count in sync with the SSR pass when the user navigates
+  // pages or toggles tabs. Adjust during render (the React-recommended pattern)
+  // rather than in an effect — no cascading re-render, and the new count is used
+  // on this very render instead of one frame late.
+  const [seenUnread, setSeenUnread] = useState(unread);
+  if (unread !== seenUnread) {
+    setSeenUnread(unread);
     setOptimisticUnread(unread);
-  }, [unread]);
+  }
 
   // Per-item click delegation. The inbox page is server-rendered, so the
   // row <a> tags are present at mount time. We listen for clicks on the
@@ -89,11 +93,10 @@ export function InboxControls({ filter, unread, visibleIds, page }: Props) {
   }, []);
 
   function onMarkAll() {
-    if (visibleIds.length === 0) return;
+    if (optimisticUnread === 0) return;
     startTransition(async () => {
-      // Optimistic: every visible row loses its fresh state; the unread count
-      // drops to 0 (only the visible page's contribution is certain, but the
-      // server's readAll will catch the rest on next page load).
+      // Optimistic: every visible row loses its fresh state and the unread
+      // count drops to 0 — readAll is a true all-pages mark, so 0 is accurate.
       const rows = document.querySelectorAll<HTMLLIElement>("li.inbox-row.fresh");
       rows.forEach((li) => {
         li.classList.remove("fresh");
@@ -103,7 +106,7 @@ export function InboxControls({ filter, unread, visibleIds, page }: Props) {
         link?.removeAttribute("data-mark-on-click");
       });
       setOptimisticUnread(0);
-      await postMarkAll(visibleIds);
+      await postMarkAll();
       // Refresh the server tree so the next page render is consistent with
       // the (now-persisted) read state — important for the "unread" tab
       // which hides items the player has marked.
