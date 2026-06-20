@@ -1,7 +1,6 @@
 import { HeatHeader, type TopbarYouProps } from "@/components/heat/HeatHeader";
 import { HeatBottomNav } from "@/components/heat/HeatBottomNav";
 import { HowToPlayAnnounce } from "@/components/heat/HowToPlayAnnounce";
-import { StageWrappedGate } from "@/components/heat/StageWrappedGate";
 import { AnnouncePopup } from "@/components/heat/AnnouncePopup";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
@@ -48,9 +47,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             }}
           />
         )}
-        {/* Stage Wrapped recap (PHA-1051) — auto-opens the latest resolved stage's
-            recap for every signed-in viewer on any page, once per stage. */}
-        {session && <StageWrappedGate playerId={session.playerId} />}
+        {/* Stage Wrapped recap (PHA-1051) — the app-wide auto-open launcher was
+            REMOVED (PHA-1269): the full-screen recap deck auto-opening on login
+            froze low-end mobile (Android) and didn't fit small screens. The recap
+            is still available on demand from the stage reveal page ("Replay the
+            recap" button) and via the recap notification (?wrapped=1 deep link).
+            Nothing pops up on its own anymore. */}
         {children}
       </main>
       <HeatBottomNav />
