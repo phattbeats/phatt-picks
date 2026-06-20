@@ -19,8 +19,12 @@
  * even if this cycle missed it (accumulate, same as the dossier).
  */
 
-import { after } from "next/server";
 import { prisma } from "./db";
+import {
+  claimRefreshSlot as claimSourceRefreshSlot,
+  stampRefreshSlot as stampSourceRefreshSlot,
+  runDeferred,
+} from "./source-refresh";
 import {
   PLAYOFF_MARKET_SLUGS,
   gammaEventUrl,
@@ -52,47 +56,13 @@ interface SpotlightOddsBlob {
   fetchedAt: number;
 }
 
-/**
- * Atomically claim the refresh slot against the ~1h floor — identical pattern to
- * claimRefreshSlot in team-stats.ts. Returns true iff the floor has elapsed (or
- * no row exists) AND this caller won the race. Best-effort: a DB hiccup resolves
- * to "allowed" so storage never permanently blocks the driver.
- */
-async function claimRefreshSlot(): Promise<boolean> {
-  const now = new Date();
-  const floor = new Date(now.getTime() - ODDS_REFRESH_MIN_INTERVAL_MS);
-  try {
-    const res = await prisma.sourceState.updateMany({
-      where: { source: ODDS_REFRESH_SOURCE, lastCallAt: { lt: floor } },
-      data: { lastCallAt: now },
-    });
-    if (res.count > 0) return true;
-    // id + updatedAt are NOT NULL with only client-side Prisma defaults, so the
-    // raw insert MUST supply them or OR IGNORE swallows the NOT NULL violation
-    // (permanent wedge on a fresh DB). Generate the id in SQL, stamp updatedAt.
-    const inserted = await prisma.$executeRaw`
-      INSERT OR IGNORE INTO "SourceState" ("id", "source", "lastCallAt", "updatedAt")
-      VALUES (lower(hex(randomblob(16))), ${ODDS_REFRESH_SOURCE}, ${now}, ${now})
-    `;
-    return inserted > 0;
-  } catch {
-    return true;
-  }
-}
+/** Claim the ~1h spotlight-odds refresh slot (shared compare-and-set). */
+const claimRefreshSlot = (): Promise<boolean> =>
+  claimSourceRefreshSlot(ODDS_REFRESH_SOURCE, ODDS_REFRESH_MIN_INTERVAL_MS);
 
 /** Unconditionally stamp the refresh slot (a forced warm backs the read path off). */
-async function stampRefreshSlot(): Promise<void> {
-  const now = new Date();
-  try {
-    await prisma.sourceState.upsert({
-      where: { source: ODDS_REFRESH_SOURCE },
-      update: { lastCallAt: now },
-      create: { source: ODDS_REFRESH_SOURCE, lastCallAt: now },
-    });
-  } catch {
-    // best-effort
-  }
-}
+const stampRefreshSlot = (): Promise<void> =>
+  stampSourceRefreshSlot(ODDS_REFRESH_SOURCE);
 
 /**
  * Fetch one matchup event from gamma-api. Returns the first event object (the
@@ -200,14 +170,6 @@ async function ingestSpotlightOdds(eventId: number, nowMs: number): Promise<numb
   }
 }
 
-function runDeferred(task: () => Promise<unknown>): void {
-  try {
-    after(task);
-  } catch {
-    void task();
-  }
-}
-
 /**
  * On-read self-refresh (mirrors refreshTeamStatsOnRead). One atomic ~1h claim
  * gates the whole refresh; the fetch is DEFERRED past the response. Frozen /
@@ -227,7 +189,7 @@ export async function refreshSpotlightOddsOnRead(
   if (Object.keys(PLAYOFF_MARKET_SLUGS).length === 0) return; // gated — no matchups authored
   if (await isEventFrozenById(eventId, nowMs)) return; // archived Majors never re-fetch
   if (!(await claimRefreshSlot())) return; // within floor or lost the race
-  runDeferred(() => ingestSpotlightOdds(eventId, nowMs));
+  runDeferred(() => ingestSpotlightOdds(eventId, nowMs), "spotlight-odds");
 }
 
 /** Is there already a cached blob for this event? (cheap existence check) */
