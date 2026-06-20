@@ -1221,6 +1221,14 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   /* A recap is a takeover, not a scroll — fix the height so the slide stage
      owns the middle and the controls pin to the foot. */
   min-height: 60vh;
+  min-height: 60dvh;
+  /* PHA-1276: cap to the *visible* viewport. `dvh` tracks Android Chrome's
+     dynamic URL/nav bars, so the whole deck — close button, progress dots, the
+     slide, and the footer controls — always lands on-screen instead of being
+     pushed past the top edge as a bottom sheet (the "didn't fit my screen"
+     report). `vh` stays as the fallback for browsers without `dvh`. */
+  max-height: 88vh;
+  max-height: 92dvh;
   overflow: hidden;
   position: relative;
 }
@@ -1236,7 +1244,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .sw-panel > * { position: relative; z-index: 1; }
 @keyframes sw-bloom { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
 @media (min-width: 560px) {
-  .sw-panel { min-height: 0; height: auto; max-height: 80vh; }
+  .sw-panel { min-height: 0; height: auto; max-height: 80vh; max-height: 80dvh; }
 }
 
 /* Stories-style segmented progress. Each segment is a track; an inner fill
@@ -1244,7 +1252,10 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
    duration (--sw-fill-ms) for that Wrapped/Stories tick. */
 .sw-dots {
   display: flex; gap: 6px; justify-content: center;
-  padding: 6px 26px 2px; margin-bottom: 6px;
+  /* PHA-1276: top padding clears the absolutely-positioned corner controls
+     (close button top-right, sound/mood top-left) so the dot row never sits
+     under them on a narrow phone. */
+  padding: 18px 26px 2px; margin-bottom: 6px;
 }
 .sw-dot {
   flex: 1; max-width: 52px; height: 4px; padding: 0; border: none;
@@ -1263,10 +1274,16 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 
 /* Slide stage — flexes to fill, centers the card */
 .sw-stage {
-  flex: 1; display: flex; align-items: center; justify-content: center;
-  padding: 30px 8px; min-height: 0;
+  flex: 1; min-height: 0; display: flex;
+  /* PHA-1276: a tall slide (hero photo + big figure + body) scrolls *within*
+     the stage instead of clipping past the fixed-height panel on a short phone.
+     `margin: auto` on the slide centres it while it fits, yet still lets you
+     scroll to the very top when it doesn't — plain flex centering would pin the
+     overflow and cut off the top, which can't be scrolled back into view. */
+  overflow-y: auto; overscroll-behavior: contain;
+  padding: 26px 8px;
 }
-.sw-slide { width: 100%; text-align: center; }
+.sw-slide { width: 100%; text-align: center; margin: auto; }
 .sw-eyebrow {
   display: inline-block; margin-bottom: 16px; color: var(--heat);
   padding: 3px 9px; border: 1px solid color-mix(in srgb, var(--heat) 40%, transparent);
@@ -1291,6 +1308,18 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .sw-body {
   margin: 13px auto 0; max-width: 32ch;
   font-size: 14px; line-height: 1.55; color: var(--ink-mid); text-wrap: pretty;
+}
+
+/* PHA-1276: shave the tallest elements on small/short phones so a typical slide
+   fits the viewport without needing to scroll the stage. The scroll fallback
+   above still catches the rare extra-tall slide. */
+@media (max-width: 559px) {
+  .sw-stage { padding: 16px 6px; }
+  .sw-photo { height: 132px; margin-bottom: 12px; }
+  .sw-figure { font-size: clamp(44px, 16vw, 70px); margin-bottom: 6px; }
+  .sw-figcap { margin-bottom: 12px; }
+  .sw-eyebrow { margin-bottom: 12px; }
+  .sw-controls { padding-top: 12px; }
 }
 
 /* Kind-aware flavour — the framework ships generic, but each template gets a
