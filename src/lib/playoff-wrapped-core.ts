@@ -21,11 +21,43 @@
  * exercises every branch offline.
  */
 
-import type { WrappedSlide, WrappedTeamLogo } from "./stage-wrapped-core";
+import type { WrappedPhoto, WrappedSlide, WrappedTeamLogo } from "./stage-wrapped-core";
 import type { StageWrappedRankMove } from "./stage-wrapped-content";
 
 /** Per-slide auto-advance for the recap (floored by the shell to MIN_AUTO_ADVANCE_MS). */
 const AUTO_MS = 6000;
+
+/* ------------------------------------------------------------------------- *
+ * The "dank HLTV photo" twist (PHA-1274).
+ *
+ * Brandon: "the twist for this wrapped is we include DANK photos from HLTV —
+ * niko screaming, the cologne cathedral, etc." Photos live under /public/wrapped
+ * and every one carries a real, licensable credit (the POC ships Wikimedia
+ * Commons stills of the actual venue; HLTV/match-specific stills are a licensing
+ * follow-up — see the PR). The marks below are the reusable handles the authored
+ * moments and the champion slide reference, so swapping in a licensed HLTV still
+ * later is a one-line change.
+ * ------------------------------------------------------------------------- */
+export const COLOGNE_PHOTOS = {
+  cathedral: {
+    src: "/wrapped/cologne-cathedral.jpg",
+    alt: "Cologne Cathedral towering over the city skyline",
+    credit: "Cologne Cathedral · Wikimedia · CC BY-SA",
+    focus: "50% 38%",
+  },
+  arena: {
+    src: "/wrapped/cologne-arena.jpg",
+    alt: "A packed Counter-Strike arena in Cologne, the main stage lit blue",
+    credit: "ESL One Cologne · Wikimedia · CC BY-SA",
+    focus: "50% 42%",
+  },
+  player: {
+    src: "/wrapped/cologne-player.jpg",
+    alt: "A Counter-Strike pro on the Cologne stage",
+    credit: "ESL One Cologne · Wikimedia · CC BY-SA",
+    focus: "50% 30%",
+  },
+} satisfies Record<string, WrappedPhoto>;
 
 /**
  * Visual assets the builder can't compute itself: a team-logo resolver
@@ -66,11 +98,59 @@ export interface PlayoffBracketBuster {
 }
 
 /**
- * The hard, resolved facts of the finished bracket. The wiring layer (a sibling
+ * An authored, already-happened playoff beat — the "historic moments" Brandon
+ * asked for, each carrying a dank documentary photo. These are curated (not
+ * derived) so the recap has real story even mid-bracket, before there's a
+ * champion to crown.
+ */
+export interface PlayoffMoment {
+  id: string;
+  eyebrow: string;
+  headline: string;
+  body?: string;
+  figure?: string;
+  figureCaption?: string;
+  /** Team pickids whose logos illustrate the beat (0–3). */
+  logoPickIds?: number[];
+  /** The dank photo for this beat (cathedral / arena / a player moment). */
+  photo?: WrappedPhoto;
+}
+
+/**
+ * The historic Cologne Playoff beats that have ALREADY happened — curated, real,
+ * and photo-led. The wiring layer passes these into the deck so the recap shows
+ * story now (Cologne is mid-bracket as this is authored), not an empty card that
+ * waits for the Grand Final. Add/replace beats as the bracket plays out; the
+ * exact live results land here (or get derived) when the matches resolve.
+ */
+export const COLOGNE_PLAYOFF_MOMENTS: readonly PlayoffMoment[] = [
+  {
+    id: "po-m-cathedral",
+    eyebrow: "THE CATHEDRAL",
+    headline: "Welcome to the Cathedral of Counter-Strike.",
+    body: "Eight teams survived three Swiss stages to walk into Cologne for the single-elimination Playoffs — the loudest building in Counter-Strike, and the one every player wants to win in.",
+    photo: COLOGNE_PHOTOS.arena,
+  },
+  {
+    id: "po-m-cinderellas",
+    eyebrow: "THE CINDERELLAS",
+    headline: "The two lowest seeds crashed the bracket.",
+    figure: "#13 · #15",
+    figureCaption: "9z and BetBoom booked Playoff tickets",
+    body: "9z (#13) knocked out top-seeded Vitality to make it on a negative round diff, and BetBoom (#15) swept title contender Falcons. Nobody had this bracket — and now they're in the Cathedral.",
+    logoPickIds: [112, 137],
+    photo: COLOGNE_PHOTOS.player,
+  },
+] as const;
+
+/**
+ * The hard, resolved facts of the bracket so far. The wiring layer (a sibling
  * of `stage-wrapped-launch.ts`) derives these from the committed playoff
  * sections + the live answer key; this module only assembles them into slides.
  */
 export interface PlayoffWrappedFacts {
+  /** Authored historic beats to fold in (already-happened, photo-led). */
+  moments?: readonly PlayoffMoment[];
   /** The Grand Final winner's pickid — null until the GF is decided (the gate). */
   championPickId: number | null;
   championName?: string | null;
@@ -106,8 +186,16 @@ export interface PlayoffWrappedPersonal {
   reactionsPlaced?: number | null;
 }
 
-/** True once the bracket has a champion — i.e. a Playoffs Wrapped deck exists. */
-export function playoffWrappedHasContent(facts: Pick<PlayoffWrappedFacts, "championPickId">): boolean {
+/** True when there's a Playoffs Wrapped story to tell — a crowned champion OR at
+ * least one authored historic moment (so the recap shows already-happened beats
+ * mid-bracket, not just the finale). */
+export function playoffWrappedHasContent(facts: Pick<PlayoffWrappedFacts, "championPickId" | "moments">): boolean {
+  const hasChampion = facts.championPickId != null && facts.championPickId !== 0;
+  return hasChampion || (facts.moments?.length ?? 0) > 0;
+}
+
+/** Whether the Grand Final has crowned a champion (the finale slides gate on this). */
+function hasChampion(facts: Pick<PlayoffWrappedFacts, "championPickId">): boolean {
   return facts.championPickId != null && facts.championPickId !== 0;
 }
 
@@ -138,7 +226,8 @@ export function buildPlayoffWrappedDeck(
   assets: PlayoffWrappedAssets = {},
 ): WrappedSlide[] {
   if (!playoffWrappedHasContent(facts)) return [];
-  const champId = facts.championPickId as number;
+  const decided = hasChampion(facts);
+  const champId = facts.championPickId ?? 0;
 
   const slides: WrappedSlide[] = [];
   const eyebrow = "COLOGNE PLAYOFFS · WRAPPED";
@@ -164,44 +253,68 @@ export function buildPlayoffWrappedDeck(
     ? { src: assets.gameLogoSrc, alt: "Counter-Strike 2", invert: false }
     : majorBrand;
 
-  const championName = nameFor(champId, assets, facts.championName);
+  const championName = decided ? nameFor(champId, assets, facts.championName) : "";
 
-  // 1 — Cover.
+  // 1 — Cover. Copy + closer adapt to whether the Final has crowned a champion:
+  // mid-bracket it's a "so far" recap of the moments that already made history;
+  // once decided it's the finale. The cathedral photo leads either way.
   slides.push({
     id: "po-intro",
     kind: "intro",
     eyebrow,
-    headline: "Eight walked in. One walked out.",
-    body: "The Cathedral named its champion. Before you see how you called it — here's how the Cologne Playoffs went down.",
+    headline: decided ? "Eight walked in. One walked out." : "Eight walked in. The Cathedral is loud.",
+    body: decided
+      ? "The Cathedral named its champion. Before you see how you called it — here's how the Cologne Playoffs went down."
+      : "The Cologne Playoffs are underway — and they've already made history. Here's the bracket so far.",
     brandLogo: majorBrand,
+    photo: COLOGNE_PHOTOS.cathedral,
     stageBadge: { numeral: "PLAYOFFS", label: "COLOGNE", sub: "WRAPPED" },
     autoAdvanceMs: AUTO_MS,
   });
 
-  // 2 — The champion.
-  const overRunnerUp =
-    facts.runnerUpPickId && facts.runnerUpPickId !== 0
-      ? ` over ${nameFor(facts.runnerUpPickId, assets, facts.runnerUpName)}`
-      : "";
-  const finalScore = facts.finalScore?.trim();
-  slides.push({
-    id: "po-champion",
-    kind: "moment",
-    eyebrow: "CHAMPION OF COLOGNE",
-    headline: `${championName} lifted the trophy.`,
-    figure: "🏆",
-    figureCaption: finalScore
-      ? `Grand Final${overRunnerUp} · ${finalScore}`
-      : overRunnerUp
-        ? `Grand Final${overRunnerUp}`.trim()
-        : "Champions of IEM Cologne 2026",
-    body: `Eight teams entered the single-elim bracket. ${championName} ran the table${overRunnerUp} to be the last team standing in the Cathedral of Counter-Strike.`,
-    teamLogos: logo(champId),
-    autoAdvanceMs: AUTO_MS,
-  });
+  // 2 — Authored historic beats (already happened, photo-led).
+  for (const m of facts.moments ?? []) {
+    slides.push({
+      id: m.id,
+      kind: "moment",
+      eyebrow: m.eyebrow,
+      headline: m.headline,
+      figure: m.figure,
+      figureCaption: m.figureCaption,
+      body: m.body,
+      teamLogos: logoRow(...(m.logoPickIds ?? [])),
+      photo: m.photo,
+      autoAdvanceMs: AUTO_MS,
+    });
+  }
 
-  // 3 — The champion's run (only when we have the path).
-  const path = facts.championPath ?? [];
+  // 3 — The champion (only once the Grand Final is decided).
+  if (decided) {
+    const overRunnerUp =
+      facts.runnerUpPickId && facts.runnerUpPickId !== 0
+        ? ` over ${nameFor(facts.runnerUpPickId, assets, facts.runnerUpName)}`
+        : "";
+    const finalScore = facts.finalScore?.trim();
+    slides.push({
+      id: "po-champion",
+      kind: "moment",
+      eyebrow: "CHAMPION OF COLOGNE",
+      headline: `${championName} lifted the trophy.`,
+      figure: "🏆",
+      figureCaption: finalScore
+        ? `Grand Final${overRunnerUp} · ${finalScore}`
+        : overRunnerUp
+          ? `Grand Final${overRunnerUp}`.trim()
+          : "Champions of IEM Cologne 2026",
+      body: `Eight teams entered the single-elim bracket. ${championName} ran the table${overRunnerUp} to be the last team standing in the Cathedral of Counter-Strike.`,
+      teamLogos: logo(champId),
+      photo: COLOGNE_PHOTOS.arena,
+      autoAdvanceMs: AUTO_MS,
+    });
+  }
+
+  // 4 — The champion's run (only when we have the path).
+  const path = decided ? facts.championPath ?? [] : [];
   if (path.length > 0) {
     const legs = path
       .map((leg) => {
@@ -253,19 +366,25 @@ export function buildPlayoffWrappedDeck(
       autoAdvanceMs: AUTO_MS,
     });
 
-    // Your champion — matched the real one or not.
+    // Your champion — a settled verdict once the Final is in, a live call before.
     if (personal.championPickId && personal.championPickId !== 0) {
       const yourChampName = nameFor(personal.championPickId, assets, personal.championName);
-      const matched = personal.championPickId === champId;
+      const matched = decided && personal.championPickId === champId;
       slides.push({
         id: "po-your-champion",
         kind: "moment",
         eyebrow: "YOUR CHAMPION",
-        headline: matched ? `You crowned ${yourChampName}.` : `You had ${yourChampName}.`,
+        headline: matched
+          ? `You crowned ${yourChampName}.`
+          : decided
+            ? `You had ${yourChampName}.`
+            : `Your pick to lift it: ${yourChampName}.`,
         figure: matched ? "✓" : undefined,
         body: matched
           ? `You called the Cathedral right — ${yourChampName} lifted the trophy exactly like you said.`
-          : `Your title pick was ${yourChampName}; the bracket crowned ${championName}. Next Major.`,
+          : decided
+            ? `Your title pick was ${yourChampName}; the bracket crowned ${championName}. Next Major.`
+            : `You've got ${yourChampName} to win it all. They're still alive in the bracket — hold your breath.`,
         teamLogos: logo(personal.championPickId),
         calledIt: matched
           ? { label: "YOU CALLED THE CHAMPION", sub: "You saw the vision." }
@@ -283,13 +402,15 @@ export function buildPlayoffWrappedDeck(
         headline: "You were in the building.",
         figure: `${personal.reactionsPlaced}`,
         figureCaption: personal.reactionsPlaced === 1 ? "reaction dropped on the bracket" : "reactions dropped on the bracket",
-        body: "Your stamps landed on the picks you backed — unmasked now that the bracket's resolved.",
+        body: decided
+          ? "Your stamps landed on the picks you backed — unmasked now that the bracket's resolved."
+          : "Your stamps are on the picks you backed — they unmask as each match resolves.",
         autoAdvanceMs: AUTO_MS,
       });
     }
 
     // Where you landed.
-    slides.push(rankSlide(eyebrow, personal));
+    slides.push(rankSlide(eyebrow, personal, decided));
   }
 
   // Closer.
@@ -297,43 +418,48 @@ export function buildPlayoffWrappedDeck(
     id: "po-outro",
     kind: "outro",
     eyebrow,
-    headline: personal ? "Cologne is a wrap." : "See your own card.",
-    body: personal
-      ? "That's the Major. Replay this any time from the bracket. See you in Singapore."
-      : "Sign in to get your personal bracket recap — your calls, your champion, your rank.",
+    headline: !personal ? "See your own card." : decided ? "Cologne is a wrap." : "The bracket's still live.",
+    body: !personal
+      ? "Sign in to get your personal bracket recap — your calls, your champion, your rank."
+      : decided
+        ? "That's the Major. Replay this any time from the bracket. See you in Singapore."
+        : "Replay this any time from the bracket — your card fills in as the matches land.",
     brandLogo: gameBrand,
-    stageBadge: { numeral: "PLAYOFFS", label: "COLOGNE", sub: personal ? "CHAMPIONS" : "RECAP" },
+    photo: decided ? COLOGNE_PHOTOS.player : undefined,
+    stageBadge: { numeral: "PLAYOFFS", label: "COLOGNE", sub: !personal ? "RECAP" : decided ? "CHAMPIONS" : "LIVE" },
   });
 
   return slides;
 }
 
-/** "Where you landed" — final leaderboard rank + movement. Mirrors the stage deck. */
-function rankSlide(eyebrow: string, p: PlayoffWrappedPersonal): WrappedSlide {
+/** "Where you landed" — leaderboard rank + movement. Mirrors the stage deck;
+ *  copy says "final" once the bracket's decided, "current" while it's live. */
+function rankSlide(eyebrow: string, p: PlayoffWrappedPersonal, decided: boolean): WrappedSlide {
+  const where = decided ? "final" : "current";
   const move = p.rankMove;
   let figure = "—";
-  let caption = "Your final spot on the board.";
+  let caption = `Your ${where} spot on the board.`;
   if (move && move.direction !== "new" && move.delta != null) {
     const n = Math.abs(move.delta);
     if (move.direction === "up") {
       figure = `▲${n}`;
-      caption = p.rankAfter != null ? `Up to ${p.rankAfter} on the final board` : "You climbed the board";
+      caption = p.rankAfter != null ? `Up to ${p.rankAfter} on the ${where} board` : "You climbed the board";
     } else if (move.direction === "down") {
       figure = `▼${n}`;
-      caption = p.rankAfter != null ? `Down to ${p.rankAfter} on the final board` : "You slipped at the finish";
+      caption = p.rankAfter != null ? `Down to ${p.rankAfter} on the ${where} board` : "You slipped this run";
     } else {
       figure = "—";
       caption = p.rankAfter != null ? `Held at ${p.rankAfter}` : "You held your ground";
     }
   } else if (p.rankAfter != null) {
     figure = `#${p.rankAfter}`;
-    caption = "Your final spot on the board";
+    caption = `Your ${where} spot on the board`;
   }
   return {
     id: "po-rank",
     kind: "standings",
     eyebrow,
-    headline: "Where you finished.",
+    headline: decided ? "Where you finished." : "Where you stand.",
     figure,
     figureCaption: caption,
     autoAdvanceMs: AUTO_MS,
