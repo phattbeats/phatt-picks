@@ -41,7 +41,7 @@ import {
 } from "@/lib/write-core";
 
 /** The write path is only attempted when the owner has confirmed it viable. */
-export function isWriteEnabled(): boolean {
+function isWriteEnabled(): boolean {
   return process.env.WRITE_ENABLED === "true";
 }
 

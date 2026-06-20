@@ -9,9 +9,9 @@ import { NotificationBell } from "./NotificationBell";
 const NAV_LINKS = [
   { href: "/", label: "Home", match: (p: string) => p === "/" },
   { href: "/picks", label: "Picks", match: (p: string) => p.startsWith("/picks") },
-  { href: "/leaderboard", label: "Leaderboard", match: (p: string) => p.startsWith("/leaderboard") || p.startsWith("/players") },
+  { href: "/leaderboard", label: "Leaderboard", match: (p: string) => p.startsWith("/leaderboard") },
   { href: "/news", label: "News", match: (p: string) => p.startsWith("/news") },
-  { href: "/profile", label: "Profile", match: (p: string) => p.startsWith("/profile") },
+  { href: "/profile", label: "Profile", match: (p: string) => p.startsWith("/profile") || p.startsWith("/players") || p.startsWith("/settings") },
 ] as const;
 
 export type TopbarYouProps =

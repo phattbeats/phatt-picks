@@ -43,6 +43,24 @@ import {
 const SESSION_COOKIE = "phatt_session";
 const SPLASH_PATH = "/login";
 
+/**
+ * Never let an HTML document be cached (PHA-1269). Static pages like the `/login`
+ * splash are prerendered and otherwise ship `Cache-Control: s-maxage=31536000`
+ * (one YEAR). After a deploy the proxy/browser keeps serving that year-old HTML —
+ * which references the OLD hashed JS/CSS chunks. The user then runs a stale build
+ * (e.g. the pre-fix CSS that froze Android, or chunk URLs that 404 into a white
+ * screen) with no way to self-heal — "he loads the cached version." Forcing
+ * `no-store` on the document means every navigation fetches fresh HTML pointing at
+ * the CURRENT chunks; the immutable hashed assets under `/_next/static` (excluded
+ * from this middleware's matcher) keep their long cache, so this costs nothing but
+ * a tiny HTML re-fetch. Applied to every page response the middleware returns.
+ */
+const NO_STORE = "no-store, must-revalidate";
+function noStore(res: NextResponse): NextResponse {
+  res.headers.set("Cache-Control", NO_STORE);
+  return res;
+}
+
 // Prefixes that do NOT require a session. `/login` covers the splash and both
 // sign-in surfaces; `/join` covers invite landings.
 const PUBLIC_PREFIXES = ["/login", "/join"];
@@ -80,14 +98,16 @@ export async function middleware(req: NextRequest) {
   const isPublic = PUBLIC_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(p + "/"),
   );
-  if (isPublic) return NextResponse.next();
+  // Public pages (notably the prerendered `/login` splash) must NOT be cached as
+  // a stale build — see noStore() above.
+  if (isPublic) return noStore(NextResponse.next());
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   if (!token) return bounceToSplash(req, false);
 
   const secret = process.env.NEXTAUTH_SECRET;
   // Missing secret at the edge → fail open (don't mass-logout on a misconfig).
-  if (!secret) return NextResponse.next();
+  if (!secret) return noStore(NextResponse.next());
 
   const payload = await verifySessionToken(token, secret);
   if (!payload || typeof payload.sub !== "string") {
@@ -119,7 +139,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  return res;
+  return noStore(res);
 }
 
 export const config = {

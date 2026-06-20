@@ -37,15 +37,21 @@ function check(name: string, cond: boolean) {
 console.log("\noutcomes-driver - canonical claim + deferred pattern (mirrors PHA-863)");
 
 const outcomes = read("src/lib/outcomes.ts");
+// The claim + deferred-run primitives are shared across every on-read driver
+// (PHA-1271 lean pass), so the canonical-pattern assertions read both the
+// outcomes call sites AND the shared lib/source-refresh.ts that owns them.
+const sourceRefresh = read("src/lib/source-refresh.ts");
 check(
   "outcomes.ts exports refreshOutcomesOnRead",
   /export async function refreshOutcomesOnRead\(/.test(outcomes),
 );
 check(
   "refresh is gated by an ATOMIC claim (updateMany guarded by the floor)",
-  /claimOutcomesRefreshSlot/.test(outcomes) &&
-    /sourceState\.updateMany\(\s*\{\s*where:\s*\{\s*source:\s*OUTCOMES_REFRESH_SOURCE,\s*lastCallAt:\s*\{\s*lt:\s*floor/.test(
-      outcomes,
+  // outcomes binds the outcomes source to the shared claim; the shared claim is
+  // the atomic compare-and-set (updateMany where lastCallAt < floor). PHA-1271.
+  /claimOutcomesRefreshSlot[\s\S]*?claimRefreshSlot\(\s*OUTCOMES_REFRESH_SOURCE/.test(outcomes) &&
+    /sourceState\.updateMany\(\s*\{\s*where:\s*\{\s*source,\s*lastCallAt:\s*\{\s*lt:\s*floor/.test(
+      sourceRefresh,
     ),
 );
 check(
@@ -54,22 +60,24 @@ check(
 );
 check(
   "slow ingest + HLTV bridge are DEFERRED past the response via Next `after`",
-  /import \{ after \} from "next\/server"/.test(outcomes) &&
-    // PHA-918: the deferred body now runs the answer-key ingest AND the HLTV
-    // Swiss bridge that resolves the buckets Valve leaves ambiguous.
-    /runDeferred\(async \(\) => \{[\s\S]*?ingestOutcomes\(eventId\)[\s\S]*?bridgeSwissOutcomes\(eventId\)/.test(outcomes) &&
-    /after\(run\)/.test(outcomes),
+  // PHA-918: the deferred body runs the answer-key ingest AND the HLTV Swiss
+  // bridge that resolves the buckets Valve leaves ambiguous. PHA-1271: the
+  // deferral primitive (Next `after`) now lives in the shared source-refresh lib.
+  /runDeferred\(async \(\) => \{[\s\S]*?ingestOutcomes\(eventId\)[\s\S]*?bridgeSwissOutcomes\(eventId\)/.test(outcomes) &&
+    /import \{ after \} from "next\/server"/.test(sourceRefresh) &&
+    /after\(run\)/.test(sourceRefresh),
 );
 check(
   "deferred task swallows errors — .catch inside runDeferred's run closure",
-  // Pin the .catch to the runDeferred body, not any arbitrary downstream .catch.
-  /function runDeferred[\s\S]{0,400}\.catch\(/.test(outcomes),
+  // Pin the .catch to the shared runDeferred body, not any arbitrary downstream .catch.
+  /function runDeferred[\s\S]{0,400}\.catch\(/.test(sourceRefresh),
 );
 check(
   "claim is best-effort (outer catch grants slot on any DB error)",
   // Within-floor / lost-race returns `inserted > 0` (0 = backed off).
   // Outer catch returns true (DB hiccup — allow rather than block forever).
-  /claimOutcomesRefreshSlot[\s\S]*?return inserted > 0;[\s\S]*?} catch \{[\s\S]{0,80}return true;/.test(outcomes),
+  // PHA-1271: the compare-and-set body lives in the shared claimRefreshSlot.
+  /export async function claimRefreshSlot[\s\S]*?return inserted > 0;[\s\S]*?} catch \{[\s\S]{0,80}return true;/.test(sourceRefresh),
 );
 
 console.log("\noutcomes-driver - source fetch is bounded (can't hang the deferred run)");

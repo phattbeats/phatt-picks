@@ -25,7 +25,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   });
   // The top-right avatar opens your own player profile (Brandon). Anonymous →
   // the account/sign-in surface.
-  const profileHref = session ? `/players/${session.playerId}` : "/profile";
+  const profileHref = session ? `/players/${session.playerId}` : "/settings";
 
   // Broadcast popup (PHA-1211) — the latest active announcement, shown once to
   // every signed-in player. Derived from the clock; null when none is live.
@@ -48,8 +48,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             }}
           />
         )}
-        {/* Stage Wrapped recap (PHA-1051) — auto-opens the latest resolved stage's
-            recap for every signed-in viewer on any page, once per stage. */}
+        {/* Stage (Swiss) recap auto-open stays REMOVED (PHA-1269): it froze
+            low-end Android on login. The Stage recap is on-demand only (reveal
+            "Replay" button + ?wrapped=1 deep link).
+            The MAJOR Wrapped finale (PHA-1274) DOES auto-open app-wide — Brandon's
+            call, it's the big finish — but ironclad: hard-gated on the Grand Final
+            champion (renders nothing until then), deferred to idle, once per
+            viewer, behind an error boundary, no GPU blur, mobile-fit. */}
         {session && <StageWrappedGate playerId={session.playerId} />}
         {children}
       </main>

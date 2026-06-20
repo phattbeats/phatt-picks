@@ -21,7 +21,10 @@
  * stay server-side; it carries the contact e-mail in the UA).
  */
 
-import { prisma } from "./db";
+import {
+  claimRefreshSlot as claimSourceRefreshSlot,
+  stampRefreshSlot as stampSourceRefreshSlot,
+} from "./source-refresh";
 import { parseHltvRss, HLTV_SOURCE } from "./hltv-core";
 import type { WireItem } from "./news-core";
 
@@ -57,65 +60,23 @@ export class HltvFetchError extends Error {
 }
 
 /**
- * Atomically claim the HLTV refresh slot. Returns true iff the 5-minute floor
- * has elapsed (or no row exists yet) AND this caller won the race — under
- * concurrency exactly one caller wins, the rest get false. This replaces the
- * old check-then-stamp pair, which let concurrent first-requests both pass the
- * floor (thundering herd) and serialized nothing across processes. (PHA-863.)
- *
- * The win is decided by a single `updateMany` guarded by `lastCallAt < floor`:
- * SQLite serializes the write, so only one row update flips the stamp past the
- * floor. A `count` of 0 means either the row is within the floor OR it doesn't
- * exist yet — we disambiguate with a `create`, which succeeds only in the
- * first-ever case and trips the unique constraint (→ false) otherwise.
- *
- * Best-effort: any DB error resolves to "allowed" so a storage hiccup never
- * permanently blocks the wire.
+ * Atomically claim the HLTV refresh slot against the 5-minute floor (PHA-863).
+ * Replaces the old check-then-stamp pair, which let concurrent first-requests
+ * both pass the floor (thundering herd) and serialized nothing across processes.
+ * The shared primitive owns the compare-and-set; this binds it to the wire's
+ * source + interval so `news.ts` can call it argument-free.
  */
-export async function claimRefreshSlot(): Promise<boolean> {
-  const now = new Date();
-  const floor = new Date(now.getTime() - REFRESH_MIN_INTERVAL_MS);
-  try {
-    const res = await prisma.sourceState.updateMany({
-      where: { source: SOURCE, lastCallAt: { lt: floor } },
-      data: { lastCallAt: now },
-    });
-    if (res.count > 0) return true; // won the slot: floor had elapsed
-    // No matching row: first-ever call (no row) vs. within the floor.
-    // INSERT OR IGNORE is atomic — succeeds only when no row exists, silently
-    // skips otherwise. Avoids the P2002 that `create` throws (and Prisma logs)
-    // when multiple workers race at startup before the row exists.
-    // id + updatedAt are NOT NULL with only client-side Prisma defaults, so a raw
-    // insert MUST supply them or OR IGNORE silently swallows the NOT NULL violation
-    // and the row never inserts (permanent wedge on a fresh DB). Generate the id in
-    // SQL and stamp updatedAt = now.
-    const inserted = await prisma.$executeRaw`
-      INSERT OR IGNORE INTO "SourceState" ("id", "source", "lastCallAt", "updatedAt")
-      VALUES (lower(hex(randomblob(16))), ${SOURCE}, ${now}, ${now})
-    `;
-    return inserted > 0; // 1 = first-ever pull; 0 = within floor or lost the race
-  } catch {
-    return true; // DB hiccup — don't let storage block the wire
-  }
+export function claimRefreshSlot(): Promise<boolean> {
+  return claimSourceRefreshSlot(SOURCE, REFRESH_MIN_INTERVAL_MS);
 }
 
 /**
  * Unconditionally stamp the refresh slot to now, ignoring the floor. Used by the
  * owner-forced ingest path (`/api/news/ingest`) so a manual refresh both runs
- * the pull AND makes the read path back off for the next interval. Best-effort.
- * (PHA-863.)
+ * the pull AND makes the read path back off for the next interval. (PHA-863.)
  */
-export async function stampRefreshSlot(): Promise<void> {
-  const now = new Date();
-  try {
-    await prisma.sourceState.upsert({
-      where: { source: SOURCE },
-      update: { lastCallAt: now },
-      create: { source: SOURCE, lastCallAt: now },
-    });
-  } catch {
-    // best-effort — a failed stamp just means the next read may re-pull early
-  }
+export function stampRefreshSlot(): Promise<void> {
+  return stampSourceRefreshSlot(SOURCE);
 }
 
 /**
