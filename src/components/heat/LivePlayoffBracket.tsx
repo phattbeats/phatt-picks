@@ -29,6 +29,7 @@ import {
   summarizePlayoffPicks,
   type PlayoffBracket,
   type PlayoffMatch,
+  type PlayoffRoundKey,
   type PlayoffSide,
 } from "@/lib/playoff-bracket-core";
 
@@ -63,6 +64,19 @@ const GEO_DESKTOP: BracketGeo = {
 
 const GREEN = "var(--tac-green, #9bd23c)";
 
+// Friendly [singular, plural] round names for the "awaiting result" notice.
+const ROUND_FRIENDLY: Record<PlayoffRoundKey, [string, string]> = {
+  QF: ["Quarterfinal", "Quarterfinals"],
+  SF: ["Semifinal", "Semifinals"],
+  GF: ["Grand Final", "Grand Finals"],
+};
+
+/** Join 1–3 labels into prose: "A", "A & B", "A, B & C". */
+function joinLabels(labels: readonly string[]): string {
+  if (labels.length <= 1) return labels[0] ?? "";
+  return `${labels.slice(0, -1).join(", ")} & ${labels[labels.length - 1]}`;
+}
+
 export function LivePlayoffBracket({
   bracket,
   teamMap,
@@ -79,6 +93,17 @@ export function LivePlayoffBracket({
 
   const summary = summarizePlayoffPicks(bracket);
   const champ = bracket.championPickid != null ? teamMap.get(bracket.championPickid) : undefined;
+
+  // Matches that have started but whose official Valve result hasn't landed yet
+  // (PHA-1016). Name the round(s) so a concluded-but-unpublished game reads as
+  // "awaiting the official result" instead of looking identical to an undecided
+  // one — the gap that made a finished semifinal look like nothing had updated.
+  const awaitingRoundLabels = rounds
+    .filter((rd) => rd.matches.some((m) => m.awaitingResult))
+    .map((rd) => {
+      const n = rd.matches.filter((m) => m.awaitingResult).length;
+      return ROUND_FRIENDLY[rd.key][n > 1 ? 1 : 0];
+    });
 
   return (
     <div className="panel brk" style={{ padding: "20px 18px 22px" }}>
@@ -105,6 +130,37 @@ export function LivePlayoffBracket({
           </>
         )}
       </p>
+
+      {/* Awaiting-official-result notice (PHA-1016). Subtle, heat-tinted line that
+          names the round(s) whose game has started but whose Valve answer key
+          hasn't published yet — so the bracket says something is happening
+          during the publishing lag instead of looking frozen. */}
+      {awaitingRoundLabels.length > 0 && !champ && (
+        <p
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            margin: "12px 0 0",
+            padding: "8px 11px",
+            background: "rgba(240,163,0,0.07)",
+            border: "1px solid var(--hair-3)",
+            fontSize: 13,
+            color: "var(--ink-mid)",
+            lineHeight: 1.45,
+          }}
+        >
+          <span aria-hidden="true" style={{ fontSize: 14, flexShrink: 0 }}>
+            ⏳
+          </span>
+          <span>
+            <strong style={{ color: "var(--ink-hi)", fontWeight: 600 }}>
+              {joinLabels(awaitingRoundLabels)}
+            </strong>{" "}
+            — awaiting the official result. It lands here the moment Valve makes it final.
+          </span>
+        </p>
+      )}
 
       {/* Champion banner */}
       {champ && (
@@ -275,8 +331,14 @@ function MatchCell({
   teamMap: Map<number, TeamDef>;
   geo: BracketGeo;
 }) {
-  // A decided match gets its winner's branch tinted; an open/seeded one is neutral.
-  const accent = match.decided ? "var(--hair-3)" : "var(--hair)";
+  // A decided match gets its winner's branch tinted; a match that has started but
+  // hasn't resolved yet gets a faint heat border so the eye finds the in-flight
+  // game (PHA-1016); an open/seeded one is neutral.
+  const accent = match.decided
+    ? "var(--hair-3)"
+    : match.awaitingResult
+      ? "rgba(240,163,0,0.45)"
+      : "var(--hair)";
   return (
     <div
       className="brk"
@@ -289,9 +351,9 @@ function MatchCell({
         justifyContent: "center",
       }}
     >
-      <SideRow side={match.team1} played={match.decided} teamMap={teamMap} geo={geo} />
+      <SideRow side={match.team1} played={match.decided} awaiting={match.awaitingResult} teamMap={teamMap} geo={geo} />
       <div style={{ height: 1, background: "var(--hair)", margin: "0 7px" }} />
-      <SideRow side={match.team2} played={match.decided} teamMap={teamMap} geo={geo} />
+      <SideRow side={match.team2} played={match.decided} awaiting={match.awaitingResult} teamMap={teamMap} geo={geo} />
     </div>
   );
 }
@@ -299,11 +361,13 @@ function MatchCell({
 function SideRow({
   side,
   played,
+  awaiting,
   teamMap,
   geo,
 }: {
   side: PlayoffSide;
   played: boolean;
+  awaiting: boolean;
   teamMap: Map<number, TeamDef>;
   geo: BracketGeo;
 }) {
@@ -341,7 +405,8 @@ function SideRow({
         </span>
         {side.userPicked && <span style={{ ...pickTagStyle, fontSize: geo.tagFs }}>Your call</span>}
       </span>
-      {/* score (only when a live overlay provided one) */}
+      {/* score column: a live overlay score, the winner's ✓ once decided, or a
+          faint ⏳ in the slot where the ✓ will land while we await the result. */}
       <span
         style={{
           fontFamily: "var(--font-mono)",
@@ -352,7 +417,17 @@ function SideRow({
           textAlign: "right",
         }}
       >
-        {side.score != null ? side.score : side.winner && played ? "✓" : ""}
+        {side.score != null ? (
+          side.score
+        ) : side.winner && played ? (
+          "✓"
+        ) : awaiting && !tbd ? (
+          <span aria-label="awaiting result" title="Awaiting official result" style={{ opacity: 0.65 }}>
+            ⏳
+          </span>
+        ) : (
+          ""
+        )}
       </span>
     </div>
   );

@@ -107,6 +107,15 @@ export interface PlayoffMatch {
    * construction — a chip renders only for a game with a real, committed time.
    */
   scheduledAtIso: string | null;
+  /**
+   * The match is seeded and its committed start has passed, but no winner has
+   * resolved yet — it is underway or already finished while we wait on Valve's
+   * official answer key (which publishes well after a match actually ends). Lets
+   * the bracket say "awaiting official result" instead of looking frozen during
+   * that lag — the gap that made a concluded semifinal look like nothing had
+   * updated (PHA-1016). Needs `nowMs`; false when no clock is supplied.
+   */
+  awaitingResult: boolean;
 }
 
 export interface PlayoffRound {
@@ -137,6 +146,12 @@ export interface PlayoffInputs {
   winnerByGroup?: ReadonlyMap<number, number>;
   /** groupId → live series scores [team1Score, team2Score] (optional HLTV overlay). */
   scoreByGroup?: ReadonlyMap<number, readonly [number, number]>;
+  /**
+   * Current wall-clock (ms). Only used to flag `awaitingResult` on a seeded,
+   * still-undecided match whose committed start has passed. Omit and no match is
+   * ever marked awaiting (the bracket renders exactly as before).
+   */
+  nowMs?: number;
 }
 
 /** Reduce a layout group name to its short match label ("...| Match 1" → "Match 1"). */
@@ -154,7 +169,7 @@ function matchLabel(name: string): string {
  * never fabricates a team or a result.
  */
 export function buildPlayoffBracket(inputs: PlayoffInputs): PlayoffBracket {
-  const { sections, userPickByGroup, winnerByGroup, scoreByGroup } = inputs;
+  const { sections, userPickByGroup, winnerByGroup, scoreByGroup, nowMs } = inputs;
   const byId = new Map<number, Section>();
   for (const s of sections) byId.set(s.sectionid, s);
 
@@ -190,6 +205,14 @@ export function buildPlayoffBracket(inputs: PlayoffInputs): PlayoffBracket {
         userResult = decided ? (userPick === winner ? "hit" : "miss") : "pending";
       }
 
+      const scheduledAtIso = playoffGameTime(def.sectionId, matchIndex);
+      const awaitingResult =
+        seeded &&
+        !decided &&
+        scheduledAtIso != null &&
+        nowMs != null &&
+        Date.parse(scheduledAtIso) <= nowMs;
+
       totalMatches++;
       if (seeded) anySeeded = true;
       if (decided) anyDecided = true;
@@ -202,7 +225,8 @@ export function buildPlayoffBracket(inputs: PlayoffInputs): PlayoffBracket {
         seeded,
         decided,
         userResult,
-        scheduledAtIso: playoffGameTime(def.sectionId, matchIndex),
+        scheduledAtIso,
+        awaitingResult,
       };
     });
 

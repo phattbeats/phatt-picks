@@ -184,5 +184,41 @@ check("no playoff sections → empty bracket, no throw", (() => {
   return b.rounds.length === 0 && b.totalMatches === 0 && b.championPickid === null;
 })());
 
+console.log("\nplayoff-bracket - awaitingResult (started, seeded, still undecided) — PHA-1016");
+// QF Match 1 (section 108, game 0) is committed for 2026-06-18T13:45:00Z.
+const QF1_START_MS = Date.parse("2026-06-18T13:45:00Z");
+const awaitingSections = clone(playoffSections);
+awaitingSections.find((s) => s.sectionid === 108)!.groups[0].teams = [{ pickid: A }, { pickid: B }];
+const gAwaitQF1 = groupId(awaitingSections, 108, 0);
+const awaitingMatch = (inputs: Parameters<typeof buildPlayoffBracket>[0]) =>
+  buildPlayoffBracket(inputs).rounds[0].matches[0];
+check("seeded + undecided + start passed → awaitingResult", (() => {
+  const m = awaitingMatch({ sections: awaitingSections, nowMs: QF1_START_MS + 60_000 });
+  return m.awaitingResult === true && m.seeded && !m.decided;
+})());
+check("exactly at the start instant counts as started (<=)", (() => {
+  return awaitingMatch({ sections: awaitingSections, nowMs: QF1_START_MS }).awaitingResult === true;
+})());
+check("before start → not awaiting", (() => {
+  return awaitingMatch({ sections: awaitingSections, nowMs: QF1_START_MS - 60_000 }).awaitingResult === false;
+})());
+check("no nowMs supplied → never awaiting (renders exactly as before)", (() => {
+  return awaitingMatch({ sections: awaitingSections }).awaitingResult === false;
+})());
+check("decided match is not awaiting even past start", (() => {
+  const m = awaitingMatch({
+    sections: awaitingSections,
+    winnerByGroup: new Map([[gAwaitQF1, A]]),
+    nowMs: QF1_START_MS + 3 * 3600_000,
+  });
+  return m.decided && m.awaitingResult === false;
+})());
+check("unseeded (TBD) match is never awaiting", (() => {
+  // GF (section 110) ships TBD-vs-TBD in the committed fixture.
+  const b = buildPlayoffBracket({ sections: awaitingSections, nowMs: QF1_START_MS + 3 * 3600_000 });
+  const gf = b.rounds[2].matches[0];
+  return !gf.seeded && gf.awaitingResult === false;
+})());
+
 console.log(`\nplayoff-bracket: ${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);
