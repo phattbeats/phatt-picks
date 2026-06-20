@@ -161,6 +161,9 @@ check("stinger is the post-credits 'will return'", /will return/i.test(out.find(
 check("stinger uses the Hotline brand, not the old name", /Hotline/.test(out.find((s) => s.id === "po-stinger")?.headline ?? "") && !/phaTT Picks/i.test(out.find((s) => s.id === "po-stinger")?.headline ?? ""));
 check("stinger teases the next Major (Singapore)", /Singapore/i.test(out.find((s) => s.id === "po-stinger")?.body ?? ""));
 check("thanks comes before the stinger", outIds.indexOf("po-thanks") < outIds.indexOf("po-stinger"));
+check("coin checkout slide present", outIds.includes("po-coin"));
+check("coin slide links to the shelf via CTA", (() => { const c = out.find((s) => s.id === "po-coin"); return c?.cta?.href === "/profile" && /coin/i.test(c?.cta?.label ?? ""); })());
+check("coin slide sits before the thank-you", outIds.indexOf("po-coin") < outIds.indexOf("po-thanks"));
 
 // ---- PHA-1274 scope correction: this is the *Major* Wrapped, not just Playoffs. ----
 check("cover frames the whole Major (32 walked in)", /thirty-two walked in/i.test(out[0].headline));
