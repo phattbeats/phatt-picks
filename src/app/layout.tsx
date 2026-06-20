@@ -71,24 +71,49 @@ const CHUNK_RECOVERY = `(function(){
  *   and pickems.phatt.vip).
  * - Sends path + referrer only; the server stores no PII (see analytics-core).
  * - Tracks SPA route changes by wrapping history.pushState/replaceState.
+ * - Also records anonymous in-app events: <details> opens ("disclosure_open",
+ *   labelled by the summary text) and max scroll depth ("scroll") on leave —
+ *   plus window.__hlTrack(name,label) for explicit events. All cookieless.
  */
 const ANALYTICS = `(function(){
   try{ if(navigator.doNotTrack==='1'||window.doNotTrack==='1'||navigator.msDoNotTrack==='1') return; }catch(e){}
   var h=location.hostname;
   if(h==='localhost'||h==='127.0.0.1'||h==='0.0.0.0'||h==='::1'||h.indexOf('.')===-1||h.slice(-6)==='.local') return;
-  var last='';
-  function send(){
+  function post(o){
     try{
-      var p=location.pathname; if(p===last) return; last=p;
-      var body=JSON.stringify({path:p,referrer:document.referrer||''});
+      o.path=location.pathname;
+      var body=JSON.stringify(o);
       if(navigator.sendBeacon){ navigator.sendBeacon('/api/stats/collect', new Blob([body],{type:'application/json'})); }
       else { fetch('/api/stats/collect',{method:'POST',headers:{'Content-Type':'application/json'},body:body,keepalive:true}); }
     }catch(e){}
   }
-  function wrap(m){ var o=history[m]; if(typeof o!=='function') return; history[m]=function(){ var r=o.apply(this,arguments); send(); return r; }; }
+  window.__hlTrack=function(name,label){ if(name) post({event:String(name),label:label?String(label):''}); };
+  var last='', maxScroll=0;
+  function flushScroll(){ if(maxScroll>=25){ post({event:'scroll',scroll:maxScroll}); maxScroll=0; } }
+  function view(){
+    var p=location.pathname; if(p===last) return; last=p;
+    flushScroll(); maxScroll=0;
+    post({referrer:document.referrer||''});
+  }
+  function wrap(m){ var o=history[m]; if(typeof o!=='function') return; history[m]=function(){ var r=o.apply(this,arguments); view(); return r; }; }
   wrap('pushState'); wrap('replaceState');
-  window.addEventListener('popstate', send);
-  send();
+  window.addEventListener('popstate', view);
+  // <details> opens (FAQ / settings / help disclosures) — the original question.
+  document.addEventListener('toggle', function(e){
+    var t=e.target;
+    if(t&&t.tagName==='DETAILS'&&t.open){
+      var s=t.querySelector('summary');
+      post({event:'disclosure_open',label:(s&&s.textContent||'').slice(0,80)});
+    }
+  }, true);
+  // Max scroll depth, flushed on leave.
+  window.addEventListener('scroll', function(){
+    var d=document.documentElement, sh=d.scrollHeight-d.clientHeight;
+    if(sh>0){ var pct=Math.round((d.scrollTop||document.body.scrollTop)/sh*100); if(pct>maxScroll) maxScroll=pct; }
+  }, {passive:true});
+  window.addEventListener('visibilitychange', function(){ if(document.visibilityState==='hidden') flushScroll(); });
+  window.addEventListener('pagehide', flushScroll);
+  view();
 })();`;
 
 export default function RootLayout({
