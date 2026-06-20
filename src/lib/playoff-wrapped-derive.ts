@@ -144,7 +144,7 @@ function deriveCinderella(bracket: PlayoffBracket, opts: DeriveOptions): Playoff
     figureCaption: `the #${worst.seed} seed went on a run`,
     body: `Nobody penciled in the #${worst.seed} seed. ${name} won a knockout match they had no business winning and turned the Cathedral upside down.`,
     logoPickIds: [worst.pickId],
-    photo: COLOGNE_PHOTOS.player,
+    photo: COLOGNE_PHOTOS.cinderella,
   };
 }
 

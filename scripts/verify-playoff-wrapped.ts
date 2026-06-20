@@ -205,9 +205,9 @@ const mid = buildPlayoffWrappedDeck(midFacts, null, assets);
 const midIds = mid.map((s) => s.id);
 check("mid-bracket deck is non-empty", mid.length > 0);
 check("mid-bracket cover adapts copy", /Cathedral is loud/i.test(mid[0].headline));
-check("cover carries the cathedral photo", mid[0].photo?.src === COLOGNE_PHOTOS.cathedral.src);
+check("cover carries the cover photo", mid[0].photo?.src === COLOGNE_PHOTOS.cover.src);
 check("authored moment slides present", midIds.includes("po-m-cathedral") && midIds.includes("po-m-cinderellas"));
-check("authored moment carries its photo", mid.find((s) => s.id === "po-m-cathedral")?.photo?.src === COLOGNE_PHOTOS.arena.src);
+check("authored moment carries its photo", mid.find((s) => s.id === "po-m-cathedral")?.photo?.src === COLOGNE_PHOTOS.cathedral.src);
 check("mid-bracket has NO champion slide", !midIds.includes("po-champion"));
 check("mid-bracket still has no personal slides (signed-out)", !midIds.some((id) => id.startsWith("po-your") || id === "po-rank"));
 
@@ -231,7 +231,7 @@ const decidedWithMoments = buildPlayoffWrappedDeck({ ...resolved, moments: COLOG
 const dwmIds = decidedWithMoments.map((s) => s.id);
 check("decided+moments: moments come before champion",
   dwmIds.indexOf("po-m-cathedral") < dwmIds.indexOf("po-champion"));
-check("decided champion slide carries a photo", decidedWithMoments.find((s) => s.id === "po-champion")?.photo?.src === COLOGNE_PHOTOS.arena.src);
+check("decided champion slide carries a photo", decidedWithMoments.find((s) => s.id === "po-champion")?.photo?.src === COLOGNE_PHOTOS.champion.src);
 
 console.log(`\nverify-playoff-wrapped: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);
