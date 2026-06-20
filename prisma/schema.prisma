@@ -259,3 +259,20 @@ model NotificationRead {
   @@id([playerId, entryId])
   @@index([playerId, readAt])
 }
+
+// Built-in privacy-friendly pageview counter (PHA-1277). One row per view, fully
+// anonymous: normalized internal path + coarse device + external referrer host
+// only. No player relation, no IP, no query strings — see analytics-core.ts for
+// the sanitization rules. Lets us measure which routes actually get traffic so
+// the next declutter is evidence-based, without any third-party tracker or a
+// separate analytics container (it lives in this app's own SQLite DB).
+model PageView {
+  id        String   @id @default(cuid())
+  path      String
+  device    String // mobile | tablet | desktop
+  referrer  String? // external host only; null for direct / internal nav
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([path])
+}
