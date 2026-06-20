@@ -169,18 +169,34 @@ export function normalizeOutcomes(
     index.set(section.sectionid, byGroup);
   }
 
-  // Global team roster (every team in the event). The HLTV bridge derives Swiss
-  // clinches from the LIVE tournament field, which can legitimately be larger than
-  // a section's committed per-group roster — e.g. Cologne Stage III: the pick'em
-  // layout group carries 8 teams, but the live HLTV Swiss runs 16, so a real 0:3
-  // (B8) / 3:0 (Spirit) clinch would otherwise be rejected "not eligible for group"
-  // and never score (PHA-1109). For an HLTV-sourced winner we trust the live field
-  // and validate against the global roster instead of the partial per-group one;
-  // the slot/section/group existence checks still apply, and the winner is always a
-  // real team the standings parser mapped to a layout pickid. Valve / Liquipedia
-  // outcomes keep the stricter per-group check (they're validated against their own
-  // structured data, where an out-of-group team IS a parse error).
+  // Global team roster (every team in the event). Two live sources trust this
+  // broader field instead of the committed per-group roster, because both read a
+  // winner that the live tournament structure already proves is real:
+  //
+  //   • HLTV bridge (PHA-1109): derives Swiss clinches from the LIVE field, which
+  //     can be larger than a section's committed per-group roster — Cologne Stage
+  //     III's pick'em group carries 8 teams but the live Swiss runs 16, so a real
+  //     0:3 (B8) / 3:0 (Spirit) clinch would otherwise be rejected "not eligible
+  //     for group" and never score.
+  //   • Valve oracle (PHA-1273): reads the winner straight from the LIVE layout
+  //     group's pick slot (resolveOutcomesFromLayout), so it is by construction one
+  //     of that live group's two teams. But the playoff bracket is DYNAMICALLY
+  //     SEEDED — the committed fixture's per-group roster is a pre-seed guess that
+  //     can drift from Valve's actual bracket. Cologne QF1/QF2: the fixture seeded
+  //     groups 274/275 as Aurora–BetBoom / 9z–FURIA, but Valve's real bracket has
+  //     them SWAPPED (274=9z–FURIA→85, 275=Aurora–BetBoom→134). The picks UI shows
+  //     Valve's live teams (mergeLiveLayout overlays them by sectionid:groupid), so
+  //     players actually picked into Valve's arrangement — yet the strict per-group
+  //     check validated the winner against the stale committed roster and rejected
+  //     85/134 as "not eligible", leaving QF1/QF2 forever unresolved on the bracket.
+  //
+  // For a Valve- or HLTV-sourced winner we therefore trust the live field and
+  // validate against the global roster; the slot/section/group existence checks
+  // still apply, and the winner is always a real team. Only LIQUIPEDIA keeps the
+  // strict per-group check — its name-matched parse means an out-of-group team
+  // really is a parse error, and it can't know Valve's live slot/seed order anyway.
   const globalTeams = new Set(layout.teams.map((t) => t.pickid).filter((id) => id !== 0));
+  const trustsLiveField = source === "hltv" || source === "valve";
 
   for (const slot of raw) {
     const group = index.get(slot.sectionId)?.get(slot.groupId);
@@ -198,7 +214,7 @@ export function normalizeOutcomes(
     }
     const eligible =
       group.teams.has(slot.winnerPickId) ||
-      (source === "hltv" && globalTeams.has(slot.winnerPickId));
+      (trustsLiveField && globalTeams.has(slot.winnerPickId));
     if (!eligible) {
       rejected.push({ slot, reason: `winner ${slot.winnerPickId} not eligible for group` });
       continue;
