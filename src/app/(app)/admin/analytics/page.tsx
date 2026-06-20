@@ -123,8 +123,12 @@ export default async function AnalyticsPage({
   const visitors = new Set(sessions.map((s) => s.visitor)).size;
   const bounces = sessions.filter((s) => s.views === 1).length;
   const bounceRate = sessions.length ? Math.round((bounces / sessions.length) * 100) : 0;
-  const avgDuration = sessions.length
-    ? sessions.reduce((a, s) => a + (s.end.getTime() - s.start.getTime()), 0) / sessions.length
+  // Average duration over ENGAGED (multi-view) sessions only — a single-view
+  // bounce has start===end (duration 0) and can't measure time-on-page, so
+  // including bounces would just drag the average toward zero.
+  const engaged = sessions.filter((s) => s.views > 1);
+  const avgDuration = engaged.length
+    ? engaged.reduce((a, s) => a + (s.end.getTime() - s.start.getTime()), 0) / engaged.length
     : 0;
   const tally = (arr: string[]) => {
     const m = new Map<string, number>();
@@ -192,7 +196,7 @@ export default async function AnalyticsPage({
               </tr>
             </thead>
             <tbody>
-              {byPath.map((r) => (
+              {byPath.slice(0, 100).map((r) => (
                 <tr key={r.path} style={{ borderBottom: "1px solid rgba(255,255,255,.07)" }}>
                   <td style={{ padding: ".35rem .4rem", fontFamily: "monospace" }}>{r.path}</td>
                   <td style={{ padding: ".35rem .4rem", textAlign: "right" }}>{r._count._all.toLocaleString()}</td>
