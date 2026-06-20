@@ -41,17 +41,19 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Network passthrough for top-level navigations only; everything else (SSE,
-// /api, RSC refreshes, static assets) is left to the browser's native networking
-// so the worker never holds a streaming connection or sits on the hot path.
-self.addEventListener("fetch", (event) => {
-  const req = event.request;
-  if (req.method !== "GET") return;
-  // Only interpose on document navigations — never on the SSE stream, API calls,
-  // RSC payloads, or static assets.
-  if (req.mode !== "navigate" || req.destination !== "document") return;
-  event.respondWith(fetch(req).catch(() => Response.error()));
-});
+// The app caches nothing and serves everything live, so the worker intercepts
+// NOTHING — it exists only to satisfy PWA installability and to receive push.
+// An empty fetch listener still counts as a fetch handler for installability,
+// while letting the browser do all networking natively.
+//
+// WHITE-SCREEN FIX (PHA-1269): the previous version intercepted document
+// navigations and, on any fetch hiccup, returned `Response.error()`. In an
+// installed PWA (standalone, no address bar) or on a flaky mobile connection,
+// that turns a single transient navigation failure into a hard blank page with
+// no way to retry — exactly the "white screen when logging in on Android" report.
+// Not interposing means a failed navigation falls back to the browser's own
+// retry/error handling instead of a dead white screen.
+self.addEventListener("fetch", () => {});
 
 // Web Push — all notification kinds share this handler. Payload shape: PreLockPayload
 // from notify-core (title, body, url, tag, actions?).
