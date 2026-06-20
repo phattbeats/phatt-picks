@@ -66,6 +66,12 @@ export function HeatBottomNav() {
         <Link
           key={item.href}
           href={item.href}
+          // PHA-1269: no eager prefetch. The bottom nav is on every authed page,
+          // and Next was prefetching the full RSC tree of /picks, /leaderboard,
+          // /profile etc. on mount — a burst of heavy fetches + deserialization
+          // that wedged the renderer on low-RAM Android (freeze → Chrome crash).
+          // Tap-navigation still works; we just don't fetch all routes up front.
+          prefetch={false}
           className={item.match(pathname) ? "active" : undefined}
         >
           {item.icon}
