@@ -217,6 +217,7 @@ export default async function DashboardPage() {
               <Link
                 href={`/picks?section=${active.section.sectionid}`}
                 className="btn-heat"
+                prefetch={false}
               >
                 {session
                   ? selfPickComplete
@@ -233,6 +234,7 @@ export default async function DashboardPage() {
               <Link
                 href={`/picks?section=${active.section.sectionid}`}
                 className="btn-heat"
+                prefetch={false}
               >
                 {active.pick.reason === "locked-time-passed" && session
                   ? "Check Your Picks"
@@ -242,7 +244,7 @@ export default async function DashboardPage() {
                 </svg>
               </Link>
             )}
-            <Link href="/leaderboard" className="btn-ghost">View Ranks</Link>
+            <Link href="/leaderboard" className="btn-ghost" prefetch={false}>View Ranks</Link>
           </div>
         </div>
       </section>
@@ -292,7 +294,7 @@ export default async function DashboardPage() {
             </div>
           </div>
         ) : (
-          <Link href="/login/auth" className="panel brk" style={{
+          <Link href="/login/auth" className="panel brk" prefetch={false} style={{
             display: "block",
             textDecoration: "none",
             color: "inherit",
@@ -322,7 +324,7 @@ export default async function DashboardPage() {
           <span className="br-bl" />
           <div className="panel-title">
             Leaderboard · Top 4
-            <Link href="/leaderboard" className="link">Full board →</Link>
+            <Link href="/leaderboard" className="link" prefetch={false}>Full board →</Link>
           </div>
           {top.length === 0 ? (
             <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: 0 }}>
@@ -347,14 +349,14 @@ export default async function DashboardPage() {
         <span className="br-bl" />
         <div className="panel-title">
           Wire
-          <Link href="/news" className="link">All news →</Link>
+          <Link href="/news" className="link" prefetch={false}>All news →</Link>
         </div>
         {wireItems.length > 0 ? (
           <WireFeed items={wireItems} now={now} variant="compact" />
         ) : (
           <div style={{ color: "var(--ink-mid)", fontSize: 13 }}>
             The wire is quiet. Headlines drop on{" "}
-            <Link href="/news" style={{ color: "var(--heat)" }}>News</Link>.
+            <Link href="/news" style={{ color: "var(--heat)" }} prefetch={false}>News</Link>.
           </div>
         )}
       </section>
@@ -477,6 +479,7 @@ function LeaderRow({
   return (
     <Link
       href={`/players/${encodeURIComponent(row.playerId)}`}
+      prefetch={false}
       style={{
         display: "grid",
         gridTemplateColumns: "24px 34px 1fr auto",
