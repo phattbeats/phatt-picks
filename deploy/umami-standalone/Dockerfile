@@ -10,9 +10,11 @@ FROM ghcr.io/umami-software/umami:postgresql-latest
 
 USER root
 
-# postgresql = server (initdb/pg_ctl/postgres), -client = psql/createdb/createuser,
-# su-exec = drop to the postgres user from the root entrypoint.
-RUN apk add --no-cache postgresql postgresql-client su-exec
+# Pinned to v17 so the binaries match the /usr/libexec/postgresql17 PATH below.
+# server (initdb/pg_ctl/postgres) + client (psql/createdb/createuser) + contrib
+# (pgcrypto, required by Umami's 01_init migration) + su-exec (drop to postgres
+# from the root entrypoint).
+RUN apk add --no-cache postgresql17 postgresql17-client postgresql17-contrib su-exec
 
 ENV PGDATA=/var/lib/postgresql/data \
     DATABASE_TYPE=postgresql \
