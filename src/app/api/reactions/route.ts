@@ -20,6 +20,7 @@ import { isSameOrigin } from "@/lib/csrf";
 import { createCooldownStore, checkCooldown } from "@/lib/security-core";
 import { isValidStampId, getStamp, tallyReactions } from "@/lib/bleachers-core";
 import { isLockTimePassed } from "@/lib/lock-schedule-core";
+import { isSwissSection } from "@/lib/swiss-bucket-core";
 import { currentEventId } from "@/lib/events-core";
 import { getCommittedLayout } from "@/lib/layout";
 import { isPushConfigured, sendPushToPlayer } from "@/lib/notify";
@@ -74,10 +75,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: "not-revealed" }, { status: 409 });
   }
 
+  // Read-only-on-resolve is a SWISS rule. The playoff bracket resolves
+  // match-by-match while it's still the live event everyone reacts to
+  // (PHA-1262), so the resolved gate must not fire on QF/SF/GF picks — only on
+  // a fully-resolved Swiss group.
   const layout = getCommittedLayout();
   const section = layout.sections.find((s) => s.sectionid === sId);
   const group = section?.groups.find((g) => g.groupid === gId);
-  if (group) {
+  if (group && isSwissSection(sId)) {
     const outcomeCount = await prisma.stageOutcome.count({
       where: { eventId, sectionId: sId, groupId: gId },
     });

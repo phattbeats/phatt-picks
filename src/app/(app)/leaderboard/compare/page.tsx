@@ -544,7 +544,11 @@ export default async function ComparePage({
                 const aGroup = aPicksMap[section.sectionid]?.[group.groupid] ?? {};
                 const bGroup = bPicksMap[section.sectionid]?.[group.groupid] ?? {};
                 const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
-                const groupClosed = Object.keys(groupOutcomes).length >= group.picks.length;
+                // Read-only on resolution applies to SWISS only. The playoff bracket
+                // resolves match-by-match while it's still the live event everyone is
+                // reacting to (PHA-1262) — gating those per-match would silently kill
+                // reactions on each QF/SF as it finishes. Keep playoff picks reactable.
+                const groupClosed = isSwiss && Object.keys(groupOutcomes).length >= group.picks.length;
 
                 return (
                   <div

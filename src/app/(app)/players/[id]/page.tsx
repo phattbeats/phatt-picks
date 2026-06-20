@@ -383,7 +383,6 @@ export default async function PlayerProfilePage({
                 const revealed = isSelf || lockRevealed;
                 const groupPicks = pickMap[section.sectionid]?.[group.groupid] ?? {};
                 const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
-                const groupClosed = Object.keys(groupOutcomes).length >= group.picks.length;
 
                 return (
                   <div
@@ -459,6 +458,10 @@ export default async function PlayerProfilePage({
                                     </span>
                                   )}
                                 </div>
+                                {/* Playoffs stay reactable match-by-match: the bracket is
+                                    the live event, so a resolved QF/SF must NOT silently
+                                    lock reactions (PHA-1262). Swiss read-only-on-resolve
+                                    is handled in the Swiss branch above. */}
                                 {lockRevealed && pick != null && (
                                   <BleachersStrip
                                     targetPlayerId={player.id}
@@ -466,7 +469,7 @@ export default async function PlayerProfilePage({
                                     groupId={group.groupid}
                                     slotIndex={slot.index}
                                     initialTally={tallyFor(section.sectionid, group.groupid, slot.index)}
-                                    canReact={canReact && !groupClosed}
+                                    canReact={canReact}
                                   />
                                 )}
                               </div>
