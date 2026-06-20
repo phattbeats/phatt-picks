@@ -31,6 +31,8 @@ import { currentEventId } from "@/lib/events-core";
 import { isRevealForcedById } from "@/lib/event-freeze";
 import { BleachersStrip, type TallyLine } from "@/components/heat/BleachersStrip";
 import { tallyReactions, pickTargetKey, type ReactionLike } from "@/lib/bleachers-core";
+import { ChallengeCoinShelf } from "@/components/heat/ChallengeCoinShelf";
+import { getPlayerChallengeCoins } from "@/lib/challenge-coins";
 
 function ordSuffix(n: number): string {
   const v = n % 100;
@@ -131,6 +133,11 @@ export default async function PlayerProfilePage({
 
   const score = scorePlayer(layout, pickMap, outcomeMap).total;
   const coinTier = visibleCoinTier(player);
+
+  // Challenge coins (PHA-1278) — the collectible track: one struck Major coin
+  // per event this player took part in, minted when the Major concludes. Empty
+  // while the live event is still in flight (adds no DB work until it archives).
+  const challengeCoins = await getPlayerChallengeCoins(player.id, nowMs);
 
   // Rank — score this player against the whole field (mockup-06 stat hero).
   const allPlayers = await prisma.player.findMany({ select: { id: true, displayName: true } });
@@ -307,6 +314,9 @@ export default async function PlayerProfilePage({
           </div>
         </div>
       )}
+
+      {/* Challenge coins (PHA-1278) — collectible Major-logo shelf */}
+      <ChallengeCoinShelf coins={challengeCoins} isSelf={isSelf} />
 
       {/* Compare CTA — only if there's somebody to compare against */}
       {session && session.playerId !== player.id && (
