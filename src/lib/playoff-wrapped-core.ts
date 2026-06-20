@@ -21,11 +21,93 @@
  * exercises every branch offline.
  */
 
-import type { WrappedSlide, WrappedTeamLogo } from "./stage-wrapped-core";
+import type { WrappedPhoto, WrappedSlide, WrappedTeamLogo } from "./stage-wrapped-core";
 import type { StageWrappedRankMove } from "./stage-wrapped-content";
+import { regionMetaForPickid } from "./regions-core";
 
 /** Per-slide auto-advance for the recap (floored by the shell to MIN_AUTO_ADVANCE_MS). */
 const AUTO_MS = 6000;
+
+/* ------------------------------------------------------------------------- *
+ * The "dank HLTV photo" twist (PHA-1274).
+ *
+ * Brandon: "the twist for this wrapped is we include DANK photos from HLTV."
+ * These are the real photographer stills from the IEM Cologne Major 2026 sets,
+ * curated from the official HLTV galleries and placed per slide (Brandon picked
+ * the "license + wire these in" route, 2026-06-20). Each lives under
+ * /public/wrapped and carries an HLTV credit; see public/wrapped/CREDITS.md for
+ * the per-file source + the rights note. Filenames are stable handles so a
+ * future major just drops its own set in.
+ * ------------------------------------------------------------------------- */
+export const COLOGNE_PHOTOS = {
+  /** Cover — the packed LANXESS arena, "thirty-two walked in". */
+  cover: {
+    src: "/wrapped/major-cover.jpg",
+    alt: "The packed LANXESS Arena crowd at the IEM Cologne Major 2026",
+    credit: "IEM Cologne Major 2026 · HLTV",
+    focus: "50% 45%",
+  },
+  /** The Cathedral — the main stage, wide. */
+  cathedral: {
+    src: "/wrapped/major-cathedral.jpg",
+    alt: "The IEM Cologne Major 2026 main stage, the Cathedral of Counter-Strike",
+    credit: "IEM Cologne Major 2026 · HLTV",
+    focus: "50% 42%",
+  },
+  /** donk / Spirit's Swiss dominance — moody hero portrait. */
+  donk: {
+    src: "/wrapped/major-donk.jpg",
+    alt: "A Team Spirit player on stage at the IEM Cologne Major 2026",
+    credit: "IEM Cologne Major 2026 · HLTV",
+    focus: "50% 30%",
+  },
+  /** woxic's clinch — a player draped in the Turkish flag. */
+  woxic: {
+    src: "/wrapped/major-woxic.jpg",
+    alt: "An Aurora player draped in the Turkish flag at the IEM Cologne Major 2026",
+    credit: "IEM Cologne Major 2026 · HLTV",
+    focus: "50% 35%",
+  },
+  /** The Cinderellas — arms-up celebration to the crowd. */
+  cinderella: {
+    src: "/wrapped/major-cinderella.jpg",
+    alt: "A player celebrating with arms raised to the crowd at the IEM Cologne Major 2026",
+    credit: "IEM Cologne Major 2026 · HLTV",
+    focus: "50% 35%",
+  },
+  /**
+   * magixx 1v4 — the hand-to-face disbelief reaction (the QF vs G2 on Mirage).
+   * Stand-in reaction still from the HLTV set; swap to the exact magixx frame if
+   * we get it (same filename → zero code change).
+   */
+  magixx: {
+    src: "/wrapped/magixx-1v4.jpg",
+    alt: "A player, hand to his face in disbelief, at the IEM Cologne Major 2026",
+    credit: "IEM Cologne Major 2026 · HLTV",
+    focus: "50% 30%",
+  },
+  /** Champion — the trophy. */
+  champion: {
+    src: "/wrapped/major-champion.jpg",
+    alt: "The IEM Cologne Major 2026 champions' trophy on stage",
+    credit: "IEM Cologne Major 2026 · HLTV",
+    focus: "50% 45%",
+  },
+  /** The Last Eight / nations — the crowd, hands up. */
+  nations: {
+    src: "/wrapped/major-nations.jpg",
+    alt: "Fans in the stands at the IEM Cologne Major 2026",
+    credit: "IEM Cologne Major 2026 · HLTV",
+    focus: "50% 45%",
+  },
+  /** Thank you from -phaTT — the fans. */
+  thanks: {
+    src: "/wrapped/major-thanks.jpg",
+    alt: "The IEM Cologne Major 2026 crowd packed into the arena",
+    credit: "IEM Cologne Major 2026 · HLTV",
+    focus: "50% 45%",
+  },
+} satisfies Record<string, WrappedPhoto>;
 
 /**
  * Visual assets the builder can't compute itself: a team-logo resolver
@@ -66,11 +148,123 @@ export interface PlayoffBracketBuster {
 }
 
 /**
- * The hard, resolved facts of the finished bracket. The wiring layer (a sibling
+ * An authored, already-happened playoff beat — the "historic moments" Brandon
+ * asked for, each carrying a dank documentary photo. These are curated (not
+ * derived) so the recap has real story even mid-bracket, before there's a
+ * champion to crown.
+ */
+export interface PlayoffMoment {
+  id: string;
+  eyebrow: string;
+  headline: string;
+  body?: string;
+  figure?: string;
+  figureCaption?: string;
+  /** Team pickids whose logos illustrate the beat (0–3). */
+  logoPickIds?: number[];
+  /** The dank photo for this beat (cathedral / arena / a player moment). */
+  photo?: WrappedPhoto;
+}
+
+/**
+ * The historic Cologne Playoff beats that have ALREADY happened — curated, real,
+ * and photo-led. The wiring layer passes these into the deck so the recap shows
+ * story now (Cologne is mid-bracket as this is authored), not an empty card that
+ * waits for the Grand Final. Add/replace beats as the bracket plays out; the
+ * exact live results land here (or get derived) when the matches resolve.
+ */
+export const COLOGNE_PLAYOFF_MOMENTS: readonly PlayoffMoment[] = [
+  {
+    id: "po-m-cathedral",
+    eyebrow: "THE CATHEDRAL",
+    headline: "Welcome to the Cathedral of Counter-Strike.",
+    body: "Thirty-two of the best teams in the world came to Cologne to fight through three Swiss stages for one of eight Playoff tickets — into the loudest building in Counter-Strike, the one every player wants to win in.",
+    photo: COLOGNE_PHOTOS.cathedral,
+  },
+  {
+    id: "po-m-donk",
+    eyebrow: "THE BEST IN THE WORLD",
+    headline: "donk turned the Swiss into a highlight reel.",
+    body: "Spirit barely conceded a round on the way through Cologne — a clean 3-0 over NaVi, Aurora and 9z, with donk, the Major MVP at sixteen, posting one of the most dominant individual runs the Major has seen. For a stretch, the rest of the field was playing for second.",
+    logoPickIds: [81],
+    photo: COLOGNE_PHOTOS.donk,
+  },
+  {
+    id: "po-m-woxic",
+    eyebrow: "A NATION'S RETURN",
+    headline: "woxic's 1v4 sent Turkey to the bracket.",
+    figure: "1v4",
+    figureCaption: "Aurora clinch on Dust2, Stage 3",
+    body: "With the Playoff berth on the line, woxic stood up in a 1v4 on Dust2 and won it — sealing Aurora's first run to a Major playoff stage since Copenhagen 2024, and the Turkish core back among the last eight.",
+    logoPickIds: [134],
+    photo: COLOGNE_PHOTOS.woxic,
+  },
+  {
+    id: "po-m-cinderellas",
+    eyebrow: "THE CINDERELLAS",
+    headline: "The two lowest seeds crashed the bracket.",
+    figure: "#13 · #15",
+    figureCaption: "9z and BetBoom booked Playoff tickets",
+    body: "9z (#13) knocked out top-seeded Vitality to make it on a negative round diff, and BetBoom (#15) swept title contender Falcons. Nobody had this bracket — and now they're in the Cathedral.",
+    logoPickIds: [112, 137],
+    photo: COLOGNE_PHOTOS.cinderella,
+  },
+  {
+    // PHA-1274 (Brandon): "reserve a spot for magixx 1v4 with a pic of his hand
+    // on his head in disbelief." Spirit = pickid 81. Wired to a hand-to-face
+    // disbelief still from the HLTV set (COLOGNE_PHOTOS.magixx); swap to the
+    // exact magixx frame anytime — same filename, zero code change.
+    id: "po-m-magixx-1v4",
+    eyebrow: "HISTORIC MOMENT",
+    headline: "magixx, one man against four — and still standing.",
+    figure: "1v4",
+    figureCaption: "Spirit past G2, Mirage · the Quarterfinal",
+    body: "Last man alive in the Quarterfinal, the round already written off, magixx held one angle and emptied a single AK spray through four G2 players — then froze, hand on his head, not quite believing it himself. Graffiti-worthy. Valve made his face their profile picture. The Cathedral lost its mind.",
+    logoPickIds: [81, 59],
+    photo: COLOGNE_PHOTOS.magixx,
+  },
+] as const;
+
+/**
+ * A one-slide tribute to a team that made the Cologne last eight. The "big
+ * finish" deck (PHA-1274, Brandon: "every team should have at least one slide")
+ * gives each of the eight its own card — the global spread of the field is half
+ * the story. Copy is grounded in each team's real Cologne run (the Spotlight
+ * narratives), so nothing here is invented.
+ */
+export interface PlayoffTeamTribute {
+  pickId: number;
+  /** Mono eyebrow tag, mirrors the team's Spotlight tag (e.g. "THE LAST DANCE"). */
+  tag: string;
+  /** One-line tribute, grounded in the team's real run. */
+  blurb: string;
+}
+
+/**
+ * The eight that walked into the Cathedral, each with a card in the finale deck.
+ * Order is a deliberate flow (marquees → rebuilds → Cinderellas), not seeding.
+ * Names render through the logo resolver; the region chip on each slide is what
+ * makes the "every flag in the building" thread land.
+ */
+export const COLOGNE_PLAYOFF_TEAMS: readonly PlayoffTeamTribute[] = [
+  { pickId: 81, tag: "THE BEST IN THE WORLD", blurb: "donk — a Major MVP at sixteen — and sh1ro behind him. The most feared roster alive walked in barely dropping a round." },
+  { pickId: 89, tag: "THE BURDEN OF FIRST", blurb: "ZywOo and apEX. The world #1, the standard the whole scene measures itself against, carrying the weight of the favourite." },
+  { pickId: 139, tag: "THE MISSING CROWN", blurb: "NiKo, m0NESY and karrigan — a roster built for one thing: the trophy its biggest star has never lifted." },
+  { pickId: 85, tag: "THE LAST DANCE", blurb: "FalleN's last ride, the AWP now molodoy's. Brazil's godfather chasing one more Major as the torch passes in real time." },
+  { pickId: 59, tag: "THE REBUILD", blurb: "huNter and a fearless young core — HeavyGod and MATYS — the rebuilt G2 nobody had pegged for the last eight." },
+  { pickId: 134, tag: "A NATION'S RETURN", blurb: "XANTARES, MAJ3R, and woxic's 1v4 on Dust2. Turkish Counter-Strike back among the last eight for the first time since Copenhagen." },
+  { pickId: 137, tag: "THE LONG WAY BACK", blurb: "Boombl4, a Major-winning captain, dragging an all-Russian young core back to the bracket the hard way." },
+  { pickId: 112, tag: "BEYOND BRAZIL", blurb: "luchov and dgt's ace on Overpass. Argentina, Uruguay and Chile — the first South American playoff team without a Brazilian core." },
+] as const;
+
+/**
+ * The hard, resolved facts of the bracket so far. The wiring layer (a sibling
  * of `stage-wrapped-launch.ts`) derives these from the committed playoff
  * sections + the live answer key; this module only assembles them into slides.
  */
 export interface PlayoffWrappedFacts {
+  /** Authored historic beats to fold in (already-happened, photo-led). */
+  moments?: readonly PlayoffMoment[];
   /** The Grand Final winner's pickid — null until the GF is decided (the gate). */
   championPickId: number | null;
   championName?: string | null;
@@ -106,8 +300,16 @@ export interface PlayoffWrappedPersonal {
   reactionsPlaced?: number | null;
 }
 
-/** True once the bracket has a champion — i.e. a Playoffs Wrapped deck exists. */
-export function playoffWrappedHasContent(facts: Pick<PlayoffWrappedFacts, "championPickId">): boolean {
+/** True when there's a Playoffs Wrapped story to tell — a crowned champion OR at
+ * least one authored historic moment (so the recap shows already-happened beats
+ * mid-bracket, not just the finale). */
+export function playoffWrappedHasContent(facts: Pick<PlayoffWrappedFacts, "championPickId" | "moments">): boolean {
+  const hasChampion = facts.championPickId != null && facts.championPickId !== 0;
+  return hasChampion || (facts.moments?.length ?? 0) > 0;
+}
+
+/** Whether the Grand Final has crowned a champion (the finale slides gate on this). */
+function hasChampion(facts: Pick<PlayoffWrappedFacts, "championPickId">): boolean {
   return facts.championPickId != null && facts.championPickId !== 0;
 }
 
@@ -138,10 +340,11 @@ export function buildPlayoffWrappedDeck(
   assets: PlayoffWrappedAssets = {},
 ): WrappedSlide[] {
   if (!playoffWrappedHasContent(facts)) return [];
-  const champId = facts.championPickId as number;
+  const decided = hasChampion(facts);
+  const champId = facts.championPickId ?? 0;
 
   const slides: WrappedSlide[] = [];
-  const eyebrow = "COLOGNE PLAYOFFS · WRAPPED";
+  const eyebrow = "COLOGNE MAJOR · WRAPPED";
 
   const logo = (pickId: number | null | undefined): WrappedTeamLogo[] | undefined => {
     if (pickId == null || pickId === 0 || !assets.resolveTeamLogo) return undefined;
@@ -164,44 +367,70 @@ export function buildPlayoffWrappedDeck(
     ? { src: assets.gameLogoSrc, alt: "Counter-Strike 2", invert: false }
     : majorBrand;
 
-  const championName = nameFor(champId, assets, facts.championName);
+  const championName = decided ? nameFor(champId, assets, facts.championName) : "";
 
-  // 1 — Cover.
+  // 1 — Cover. This is the *Major* Wrapped (Brandon: "32 teams walked in, 1
+  // walked out") — the whole IEM Cologne run, three Swiss gauntlets and the
+  // bracket, not just the Playoffs. Copy + closer adapt to whether the Final has
+  // crowned a champion: mid-tournament it's a "so far" recap of the moments that
+  // already made history; once decided it's the finale. Cathedral photo leads.
   slides.push({
     id: "po-intro",
     kind: "intro",
     eyebrow,
-    headline: "Eight walked in. One walked out.",
-    body: "The Cathedral named its champion. Before you see how you called it — here's how the Cologne Playoffs went down.",
+    headline: decided ? "Thirty-two walked in. One walked out." : "Thirty-two walked in. The Cathedral is loud.",
+    body: decided
+      ? "Three Swiss gauntlets, a single-elimination bracket, and the loudest building in Counter-Strike named its champion. Before you see how you called it — here's how the Cologne Major went down."
+      : "The Cologne Major is underway — thirty-two teams, three Swiss stages, and it's already made history. Here's the run so far.",
     brandLogo: majorBrand,
-    stageBadge: { numeral: "PLAYOFFS", label: "COLOGNE", sub: "WRAPPED" },
+    photo: COLOGNE_PHOTOS.cover,
+    stageBadge: { numeral: "MAJOR", label: "COLOGNE", sub: "WRAPPED" },
     autoAdvanceMs: AUTO_MS,
   });
 
-  // 2 — The champion.
-  const overRunnerUp =
-    facts.runnerUpPickId && facts.runnerUpPickId !== 0
-      ? ` over ${nameFor(facts.runnerUpPickId, assets, facts.runnerUpName)}`
-      : "";
-  const finalScore = facts.finalScore?.trim();
-  slides.push({
-    id: "po-champion",
-    kind: "moment",
-    eyebrow: "CHAMPION OF COLOGNE",
-    headline: `${championName} lifted the trophy.`,
-    figure: "🏆",
-    figureCaption: finalScore
-      ? `Grand Final${overRunnerUp} · ${finalScore}`
-      : overRunnerUp
-        ? `Grand Final${overRunnerUp}`.trim()
-        : "Champions of IEM Cologne 2026",
-    body: `Eight teams entered the single-elim bracket. ${championName} ran the table${overRunnerUp} to be the last team standing in the Cathedral of Counter-Strike.`,
-    teamLogos: logo(champId),
-    autoAdvanceMs: AUTO_MS,
-  });
+  // 2 — Authored historic beats (already happened, photo-led).
+  for (const m of facts.moments ?? []) {
+    slides.push({
+      id: m.id,
+      kind: "moment",
+      eyebrow: m.eyebrow,
+      headline: m.headline,
+      figure: m.figure,
+      figureCaption: m.figureCaption,
+      body: m.body,
+      teamLogos: logoRow(...(m.logoPickIds ?? [])),
+      photo: m.photo,
+      autoAdvanceMs: AUTO_MS,
+    });
+  }
 
-  // 3 — The champion's run (only when we have the path).
-  const path = facts.championPath ?? [];
+  // 3 — The champion (only once the Grand Final is decided).
+  if (decided) {
+    const overRunnerUp =
+      facts.runnerUpPickId && facts.runnerUpPickId !== 0
+        ? ` over ${nameFor(facts.runnerUpPickId, assets, facts.runnerUpName)}`
+        : "";
+    const finalScore = facts.finalScore?.trim();
+    slides.push({
+      id: "po-champion",
+      kind: "moment",
+      eyebrow: "CHAMPION OF COLOGNE",
+      headline: `${championName} lifted the trophy.`,
+      figure: "🏆",
+      figureCaption: finalScore
+        ? `Grand Final${overRunnerUp} · ${finalScore}`
+        : overRunnerUp
+          ? `Grand Final${overRunnerUp}`.trim()
+          : "Champions of IEM Cologne 2026",
+      body: `Eight teams entered the single-elim bracket. ${championName} ran the table${overRunnerUp} to be the last team standing in the Cathedral of Counter-Strike.`,
+      teamLogos: logo(champId),
+      photo: COLOGNE_PHOTOS.champion,
+      autoAdvanceMs: AUTO_MS,
+    });
+  }
+
+  // 4 — The champion's run (only when we have the path).
+  const path = decided ? facts.championPath ?? [] : [];
   if (path.length > 0) {
     const legs = path
       .map((leg) => {
@@ -239,7 +468,37 @@ export function buildPlayoffWrappedDeck(
     });
   }
 
-  // 5+ — Personal slides (signed-in viewer with a bracket).
+  // 5 — The field: every team that made the Cathedral gets a card (Brandon:
+  // "every team should have at least one slide"). A "nations" bridge leads it so
+  // the global spread of the eight reads as the story it is, then one tribute
+  // per team. Evergreen — shows the moment the playoff field is set, finale or
+  // mid-bracket — so the recap always carries the room.
+  slides.push({
+    id: "po-nations",
+    kind: "moment",
+    eyebrow: "THE LAST EIGHT",
+    headline: "Thirty-two came. Eight made the Cathedral.",
+    figure: "32 → 8",
+    figureCaption: "three Swiss gauntlets, eight survivors",
+    body: "Brazil and Argentina, France and Turkey, Russia and Kazakhstan, the rebuilt and the unheralded — the eight that walked out of the gauntlet came from every corner of the world. One bracket, one server, the planet watching the same rounds at once. This is what Counter-Strike does.",
+    photo: COLOGNE_PHOTOS.nations,
+    autoAdvanceMs: AUTO_MS,
+  });
+  for (const t of COLOGNE_PLAYOFF_TEAMS) {
+    const region = regionMetaForPickid(t.pickId);
+    slides.push({
+      id: `po-team-${t.pickId}`,
+      kind: "moment",
+      eyebrow: t.tag,
+      headline: nameFor(t.pickId, assets),
+      figureCaption: region ? region.label : undefined,
+      body: t.blurb,
+      teamLogos: logo(t.pickId),
+      autoAdvanceMs: AUTO_MS,
+    });
+  }
+
+  // 6+ — Personal slides (signed-in viewer with a bracket).
   if (personal) {
     const name = personal.displayName?.trim();
     slides.push({
@@ -253,19 +512,25 @@ export function buildPlayoffWrappedDeck(
       autoAdvanceMs: AUTO_MS,
     });
 
-    // Your champion — matched the real one or not.
+    // Your champion — a settled verdict once the Final is in, a live call before.
     if (personal.championPickId && personal.championPickId !== 0) {
       const yourChampName = nameFor(personal.championPickId, assets, personal.championName);
-      const matched = personal.championPickId === champId;
+      const matched = decided && personal.championPickId === champId;
       slides.push({
         id: "po-your-champion",
         kind: "moment",
         eyebrow: "YOUR CHAMPION",
-        headline: matched ? `You crowned ${yourChampName}.` : `You had ${yourChampName}.`,
+        headline: matched
+          ? `You crowned ${yourChampName}.`
+          : decided
+            ? `You had ${yourChampName}.`
+            : `Your pick to lift it: ${yourChampName}.`,
         figure: matched ? "✓" : undefined,
         body: matched
           ? `You called the Cathedral right — ${yourChampName} lifted the trophy exactly like you said.`
-          : `Your title pick was ${yourChampName}; the bracket crowned ${championName}. Next Major.`,
+          : decided
+            ? `Your title pick was ${yourChampName}; the bracket crowned ${championName}. Next Major.`
+            : `You've got ${yourChampName} to win it all. They're still alive in the bracket — hold your breath.`,
         teamLogos: logo(personal.championPickId),
         calledIt: matched
           ? { label: "YOU CALLED THE CHAMPION", sub: "You saw the vision." }
@@ -283,57 +548,78 @@ export function buildPlayoffWrappedDeck(
         headline: "You were in the building.",
         figure: `${personal.reactionsPlaced}`,
         figureCaption: personal.reactionsPlaced === 1 ? "reaction dropped on the bracket" : "reactions dropped on the bracket",
-        body: "Your stamps landed on the picks you backed — unmasked now that the bracket's resolved.",
+        body: decided
+          ? "Your stamps landed on the picks you backed — unmasked now that the bracket's resolved."
+          : "Your stamps are on the picks you backed — they unmask as each match resolves.",
         autoAdvanceMs: AUTO_MS,
       });
     }
 
     // Where you landed.
-    slides.push(rankSlide(eyebrow, personal));
+    slides.push(rankSlide(eyebrow, personal, decided));
   }
 
-  // Closer.
+  // Closer, part 1 — the heartfelt thank-you from -phaTT (Brandon: "a very
+  // heartfelt thank you from -phaTT ... love for the community of cs and the
+  // unity of all the different countries in the world participating and the
+  // fans"). For a signed-out viewer it carries a soft nudge to sign in next
+  // time; signed-in keeps it pure gratitude.
   slides.push({
-    id: "po-outro",
+    id: "po-thanks",
     kind: "outro",
-    eyebrow,
-    headline: personal ? "Cologne is a wrap." : "See your own card.",
-    body: personal
-      ? "That's the Major. Replay this any time from the bracket. See you in Singapore."
-      : "Sign in to get your personal bracket recap — your calls, your champion, your rank.",
+    eyebrow: "FROM -phaTT",
+    headline: "Thank you for being here.",
+    body: !personal
+      ? "Every pick, every reaction, every 3am refresh to catch a clutch from the other side of the world — that's what makes this. Counter-Strike puts the whole planet in one room, and you were in it. Sign in next time and we'll keep your card. From all of us at phaTT: thank you. We love this game, and we love this community. ♥"
+      : "Every pick you made, every reaction you dropped, every late night you spent watching strangers from across the world play the game we all love — thank you. Counter-Strike puts the whole planet in one room, and you spent this Major in it with us. From all of us at phaTT: we love this game, and we love you. ♥",
+    photo: COLOGNE_PHOTOS.thanks,
+    stageBadge: { numeral: "♥", label: "FROM", sub: "phaTT" },
+  });
+
+  // Closer, part 2 — the post-credits stinger (Brandon: "a cheeky see you at the
+  // next one hint sort of like a marvel movie 'will return' type shit"). The
+  // genuine last beat: the next Major is PGL Singapore 2026.
+  slides.push({
+    id: "po-stinger",
+    kind: "outro",
+    eyebrow: "POST-CREDITS",
+    headline: "Hotline will return.",
+    body: "Next stop: PGL Major Singapore 2026. New bracket, new Cinderellas, new history — same room, same game, same world. See you there. 🌏",
     brandLogo: gameBrand,
-    stageBadge: { numeral: "PLAYOFFS", label: "COLOGNE", sub: personal ? "CHAMPIONS" : "RECAP" },
+    stageBadge: { numeral: "?", label: "NEXT", sub: "MAJOR" },
   });
 
   return slides;
 }
 
-/** "Where you landed" — final leaderboard rank + movement. Mirrors the stage deck. */
-function rankSlide(eyebrow: string, p: PlayoffWrappedPersonal): WrappedSlide {
+/** "Where you landed" — leaderboard rank + movement. Mirrors the stage deck;
+ *  copy says "final" once the bracket's decided, "current" while it's live. */
+function rankSlide(eyebrow: string, p: PlayoffWrappedPersonal, decided: boolean): WrappedSlide {
+  const where = decided ? "final" : "current";
   const move = p.rankMove;
   let figure = "—";
-  let caption = "Your final spot on the board.";
+  let caption = `Your ${where} spot on the board.`;
   if (move && move.direction !== "new" && move.delta != null) {
     const n = Math.abs(move.delta);
     if (move.direction === "up") {
       figure = `▲${n}`;
-      caption = p.rankAfter != null ? `Up to ${p.rankAfter} on the final board` : "You climbed the board";
+      caption = p.rankAfter != null ? `Up to ${p.rankAfter} on the ${where} board` : "You climbed the board";
     } else if (move.direction === "down") {
       figure = `▼${n}`;
-      caption = p.rankAfter != null ? `Down to ${p.rankAfter} on the final board` : "You slipped at the finish";
+      caption = p.rankAfter != null ? `Down to ${p.rankAfter} on the ${where} board` : "You slipped this run";
     } else {
       figure = "—";
       caption = p.rankAfter != null ? `Held at ${p.rankAfter}` : "You held your ground";
     }
   } else if (p.rankAfter != null) {
     figure = `#${p.rankAfter}`;
-    caption = "Your final spot on the board";
+    caption = `Your ${where} spot on the board`;
   }
   return {
     id: "po-rank",
     kind: "standings",
     eyebrow,
-    headline: "Where you finished.",
+    headline: decided ? "Where you finished." : "Where you stand.",
     figure,
     figureCaption: caption,
     autoAdvanceMs: AUTO_MS,

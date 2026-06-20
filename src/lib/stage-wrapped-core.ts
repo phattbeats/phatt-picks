@@ -45,6 +45,24 @@ export interface WrappedAvatar {
   label: string;
 }
 
+/**
+ * A documentary photo for a slide — the "dank HLTV photo" twist (PHA-1274): the
+ * Cologne cathedral, the arena crowd, a player mid-scream. Rendered as a hero
+ * band behind/above the copy. `credit` is shown small so attribution rides with
+ * the image (every shipped photo must carry a real, licensable source).
+ */
+export interface WrappedPhoto {
+  src: string;
+  alt: string;
+  /** Attribution line, e.g. "ESL One Cologne · CC BY-SA". Always set for shipped photos. */
+  credit?: string;
+  /**
+   * CSS object-position focal point, e.g. "50% 30%", so a crop keeps the subject
+   * in frame on the tall slide band. Defaults to center.
+   */
+  focus?: string;
+}
+
 /** A stylized STAGE logo lockup (HEAT brand) — hero mark on the cover/closer. */
 export interface WrappedStageBadge {
   /** Roman numeral, e.g. "I" / "II" / "III". */
@@ -73,6 +91,8 @@ export interface WrappedSlide {
   teamLogos?: WrappedTeamLogo[];
   /** A brand mark (major / game logo) for cover + closer slides. */
   brandLogo?: WrappedBrandLogo;
+  /** A documentary hero photo (the HLTV-photo twist) — cathedral, arena, a player moment. */
+  photo?: WrappedPhoto;
   /** The viewer's avatar, for personal slides. */
   avatar?: WrappedAvatar;
   /** A stylized STAGE logo lockup, for the cover + closer. */
@@ -109,6 +129,59 @@ export function resolveAutoAdvanceMs(
   if (opts.reducedMotion || opts.userControlled) return null;
   return Math.max(MIN_AUTO_ADVANCE_MS, requested);
 }
+
+/* ------------------------------------------------------------------ */
+/* Soundtrack (PHA-1054 + PHA-1274)                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One selectable backing track for the deck. Every track is royalty-free and
+ * CC-BY 3.0 by Kevin MacLeod (incompetech.com) — his blanket license covers the
+ * whole catalog, so attribution to the composer (carried in `credit`, surfaced
+ * in the sound control) is all that's required. The mp3s live under
+ * /public/audio and are mirrored in public/audio/CREDITS.md.
+ */
+export interface WrappedTrack {
+  id: string;
+  /** Track name for the picker + control title. */
+  title: string;
+  src: string;
+  /** Attribution line — always shown so the license rides with the audio. */
+  credit: string;
+  /** Short mood tag for the picker, e.g. "Epic" / "Bittersweet" / "Somber". */
+  mood: string;
+}
+
+/**
+ * The deck soundtrack options (PHA-1274, Brandon: "a few more epic musics with
+ * more bittersweet or somber endings"). Index 0 is the default that plays on the
+ * first sound-on; the track control cycles through the rest. Order puts the
+ * triumphant theme first, then the bittersweet/somber pieces that suit a Major
+ * sending its champion home and everyone else into the off-season.
+ */
+export const WRAPPED_TRACKS: readonly WrappedTrack[] = [
+  {
+    id: "descent",
+    title: "The Descent",
+    src: "/audio/wrapped-theme.mp3",
+    credit: "“The Descent” — Kevin MacLeod (incompetech.com) · CC-BY 3.0",
+    mood: "Epic",
+  },
+  {
+    id: "despair-triumph",
+    title: "Despair & Triumph",
+    src: "/audio/wrapped-despair-triumph.mp3",
+    credit: "“Despair and Triumph” — Kevin MacLeod (incompetech.com) · CC-BY 3.0",
+    mood: "Bittersweet",
+  },
+  {
+    id: "long-note-three",
+    title: "Long Note Three",
+    src: "/audio/wrapped-long-note-three.mp3",
+    credit: "“Long Note Three” — Kevin MacLeod (incompetech.com) · CC-BY 3.0",
+    mood: "Somber",
+  },
+];
 
 /* ------------------------------------------------------------------ */
 /* Deck cursor reducer                                                 */

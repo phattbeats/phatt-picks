@@ -26,6 +26,7 @@ import {
   resolveAutoAdvanceMs,
   stageWrappedKey,
   wrappedSeenKey,
+  WRAPPED_TRACKS,
   type DeckState,
 } from "../src/lib/stage-wrapped-core.ts";
 
@@ -118,6 +119,14 @@ check("deck exercises distinct kinds", new Set(slides.map((s) => s.kind)).size >
 check("deck includes a standings slide", slides.some((s) => s.kind === "standings"));
 check("auto-advanced slides all resolve at/above the floor", slides.filter((s) => s.autoAdvanceMs).every((s) => resolveAutoAdvanceMs(s) !== null && resolveAutoAdvanceMs(s)! >= MIN_AUTO_ADVANCE_MS));
 check("closing slide waits for the user (no auto-advance)", slides[slides.length - 1].autoAdvanceMs == null);
+
+console.log("\nstage-wrapped - soundtrack registry (PHA-1274)");
+check("more than one track to choose from", WRAPPED_TRACKS.length >= 2);
+check("every track has a src + credit + mood", WRAPPED_TRACKS.every((t) => !!t.src && !!t.credit && !!t.mood));
+check("every track is attributed (CC-BY / Kevin MacLeod)", WRAPPED_TRACKS.every((t) => /CC-BY/i.test(t.credit) && /MacLeod/i.test(t.credit)));
+check("track ids are unique", new Set(WRAPPED_TRACKS.map((t) => t.id)).size === WRAPPED_TRACKS.length);
+check("offers a bittersweet/somber ending mood", WRAPPED_TRACKS.some((t) => /bittersweet|somber/i.test(t.mood)));
+check("default track leads (index 0 = the epic theme)", WRAPPED_TRACKS[0].id === "descent");
 
 console.log(`\nstage-wrapped: ${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);

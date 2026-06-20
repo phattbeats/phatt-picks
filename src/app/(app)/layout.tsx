@@ -1,6 +1,7 @@
 import { HeatHeader, type TopbarYouProps } from "@/components/heat/HeatHeader";
 import { HeatBottomNav } from "@/components/heat/HeatBottomNav";
 import { HowToPlayAnnounce } from "@/components/heat/HowToPlayAnnounce";
+import { StageWrappedGate } from "@/components/heat/StageWrappedGate";
 import { AnnouncePopup } from "@/components/heat/AnnouncePopup";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
@@ -47,12 +48,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             }}
           />
         )}
-        {/* Stage Wrapped recap (PHA-1051) — the app-wide auto-open launcher was
-            REMOVED (PHA-1269): the full-screen recap deck auto-opening on login
-            froze low-end mobile (Android) and didn't fit small screens. The recap
-            is still available on demand from the stage reveal page ("Replay the
-            recap" button) and via the recap notification (?wrapped=1 deep link).
-            Nothing pops up on its own anymore. */}
+        {/* Stage (Swiss) recap auto-open stays REMOVED (PHA-1269): it froze
+            low-end Android on login. The Stage recap is on-demand only (reveal
+            "Replay" button + ?wrapped=1 deep link).
+            The MAJOR Wrapped finale (PHA-1274) DOES auto-open app-wide — Brandon's
+            call, it's the big finish — but ironclad: hard-gated on the Grand Final
+            champion (renders nothing until then), deferred to idle, once per
+            viewer, behind an error boundary, no GPU blur, mobile-fit. */}
+        {session && <StageWrappedGate playerId={session.playerId} />}
         {children}
       </main>
       <HeatBottomNav />
