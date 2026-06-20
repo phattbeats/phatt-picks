@@ -26,7 +26,10 @@ export function CoinInspector({
 }) {
   const DIAM = 300; // on-screen coin diameter (px)
   const THICK = 34; // coin thickness (px) — chunky, quarter-like
-  const radius = DIAM / 2;
+  // Rim sits flush at the disc edge (art is cropped to the disc, so the face
+  // radius IS DIAM/2). Tuck 1px so the reeded wall hugs the face instead of
+  // ringing it like an orbit.
+  const radius = DIAM / 2 - 1;
 
   const rot = useRef({ x: -12, y: 0 });
   const vel = useRef(0); // residual spin velocity (deg/frame)
@@ -91,7 +94,8 @@ export function CoinInspector({
 
   const front = coinArtSrc(coin.slug, coin.tier);
   const back = coinBackSrc(coin.tier);
-  const segW = Math.ceil((Math.PI * DIAM) / EDGE_SEGMENTS) + 2;
+  // Tangential length of each rim strip; +2px overlap so the wall has no seams.
+  const segLen = Math.ceil((2 * Math.PI * radius) / EDGE_SEGMENTS) + 2;
 
   return (
     <div className="coin-inspect-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label={`Inspect ${coin.name} challenge coin`}>
@@ -124,15 +128,18 @@ export function CoinInspector({
                 <img src={back} alt="" width={DIAM} height={DIAM} draggable={false} />
                 <span className={`coin3d-shine ${coin.tier}`} aria-hidden="true" />
               </div>
-              {/* Knurled edge ring */}
+              {/* Reeded edge — a true cylinder wall about the coin's own (Z)
+                  axis: each strip stands vertically (height = thickness) at the
+                  rim and faces outward, so it reads as the coin's milled edge,
+                  not a ring orbiting it. */}
               {Array.from({ length: EDGE_SEGMENTS }).map((_, i) => (
                 <div
                   key={i}
                   className={`coin3d-edge ${coin.tier}`}
                   style={{
-                    width: segW,
-                    height: THICK,
-                    transform: `translate(-50%, -50%) rotateY(${(360 / EDGE_SEGMENTS) * i}deg) translateZ(${radius}px)`,
+                    width: THICK,
+                    height: segLen,
+                    transform: `translate(-50%, -50%) rotateZ(${(360 / EDGE_SEGMENTS) * i}deg) translateX(${radius}px) rotateY(90deg)`,
                   }}
                 />
               ))}

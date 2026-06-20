@@ -971,11 +971,12 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .coin3d-shine.bronze { background: linear-gradient(115deg, transparent 42%, rgba(255,230,200,0.24) 50%, transparent 58%); }
 .coin3d-edge {
   position: absolute; top: 50%; left: 50%;
-  /* Reeded (milled) edge like a quarter: crisp vertical ribs layered over a
-     top→bottom cylinder shade so the rim reads as rounded metal, not a flat band. */
+  /* Reeded (milled) edge like a quarter: ribs run across the thickness (spaced
+     around the rim → the strip's height), layered over a cross-thickness shade
+     (the strip's width) so the rim reads as rounded metal, not a flat band. */
   background-image:
-    repeating-linear-gradient(90deg, rgba(0,0,0,0.55) 0 1px, rgba(255,255,255,0.22) 1px 2.5px),
-    linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(255,255,255,0.22) 46%, rgba(0,0,0,0.6) 100%);
+    repeating-linear-gradient(to bottom, rgba(0,0,0,0.55) 0 1px, rgba(255,255,255,0.22) 1px 2.5px),
+    linear-gradient(to right, rgba(0,0,0,0.6) 0%, rgba(255,255,255,0.22) 46%, rgba(0,0,0,0.6) 100%);
 }
 .coin3d-edge.diamond { background-color: #6c93b0; }
 .coin3d-edge.gold { background-color: #a87c22; }
