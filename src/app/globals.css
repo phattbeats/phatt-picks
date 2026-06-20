@@ -777,6 +777,43 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   background: var(--surf-1); border: 1px solid var(--hair-2);
   padding: 22px 20px; display: flex; align-items: center; gap: 18px;
 }
+/* Gear cog → /settings, top-right of your own hero (PHA-1275). */
+.profile-gear {
+  position: absolute; top: 12px; right: 12px;
+  width: 34px; height: 34px; display: grid; place-items: center;
+  border: 1px solid var(--hair-2); border-radius: var(--r-sm);
+  background: var(--surf-2); color: var(--ink-mid);
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.profile-gear:hover { color: var(--heat); border-color: var(--hair-3); background: var(--surf-3); }
+
+/* Settings disclosures (PHA-1275) — fold the rarely-opened pages away so the
+   page opens calm. <details>/<summary>, no JS. */
+.settings-fold { padding: 0; }
+.settings-fold > summary {
+  list-style: none; cursor: pointer; user-select: none;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 16px 18px;
+  font-family: var(--font-display); font-weight: 800; font-size: 15px;
+  text-transform: uppercase; letter-spacing: 0.02em; color: var(--ink-hi);
+}
+.settings-fold > summary::-webkit-details-marker { display: none; }
+.settings-fold > summary::after {
+  content: '+'; margin-left: auto; flex-shrink: 0;
+  font-family: var(--font-mono); font-weight: 400; font-size: 18px;
+  color: var(--ink-mid); transition: transform 0.15s ease;
+}
+.settings-fold[open] > summary::after { content: '–'; }
+.settings-fold-hint {
+  font-family: var(--font-mono); font-weight: 400; font-size: 9px;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-low);
+  text-align: right; flex-shrink: 1; min-width: 0;
+}
+.settings-fold-body {
+  display: flex; flex-direction: column; gap: 18px;
+  padding: 2px 18px 18px;
+  border-top: 1px solid var(--hair);
+}
 .profile-av {
   width: 60px; height: 60px; border-radius: var(--r-sm);
   border: 1px solid var(--hair-3); background: var(--surf-3);
