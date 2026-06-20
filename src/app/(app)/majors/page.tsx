@@ -205,7 +205,7 @@ export default async function MajorsPage() {
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
-          {history.map((row) => {
+          {history.map((row, i) => {
             const coin = coinByEvent.get(row.eventId);
             return (
             <div
@@ -279,7 +279,7 @@ export default async function MajorsPage() {
             </Link>
             {coin && (
               <div className="major-row-coin">
-                <InspectableCoin coin={coin} size={60} />
+                <InspectableCoin coin={coin} size={60} delay={i * 1.1} />
                 <span className={`coin-collectible-tier ${coin.tier}`}>{coin.tier}</span>
               </div>
             )}

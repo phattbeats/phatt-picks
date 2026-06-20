@@ -52,10 +52,10 @@ export function ChallengeCoinShelf({
         <span className="coin-shelf-count">{coins.length}</span>
       </div>
       <div className="coin-shelf-grid">
-        {coins.map((c) => (
+        {coins.map((c, i) => (
           <div key={c.eventId} className="coin-collectible">
             <div className="coin-collectible-disc">
-              <InspectableCoin coin={c} size={112} />
+              <InspectableCoin coin={c} size={112} delay={i * 1.3} />
             </div>
             <div className={`coin-collectible-tier ${c.tier}`}>{c.tier}</div>
             <div className="coin-collectible-name">{c.name}</div>

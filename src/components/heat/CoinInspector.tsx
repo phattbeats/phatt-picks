@@ -116,11 +116,13 @@ export function CoinInspector({
               <div className="coin3d-face" style={{ transform: `translateZ(${THICK / 2}px)` }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={front} alt="" width={DIAM} height={DIAM} draggable={false} />
+                <span className={`coin3d-shine ${coin.tier}`} aria-hidden="true" />
               </div>
               {/* Back face */}
               <div className="coin3d-face" style={{ transform: `rotateY(180deg) translateZ(${THICK / 2}px)` }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={back} alt="" width={DIAM} height={DIAM} draggable={false} />
+                <span className={`coin3d-shine ${coin.tier}`} aria-hidden="true" />
               </div>
               {/* Knurled edge ring */}
               {Array.from({ length: EDGE_SEGMENTS }).map((_, i) => (
@@ -153,8 +155,13 @@ export function CoinInspector({
   );
 }
 
-/** Convenience: a shelf thumbnail that opens the inspector on tap. */
-export function InspectableCoin({ coin, size = 112 }: { coin: ChallengeCoin; size?: number }) {
+/**
+ * Convenience: a shelf thumbnail that opens the inspector on tap. Carries a slow
+ * sheen sweep + a faint sparkle ("ooh shiny", dialed back) — staggered per coin
+ * via `delay` so a shelf glints organically, not in unison. Pure transform/
+ * opacity animation (no blur/backdrop-filter) and off under reduced-motion.
+ */
+export function InspectableCoin({ coin, size = 112, delay = 0 }: { coin: ChallengeCoin; size?: number; delay?: number }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -164,8 +171,13 @@ export function InspectableCoin({ coin, size = 112 }: { coin: ChallengeCoin; siz
         onClick={() => setOpen(true)}
         title={`Inspect ${coin.name} — ${coin.tier}`}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={coinArtSrc(coin.slug, coin.tier)} alt={`${coin.name} challenge coin (${coin.tier})`} width={size} height={size} />
+        <span
+          className={`coin-shine ${coin.tier}`}
+          style={{ ["--shimmer-delay" as string]: `${delay}s` } as React.CSSProperties}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={coinArtSrc(coin.slug, coin.tier)} alt={`${coin.name} challenge coin (${coin.tier})`} width={size} height={size} />
+        </span>
       </button>
       {open && <CoinInspector coin={coin} onClose={() => setOpen(false)} />}
     </>
