@@ -889,20 +889,22 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .coin-shine::before {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   clip-path: circle(46% at 50% 50%); mix-blend-mode: screen;
-  background: linear-gradient(115deg, transparent 38%, rgba(255,255,255,0.55) 50%, transparent 62%);
+  /* Narrow, gentle band — a glide of light, not a wash. Kept low enough that the
+     embossed lettering stays legible underneath (Brandon: "too much sheen"). */
+  background: linear-gradient(115deg, transparent 44%, rgba(255,255,255,0.30) 50%, transparent 56%);
   transform: translateX(-120%);
   animation: coin-sweep 5.5s var(--shimmer-delay, 0s) ease-in-out infinite;
 }
 .coin-shine::after {
-  content: ""; position: absolute; top: 28%; left: 60%; width: 16%; height: 16%; pointer-events: none;
-  background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 68%);
+  content: ""; position: absolute; top: 28%; left: 60%; width: 13%; height: 13%; pointer-events: none;
+  background: radial-gradient(circle, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 68%);
   opacity: 0; transform: scale(0.4);
   animation: coin-sparkle 5.5s var(--shimmer-delay, 0s) ease-in-out infinite;
 }
-.coin-shine.diamond::before { opacity: 1; }
-.coin-shine.gold::before { opacity: 0.85; }
-.coin-shine.silver::before { opacity: 0.8; }
-.coin-shine.bronze::before { opacity: 0.6; }
+.coin-shine.diamond::before { opacity: 0.85; }
+.coin-shine.gold::before { opacity: 0.6; }
+.coin-shine.silver::before { opacity: 0.55; }
+.coin-shine.bronze::before { opacity: 0.42; }
 .coin-shine.bronze::after { opacity: 0; filter: brightness(0.8); }
 @keyframes coin-sweep {
   0% { transform: translateX(-120%); }
@@ -961,20 +963,24 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .coin3d-shine {
   position: absolute; inset: 0; pointer-events: none; border-radius: 50%;
   clip-path: circle(48% at 50% 50%); mix-blend-mode: screen;
-  background: linear-gradient(115deg, transparent 36%, rgba(255,255,255,0.5) 50%, transparent 64%);
+  background: linear-gradient(115deg, transparent 42%, rgba(255,255,255,0.30) 50%, transparent 58%);
   transform: translateX(-120%);
   animation: coin-sweep 4s ease-in-out infinite;
 }
-.coin3d-shine.diamond { background: linear-gradient(115deg, transparent 34%, rgba(210,240,255,0.62) 50%, transparent 66%); }
-.coin3d-shine.bronze { background: linear-gradient(115deg, transparent 38%, rgba(255,230,200,0.4) 50%, transparent 62%); }
+.coin3d-shine.diamond { background: linear-gradient(115deg, transparent 40%, rgba(210,240,255,0.4) 50%, transparent 60%); }
+.coin3d-shine.bronze { background: linear-gradient(115deg, transparent 42%, rgba(255,230,200,0.24) 50%, transparent 58%); }
 .coin3d-edge {
   position: absolute; top: 50%; left: 50%;
-  background: repeating-linear-gradient(90deg, rgba(0,0,0,0.35) 0 1px, rgba(255,255,255,0.12) 1px 3px);
+  /* Reeded (milled) edge like a quarter: crisp vertical ribs layered over a
+     top→bottom cylinder shade so the rim reads as rounded metal, not a flat band. */
+  background-image:
+    repeating-linear-gradient(90deg, rgba(0,0,0,0.55) 0 1px, rgba(255,255,255,0.22) 1px 2.5px),
+    linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(255,255,255,0.22) 46%, rgba(0,0,0,0.6) 100%);
 }
-.coin3d-edge.diamond { background-color: #5b86a6; }
-.coin3d-edge.gold { background-color: #9c7320; }
-.coin3d-edge.silver { background-color: #8a8d92; }
-.coin3d-edge.bronze { background-color: #84512a; }
+.coin3d-edge.diamond { background-color: #6c93b0; }
+.coin3d-edge.gold { background-color: #a87c22; }
+.coin3d-edge.silver { background-color: #92969c; }
+.coin3d-edge.bronze { background-color: #8d5730; }
 .coin-inspect-meta { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .coin-inspect-name { font-size: 15px; color: var(--ink-hi); font-weight: 600; }
 .coin-inspect-finish { font-family: var(--font-mono); font-size: 11px; color: var(--ink-mid); letter-spacing: 0.06em; }

@@ -14,8 +14,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { coinArtSrc, coinBackSrc, type ChallengeCoin } from "@/lib/challenge-coin-core";
 
-/** Number of flat strips approximating the cylinder's knurled edge. */
-const EDGE_SEGMENTS = 64;
+/** Number of flat strips approximating the cylinder's reeded (ribbed) edge. */
+const EDGE_SEGMENTS = 90;
 
 export function CoinInspector({
   coin,
@@ -25,7 +25,7 @@ export function CoinInspector({
   onClose: () => void;
 }) {
   const DIAM = 300; // on-screen coin diameter (px)
-  const THICK = 22; // coin thickness (px)
+  const THICK = 34; // coin thickness (px) — chunky, quarter-like
   const radius = DIAM / 2;
 
   const rot = useRef({ x: -12, y: 0 });
