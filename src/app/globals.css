@@ -95,7 +95,12 @@ body {
   position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
 }
 .heat-bg::before, .heat-bg::after {
-  content: ''; position: absolute; border-radius: 50%; filter: blur(140px);
+  /* PHA-1269: the ambient glow used `filter: blur(140px)` on a 70vw×70vw fixed
+     layer — a giant blurred compositor texture that real-GPU Chrome re-rasters
+     whenever any animation runs, costing GPU memory + raster CPU that JS-heap
+     profiling never sees. A radial-gradient is already smooth, so the soft glow
+     comes from the gradient falloff alone, with no blur layer. */
+  content: ''; position: absolute; border-radius: 50%;
 }
 /* PHA-1007 polish: calmer backdrop. Keep ONE soft ambient glow; retire the
    second drifting blob, the tactical grid, and the scanlines so the content
@@ -443,9 +448,11 @@ body {
   height: 64px;
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 50;
-  background: rgba(10,8,5,0.92);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  /* PHA-1269: dropped `backdrop-filter: blur(20px)` — a fixed full-width bar on
+     every app page forces the GPU to re-blur everything behind it on every
+     animated frame. The bar is already 92% opaque, so a near-opaque solid fill
+     reads the same with no live compositing cost. */
+  background: rgba(10,8,5,0.975);
   border-top: 1px solid var(--hair-2);
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -1069,8 +1076,15 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .tsd-backdrop {
   position: fixed; inset: 0; z-index: 200;
   display: flex; align-items: flex-end; justify-content: center;
-  background: rgba(8,6,3,0.72);
-  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  /* PHA-1269: dropped the full-viewport `backdrop-filter: blur(4px)`. This
+     backdrop is shared by the Stage Wrapped deck (`.sw-backdrop`), which
+     AUTO-OPENS right after login; with motion on, the deck's continuous
+     animations + auto-advance force the GPU to re-rasterize a full-screen blur
+     every frame (on top of the ambient glow behind it) — pegging GPU/CPU and
+     ballooning compositor memory that JS-heap profiling can't see (the "100% CPU
+     / 4GB / freezes the whole browser" report). A darker solid scrim dims the
+     page the same way with zero live compositing. */
+  background: rgba(8,6,3,0.86);
   padding: 0;
 }
 .tsd-panel {
@@ -1316,14 +1330,18 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 
 /* Kinetic entrance — blur + scale + lift that settles, staggered per element,
    re-fired each slide via the React remount key. The Wrapped "snap into focus". */
+/* PHA-1269: animate only transform + opacity (compositor-only, cheap). The
+   former `filter: blur()` ramp re-rasterized on the GPU and re-fired on every
+   auto-advance of the deck — needless raster cost on the takeover that opens at
+   login. The snap-into-focus reads the same from the translate/scale alone. */
 @keyframes sw-slide-in {
-  from { opacity: 0; transform: translateY(20px) scale(0.965); filter: blur(7px); }
-  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  from { opacity: 0; transform: translateY(20px) scale(0.965); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 @keyframes sw-figure-pop {
-  0% { opacity: 0; transform: translateY(14px) scale(0.8); filter: blur(8px); }
+  0% { opacity: 0; transform: translateY(14px) scale(0.8); }
   62% { transform: translateY(0) scale(1.05); }
-  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 .sw-enter { animation: sw-slide-in 420ms var(--ease) both; }
 .sw-enter .sw-eyebrow { animation: sw-slide-in 460ms var(--ease) both; animation-delay: 40ms; }
