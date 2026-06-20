@@ -10,6 +10,7 @@ import {
   progressLabel,
   resolveAutoAdvanceMs,
   wrappedSeenKey,
+  WRAPPED_TRACKS,
   type DeckState,
   type WrappedSlide,
 } from "@/lib/stage-wrapped-core";
@@ -135,6 +136,9 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
   // royalty-free theme; closing the deck stops it.
   const audioRef = useRef<HTMLAudioElement>(null);
   const [soundOn, setSoundOn] = useState(false);
+  // Which backing track is selected (PHA-1274 — multiple moods, see WRAPPED_TRACKS).
+  const [trackIndex, setTrackIndex] = useState(0);
+  const track = WRAPPED_TRACKS[trackIndex] ?? WRAPPED_TRACKS[0];
   const toggleSound = useCallback(() => {
     const el = audioRef.current;
     if (!el) return;
@@ -148,6 +152,23 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
       return true;
     });
   }, []);
+  // Cycle to the next mood. If sound is already on, swap the source and keep
+  // playing from the top of the new track; if it's off, just arm the choice.
+  const cycleTrack = useCallback(() => {
+    setTrackIndex((i) => (i + 1) % WRAPPED_TRACKS.length);
+  }, []);
+  // When the track changes mid-play, reload the <audio> to the new src and
+  // resume (the src prop change alone doesn't restart a playing element).
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    el.load();
+    if (soundOn) {
+      el.volume = 0.55;
+      void el.play().catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trackIndex]);
   // Stop + reset the track whenever the deck closes.
   useEffect(() => {
     if (open) return;
@@ -271,15 +292,12 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
         <span className="br-tr" />
         <span className="br-bl" />
 
-        {/* Epic royalty-free soundtrack — "The Descent" by Kevin MacLeod (CC-BY 3.0). */}
-        <audio ref={audioRef} src="/audio/wrapped-theme.mp3" loop preload="none" aria-hidden="true" />
-        <button
-          className="sw-sound"
-          type="button"
-          aria-pressed={soundOn}
-          aria-label={soundOn ? "Mute soundtrack" : "Play epic soundtrack"}
-          title={soundOn ? "Mute" : "Play epic soundtrack — 'The Descent', Kevin MacLeod (CC-BY)"}
-          onClick={toggleSound}
+        {/* Royalty-free soundtrack — Kevin MacLeod (CC-BY 3.0). Multiple moods
+            (PHA-1274): the sound button plays/mutes; the mood button cycles
+            epic → bittersweet → somber. `key` remounts the element on track
+            change so the new src is picked up cleanly. */}
+        <audio key={track.id} ref={audioRef} src={track.src} loop preload="none" aria-hidden="true" />
+        <div
           style={{
             position: "absolute",
             top: 10,
@@ -288,32 +306,78 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
             display: "inline-flex",
             alignItems: "center",
             gap: 6,
-            padding: "5px 9px",
-            background: soundOn ? "rgba(240,163,0,0.14)" : "transparent",
-            border: "1px solid var(--hair-2)",
-            borderColor: soundOn ? "var(--heat)" : "var(--hair-2)",
-            color: soundOn ? "var(--heat)" : "var(--ink-mid)",
-            borderRadius: 4,
-            cursor: "pointer",
-            font: "inherit",
           }}
         >
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" />
-            {soundOn ? (
-              <>
-                <path d="M15.5 8.5a5 5 0 0 1 0 7" />
-                <path d="M18.5 5.5a9 9 0 0 1 0 13" />
-              </>
-            ) : (
-              <line x1="16" y1="9" x2="22" y2="15" />
-            )}
-            {!soundOn && <line x1="22" y1="9" x2="16" y2="15" />}
-          </svg>
-          <span className="eyebrow-mono" style={{ fontSize: 9, letterSpacing: "0.12em" }}>
-            {soundOn ? "SOUND ON" : "MUSIC"}
-          </span>
-        </button>
+          <button
+            className="sw-sound"
+            type="button"
+            aria-pressed={soundOn}
+            aria-label={soundOn ? "Mute soundtrack" : `Play soundtrack — ${track.title}`}
+            title={soundOn ? "Mute" : `Play soundtrack — ${track.credit}`}
+            onClick={toggleSound}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "5px 9px",
+              background: soundOn ? "rgba(240,163,0,0.14)" : "transparent",
+              border: "1px solid var(--hair-2)",
+              borderColor: soundOn ? "var(--heat)" : "var(--hair-2)",
+              color: soundOn ? "var(--heat)" : "var(--ink-mid)",
+              borderRadius: 4,
+              cursor: "pointer",
+              font: "inherit",
+            }}
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" />
+              {soundOn ? (
+                <>
+                  <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+                  <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+                </>
+              ) : (
+                <line x1="16" y1="9" x2="22" y2="15" />
+              )}
+              {!soundOn && <line x1="22" y1="9" x2="16" y2="15" />}
+            </svg>
+            <span className="eyebrow-mono" style={{ fontSize: 9, letterSpacing: "0.12em" }}>
+              {soundOn ? "SOUND ON" : "MUSIC"}
+            </span>
+          </button>
+          {/* Mood cycle — only worth showing when there's more than one track. */}
+          {WRAPPED_TRACKS.length > 1 && (
+            <button
+              className="sw-track"
+              type="button"
+              aria-label={`Change soundtrack mood (now: ${track.title} — ${track.mood})`}
+              title={`${track.title} — ${track.mood}. Tap for the next mood.`}
+              onClick={cycleTrack}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "5px 9px",
+                background: "transparent",
+                border: "1px solid var(--hair-2)",
+                color: "var(--ink-mid)",
+                borderRadius: 4,
+                cursor: "pointer",
+                font: "inherit",
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M17 1l4 4-4 4" />
+                <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                <path d="M7 23l-4-4 4-4" />
+                <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+              </svg>
+              <span className="eyebrow-mono" style={{ fontSize: 9, letterSpacing: "0.12em" }}>
+                {track.mood.toUpperCase()}
+              </span>
+            </button>
+          )}
+        </div>
 
         <button className="tsd-close" type="button" aria-label="Close" onClick={onClose}>
           <svg viewBox="0 0 24 24">
