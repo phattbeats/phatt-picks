@@ -45,6 +45,24 @@ export interface WrappedAvatar {
   label: string;
 }
 
+/**
+ * A documentary photo for a slide — the "dank HLTV photo" twist (PHA-1274): the
+ * Cologne cathedral, the arena crowd, a player mid-scream. Rendered as a hero
+ * band behind/above the copy. `credit` is shown small so attribution rides with
+ * the image (every shipped photo must carry a real, licensable source).
+ */
+export interface WrappedPhoto {
+  src: string;
+  alt: string;
+  /** Attribution line, e.g. "ESL One Cologne · CC BY-SA". Always set for shipped photos. */
+  credit?: string;
+  /**
+   * CSS object-position focal point, e.g. "50% 30%", so a crop keeps the subject
+   * in frame on the tall slide band. Defaults to center.
+   */
+  focus?: string;
+}
+
 /** A stylized STAGE logo lockup (HEAT brand) — hero mark on the cover/closer. */
 export interface WrappedStageBadge {
   /** Roman numeral, e.g. "I" / "II" / "III". */
@@ -73,6 +91,8 @@ export interface WrappedSlide {
   teamLogos?: WrappedTeamLogo[];
   /** A brand mark (major / game logo) for cover + closer slides. */
   brandLogo?: WrappedBrandLogo;
+  /** A documentary hero photo (the HLTV-photo twist) — cathedral, arena, a player moment. */
+  photo?: WrappedPhoto;
   /** The viewer's avatar, for personal slides. */
   avatar?: WrappedAvatar;
   /** A stylized STAGE logo lockup, for the cover + closer. */

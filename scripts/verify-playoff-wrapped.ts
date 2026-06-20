@@ -22,6 +22,8 @@
 import {
   buildPlayoffWrappedDeck,
   playoffWrappedHasContent,
+  COLOGNE_PHOTOS,
+  COLOGNE_PLAYOFF_MOMENTS,
   type PlayoffWrappedAssets,
   type PlayoffWrappedFacts,
   type PlayoffWrappedPersonal,
@@ -155,6 +157,55 @@ const missedChamp = missed.find((s) => s.id === "po-your-champion");
 check("wrong title pick → no reward", missedChamp?.calledIt === undefined);
 check("wrong title pick headline reads 'had'", /had/i.test(missedChamp?.headline ?? ""));
 check("no reactions → no bleachers slide", !missed.some((s) => s.id === "po-bleachers"));
+
+// ---- PHA-1274 followup: historic moments + the "dank photo" twist. ----
+
+// Every authored moment ships a real, credited photo (no bare/uncredited stills).
+check("authored moments exist", COLOGNE_PLAYOFF_MOMENTS.length >= 2);
+check("every authored moment has a credited photo",
+  COLOGNE_PLAYOFF_MOMENTS.every((m) => !!m.photo && !!m.photo.src && !!m.photo.credit));
+check("photo catalog is credited", Object.values(COLOGNE_PHOTOS).every((p) => !!p.src && !!p.alt && !!p.credit));
+
+// Mid-bracket (NO champion) but authored moments → the deck now tells a story
+// instead of waiting for the Final.
+const midFacts: PlayoffWrappedFacts = {
+  championPickId: null,
+  moments: COLOGNE_PLAYOFF_MOMENTS,
+  totalMatches: 7,
+  decidedMatches: 2,
+};
+check("moments-only → hasContent true", playoffWrappedHasContent(midFacts));
+const mid = buildPlayoffWrappedDeck(midFacts, null, assets);
+const midIds = mid.map((s) => s.id);
+check("mid-bracket deck is non-empty", mid.length > 0);
+check("mid-bracket cover adapts copy", /Cathedral is loud/i.test(mid[0].headline));
+check("cover carries the cathedral photo", mid[0].photo?.src === COLOGNE_PHOTOS.cathedral.src);
+check("authored moment slides present", midIds.includes("po-m-cathedral") && midIds.includes("po-m-cinderellas"));
+check("authored moment carries its photo", mid.find((s) => s.id === "po-m-cathedral")?.photo?.src === COLOGNE_PHOTOS.arena.src);
+check("mid-bracket has NO champion slide", !midIds.includes("po-champion"));
+check("mid-bracket still has no personal slides (signed-out)", !midIds.some((id) => id.startsWith("po-your") || id === "po-rank"));
+
+// Mid-bracket personal: title pick is a live call, not a settled verdict.
+const midPersonal: PlayoffWrappedPersonal = {
+  displayName: "DJCeee",
+  bracketHits: 1,
+  bracketResolved: 2,
+  championPickId: 85, // still alive, no champion crowned yet
+  rankAfter: 7,
+  rankMove: { delta: 2, direction: "up" },
+};
+const midMine = buildPlayoffWrappedDeck(midFacts, midPersonal, assets);
+const midChamp = midMine.find((s) => s.id === "po-your-champion");
+check("undecided title pick → no reward", midChamp?.calledIt === undefined);
+check("undecided title pick reads as a live call", /pick to lift it/i.test(midChamp?.headline ?? ""));
+check("undecided rank slide reads 'where you stand'", /where you stand/i.test(midMine.find((s) => s.id === "po-rank")?.headline ?? ""));
+
+// Decided deck WITH authored moments → moments slot in before the champion.
+const decidedWithMoments = buildPlayoffWrappedDeck({ ...resolved, moments: COLOGNE_PLAYOFF_MOMENTS }, null, assets);
+const dwmIds = decidedWithMoments.map((s) => s.id);
+check("decided+moments: moments come before champion",
+  dwmIds.indexOf("po-m-cathedral") < dwmIds.indexOf("po-champion"));
+check("decided champion slide carries a photo", decidedWithMoments.find((s) => s.id === "po-champion")?.photo?.src === COLOGNE_PHOTOS.arena.src);
 
 console.log(`\nverify-playoff-wrapped: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

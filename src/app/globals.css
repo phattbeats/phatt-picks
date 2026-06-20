@@ -1267,6 +1267,32 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   padding: 30px 8px; min-height: 0;
 }
 .sw-slide { width: 100%; text-align: center; }
+/* Documentary hero photo (PHA-1274) — a wide cinematic band at the top of the
+   slide. A bottom gradient fades the image into the deck so the headline keeps
+   its contrast, and a hairline + heat glow frame it as a "broadcast still".
+   The image is cropped to the band via object-fit; the focal point is set
+   per-photo inline so the subject stays in frame. */
+.sw-photo {
+  position: relative; margin: 0 0 16px; width: 100%; height: 168px;
+  border-radius: 8px; overflow: hidden;
+  border: 1px solid var(--hair-2); box-shadow: 0 10px 30px rgba(0,0,0,0.45), 0 0 22px var(--heat-glow);
+}
+.sw-photo img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  filter: saturate(1.05) contrast(1.02);
+}
+/* Fade the foot of the photo into the surface so the eyebrow/figure below it
+   reads as one frame, plus a faint top vignette for depth. */
+.sw-photo::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(to bottom, rgba(10,8,5,0.10) 0%, transparent 22%, transparent 62%, var(--surf-1) 100%);
+}
+.sw-photo figcaption {
+  position: absolute; right: 7px; bottom: 6px; z-index: 1;
+  font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-mid); background: rgba(10,8,5,0.55); padding: 2px 6px; border-radius: 3px;
+}
 .sw-eyebrow {
   display: inline-block; margin-bottom: 16px; color: var(--heat);
   padding: 3px 9px; border: 1px solid color-mix(in srgb, var(--heat) 40%, transparent);
