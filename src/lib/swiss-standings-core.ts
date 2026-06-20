@@ -267,11 +267,3 @@ export function buildSwissStandings(
     userTotal: userPicks.length,
   };
 }
-
-/** UI grouping order + display labels for the standings columns. */
-export const SWISS_STATUS_GROUPS: ReadonlyArray<{ status: SwissTeamStatus; label: string }> = [
-  { status: "advanced-3-0", label: "3:0 — ADVANCED" },
-  { status: "advanced", label: "ADVANCED" },
-  { status: "live", label: "STILL IN CONTENTION" },
-  { status: "eliminated", label: "0:3 — ELIMINATED" },
-];
