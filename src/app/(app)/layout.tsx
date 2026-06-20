@@ -24,7 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   });
   // The top-right avatar opens your own player profile (Brandon). Anonymous →
   // the account/sign-in surface.
-  const profileHref = session ? `/players/${session.playerId}` : "/profile";
+  const profileHref = session ? `/players/${session.playerId}` : "/settings";
 
   // Broadcast popup (PHA-1211) — the latest active announcement, shown once to
   // every signed-in player. Derived from the clock; null when none is live.
