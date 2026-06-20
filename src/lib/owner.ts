@@ -8,7 +8,7 @@
 
 import type { Session } from "./session";
 
-export function getOwnerSteamId(): string | null {
+function getOwnerSteamId(): string | null {
   const raw = process.env.OWNER_STEAM_ID;
   if (!raw) return null;
   const trimmed = raw.trim();

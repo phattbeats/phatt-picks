@@ -27,31 +27,62 @@ self.addEventListener("install", () => {
 });
 
 self.addEventListener("activate", (event) => {
-  // Purge ALL Cache Storage on every activation. This app is deliberately
-  // cache-light and stores nothing, but a prior SW iteration (or any future
-  // regression) that did cache would otherwise leave stale entries that survive
-  // reloads and deploys — the "saved cached version" Brandon flagged (PHA-1269).
-  // Deleting unconditionally guarantees no stale build can ever be served.
   event.waitUntil(
     (async () => {
+      // Purge ALL Cache Storage on activation. This app is deliberately
+      // cache-light and stores nothing, but a prior SW iteration (or any future
+      // regression) that cached would otherwise leave stale entries that survive
+      // reloads and deploys — the "saved cached version" Brandon flagged.
       const keys = await caches.keys();
       await Promise.all(keys.map((k) => caches.delete(k)));
       await self.clients.claim();
+
+      // BROADCAST RECOVERY (PHA-1269). A fresh worker means a new deploy. Bounce
+      // every open client to the current build so anyone stuck on an old cached
+      // version is pulled onto the fix — this is the one mechanism that reaches an
+      // installed PWA / SW-controlled tab even when its HTML is cached, because the
+      // worker updates independently of the page's HTTP cache. We navigate with a
+      // one-shot cache-busting `_v` param so the reload is GUARANTEED to fetch the
+      // current HTML from the network (bypassing a stale cached copy) rather than
+      // re-serving the broken one. Once per activation (once per deploy) → no loop;
+      // `_v` is ignored by the app and invisible in a standalone PWA (no URL bar).
+      try {
+        const wins = await self.clients.matchAll({ type: "window" });
+        await Promise.all(
+          wins.map((c) => {
+            if (typeof c.navigate !== "function") return undefined;
+            let href;
+            try {
+              const u = new URL(c.url);
+              u.searchParams.set("_v", String(Date.now()));
+              href = u.href;
+            } catch {
+              href = c.url;
+            }
+            return c.navigate(href).catch(() => {});
+          }),
+        );
+      } catch {
+        // navigate() unsupported (e.g. iOS Safari) — clients still got the purge +
+        // claim, and the no-store HTML + ChunkLoadError self-heal recover them.
+      }
     })(),
   );
 });
 
-// Network passthrough for top-level navigations only; everything else (SSE,
-// /api, RSC refreshes, static assets) is left to the browser's native networking
-// so the worker never holds a streaming connection or sits on the hot path.
-self.addEventListener("fetch", (event) => {
-  const req = event.request;
-  if (req.method !== "GET") return;
-  // Only interpose on document navigations — never on the SSE stream, API calls,
-  // RSC payloads, or static assets.
-  if (req.mode !== "navigate" || req.destination !== "document") return;
-  event.respondWith(fetch(req).catch(() => Response.error()));
-});
+// The app caches nothing and serves everything live, so the worker intercepts
+// NOTHING — it exists only to satisfy PWA installability and to receive push.
+// An empty fetch listener still counts as a fetch handler for installability,
+// while letting the browser do all networking natively.
+//
+// WHITE-SCREEN FIX (PHA-1269): the previous version intercepted document
+// navigations and, on any fetch hiccup, returned `Response.error()`. In an
+// installed PWA (standalone, no address bar) or on a flaky mobile connection,
+// that turns a single transient navigation failure into a hard blank page with
+// no way to retry — exactly the "white screen when logging in on Android" report.
+// Not interposing means a failed navigation falls back to the browser's own
+// retry/error handling instead of a dead white screen.
+self.addEventListener("fetch", () => {});
 
 // Web Push — all notification kinds share this handler. Payload shape: PreLockPayload
 // from notify-core (title, body, url, tag, actions?).

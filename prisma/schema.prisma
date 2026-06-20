@@ -216,7 +216,14 @@ model Reaction {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  @@unique([senderId, eventId, sectionId, groupId, slotIndex])
+  // One stamp per sender PER TARGET PICK. targetPlayerId is part of the key
+  // because playoff bracket groups are shared across all players (group 274 =
+  // QF1 for everyone, slot 0), so without it a sender could react to only ONE
+  // player's pick per (section, group, slot) — reacting to a second player at
+  // the same coordinates collided on the narrower key and silently re-stamped
+  // the first target instead (PHA-1262: "could react on Miss_Shade but not
+  // Brandolorian/Ty-C").
+  @@unique([senderId, eventId, sectionId, groupId, slotIndex, targetPlayerId])
   @@index([eventId, targetPlayerId])
 }
 
@@ -251,4 +258,21 @@ model NotificationRead {
 
   @@id([playerId, entryId])
   @@index([playerId, readAt])
+}
+
+// Built-in privacy-friendly pageview counter (PHA-1277). One row per view, fully
+// anonymous: normalized internal path + coarse device + external referrer host
+// only. No player relation, no IP, no query strings — see analytics-core.ts for
+// the sanitization rules. Lets us measure which routes actually get traffic so
+// the next declutter is evidence-based, without any third-party tracker or a
+// separate analytics container (it lives in this app's own SQLite DB).
+model PageView {
+  id        String   @id @default(cuid())
+  path      String
+  device    String // mobile | tablet | desktop
+  referrer  String? // external host only; null for direct / internal nav
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([path])
 }

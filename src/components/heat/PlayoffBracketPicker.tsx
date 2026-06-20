@@ -203,18 +203,32 @@ export function PlayoffBracketPicker({
           spent on the live counter, not the label. */}
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--ink-mid)" }}>
-          Place the whole bracket
+          {enabled ? "Place the whole bracket" : "Your bracket"}
         </span>
         <span className="last-updated">
-          {pickCount}/{totalMatches} called{saveState === "saving" ? " · saving…" : saveState === "saved" ? " · saved" : saveState === "error" ? " · retry" : ""}
+          {enabled
+            ? `${pickCount}/${totalMatches} called${saveState === "saving" ? " · saving…" : saveState === "saved" ? " · saved" : saveState === "error" ? " · retry" : ""}`
+            : "Locked"}
         </span>
       </div>
       <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "10px 0 0", lineHeight: 1.5 }}>
-        One stage, one bracket. Tap the team you call to win each match — they
-        advance up the nave to the next round. Tap{" "}
-        <span style={{ color: "var(--heat)", fontWeight: 600 }}>★ SPOTLIGHT</span> on any
-        team for its story. Change your mind upstream and the rounds below re-open.
-        {!steamLinked && signedIn ? " Saves as you go." : null}
+        {enabled ? (
+          <>
+            One stage, one bracket. Tap the team you call to win each match — they
+            advance up the nave to the next round. Tap{" "}
+            <span style={{ color: "var(--heat)", fontWeight: 600 }}>★ SPOTLIGHT</span> on any
+            team for its story. Change your mind upstream and the rounds below re-open.
+            {!steamLinked && signedIn ? " Saves as you go." : null}
+          </>
+        ) : (
+          // PHA-1263: locked read-only — the bracket the viewer crowned, frozen.
+          <>
+            Picks are locked — this is the bracket you called, your crowned
+            champion at the bottom. Tap{" "}
+            <span style={{ color: "var(--heat)", fontWeight: 600 }}>★ SPOTLIGHT</span> on any
+            team for its story. Live results fill in below as matches finish.
+          </>
+        )}
       </p>
 
       <div className="po-tree-compact">

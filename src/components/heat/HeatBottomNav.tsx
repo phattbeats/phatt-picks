@@ -48,11 +48,14 @@ const NAV_ITEMS: readonly NavItem[] = [
   {
     href: "/leaderboard",
     label: "Ranks",
-    match: (p) => p.startsWith("/leaderboard") || p.startsWith("/players"),
+    match: (p) => p.startsWith("/leaderboard"),
     icon: RanksIcon,
   },
   { href: "/news", label: "News", match: (p) => p.startsWith("/news"), icon: NewsIcon },
-  { href: "/profile", label: "You", match: (p) => p.startsWith("/profile"), icon: YouIcon },
+  // "You" now lands on your profile card; /players/* and /settings light it up
+  // (PHA-1275). Drilling into another player's card from Ranks lights You too —
+  // acceptable: they're both profiles.
+  { href: "/profile", label: "You", match: (p) => p.startsWith("/profile") || p.startsWith("/players") || p.startsWith("/settings"), icon: YouIcon },
 ];
 
 export function HeatBottomNav() {
@@ -63,6 +66,12 @@ export function HeatBottomNav() {
         <Link
           key={item.href}
           href={item.href}
+          // PHA-1269: no eager prefetch. The bottom nav is on every authed page,
+          // and Next was prefetching the full RSC tree of /picks, /leaderboard,
+          // /profile etc. on mount — a burst of heavy fetches + deserialization
+          // that wedged the renderer on low-RAM Android (freeze → Chrome crash).
+          // Tap-navigation still works; we just don't fetch all routes up front.
+          prefetch={false}
           className={item.match(pathname) ? "active" : undefined}
         >
           {item.icon}
