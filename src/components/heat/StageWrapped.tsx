@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { Component, useCallback, useEffect, useReducer, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   buildPlaceholderSlides,
@@ -38,6 +38,26 @@ import { StageLogo } from "@/components/heat/StageLogo";
 /* ------------------------------------------------------------------ */
 
 const REPLAY_EVENT = "stage-wrapped:replay";
+
+/**
+ * Ironclad guard (PHA-1274): the Wrapped deck is the only thing that auto-opens
+ * app-wide, so a render fault inside it must NEVER take down the page (a white
+ * screen would block the whole app — exactly the class of failure PHA-1269
+ * fought). If the deck throws, we render nothing and the rest of the app is
+ * untouched.
+ */
+class WrappedBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch() {
+    /* swallowed on purpose — the recap is non-essential chrome */
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
 
 /** Fire from any "Replay the recap" button; the matching launcher re-opens. */
 export function replayStageWrapped(stageKey: string): void {
@@ -676,12 +696,23 @@ interface AnnounceProps {
    * that already dismissed the auto-popup (PHA-1245 follow-up).
    */
   forceOpen?: boolean;
+  /**
+   * Opt-in app-wide auto-open (PHA-1274 — the Major Wrapped finale). OFF by
+   * default so stage recaps stay explicit-intent only (PHA-1269). When true the
+   * deck pops once per viewer, but IRONCLAD against the prior mobile-freeze:
+   * the open is deferred to idle (never blocks first paint / site access), the
+   * seen-flag is stamped before opening (a reload never re-pops), and the deck
+   * itself carries no GPU blur (PHA-1269) and fits mobile (PHA-1276). A render
+   * fault is swallowed by the boundary below, so it can never block the app.
+   */
+  autoOpen?: boolean;
 }
 
 /**
- * Drop-in launcher that mirrors `HowToPlayAnnounce`: auto-opens the deck once
- * per stage (localStorage keyed by event+stage), remembers dismissal, and
- * re-opens on a `replayStageWrapped(stageKey)` event from any entry point.
+ * Drop-in launcher that mirrors `HowToPlayAnnounce`: opens the deck on explicit
+ * intent (notification deep-link `forceOpen`, or a replay event), and — when
+ * `autoOpen` is set — pops it once per viewer, deferred to idle so it never
+ * blocks the page.
  */
 export function StageWrappedAnnounce({
   stageKey,
@@ -692,25 +723,55 @@ export function StageWrappedAnnounce({
   resolved = true,
   loading = false,
   forceOpen = false,
+  autoOpen = false,
 }: AnnounceProps) {
   const [open, setOpen] = useState(false);
   const deck = slides ?? buildPlaceholderSlides(title);
   const seenKey = wrappedSeenKey(eventId, sectionId);
 
-  // Auto-open once, only after the stage resolved and there's something to show.
+  // App-wide auto-open is OFF for stage recaps (PHA-1269): popping the full-screen
+  // animated takeover unprompted on login froze low-end Android. It returns ONLY
+  // as an explicit opt-in for the Major Wrapped finale (`autoOpen`), and even
+  // then it is deferred + once-per-viewer + boundary-guarded (see below), and
+  // the deck no longer carries the GPU blur that caused the freeze. Stage recaps
+  // still open only via explicit intent (notification deep-link / replay button).
+  const autoRef = useRef(false);
   useEffect(() => {
-    if (!resolved || loading) return;
+    if (!autoOpen || !resolved || loading || autoRef.current) return;
+    let seen = false;
     try {
-      if (!localStorage.getItem(seenKey)) setOpen(true);
+      seen = localStorage.getItem(seenKey) === "1";
     } catch {
-      // Storage blocked (private mode) — skip the auto-popup, replay still works.
+      /* storage blocked — treat as unseen, still open once below */
     }
-  }, [resolved, loading, seenKey]);
+    if (seen) return;
+    autoRef.current = true;
+    // Defer to idle so the popup NEVER blocks first paint or access to the app
+    // (the prior freeze blocked the whole site). Falls back to a short timeout.
+    const ric: (cb: () => void) => number =
+      typeof window !== "undefined" && "requestIdleCallback" in window
+        ? (cb) => (window as unknown as { requestIdleCallback: (c: () => void, o?: { timeout: number }) => number }).requestIdleCallback(cb, { timeout: 1500 })
+        : (cb) => window.setTimeout(cb, 400);
+    const cancel: (id: number) => void =
+      typeof window !== "undefined" && "cancelIdleCallback" in window
+        ? (id) => (window as unknown as { cancelIdleCallback: (i: number) => void }).cancelIdleCallback(id)
+        : (id) => window.clearTimeout(id);
+    const id = ric(() => {
+      // Stamp BEFORE opening so a reload mid-deck never re-pops.
+      try {
+        localStorage.setItem(seenKey, "1");
+      } catch {
+        /* ignore */
+      }
+      setOpen(true);
+    });
+    return () => cancel(id);
+  }, [autoOpen, resolved, loading, seenKey]);
 
   // Deep-link force-open (PHA-1245 follow-up): the recap notification lands here
-  // with ?wrapped=1, so re-open the deck once even if this device already saw it.
-  // Also stamp the seen-flag so the app-wide auto-launcher (StageWrappedGate)
-  // won't pop a second copy for this same stage.
+  // with ?wrapped=1, so open the deck once even if this device already saw it.
+  // Still stamp the seen-flag (harmless now that auto-open is gone) so any other
+  // mount of this same stage stays consistent.
   const forcedRef = useRef(false);
   useEffect(() => {
     if (!forceOpen || loading || forcedRef.current) return;
@@ -742,5 +803,9 @@ export function StageWrappedAnnounce({
     setOpen(false);
   }, [seenKey]);
 
-  return <StageWrapped open={open} onClose={close} slides={deck} title={title} loading={loading} />;
+  return (
+    <WrappedBoundary>
+      <StageWrapped open={open} onClose={close} slides={deck} title={title} loading={loading} />
+    </WrappedBoundary>
+  );
 }
