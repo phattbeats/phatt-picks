@@ -81,6 +81,19 @@ check(
     /const PARSE_FETCH_TIMEOUT_MS = /.test(liquipedia),
 );
 
+console.log("\noutcomes-driver - in-process live tick drives the Valve oracle (PHA-1273)");
+
+check(
+  "refreshLiveResultsTick runs the Valve oracle (ingestOutcomes) so playoffs resolve headlessly",
+  // PHA-1273: playoff StageOutcome rows come only from the Valve answer key
+  // (ingestOutcomes), which previously ran solely on the owner trigger / the
+  // unreliable after()-deferred read path. The traffic-independent tick must call
+  // it so QF/SF/GF turn green within a tick like Swiss clinches do.
+  /export async function refreshLiveResultsTick\([\s\S]*?await ingestOutcomes\(eventId\)[\s\S]*?bridgeSwissOutcomes\(eventId, nowMs\)/.test(
+    outcomes,
+  ),
+);
+
 console.log("\noutcomes-driver - wired into every outcome-reading surface");
 
 for (const [label, path] of [

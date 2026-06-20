@@ -465,8 +465,27 @@ export async function refreshLiveResultsTick(
   }
 
   let resolved = 0;
+
+  // Valve oracle (PHA-1273). The Swiss bridge below only resolves the Swiss
+  // sections (standingsSectionIds / isSwissSection) — PLAYOFF outcomes come
+  // exclusively from the Valve answer key in GetTournamentLayout (ingestOutcomes),
+  // which otherwise only ran on the owner's manual ingest or the unreliable
+  // after()-deferred on-read path. The symptom: Cologne QF1/QF2 sat unresolved on
+  // the bracket because no headless driver ever poked the oracle after the owner's
+  // last manual run. Drive it here on the same traffic-independent tick so playoff
+  // QF/SF/GF results turn green within a tick, exactly like Swiss clinches do.
+  // Idempotent + self-gating (only locked groups with a single resolved pickid;
+  // already-resolved slots are filtered before persist), so it's a cheap no-op
+  // once the bracket is fully resolved.
   try {
-    resolved = await bridgeSwissOutcomes(eventId, nowMs);
+    const summary = await ingestOutcomes(eventId);
+    resolved += summary.written;
+  } catch (e) {
+    console.error("[live-tick] Valve oracle ingest failed (non-fatal):", e instanceof Error ? e.message : e);
+  }
+
+  try {
+    resolved += await bridgeSwissOutcomes(eventId, nowMs);
   } catch (e) {
     console.error("[live-tick] outcome bridge failed (non-fatal):", e instanceof Error ? e.message : e);
   }
