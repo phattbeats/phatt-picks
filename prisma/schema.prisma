@@ -216,7 +216,14 @@ model Reaction {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  @@unique([senderId, eventId, sectionId, groupId, slotIndex])
+  // One stamp per sender PER TARGET PICK. targetPlayerId is part of the key
+  // because playoff bracket groups are shared across all players (group 274 =
+  // QF1 for everyone, slot 0), so without it a sender could react to only ONE
+  // player's pick per (section, group, slot) — reacting to a second player at
+  // the same coordinates collided on the narrower key and silently re-stamped
+  // the first target instead (PHA-1262: "could react on Miss_Shade but not
+  // Brandolorian/Ty-C").
+  @@unique([senderId, eventId, sectionId, groupId, slotIndex, targetPlayerId])
   @@index([eventId, targetPlayerId])
 }
 
