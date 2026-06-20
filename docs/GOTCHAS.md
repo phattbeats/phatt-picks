@@ -224,3 +224,15 @@ tick that resolves Swiss clinches. It's idempotent and self-gating (only locked 
 single resolved pickid; already-resolved slots filtered before persist), so QF/SF/GF now turn
 green within a tick without any owner action. If a future major's playoffs still don't resolve,
 check that tick is wired and that the bracket sections are reachable by `ingestOutcomes`.
+
+**The stale-outcome watchdog.** That headless retry runs every tick, which is exactly what
+*masked* QF1/QF2 for ~2 days — a blind retry that never noticed it was stuck. So the tick also
+runs `detectStalePlayoffOutcomes` (`outcomes-core.ts`) after the retry: per playoff section it
+reconciles the **count** of games whose scheduled start + `PLAYOFF_RESOLVE_GRACE_MS` (6h) has
+elapsed against the number of distinct resolved groups, and logs a structured
+`[live-tick] STALE playoff outcomes …` warning (and a `stale` count on the tick) when a match is
+overdue. It is **count-based and seed-order-independent on purpose** — it never maps a schedule
+slot to a specific group (that mapping is the very seed assumption that broke QF1/QF2), so it
+catches a stuck match no matter which group it is, and never false-fires on a game still in
+progress. The grace is the *detection* deadline, not a retry interval. If you see that warning,
+a real match is genuinely stuck — check the source and the `rejected` summary from `ingestOutcomes`.

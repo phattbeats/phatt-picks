@@ -71,6 +71,78 @@ export function pickLockedUnresolvedSlots(
   return out;
 }
 
+/**
+ * A playoff match is "overdue" if it has not resolved within this long after its
+ * scheduled start. A BO3 runs ~2.5h and a BO5 grand final ~4h+, so 6h clears the
+ * longest real match plus Valve's answer-key posting lag without ever false-firing
+ * on a game that is merely still in progress. Tunable; the live tick re-checks it
+ * every cycle, so this is the *detection* deadline, not a retry interval. (PHA-1273)
+ */
+export const PLAYOFF_RESOLVE_GRACE_MS = 6 * 60 * 60 * 1000;
+
+/** A playoff round (section) carrying matches that should have finished by now but
+ *  have no StageOutcome — the stuck-ingest watchdog signal (PHA-1273). */
+export interface StalePlayoffSection {
+  sectionId: number;
+  /** Games whose scheduled start + grace has elapsed (a winner is expected). */
+  expectedDone: number;
+  /** Distinct groups in this section that DO have a resolved StageOutcome. */
+  resolved: number;
+  /** expectedDone − resolved (always ≥ 1 for a returned entry). */
+  missing: number;
+  /** How far the earliest still-missing match is past its deadline, in ms. */
+  overdueByMs: number;
+}
+
+/**
+ * Watchdog: which playoff rounds have unresolved matches that are *overdue*
+ * (PHA-1273). `refreshLiveResultsTick` already re-pokes the Valve oracle every
+ * cycle, so a transiently-stuck match self-heals on the next tick — the half that
+ * was missing is NOTICING when a match stays unresolved long past when it should
+ * have finished. Cologne QF1/QF2 sat un-green for ~2 days behind a normalizer
+ * seed-swap bug while that blind retry silently masked it; this surfaces the whole
+ * class within `graceMs` of a match's scheduled start.
+ *
+ * Count-based and **seed-order-independent by design**: per section we compare the
+ * number of games whose (start + grace) has elapsed against the number of distinct
+ * groups that actually resolved. We deliberately do NOT map a schedule slot to a
+ * specific group — that mapping is exactly the stale per-group seed assumption that
+ * broke QF1/QF2 — so a stuck match is caught no matter which group it turns out to
+ * be; only the COUNT has to reconcile. Pure: the caller supplies the per-section
+ * resolved-group counts and `nowMs`. A future major inherits this for free by
+ * filling its own per-game playoff schedule.
+ */
+export function detectStalePlayoffOutcomes(
+  schedule: Readonly<Record<number, readonly string[]>>,
+  resolvedGroupsBySection: ReadonlyMap<number, number>,
+  nowMs: number,
+  graceMs: number = PLAYOFF_RESOLVE_GRACE_MS,
+): StalePlayoffSection[] {
+  const stale: StalePlayoffSection[] = [];
+  for (const key of Object.keys(schedule)) {
+    const sectionId = Number(key);
+    const deadlines = (schedule[sectionId] ?? [])
+      .map((iso) => Date.parse(iso))
+      .filter((ms) => !Number.isNaN(ms))
+      .map((startMs) => startMs + graceMs)
+      .sort((a, b) => a - b);
+    const expectedDone = deadlines.filter((d) => d <= nowMs).length;
+    const resolved = resolvedGroupsBySection.get(sectionId) ?? 0;
+    if (expectedDone > resolved) {
+      // deadlines sorted asc — the `resolved`-th (0-based) is the earliest match
+      // that should be done but isn't; report how far past its deadline we are.
+      stale.push({
+        sectionId,
+        expectedDone,
+        resolved,
+        missing: expectedDone - resolved,
+        overdueByMs: nowMs - deadlines[resolved],
+      });
+    }
+  }
+  return stale;
+}
+
 export interface LayoutOracleResult {
   /** Slots with a single, unambiguous correct team — ready to ingest. */
   resolved: RawResolvedSlot[];

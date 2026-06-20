@@ -23,6 +23,8 @@ import {
   normalizeOutcomes,
   pickLockedUnresolvedSlots,
   resolveOutcomesFromLayout,
+  detectStalePlayoffOutcomes,
+  PLAYOFF_RESOLVE_GRACE_MS,
   type NormalizedOutcome,
   type RawResolvedSlot,
 } from "./outcomes-core";
@@ -35,7 +37,12 @@ import { getSwissStandings, getSwissBracket, ingestStandingsNow, standingsSectio
 import { bracketMatchRecords, bracketTerminalRecords } from "./swiss-bracket-core";
 import { deriveClinchedSlots, findContradictedSlots } from "./swiss-clinch-core";
 import { bucketSwissSlots, isSwissSection } from "./swiss-bucket-core";
-import { isLockTimePassed, isWithinRefreshWindow } from "./lock-schedule-core";
+import {
+  isLockTimePassed,
+  isWithinRefreshWindow,
+  COLOGNE_PLAYOFF_SCHEDULE,
+  playoffSectionIds,
+} from "./lock-schedule-core";
 
 export interface IngestSummary {
   eventId: number;
@@ -421,6 +428,9 @@ export interface LiveResultsTick {
   eventId: number;
   ingested: number;
   resolved: number;
+  /** Playoff matches that are past their resolve deadline but still un-green —
+   *  the stale-outcome watchdog count (PHA-1273). 0 in the healthy case. */
+  stale: number;
 }
 
 /**
@@ -449,7 +459,7 @@ export async function refreshLiveResultsTick(
   eventId: number,
   nowMs: number = Date.now(),
 ): Promise<LiveResultsTick> {
-  if (await isEventFrozenById(eventId, nowMs)) return { eventId, ingested: 0, resolved: 0 };
+  if (await isEventFrozenById(eventId, nowMs)) return { eventId, ingested: 0, resolved: 0, stale: 0 };
 
   let ingested = 0;
   for (const sectionId of standingsSectionIds(eventId)) {
@@ -489,7 +499,55 @@ export async function refreshLiveResultsTick(
   } catch (e) {
     console.error("[live-tick] outcome bridge failed (non-fatal):", e instanceof Error ? e.message : e);
   }
-  return { eventId, ingested, resolved };
+
+  // Stale-outcome watchdog (PHA-1273). The oracle above re-pokes every tick, so a
+  // transiently-stuck playoff match self-heals on the next cycle — but a match that
+  // stays unresolved long past when it should have finished (QF1/QF2: ~2 days behind
+  // a normalizer bug) would otherwise be masked forever by that blind retry. After
+  // the retry runs, reconcile the per-section resolved-match COUNT against how many
+  // games the committed schedule says should be done by now, and emit a structured
+  // warning naming the overdue round(s) so the silent-stuck class is observable in
+  // the logs (and on the returned tick) instead of hidden. Best-effort: never throws.
+  let stale = 0;
+  try {
+    const playoffSections = [...playoffSectionIds()];
+    if (playoffSections.length > 0) {
+      const rows = await prisma.stageOutcome.findMany({
+        where: { eventId, sectionId: { in: playoffSections } },
+        select: { sectionId: true, groupId: true },
+      });
+      const groupsBySection = new Map<number, Set<number>>();
+      for (const r of rows) {
+        const set = groupsBySection.get(r.sectionId) ?? new Set<number>();
+        set.add(r.groupId);
+        groupsBySection.set(r.sectionId, set);
+      }
+      const resolvedCounts = new Map<number, number>();
+      for (const [sectionId, set] of groupsBySection) resolvedCounts.set(sectionId, set.size);
+      const staleSections = detectStalePlayoffOutcomes(
+        COLOGNE_PLAYOFF_SCHEDULE,
+        resolvedCounts,
+        nowMs,
+        PLAYOFF_RESOLVE_GRACE_MS,
+      );
+      stale = staleSections.reduce((n, s) => n + s.missing, 0);
+      if (staleSections.length > 0) {
+        console.warn(
+          "[live-tick] STALE playoff outcomes — re-poked the Valve oracle but these matches are overdue: " +
+            staleSections
+              .map(
+                (s) =>
+                  `section ${s.sectionId} ${s.resolved}/${s.expectedDone} resolved, ${s.missing} missing (earliest overdue ${Math.round(s.overdueByMs / 60000)}m)`,
+              )
+              .join("; "),
+        );
+      }
+    }
+  } catch (e) {
+    console.error("[live-tick] stale-outcome watchdog failed (non-fatal):", e instanceof Error ? e.message : e);
+  }
+
+  return { eventId, ingested, resolved, stale };
 }
 
 /**
