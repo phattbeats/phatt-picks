@@ -483,12 +483,30 @@ export default async function PicksPage({
               spotlightMarket={spotlightMarket}
             />
           ) : playoffSeeded ? (
-            // PHA-1263: bracket seeded + picks locked — show the live bracket
-            // with actual match results filling in (LivePlayoffBracket overlays
-            // the viewer's calls as rings so they can see hits/misses in real
-            // time without being able to change their picks).
+            // PHA-1263: bracket seeded + picks locked. Show the viewer's OWN
+            // crowned bracket read-only (the interactive picker, enabled=false)
+            // so their predicted QF→SF→GF run and "Your champion" stay on screen.
+            // LivePlayoffBracket alone HID the crown ("cant see your crowned"):
+            // it derives SF/GF from real outcomes, which lag until Valve advances
+            // each round, so a viewer's downstream calls vanished. The live
+            // results bracket stays beneath it so matches still resolve in view.
             <>
               <LockedStageCard pickability={activePickability} compact />
+              {playoffPickModel && (
+                <PlayoffBracketPicker
+                  model={playoffPickModel}
+                  teams={layout.teams}
+                  initialPicks={playoffInitialPicks}
+                  enabled={false}
+                  eventId={EVENT_ID}
+                  signedIn={!!session}
+                  steamLinked={!!session?.steamId}
+                  initiallySynced={playoffSynced}
+                  liveTeamStats={liveTeamStats?.byPickid}
+                  liveStatsAsOf={liveTeamStats?.asOf}
+                  spotlightMarket={spotlightMarket}
+                />
+              )}
               {playoffBracket && (
                 <LivePlayoffBracket
                   bracket={playoffBracket}
