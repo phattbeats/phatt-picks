@@ -23,6 +23,7 @@
 
 import type { WrappedPhoto, WrappedSlide, WrappedTeamLogo } from "./stage-wrapped-core";
 import type { StageWrappedRankMove } from "./stage-wrapped-content";
+import { regionMetaForPickid } from "./regions-core";
 
 /** Per-slide auto-advance for the recap (floored by the shell to MIN_AUTO_ADVANCE_MS). */
 const AUTO_MS = 6000;
@@ -164,11 +165,43 @@ export const COLOGNE_PLAYOFF_MOMENTS: readonly PlayoffMoment[] = [
     eyebrow: "HISTORIC MOMENT",
     headline: "magixx, one man against four — and still standing.",
     figure: "1v4",
-    figureCaption: "Spirit's round out of nothing",
-    body: "Last man alive, the round already written off, magixx turned a 1v4 into a win — then froze, hand on his head, not quite believing it himself. The Cathedral lost its mind.",
-    logoPickIds: [81],
+    figureCaption: "Spirit past G2, Mirage · the Quarterfinal",
+    body: "Last man alive in the Quarterfinal, the round already written off, magixx held one angle and emptied a single AK spray through four G2 players — then froze, hand on his head, not quite believing it himself. Graffiti-worthy. Valve made his face their profile picture. The Cathedral lost its mind.",
+    logoPickIds: [81, 59],
     photo: COLOGNE_PHOTOS.magixx,
   },
+] as const;
+
+/**
+ * A one-slide tribute to a team that made the Cologne last eight. The "big
+ * finish" deck (PHA-1274, Brandon: "every team should have at least one slide")
+ * gives each of the eight its own card — the global spread of the field is half
+ * the story. Copy is grounded in each team's real Cologne run (the Spotlight
+ * narratives), so nothing here is invented.
+ */
+export interface PlayoffTeamTribute {
+  pickId: number;
+  /** Mono eyebrow tag, mirrors the team's Spotlight tag (e.g. "THE LAST DANCE"). */
+  tag: string;
+  /** One-line tribute, grounded in the team's real run. */
+  blurb: string;
+}
+
+/**
+ * The eight that walked into the Cathedral, each with a card in the finale deck.
+ * Order is a deliberate flow (marquees → rebuilds → Cinderellas), not seeding.
+ * Names render through the logo resolver; the region chip on each slide is what
+ * makes the "every flag in the building" thread land.
+ */
+export const COLOGNE_PLAYOFF_TEAMS: readonly PlayoffTeamTribute[] = [
+  { pickId: 81, tag: "THE BEST IN THE WORLD", blurb: "donk — a Major MVP at sixteen — and sh1ro behind him. The most feared roster alive walked in barely dropping a round." },
+  { pickId: 89, tag: "THE BURDEN OF FIRST", blurb: "ZywOo and apEX. The world #1, the standard the whole scene measures itself against, carrying the weight of the favourite." },
+  { pickId: 139, tag: "THE MISSING CROWN", blurb: "NiKo, m0NESY and karrigan — a roster built for one thing: the trophy its biggest star has never lifted." },
+  { pickId: 85, tag: "THE LAST DANCE", blurb: "FalleN's last ride, the AWP now molodoy's. Brazil's godfather chasing one more Major as the torch passes in real time." },
+  { pickId: 59, tag: "THE REBUILD", blurb: "huNter and a fearless young core — HeavyGod and MATYS — the rebuilt G2 nobody had pegged for the last eight." },
+  { pickId: 134, tag: "A NATION'S RETURN", blurb: "XANTARES, MAJ3R, and woxic's 1v4 on Dust2. Turkish Counter-Strike back among the last eight for the first time since Copenhagen." },
+  { pickId: 137, tag: "THE LONG WAY BACK", blurb: "Boombl4, a Major-winning captain, dragging an all-Russian young core back to the bracket the hard way." },
+  { pickId: 112, tag: "BEYOND BRAZIL", blurb: "luchov and dgt's ace on Overpass. Argentina, Uruguay and Chile — the first South American playoff team without a Brazilian core." },
 ] as const;
 
 /**
@@ -380,7 +413,35 @@ export function buildPlayoffWrappedDeck(
     });
   }
 
-  // 5+ — Personal slides (signed-in viewer with a bracket).
+  // 5 — The field: every team that made the Cathedral gets a card (Brandon:
+  // "every team should have at least one slide"). A "nations" bridge leads it so
+  // the global spread of the eight reads as the story it is, then one tribute
+  // per team. Evergreen — shows the moment the playoff field is set, finale or
+  // mid-bracket — so the recap always carries the room.
+  slides.push({
+    id: "po-nations",
+    kind: "moment",
+    eyebrow: "THE LAST EIGHT",
+    headline: "Eight teams. The whole map.",
+    body: "Brazil and Argentina, France and Turkey, Russia and Kazakhstan, the rebuilt and the unheralded — eight teams from every corner of the world, one bracket, one server, the planet watching the same rounds at once. This is what Counter-Strike does.",
+    photo: COLOGNE_PHOTOS.arena,
+    autoAdvanceMs: AUTO_MS,
+  });
+  for (const t of COLOGNE_PLAYOFF_TEAMS) {
+    const region = regionMetaForPickid(t.pickId);
+    slides.push({
+      id: `po-team-${t.pickId}`,
+      kind: "moment",
+      eyebrow: t.tag,
+      headline: nameFor(t.pickId, assets),
+      figureCaption: region ? region.label : undefined,
+      body: t.blurb,
+      teamLogos: logo(t.pickId),
+      autoAdvanceMs: AUTO_MS,
+    });
+  }
+
+  // 6+ — Personal slides (signed-in viewer with a bracket).
   if (personal) {
     const name = personal.displayName?.trim();
     slides.push({
@@ -441,20 +502,34 @@ export function buildPlayoffWrappedDeck(
     slides.push(rankSlide(eyebrow, personal, decided));
   }
 
-  // Closer.
+  // Closer, part 1 — the heartfelt thank-you from -phaTT (Brandon: "a very
+  // heartfelt thank you from -phaTT ... love for the community of cs and the
+  // unity of all the different countries in the world participating and the
+  // fans"). For a signed-out viewer it carries a soft nudge to sign in next
+  // time; signed-in keeps it pure gratitude.
   slides.push({
-    id: "po-outro",
+    id: "po-thanks",
     kind: "outro",
-    eyebrow,
-    headline: !personal ? "See your own card." : decided ? "Cologne is a wrap." : "The bracket's still live.",
+    eyebrow: "FROM -phaTT",
+    headline: "Thank you for being here.",
     body: !personal
-      ? "Sign in to get your personal bracket recap — your calls, your champion, your rank."
-      : decided
-        ? "That's the Major. Replay this any time from the bracket. See you in Singapore."
-        : "Replay this any time from the bracket — your card fills in as the matches land.",
+      ? "Every pick, every reaction, every 3am refresh to catch a clutch from the other side of the world — that's what makes this. Counter-Strike puts the whole planet in one room, and you were in it. Sign in next time and we'll keep your card. From all of us at phaTT: thank you. We love this game, and we love this community. ♥"
+      : "Every pick you made, every reaction you dropped, every late night you spent watching strangers from across the world play the game we all love — thank you. Counter-Strike puts the whole planet in one room, and you spent this Major in it with us. From all of us at phaTT: we love this game, and we love you. ♥",
+    photo: COLOGNE_PHOTOS.arena,
+    stageBadge: { numeral: "♥", label: "FROM", sub: "phaTT" },
+  });
+
+  // Closer, part 2 — the post-credits stinger (Brandon: "a cheeky see you at the
+  // next one hint sort of like a marvel movie 'will return' type shit"). The
+  // genuine last beat: the next Major is PGL Singapore 2026.
+  slides.push({
+    id: "po-stinger",
+    kind: "outro",
+    eyebrow: "POST-CREDITS",
+    headline: "phaTT Picks will return.",
+    body: "Next stop: PGL Major Singapore 2026. New bracket, new Cinderellas, new history — same room, same game, same world. See you there. 🌏",
     brandLogo: gameBrand,
-    photo: decided ? COLOGNE_PHOTOS.player : undefined,
-    stageBadge: { numeral: "PLAYOFFS", label: "COLOGNE", sub: !personal ? "RECAP" : decided ? "CHAMPIONS" : "LIVE" },
+    stageBadge: { numeral: "?", label: "NEXT", sub: "MAJOR" },
   });
 
   return slides;
