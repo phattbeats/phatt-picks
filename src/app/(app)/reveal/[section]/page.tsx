@@ -284,11 +284,11 @@ export default async function StageRevealPage({
 
   return (
     <>
-      {/* Stage Wrapped recap (PHA-1054 / PHA-1051) — replay-only here: the
-          app-wide launcher in (app)/layout.tsx (StageWrappedGate) owns the
-          once-per-stage AUTO-open for signed-in viewers, so this mount stays
-          `resolved={false}` to avoid a double popup while still answering the
-          "Replay the recap" button below for this exact stage. */}
+      {/* Stage Wrapped recap (PHA-1054 / PHA-1051) — explicit-open only. The
+          app-wide auto-launcher was removed (PHA-1269) because the full-screen
+          recap froze low-end mobile on login. This mount opens only on the
+          recap notification deep link (?wrapped=1 → forceOpen) or the "Replay
+          the recap" button below; it never pops up on its own. */}
       <StageWrappedAnnounce
         stageKey={stageWrappedKey(EVENT_ID, sectionId)}
         eventId={EVENT_ID}

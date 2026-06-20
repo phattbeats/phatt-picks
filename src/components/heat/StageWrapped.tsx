@@ -603,20 +603,19 @@ export function StageWrappedAnnounce({
   const deck = slides ?? buildPlaceholderSlides(title);
   const seenKey = wrappedSeenKey(eventId, sectionId);
 
-  // Auto-open once, only after the stage resolved and there's something to show.
-  useEffect(() => {
-    if (!resolved || loading) return;
-    try {
-      if (!localStorage.getItem(seenKey)) setOpen(true);
-    } catch {
-      // Storage blocked (private mode) — skip the auto-popup, replay still works.
-    }
-  }, [resolved, loading, seenKey]);
+  // Auto-open on resolve was REMOVED (PHA-1269). The recap is a full-screen,
+  // animated takeover; popping it up unprompted on login froze low-end mobile
+  // (Android) and didn't fit small screens, blocking access to the rest of the
+  // app. The deck now opens ONLY on explicit intent: the recap notification
+  // deep link (?wrapped=1 → forceOpen below) or a "Replay the recap" button.
+  // `resolved` stays in the props for call-site compatibility but no longer
+  // triggers an auto-popup.
+  void resolved;
 
   // Deep-link force-open (PHA-1245 follow-up): the recap notification lands here
-  // with ?wrapped=1, so re-open the deck once even if this device already saw it.
-  // Also stamp the seen-flag so the app-wide auto-launcher (StageWrappedGate)
-  // won't pop a second copy for this same stage.
+  // with ?wrapped=1, so open the deck once even if this device already saw it.
+  // Still stamp the seen-flag (harmless now that auto-open is gone) so any other
+  // mount of this same stage stays consistent.
   const forcedRef = useRef(false);
   useEffect(() => {
     if (!forceOpen || loading || forcedRef.current) return;
