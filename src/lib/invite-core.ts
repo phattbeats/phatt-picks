@@ -5,7 +5,6 @@
  * the `randomBytes(6).toString("hex")` minted in the local-auth route.
  */
 
-export const INVITE_CODE_LENGTH = 12;
 const CODE_RE = /^[0-9a-f]{12}$/;
 
 export function normalizeInviteCode(code: string): string {
