@@ -143,8 +143,26 @@ export const COLOGNE_PLAYOFF_MOMENTS: readonly PlayoffMoment[] = [
     id: "po-m-cathedral",
     eyebrow: "THE CATHEDRAL",
     headline: "Welcome to the Cathedral of Counter-Strike.",
-    body: "Eight teams survived three Swiss stages to walk into Cologne for the single-elimination Playoffs — the loudest building in Counter-Strike, and the one every player wants to win in.",
+    body: "Thirty-two of the best teams in the world came to Cologne to fight through three Swiss stages for one of eight Playoff tickets — into the loudest building in Counter-Strike, the one every player wants to win in.",
     photo: COLOGNE_PHOTOS.arena,
+  },
+  {
+    id: "po-m-donk",
+    eyebrow: "THE BEST IN THE WORLD",
+    headline: "donk turned the Swiss into a highlight reel.",
+    body: "Spirit barely conceded a round on the way through Cologne — a clean 3-0 over NaVi, Aurora and 9z, with donk, the Major MVP at sixteen, posting one of the most dominant individual runs the Major has seen. For a stretch, the rest of the field was playing for second.",
+    logoPickIds: [81],
+    photo: COLOGNE_PHOTOS.cathedral,
+  },
+  {
+    id: "po-m-woxic",
+    eyebrow: "A NATION'S RETURN",
+    headline: "woxic's 1v4 sent Turkey to the bracket.",
+    figure: "1v4",
+    figureCaption: "Aurora clinch on Dust2, Stage 3",
+    body: "With the Playoff berth on the line, woxic stood up in a 1v4 on Dust2 and won it — sealing Aurora's first run to a Major playoff stage since Copenhagen 2024, and the Turkish core back among the last eight.",
+    logoPickIds: [134],
+    photo: COLOGNE_PHOTOS.player,
   },
   {
     id: "po-m-cinderellas",
@@ -154,7 +172,7 @@ export const COLOGNE_PLAYOFF_MOMENTS: readonly PlayoffMoment[] = [
     figureCaption: "9z and BetBoom booked Playoff tickets",
     body: "9z (#13) knocked out top-seeded Vitality to make it on a negative round diff, and BetBoom (#15) swept title contender Falcons. Nobody had this bracket — and now they're in the Cathedral.",
     logoPickIds: [112, 137],
-    photo: COLOGNE_PHOTOS.player,
+    photo: COLOGNE_PHOTOS.arena,
   },
   {
     // RESERVED (PHA-1274, Brandon, 2026-06-20): "reserve a spot for magixx 1v4
@@ -291,7 +309,7 @@ export function buildPlayoffWrappedDeck(
   const champId = facts.championPickId ?? 0;
 
   const slides: WrappedSlide[] = [];
-  const eyebrow = "COLOGNE PLAYOFFS · WRAPPED";
+  const eyebrow = "COLOGNE MAJOR · WRAPPED";
 
   const logo = (pickId: number | null | undefined): WrappedTeamLogo[] | undefined => {
     if (pickId == null || pickId === 0 || !assets.resolveTeamLogo) return undefined;
@@ -316,20 +334,22 @@ export function buildPlayoffWrappedDeck(
 
   const championName = decided ? nameFor(champId, assets, facts.championName) : "";
 
-  // 1 — Cover. Copy + closer adapt to whether the Final has crowned a champion:
-  // mid-bracket it's a "so far" recap of the moments that already made history;
-  // once decided it's the finale. The cathedral photo leads either way.
+  // 1 — Cover. This is the *Major* Wrapped (Brandon: "32 teams walked in, 1
+  // walked out") — the whole IEM Cologne run, three Swiss gauntlets and the
+  // bracket, not just the Playoffs. Copy + closer adapt to whether the Final has
+  // crowned a champion: mid-tournament it's a "so far" recap of the moments that
+  // already made history; once decided it's the finale. Cathedral photo leads.
   slides.push({
     id: "po-intro",
     kind: "intro",
     eyebrow,
-    headline: decided ? "Eight walked in. One walked out." : "Eight walked in. The Cathedral is loud.",
+    headline: decided ? "Thirty-two walked in. One walked out." : "Thirty-two walked in. The Cathedral is loud.",
     body: decided
-      ? "The Cathedral named its champion. Before you see how you called it — here's how the Cologne Playoffs went down."
-      : "The Cologne Playoffs are underway — and they've already made history. Here's the bracket so far.",
+      ? "Three Swiss gauntlets, a single-elimination bracket, and the loudest building in Counter-Strike named its champion. Before you see how you called it — here's how the Cologne Major went down."
+      : "The Cologne Major is underway — thirty-two teams, three Swiss stages, and it's already made history. Here's the run so far.",
     brandLogo: majorBrand,
     photo: COLOGNE_PHOTOS.cathedral,
-    stageBadge: { numeral: "PLAYOFFS", label: "COLOGNE", sub: "WRAPPED" },
+    stageBadge: { numeral: "MAJOR", label: "COLOGNE", sub: "WRAPPED" },
     autoAdvanceMs: AUTO_MS,
   });
 
@@ -422,8 +442,10 @@ export function buildPlayoffWrappedDeck(
     id: "po-nations",
     kind: "moment",
     eyebrow: "THE LAST EIGHT",
-    headline: "Eight teams. The whole map.",
-    body: "Brazil and Argentina, France and Turkey, Russia and Kazakhstan, the rebuilt and the unheralded — eight teams from every corner of the world, one bracket, one server, the planet watching the same rounds at once. This is what Counter-Strike does.",
+    headline: "Thirty-two came. Eight made the Cathedral.",
+    figure: "32 → 8",
+    figureCaption: "three Swiss gauntlets, eight survivors",
+    body: "Brazil and Argentina, France and Turkey, Russia and Kazakhstan, the rebuilt and the unheralded — the eight that walked out of the gauntlet came from every corner of the world. One bracket, one server, the planet watching the same rounds at once. This is what Counter-Strike does.",
     photo: COLOGNE_PHOTOS.arena,
     autoAdvanceMs: AUTO_MS,
   });
