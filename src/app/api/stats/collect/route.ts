@@ -35,11 +35,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: "bad-path" }, { status: 400 });
   }
 
+  // Treat the request's own host as "internal" so same-site navigations aren't
+  // logged as referrers — works for any prod domain (hotline./pickems.phatt.vip).
+  const selfHost = (req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "")
+    .split(":")[0]
+    .toLowerCase();
+
   await prisma.pageView.create({
     data: {
       path: cleanPath,
       device: deviceClass(req.headers.get("user-agent")),
-      referrer: sanitizeReferrer(referrer),
+      referrer: sanitizeReferrer(referrer, selfHost || undefined),
     },
   });
 

@@ -66,13 +66,16 @@ const CHUNK_RECOVERY = `(function(){
  * blur, animation, or polling here.
  *
  * - Honors Do-Not-Track (sends nothing).
- * - Production domain only, so dev/preview never pollute the data.
+ * - Skips local dev (localhost / *.local), so only real visits are counted —
+ *   not coupled to a specific prod host (the app serves both hotline.phatt.vip
+ *   and pickems.phatt.vip).
  * - Sends path + referrer only; the server stores no PII (see analytics-core).
  * - Tracks SPA route changes by wrapping history.pushState/replaceState.
  */
 const ANALYTICS = `(function(){
   try{ if(navigator.doNotTrack==='1'||window.doNotTrack==='1'||navigator.msDoNotTrack==='1') return; }catch(e){}
-  if(location.hostname!=='pickems.phatt.vip') return;
+  var h=location.hostname;
+  if(h==='localhost'||h==='127.0.0.1'||h==='0.0.0.0'||h==='::1'||h.indexOf('.')===-1||h.slice(-6)==='.local') return;
   var last='';
   function send(){
     try{
