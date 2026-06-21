@@ -258,7 +258,7 @@ export async function prepareMajorWrappedAutoDeck(
 
   const gfSectionId = PLAYOFF_ROUNDS.find((r) => r.key === "GF")?.sectionId ?? 110;
   return {
-    stageKey: `${eventId}:major-wrapped`,
+    stageKey: majorWrappedStageKey(eventId),
     eventId,
     sectionId: gfSectionId,
     title: "Cologne Major",
@@ -269,6 +269,18 @@ export async function prepareMajorWrappedAutoDeck(
 /** The Grand Final section id for this format (the recap deep link target). */
 export function majorWrappedSectionId(): number {
   return PLAYOFF_ROUNDS.find((r) => r.key === "GF")?.sectionId ?? 110;
+}
+
+/**
+ * The stable `stageKey` of the Major Wrapped deck for an event — the handle the
+ * replay bus uses to re-open it. The auto-launcher (`StageWrappedGate`, mounted
+ * app-wide in the layout) registers under this key, so any surface can replay
+ * the recap with `replayStageWrapped(majorWrappedStageKey(eventId))` instead of
+ * deep-linking to a per-section reveal (which only carries that stage's own,
+ * often-empty, wrap). PHA-1274.
+ */
+export function majorWrappedStageKey(eventId: number): string {
+  return `${eventId}:major-wrapped`;
 }
 
 export interface MajorChampion {
