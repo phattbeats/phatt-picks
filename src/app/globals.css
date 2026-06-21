@@ -1510,6 +1510,10 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   width: 100%; height: 100%; object-fit: cover; display: block;
   filter: saturate(1.05) contrast(1.02);
 }
+.sw-photo video {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  filter: saturate(1.05) contrast(1.02);
+}
 /* Fade the foot of the photo into the surface so the eyebrow/figure below it
    reads as one frame, plus a faint top vignette for depth. */
 .sw-photo::after {
