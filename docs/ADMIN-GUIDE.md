@@ -79,7 +79,12 @@ Everything the app *remembers* (players, picks, scores, coins, reactions, push s
 | `WRITE_ENABLED` | Pushing picks **up to Valve** (destructive; default off). |
 | `TURNSTILE_SECRET_KEY` / `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | The signup CAPTCHA. Missing → CAPTCHA skipped. |
 | `OWNER_STEAM_ID` | Unlocks the owner-only admin tools (local-player cleanup, the `/admin/analytics` dashboard, and the manual news/outcomes ingest routes). Unset → owner gate fails closed (nobody is owner). |
-| `CRAWL4AI_URL` | The crawl4ai endpoint (see below). |
+| `CRAWL4AI_URL` | The crawl4ai endpoint (see below). Default `http://crawl4ai:11235`. |
+| `CRAWL4AI_API_TOKEN` | Bearer token for crawl4ai (live HLTV refresh + gather tooling). Defaults to a shared token if unset. |
+| `TRUSTED_PROXY_HOPS` | How many reverse-proxy hops to trust when deriving the client IP from `X-Forwarded-For`. Default `1` (the single SWAG hop); leave it unless you add another proxy. |
+| `NODE_ENV` | Set to `production` in the image; gates the session cookie's `secure` flag. Only drop from `production` for local HTTP dev. |
+| `PRELOCK_REMINDERS_DISABLED` | Set `=1` to turn **off** the pre-lock reminder scheduler. **On by default** (no env needed) since the PHA-996 fix. |
+| `EVENT_ID` / `STAGE_LOCKS_JSON` | Dry-run overrides: pin a specific Valve event id, or supply per-stage lock cutoffs as JSON. Unset → the app uses the clock-derived current event and the committed lock schedule. |
 
 Full var-by-var table with exact behaviors: **[OPERATIONS.md → Environment variables](OPERATIONS.md#environment-variables)**.
 
