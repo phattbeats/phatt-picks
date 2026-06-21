@@ -235,36 +235,16 @@ export default async function SettingsPage() {
         </div>
       </details>
 
-      {/* Help & guides — the pages most people never open (PHA-1275). Tucked into
-          a disclosure instead of stacked at the bottom of the page. */}
-      <details className="settings-fold brk">
+      {/* Help & guides moved to their own INFO page (PHA-1283) — a desktop nav
+          tab, and reachable here on mobile. Your Majors moved to your profile. */}
+      <Link href="/info" className="settings-fold brk" style={{ display: "block", textDecoration: "none" }}>
         <span className="br-tr" />
         <span className="br-bl" />
-        <summary>
+        <span className="settings-fold-summary-static">
           <span>Help &amp; guides</span>
-          <span className="settings-fold-hint">How it works · FAQ · scoring</span>
-        </summary>
-        <div className="settings-fold-body" style={{ gap: 8 }}>
-          <Link href="/how-to-play" style={accountLink}>
-            › New to Pick&apos;Em? How it works
-          </Link>
-          <Link href="/faq" style={accountLink}>
-            › FAQ — scoring, Swiss, Viewer Pass
-          </Link>
-          <Link href="/help/auth-code" style={accountLink}>
-            › How Steam sync &amp; the auth code work
-          </Link>
-          <Link href="/majors" style={accountLink}>
-            › Your Majors — your picks &amp; score every event
-          </Link>
-          <Link href="/players" style={accountLink}>
-            › Player directory
-          </Link>
-          <Link href="/pwa" style={accountLink}>
-            › Install HOTLINE to your home screen
-          </Link>
-        </div>
-      </details>
+          <span className="settings-fold-hint">How it works · FAQ · scoring →</span>
+        </span>
+      </Link>
 
       {owner && <AdminLocalPlayers />}
 
@@ -278,15 +258,6 @@ export default async function SettingsPage() {
     </>
   );
 }
-
-const accountLink: React.CSSProperties = {
-  fontFamily: "var(--font-mono)",
-  fontSize: 11,
-  letterSpacing: "0.1em",
-  textTransform: "uppercase",
-  color: "var(--ink-mid)",
-  textDecoration: "none",
-};
 
 const backLink: React.CSSProperties = {
   fontFamily: "var(--font-mono)",
@@ -329,28 +300,14 @@ function SignedOutSettings() {
         </div>
       </section>
 
-      <details className="settings-fold brk">
+      <Link href="/info" className="settings-fold brk" style={{ display: "block", textDecoration: "none" }}>
         <span className="br-tr" />
         <span className="br-bl" />
-        <summary>
+        <span className="settings-fold-summary-static">
           <span>Help &amp; guides</span>
-          <span className="settings-fold-hint">How it works · FAQ</span>
-        </summary>
-        <div className="settings-fold-body" style={{ gap: 8 }}>
-          <Link href="/how-to-play" style={accountLink}>
-            › New to Pick&apos;Em? How it works
-          </Link>
-          <Link href="/help/auth-code" style={accountLink}>
-            › How Steam sync &amp; the auth code work
-          </Link>
-          <Link href="/faq" style={accountLink}>
-            › FAQ — scoring, Swiss, Viewer Pass
-          </Link>
-          <Link href="/pwa" style={accountLink}>
-            › Install HOTLINE to your home screen
-          </Link>
-        </div>
-      </details>
+          <span className="settings-fold-hint">How it works · FAQ →</span>
+        </span>
+      </Link>
     </>
   );
 }
