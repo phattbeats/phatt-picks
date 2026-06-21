@@ -119,11 +119,13 @@ export async function register(): Promise<void> {
   const { runPreLockReminders } = await import("@/lib/prelock-reminders");
   const { runRecapPushes } = await import("@/lib/recap-pushes");
   const { runAnnouncementPushes } = await import("@/lib/announcement-pushes");
+  const { runCoinEarnedPushes } = await import("@/lib/coin-earned-pushes");
 
   const tick = (): void => {
     runPreLockReminders().catch((err) => console.error("[prelock] tick failed:", err));
     runRecapPushes().catch((err) => console.error("[recap-push] tick failed:", err));
     runAnnouncementPushes().catch((err) => console.error("[announce-push] tick failed:", err));
+    runCoinEarnedPushes().catch((err) => console.error("[coin-push] tick failed:", err));
   };
 
   setTimeout(tick, FIRST_TICK_DELAY_MS);

@@ -17,7 +17,7 @@ import { getCommittedLayout, type Layout } from "./layout";
 import { scorePlayer, type OutcomeMap, type PlayerPickMap } from "./scoring";
 import { getEventConfig } from "./events-core";
 import { computeFinish } from "./majors-core";
-import { isEventFrozenById } from "./event-freeze";
+import { eventArchivedAtMs } from "./event-freeze";
 import {
   deriveChallengeCoins,
   type ChallengeCoin,
@@ -60,9 +60,10 @@ export async function getPlayerChallengeCoins(
   const inputs: CoinInput[] = [];
   for (const { eventId, cfg } of events) {
     // Coins only mint on a concluded Major — short-circuit the live/unfinished
-    // event before any field scoring (zero added DB work while in flight).
-    const archived = await isEventFrozenById(eventId, nowMs);
-    if (!archived) continue;
+    // event before any field scoring (zero added DB work while in flight). The
+    // archive instant doubles as the coin's mint time (earnedAtMs).
+    const archivedAtMs = await eventArchivedAtMs(eventId, nowMs);
+    if (archivedAtMs === null) continue;
 
     const layout = layoutFor(eventId);
 
@@ -111,6 +112,7 @@ export async function getPlayerChallengeCoins(
       scored: layout != null,
       finish: layout ? computeFinish(playerId, ranked) : null,
       fieldSize: playerIds.length,
+      earnedAtMs: archivedAtMs,
     });
   }
 
