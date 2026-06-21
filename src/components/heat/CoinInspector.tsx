@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { coinArtSrc, coinBackSrc, type ChallengeCoin } from "@/lib/challenge-coin-core";
 
 /** Number of flat strips approximating the cylinder's reeded (ribbed) edge. */
@@ -97,7 +98,7 @@ export function CoinInspector({
   // Tangential length of each rim strip; +2px overlap so the wall has no seams.
   const segLen = Math.ceil((2 * Math.PI * radius) / EDGE_SEGMENTS) + 2;
 
-  return (
+  const tree = (
     <div className="coin-inspect-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label={`Inspect ${coin.name} challenge coin`}>
       <div className="coin-inspect-panel" onClick={(e) => e.stopPropagation()}>
         <button className="coin-inspect-close" onClick={onClose} aria-label="Close">×</button>
@@ -160,6 +161,10 @@ export function CoinInspector({
       </div>
     </div>
   );
+  // Portal to <body> so the fixed-position lightbox escapes the velvet shelf's
+  // overflow + any transformed ancestor (which would otherwise clip the coin
+  // to the card — PHA-1274 "fix clipping"). Mirrors StageWrapped/SpotlightModal.
+  return typeof document === "undefined" ? null : createPortal(tree, document.body);
 }
 
 /**
