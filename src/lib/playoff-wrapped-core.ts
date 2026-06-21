@@ -212,6 +212,9 @@ export const COLOGNE_PLAYOFF_MOMENTS: readonly PlayoffMoment[] = [
     figureCaption: "9z and BetBoom booked Playoff tickets",
     body: "9z (#13) knocked out top-seeded Vitality to make it on a negative round diff, and BetBoom (#15) swept title contender Falcons. Nobody had this bracket — and now they're in the Cathedral.",
     logoPickIds: [112, 137],
+    // 9z's luchov as the hero — the bigger upset (downed the #1 seed); both
+    // Cinderella teams' logos still show in the row below.
+    portrait: { src: "/wrapped/player-112.webp", alt: "luchov, 9z" },
     photo: COLOGNE_PHOTOS.cinderella,
   },
   {
@@ -440,6 +443,10 @@ export function buildPlayoffWrappedDeck(
           : "Champions of IEM Cologne 2026",
       body: `Eight teams entered the single-elim bracket. ${championName} ran the table${overRunnerUp} to be the last team standing in the Cathedral of Counter-Strike.`,
       teamLogos: logo(champId),
+      // The champion's marquee player as the hero (PHA-1274) — the playoff field
+      // all have a /wrapped/player-<pickid>.webp portrait; falls back to the
+      // trophy still if absent.
+      portrait: { src: `/wrapped/player-${champId}.webp`, alt: championName },
       photo: COLOGNE_PHOTOS.champion,
       autoAdvanceMs: AUTO_MS,
     });
