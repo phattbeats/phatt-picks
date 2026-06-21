@@ -22,3 +22,9 @@ change (filenames are the stable handles in `COLOGNE_PHOTOS`).
 
 The earlier Wikimedia/CC venue stills (`cologne-cathedral.jpg`, `cologne-arena.jpg`,
 `cologne-player.jpg`) remain in the folder as rights-clean fallbacks.
+
+## Highlight clip (PHA-1274)
+- **magixx-1v4.mp4** — the magixx 1v4 on Mirage vs G2, IEM Cologne Major 2026 QF.
+  ~32s, muted h264 480p (loops in the historic-play slide). Sourced from the
+  Major broadcast highlight; same rights posture as the stills above — clear with
+  HLTV/ESL before public ship, or swap for a licensed/CC cut (same filename).

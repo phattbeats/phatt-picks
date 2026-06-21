@@ -164,6 +164,9 @@ export interface PlayoffMoment {
   logoPickIds?: number[];
   /** The dank photo for this beat (cathedral / arena / a player moment). */
   photo?: WrappedPhoto;
+  /** A looping highlight clip for the beat (PHA-1274 — the magixx 1v4). When
+   *  set it takes the band; `photo` doubles as its poster/fallback. */
+  video?: { src: string; poster?: string; alt?: string; credit?: string };
 }
 
 /**
@@ -222,6 +225,15 @@ export const COLOGNE_PLAYOFF_MOMENTS: readonly PlayoffMoment[] = [
     body: "Last man alive in the Quarterfinal, the round already written off, magixx held one angle and emptied a single AK spray through four G2 players — then froze, hand on his head, not quite believing it himself. Graffiti-worthy. Valve made his face their profile picture. The Cathedral lost its mind.",
     logoPickIds: [81, 59],
     photo: COLOGNE_PHOTOS.magixx,
+    // The 30s clip loops in the slide (Brandon, PHA-1274). Muted h264 mp4 under
+    // /public/wrapped; the magixx still is its poster/fallback. Source +
+    // licensing in public/wrapped/CREDITS.md.
+    video: {
+      src: "/wrapped/magixx-1v4.mp4",
+      poster: COLOGNE_PHOTOS.magixx.src,
+      alt: "magixx's 1v4 on Mirage against G2, the IEM Cologne Major 2026 Quarterfinal",
+      credit: "magixx 1v4 · IEM Cologne Major 2026",
+    },
   },
 ] as const;
 
@@ -400,6 +412,7 @@ export function buildPlayoffWrappedDeck(
       body: m.body,
       teamLogos: logoRow(...(m.logoPickIds ?? [])),
       photo: m.photo,
+      video: m.video,
       autoAdvanceMs: AUTO_MS,
     });
   }
