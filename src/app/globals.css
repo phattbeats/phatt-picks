@@ -1555,6 +1555,19 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   width: 100%; height: 100%; object-fit: cover; display: block;
   filter: saturate(1.05) contrast(1.02);
 }
+.sw-portrait {
+  position: relative; margin: 0 auto 6px; height: 188px; display: flex;
+  align-items: flex-end; justify-content: center;
+}
+.sw-portrait::before {
+  content: ""; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+  width: 150px; height: 150px; border-radius: 50%; z-index: 0;
+  background: radial-gradient(circle, var(--heat-glow), transparent 68%);
+}
+.sw-portrait img {
+  position: relative; z-index: 1; height: 100%; width: auto; max-width: 86%;
+  object-fit: contain; display: block; filter: drop-shadow(0 10px 18px rgba(0,0,0,0.55));
+}
 .sw-photo video {
   width: 100%; height: 100%; object-fit: cover; display: block;
   filter: saturate(1.05) contrast(1.02);
