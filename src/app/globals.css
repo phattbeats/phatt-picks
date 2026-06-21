@@ -809,9 +809,45 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-low);
   text-align: right; flex-shrink: 1; min-width: 0;
 }
+/* A settings fold rendered as a plain link out to another page (no disclosure
+   toggle) — same header row, no +/- marker (PHA-1283). */
+.settings-fold-summary-static {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 16px 18px;
+  font-family: var(--font-display); font-weight: 800; font-size: 15px;
+  text-transform: uppercase; letter-spacing: 0.02em; color: var(--ink-hi);
+}
 .settings-fold-body {
   display: flex; flex-direction: column; gap: 18px;
   padding: 2px 18px 18px;
+  border-top: 1px solid var(--hair);
+}
+
+/* Collapsible per-stage cards on the player profile (PHA-1283) — the profile
+   opens condensed; each stage expands on tap. Same disclosure idiom as the
+   settings folds, sized down for the stack of stages. */
+.stage-fold { padding: 0; background: var(--surf-1); }
+.stage-fold > summary {
+  list-style: none; cursor: pointer; user-select: none;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 13px 16px;
+  font-family: var(--font-display); font-weight: 800; font-size: 14px;
+  text-transform: uppercase; letter-spacing: 0.02em; color: var(--ink-hi);
+}
+.stage-fold > summary::-webkit-details-marker { display: none; }
+.stage-fold > summary::after {
+  content: '+'; margin-left: auto; flex-shrink: 0;
+  font-family: var(--font-mono); font-weight: 400; font-size: 18px;
+  color: var(--ink-mid); transition: transform 0.15s ease;
+}
+.stage-fold[open] > summary::after { content: '–'; }
+.stage-fold-hint {
+  font-family: var(--font-mono); font-weight: 400; font-size: 9px;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-low);
+  text-align: right; flex-shrink: 1; min-width: 0;
+}
+.stage-fold-body {
+  padding: 14px 16px 16px;
   border-top: 1px solid var(--hair);
 }
 .profile-av {

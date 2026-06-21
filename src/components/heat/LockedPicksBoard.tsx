@@ -47,6 +47,7 @@ export function LockedPicksBoard({
   resolvedAtIso,
   title = "YOUR LOCKED PICKS",
   reactions,
+  bare = false,
 }: {
   section: Section;
   teamMap: Map<number, TeamDef>;
@@ -67,18 +68,20 @@ export function LockedPicksBoard({
     canReact: boolean;
     tallyFor: (groupId: number, slotIndex: number) => TallyLine[];
   };
+  /** Drop the panel chrome + title row — for when an outer wrapper (e.g. the
+   *  collapsible stage card on the profile, PHA-1283) already supplies them. */
+  bare?: boolean;
 }) {
-  return (
-    <div className="panel brk" style={{ padding: "18px 16px 20px" }}>
-      <span className="br-tr" />
-      <span className="br-bl" />
-
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
-        <span className="eyebrow-mono" style={{ color: "var(--heat)" }}>{title}</span>
-        <span className="last-updated">
-          {resolvedAtIso ? <LastUpdated iso={resolvedAtIso} /> : "Turns green / red as teams clinch"}
-        </span>
-      </div>
+  const board = (
+    <>
+      {!bare && (
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
+          <span className="eyebrow-mono" style={{ color: "var(--heat)" }}>{title}</span>
+          <span className="last-updated">
+            {resolvedAtIso ? <LastUpdated iso={resolvedAtIso} /> : "Turns green / red as teams clinch"}
+          </span>
+        </div>
+      )}
 
       <div className="pickboard">
         {section.groups.map((group) => {
@@ -166,6 +169,16 @@ export function LockedPicksBoard({
         .pslot.pick-wrong { border-color: var(--ember, #d8351c) !important; background: rgba(216,53,28,0.07); }
         .pslot.pick-wrong::before { background: var(--ember, #d8351c) !important; }
       `}</style>
+    </>
+  );
+
+  if (bare) return board;
+
+  return (
+    <div className="panel brk" style={{ padding: "18px 16px 20px" }}>
+      <span className="br-tr" />
+      <span className="br-bl" />
+      {board}
     </div>
   );
 }

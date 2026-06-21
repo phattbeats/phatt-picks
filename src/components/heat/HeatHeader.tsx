@@ -11,6 +11,9 @@ const NAV_LINKS = [
   { href: "/picks", label: "Picks", match: (p: string) => p.startsWith("/picks") },
   { href: "/leaderboard", label: "Leaderboard", match: (p: string) => p.startsWith("/leaderboard") },
   { href: "/news", label: "News", match: (p: string) => p.startsWith("/news") },
+  // INFO (PHA-1283) — help & guides as a first-class desktop tab. Also lights up
+  // on the guide sub-pages it gathers (how-to-play / faq / help / install).
+  { href: "/info", label: "Info", match: (p: string) => p.startsWith("/info") || p.startsWith("/how-to-play") || p.startsWith("/faq") || p.startsWith("/help") || p.startsWith("/pwa") },
   { href: "/profile", label: "Profile", match: (p: string) => p.startsWith("/profile") || p.startsWith("/players") || p.startsWith("/settings") },
 ] as const;
 
