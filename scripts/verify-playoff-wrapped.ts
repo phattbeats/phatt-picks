@@ -168,6 +168,7 @@ check("coin slide sits before the thank-you", outIds.indexOf("po-coin") < outIds
 // ---- PHA-1274 scope correction: this is the *Major* Wrapped, not just Playoffs. ----
 check("cover frames the whole Major (32 walked in)", /thirty-two walked in/i.test(out[0].headline));
 check("cover eyebrow reads MAJOR, not PLAYOFFS", /MAJOR/.test(out[0].eyebrow ?? "") && !/PLAYOFFS/.test(out[0].eyebrow ?? ""));
+check("magixx historic beat carries the looping clip + poster", (() => { const m = COLOGNE_PLAYOFF_MOMENTS.find((x) => x.id === "po-m-magixx-1v4"); return !!m?.video?.src && /\.mp4$/.test(m.video.src) && !!m.video.poster; })());
 check("historic moments span the Major (Swiss-stage beats present)",
   COLOGNE_PLAYOFF_MOMENTS.some((m) => m.id === "po-m-donk") && COLOGNE_PLAYOFF_MOMENTS.some((m) => m.id === "po-m-woxic"));
 check("nations bridge carries the 32→8 arc", /32/.test(out.find((s) => s.id === "po-nations")?.figure ?? ""));
