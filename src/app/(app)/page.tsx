@@ -13,7 +13,8 @@ import { getWireItems } from "@/lib/news";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { WatchNow } from "@/components/watch/WatchNow";
 import { currentEventId } from "@/lib/events-core";
-import { majorChampion, majorWrappedSectionId, type MajorChampion } from "@/lib/stage-wrapped-launch";
+import { majorChampion, majorWrappedStageKey, type MajorChampion } from "@/lib/stage-wrapped-launch";
+import { StageWrappedReplay } from "@/components/heat/StageWrappedReplay";
 
 export const dynamic = "force-dynamic";
 
@@ -153,7 +154,11 @@ export default async function DashboardPage() {
   // resolved) and the hero becomes a send-off (PHA-1274: "the homepage needs
   // updated").
   const eventLabel = champion ? "Major complete" : eventStarted ? "Live now" : "Pre-event";
-  const wrappedHref = `/reveal/${majorWrappedSectionId()}?wrapped=1`;
+  // Re-open the actual Major Wrapped deck (the app-wide launcher mounted in the
+  // layout) via the replay bus — NOT a /reveal/<GF>?wrapped=1 link, which only
+  // force-opens that one section's own wrap ("Grand Final — nothing to wrap
+  // yet") instead of the cinematic recap (PHA-1274).
+  const wrappedStageKey = majorWrappedStageKey(EVENT_ID);
 
   return (
     <>
@@ -166,7 +171,7 @@ export default async function DashboardPage() {
 
       {/* Stage briefing — or, once a champion is crowned, the Major send-off. */}
       {champion ? (
-        <ConcludedHero champion={champion} wrappedHref={wrappedHref} />
+        <ConcludedHero champion={champion} wrappedStageKey={wrappedStageKey} />
       ) : (
       <section className="brk" style={{
         position: "relative",
@@ -401,10 +406,10 @@ export default async function DashboardPage() {
  */
 function ConcludedHero({
   champion,
-  wrappedHref,
+  wrappedStageKey,
 }: {
   champion: MajorChampion;
-  wrappedHref: string;
+  wrappedStageKey: string;
 }) {
   return (
     <section className="brk" style={{
@@ -462,12 +467,11 @@ function ConcludedHero({
           all Major long — the recap below has the whole run.
         </p>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 18 }}>
-          <Link href={wrappedHref} className="btn-heat" prefetch={false}>
-            Watch the Wrapped recap
+          <StageWrappedReplay stageKey={wrappedStageKey} label="Watch the Wrapped recap" className="btn-heat">
             <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>
-          </Link>
+          </StageWrappedReplay>
           <Link href="/leaderboard" className="btn-ghost" prefetch={false}>Final Ranks</Link>
         </div>
       </div>
