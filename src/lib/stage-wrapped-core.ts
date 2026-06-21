@@ -104,6 +104,9 @@ export interface WrappedSlide {
    * fallback if the clip can't play. Takes the band slot in place of `photo`.
    */
   video?: { src: string; poster?: string; alt?: string; credit?: string };
+  /** A cut-out player portrait (PHA-1274) — the team's marquee on team slides /
+   *  player moments. Rendered as a centered transparent hero, not a photo band. */
+  portrait?: { src: string; alt?: string };
   /** Personal reward: set when the viewer's pick matched this narrative moment. */
   calledIt?: { label: string; sub?: string };
   /**
