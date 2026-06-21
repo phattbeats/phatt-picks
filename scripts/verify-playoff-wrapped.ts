@@ -103,7 +103,7 @@ check("signed-out has champion slide", outIds.includes("po-champion"));
 check("signed-out has the run", outIds.includes("po-run"));
 check("signed-out has the buster", outIds.includes("po-buster"));
 check("signed-out has NO personal slides", !outIds.some((id) => id.startsWith("po-your") || id === "po-rank" || id === "po-bleachers"));
-check("signed-out closes on the post-credits stinger", out[out.length - 1].id === "po-stinger");
+check("signed-out closes on the coin CTA (after the stinger)", out[out.length - 1].id === "po-coin");
 check("signed-out thank-you prompts sign-in", /sign in/i.test(out.find((s) => s.id === "po-thanks")?.body ?? ""));
 check("champion slide names FURIA", /FURIA/.test(out.find((s) => s.id === "po-champion")?.headline ?? ""));
 check("champion slide carries the trophy figure", out.find((s) => s.id === "po-champion")?.figure === "🏆");
@@ -146,7 +146,7 @@ check("matched champion lights YOU CALLED THE CHAMPION", yourChamp?.calledIt?.la
 check("matched champion headline reads 'crowned'", /crowned/i.test(yourChamp?.headline ?? ""));
 check("rank slide shows upward move", mine.find((s) => s.id === "po-rank")?.figure === "▲4");
 check("personal thank-you does NOT prompt sign-in", !/sign in/i.test(mine.find((s) => s.id === "po-thanks")?.body ?? ""));
-check("personal deck still closes on the stinger", mine[mine.length - 1].id === "po-stinger");
+check("personal deck closes on the coin CTA", mine[mine.length - 1].id === "po-coin");
 
 // ---- PHA-1274 "big finish": every team gets a slide + heartfelt closer + stinger. ----
 check("all eight playoff teams are authored", COLOGNE_PLAYOFF_TEAMS.length === 8);
@@ -163,7 +163,7 @@ check("stinger teases the next Major (Singapore)", /Singapore/i.test(out.find((s
 check("thanks comes before the stinger", outIds.indexOf("po-thanks") < outIds.indexOf("po-stinger"));
 check("coin checkout slide present", outIds.includes("po-coin"));
 check("coin slide links to the shelf via CTA", (() => { const c = out.find((s) => s.id === "po-coin"); return c?.cta?.href === "/profile" && /coin/i.test(c?.cta?.label ?? ""); })());
-check("coin slide sits before the thank-you", outIds.indexOf("po-coin") < outIds.indexOf("po-thanks"));
+check("coin slide is the very last beat (after thanks + stinger)", outIds[outIds.length - 1] === "po-coin" && outIds.indexOf("po-coin") > outIds.indexOf("po-stinger"));
 
 // ---- PHA-1274 scope correction: this is the *Major* Wrapped, not just Playoffs. ----
 check("cover frames the whole Major (32 walked in)", /thirty-two walked in/i.test(out[0].headline));
