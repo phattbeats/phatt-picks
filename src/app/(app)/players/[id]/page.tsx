@@ -316,7 +316,41 @@ export default async function PlayerProfilePage({
       )}
 
       {/* Challenge coins (PHA-1278) — collectible Major-logo shelf */}
-      <ChallengeCoinShelf coins={challengeCoins} isSelf={isSelf} />
+      <ChallengeCoinShelf coins={challengeCoins} />
+
+      {/* Your Majors (PHA-1283) — moved off Settings onto your own profile, where
+          the rest of your record already lives. Self only. */}
+      {isSelf && (
+        <Link
+          href="/majors"
+          className="brk"
+          style={{
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            background: "var(--surf-1)",
+            border: "1px solid var(--hair-2)",
+            padding: "14px 16px",
+            textDecoration: "none",
+          }}
+        >
+          <span className="br-tr" />
+          <span className="br-bl" />
+          <span style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
+            <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 15, textTransform: "uppercase", letterSpacing: "0.02em", color: "var(--ink-hi)" }}>
+              Your Majors
+            </span>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-low)" }}>
+              Your picks &amp; score · every event
+            </span>
+          </span>
+          <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--ink-mid)", flexShrink: 0 }} aria-hidden="true">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </Link>
+      )}
 
       {/* Compare CTA — only if there's somebody to compare against */}
       {session && session.playerId !== player.id && (
@@ -332,11 +366,14 @@ export default async function PlayerProfilePage({
         </Link>
       )}
 
-      {/* Per-stage picks (reveal-gated against non-self viewers). Swiss stages
-          render in the SAME locked-picks UI as /picks — the 3:0 / advance / 0:3
-          buckets, each call green when confirmed right, red when wrong OR no
-          longer winnable (PHA-902). Playoffs keep the per-match cards. */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Per-stage picks (reveal-gated against non-self viewers). Each stage is a
+          collapsed card by default (PHA-1283) so the profile opens condensed, not
+          as a wall of boards — tap a stage to expand it. Swiss stages render in
+          the SAME locked-picks UI as /picks — the 3:0 / advance / 0:3 buckets,
+          each call green when confirmed right, red when wrong OR no longer
+          winnable (PHA-902). Playoffs keep the per-match cards. */}
+      <div className="eyebrow-mono" style={{ display: "block", marginTop: 2 }}>STAGES</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {layout.sections.map((section) => {
           const stageLabel = section.name.split(" | ")[0].toUpperCase();
           if (isSwissSection(section.sectionid)) {
@@ -351,14 +388,19 @@ export default async function PlayerProfilePage({
               );
             if (!revealed) {
               return (
-                <div key={section.sectionid} className="pickgroup">
-                  <div className="pickgroup-head">
-                    <span className="pickgroup-name" style={{ fontSize: 14 }}>{stageLabel}</span>
+                <details key={section.sectionid} className="stage-fold brk">
+                  <span className="br-tr" />
+                  <span className="br-bl" />
+                  <summary>
+                    <span>{stageLabel}</span>
+                    <span className="stage-fold-hint">Hidden until lock</span>
+                  </summary>
+                  <div className="stage-fold-body">
+                    <div style={{ padding: 20, textAlign: "center", color: "var(--ink-low)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                      <LockIcon size={11} /> Hidden until this stage locks
+                    </div>
                   </div>
-                  <div style={{ padding: 20, textAlign: "center", color: "var(--ink-low)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                    <LockIcon size={11} /> Hidden until this stage locks
-                  </div>
-                </div>
+                </details>
               );
             }
             const swiss = buildSwissStandings(
@@ -370,30 +412,43 @@ export default async function PlayerProfilePage({
             const teamStatus = new Map(swiss.teams.map((t) => [t.pickid, t.status] as const));
             const groupResolved = Object.keys(outcomeMap[section.sectionid]?.[group.groupid] ?? {}).length >= group.picks.length;
             return (
-              <LockedPicksBoard
-                key={section.sectionid}
-                section={section}
-                teamMap={teamMap}
-                myPicks={pickMap[section.sectionid] ?? {}}
-                teamStatus={teamStatus}
-                recordByTeam={recordsBySection.get(section.sectionid)}
-                resolvedAtIso={null}
-                title={`${stageLabel}`}
-                reactions={!isSelf ? {
-                  targetPlayerId: player.id,
-                  canReact: canReact && !groupResolved,
-                  tallyFor: (groupId, slotIndex) => tallyFor(section.sectionid, groupId, slotIndex),
-                } : undefined}
-              />
+              <details key={section.sectionid} className="stage-fold brk">
+                <span className="br-tr" />
+                <span className="br-bl" />
+                <summary>
+                  <span>{stageLabel}</span>
+                  <span className="stage-fold-hint">Turns green / red as teams clinch</span>
+                </summary>
+                <div className="stage-fold-body">
+                  <LockedPicksBoard
+                    bare
+                    section={section}
+                    teamMap={teamMap}
+                    myPicks={pickMap[section.sectionid] ?? {}}
+                    teamStatus={teamStatus}
+                    recordByTeam={recordsBySection.get(section.sectionid)}
+                    resolvedAtIso={null}
+                    title={`${stageLabel}`}
+                    reactions={!isSelf ? {
+                      targetPlayerId: player.id,
+                      canReact: canReact && !groupResolved,
+                      tallyFor: (groupId, slotIndex) => tallyFor(section.sectionid, groupId, slotIndex),
+                    } : undefined}
+                  />
+                </div>
+              </details>
             );
           }
-          // Non-Swiss (playoffs): keep the per-match cards.
+          // Non-Swiss (playoffs): keep the per-match cards, inside a collapsed card.
           return (
-          <div key={section.sectionid}>
-            <h2 className="eyebrow-mono" style={{ marginBottom: 8, display: "block" }}>
-              {stageLabel}
-            </h2>
-
+          <details key={section.sectionid} className="stage-fold brk">
+            <span className="br-tr" />
+            <span className="br-bl" />
+            <summary>
+              <span>{stageLabel}</span>
+              <span className="stage-fold-hint">Playoffs</span>
+            </summary>
+            <div className="stage-fold-body">
               {section.groups.map((group) => {
                 // Self always sees own picks; others wait for stage lock.
                 const lockRevealed = arePicksRevealed(
@@ -503,7 +558,8 @@ export default async function PlayerProfilePage({
                   </div>
                 );
               })}
-          </div>
+            </div>
+          </details>
           );
         })}
       </div>
