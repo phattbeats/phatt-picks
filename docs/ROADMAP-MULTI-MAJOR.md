@@ -55,9 +55,13 @@ The registry (`events-core.ts`) is the single source of truth. `resolveActiveEve
 per-request — PHA-1046 removed the module-level `ACTIVE_EVENT_ID`). Adding a Major is one new
 registry entry. Full domain-module cutover deferred to PHA-952 post-GF.
 
-### B. Historic scores & "look back" — **DONE (PHA-949)**
+### B. Historic scores & "look back" — **DONE (PHA-949), since extended**
 `/majors` route: every event you played, your score and finish, linked into its full profile.
-Read view over already-persisted `eventId`-scoped rows — no schema change, no crawl.
+Read view over already-persisted `eventId`-scoped rows — no schema change, no crawl. Two keepsake
+surfaces have since been layered on the same event-scoped data, both pure-derived (no new tables):
+**Challenge coins** (PHA-1278) — a tiered collectible per Major you participated in (minted the
+moment the Grand Final crowns a champion), on your profile and each concluded `/majors` row — and **Major Wrapped** (PHA-1274), the GF-gated end-of-event recap
+deck. The pattern holds: "look back" features are read + UI over rows that already carry `eventId`.
 
 ### C. Self-sustaining event lifecycle — **DONE (PHA-950 + PHA-954)**
 Clock-derived status transitions, registry-driven drivers/reminders, 48h GF grace arc.

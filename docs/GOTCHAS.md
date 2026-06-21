@@ -98,6 +98,62 @@ These cost real hours. Add to this file whenever a bug burns you.
 
 ---
 
+## Client performance & the service worker
+
+The Cologne live window surfaced a cluster of "the app froze my phone / I had to restart my
+computer" reports. They were **four different causes** wearing the same costume — and the most
+important lesson is that a whole-browser freeze is almost never the JS heap.
+
+### "Freezes the WHOLE browser / had to restart" = GPU compositor, not JS heap (PHA-1269)
+- **Cause:** full-viewport `backdrop-filter: blur()` (the Stage Wrapped backdrop that auto-opened on
+  login, plus ambient `blur(140px)` and a `blur(20px)` bottom-nav). The GPU re-blurs the entire
+  screen every animated frame → the whole browser stutters/freezes, not just the tab. It is
+  **invisible to `performance.memory`** (that only sees the JS heap), so it never shows up in a
+  heap probe and **does not reproduce headless** (headless Chrome defaults to
+  `prefers-reduced-motion: reduce`).
+- **Rule:** "freezes the whole browser / restart the computer / can't reproduce headless" ⇒ suspect
+  **GPU/compositor** (blur, large filters, big composited layers), not JS memory. Profile with the
+  GPU/rendering tools, and emulate `prefers-reduced-motion: no-preference`
+  (`Emulation.setEmulatedMedia`) to reproduce. Avoid full-viewport `backdrop-filter` entirely.
+
+### A stale cached build white-screens or freezes on old CSS — the service worker is the fix (PHA-1269)
+- **Cause:** an installed PWA / cached client held onto a stale build (old CSS, or a `ChunkLoadError`
+  when a hashed chunk 404s after a deploy). The user is stuck on broken old assets.
+- **Rule:** `public/sw.js` is the recovery vector. On activate it `skipWaiting()`s, **purges all
+  Cache Storage**, and broadcast-reloads every open client onto the fresh build. An inline
+  self-heal in `layout.tsx` (sessionStorage loop-guard) drops the SW + caches and hard-reloads on a
+  ChunkLoadError. `/sw.js` is served **uncacheable** (`Cache-Control: no-store`) so the recovery
+  worker itself can always update. Keep the SW **cache-light** — it must not cache app content and
+  must not interpose on SSE / API / streaming requests (or it holds the stream buffer).
+
+### Eager `<Link>` prefetch storm froze the Android home page (PHA-1269)
+- **Cause:** too many in-viewport `next/link` prefetches firing at once on first paint.
+- **Rule:** disable prefetch on dense link lists (`prefetch={false}`) on the heavy landing surfaces.
+
+### `router.refresh()` grows retained client memory on live views (PHA-1268)
+- **Cause:** the AutoRefresh poll on live-results views calls `router.refresh()`; retained heap
+  creeps up (~43% over 200 refreshes) even though the DOM stays flat.
+- **Rule:** bound it — on results-only views, do a hard-reload reclaim (`reclaimSafe`) periodically,
+  and **pause the refresh / SSE while the tab is hidden** (PHA-1267). Stop AutoRefresh entirely
+  once the Major is over (PHA-1261).
+
+### Immortal SSE poll-loops pin server CPU (PHA-1244)
+- **Cause:** the notification SSE stream's poll loop only exited on `req.signal.aborted`; an enqueue
+  throw to a gone peer was swallowed as a "DB hiccup", so each dropped connection left a loop running
+  forever (5 DB queries / 8s, accumulating over hours = "MASSIVE cpu after update").
+- **Rule:** an SSE handler needs a hard exit: a `cancel` flag, a `safeEnqueue` that **breaks** on
+  throw (peer gone), and a lifetime cap (10 min). Never swallow an enqueue failure as transient.
+
+### A bottom-sheet sized in `vh` sits partly off-screen on mobile (PHA-1276)
+- **Cause:** `vh` counts the area *behind* a mobile browser's dynamic URL/nav bars, so a fixed-height
+  bottom-sheet (the recap deck) pushed its top controls off-screen and clipped tall slides on Android
+  Chrome.
+- **Rule:** size mobile bottom-sheet modals in **`dvh`** (dynamic viewport height) with a `vh`
+  fallback, cap with `max-height`, and let the inner stage scroll (`overflow:auto` + `margin:auto`
+  to center when it fits).
+
+---
+
 ## Valve / Steam API
 
 ### Synced picks come back as placeholders / sync 500s on re-upload
@@ -178,6 +234,16 @@ These cost real hours. Add to this file whenever a bug burns you.
 - **Rule:** prefer **raw counts** ("3 of 5 picked") — honest at any N. Compute Swiss
   consensus at **bucket grain** (slots in a bucket are interchangeable), denominator =
   distinct players. Hide the line when the field is < 2.
+
+### A reaction silently overwrites someone else's — the shared-group unique key (PHA-1262)
+- **Cause:** the `Reaction` `@@unique` omitted `targetPlayerId`. Playoff bracket groups are shared
+  across all players (everyone picks into the same QF/SF/GF slots), so reacting to a *second* player
+  at the same `(eventId,sectionId,groupId,slotIndex)` collided with and silently re-stamped the
+  *first* target. The symptom ("I can only react to one person on the bracket") looked like a UI bug.
+- **Rule:** any per-target reaction/vote table must include the **target** in its uniqueness key.
+  The Cologne key is `@@unique([senderId,eventId,sectionId,groupId,slotIndex,targetPlayerId])`.
+  Reproduce end-to-end (mint a session, POST the live API for two targets) before theorizing about
+  the gate.
 
 ### The live entry gate keys on `phatt_session` only
 - **Cause:** on the live container the splash/entry middleware gates on `phatt_session`
