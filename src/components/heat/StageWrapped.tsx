@@ -511,6 +511,23 @@ function PhotoFigure({ photo }: { photo: NonNullable<WrappedSlide["photo"]> }) {
  * the attribute alone doesn't reliably satisfy autoplay policies — and a blocked
  * play() or a load error falls back to the poster still, never an empty band.
  */
+/**
+ * A transparent player portrait (PHA-1274) — the team's marquee, used as the
+ * picture for the team slides + player moments. HLTV bodyshots are cut-out
+ * WebPs, so they sit as a centered hero over the slide's dark backdrop (no band
+ * frame) with a heat glow behind. Hides itself if the image fails to load.
+ */
+function PlayerPortrait({ portrait }: { portrait: NonNullable<WrappedSlide["portrait"]> }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return (
+    <figure className="sw-portrait">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={portrait.src} alt={portrait.alt ?? ""} onError={() => setFailed(true)} />
+    </figure>
+  );
+}
+
 function VideoFigure({ video }: { video: NonNullable<WrappedSlide["video"]> }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [failed, setFailed] = useState(false);
@@ -555,10 +572,12 @@ function SlideCard({ slide }: { slide: WrappedSlide }) {
   const badge = slide.stageBadge;
   return (
     <div className={`sw-slide sw-kind-${slide.kind} sw-enter`}>
-      {/* Band: a looping highlight clip if the slide has one (PHA-1274 — the
-          magixx 1v4), else the documentary still. The video takes the slot. */}
+      {/* Band: a looping clip (magixx 1v4) → else a player portrait (the team's
+          marquee, PHA-1274) → else the documentary still. */}
       {slide.video ? (
         <VideoFigure video={slide.video} />
+      ) : slide.portrait ? (
+        <PlayerPortrait portrait={slide.portrait} />
       ) : (
         slide.photo && <PhotoFigure photo={slide.photo} />
       )}
@@ -588,7 +607,7 @@ function SlideCard({ slide }: { slide: WrappedSlide }) {
           <StageLogo numeral={badge.numeral} label={badge.label} sub={badge.sub} />
         </div>
       ) : (
-        slide.eyebrow && <span className="eyebrow-mono sw-eyebrow">{slide.eyebrow}</span>
+        false /* eyebrow pill removed (PHA-1274, Brandon: superfluous card "title") */ && null
       )}
       {/* Team logos — matchups / clinchers. One logo centred; two flank a "vs". */}
       {logos.length > 0 && (
