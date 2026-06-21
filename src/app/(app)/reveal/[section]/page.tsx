@@ -32,9 +32,11 @@ import { ConsensusBar } from "@/components/heat/ConsensusBar";
 import type { Section } from "@/lib/layout";
 import { currentEventId } from "@/lib/events-core";
 import { StageWrappedAnnounce } from "@/components/heat/StageWrapped";
-import { StageWrappedReplay } from "@/components/heat/StageWrappedReplay";
+import { StageWrappedReplay, WrappedReplayOnLoad } from "@/components/heat/StageWrappedReplay";
 import { stageWrappedKey } from "@/lib/stage-wrapped-core";
 import { buildStageWrappedDeck, stageWrappedHasContent, type StageWrappedBestCall } from "@/lib/stage-wrapped-content";
+import { isPlayoffSection, playoffRoundForSection, PLAYOFF_ROUNDS } from "@/lib/playoff-bracket-core";
+import { majorWrappedStageKey } from "@/lib/stage-wrapped-launch";
 
 function ordSuffix(n: number): string {
   const v = n % 100;
@@ -98,10 +100,31 @@ export default async function StageRevealPage({
   const stageLabel = sectionDef.name.split(" | ")[0];
   const stageIdx = layout.sections.findIndex((s) => s.sectionid === sectionId);
 
+  // The playoffs are ONE bracket Pick'Em (QF→SF→GF), so their reveal is ONE
+  // stage too — not three separate per-round reveals (Brandon: "playoffs should
+  // be all one stage reveal"). When the requested section is any playoff round,
+  // the reveal spans every playoff section: one "Playoffs" heading, the whole
+  // bracket of picks, and a single score/rank-move across the run. Mirrors how
+  // the picks page + home hero already consolidate 108/109/110 (PHA-1007/1204).
+  const playoff = isPlayoffSection(sectionId);
+  const groupSections = playoff
+    ? PLAYOFF_ROUNDS.map((r) => layout.sections.find((s) => s.sectionid === r.sectionId)).filter(
+        (s): s is Section => !!s,
+      )
+    : [sectionDef];
+  const groupSectionIds = groupSections.map((s) => s.sectionid);
+  const revealLabel = playoff ? "Playoffs" : stageLabel;
+  const eyebrowText = playoff ? "PLAYOFFS" : `STAGE_REVEAL · ${String(stageIdx + 1).padStart(2, "0")}`;
+  // The playoff reveal's recap IS the Major Wrapped deck (one bracket → one
+  // cinematic), opened through the app-wide launcher's replay bus rather than a
+  // per-round wrap. The per-round wrap ("Grand Final — nothing to wrap yet") is
+  // what the old /reveal/110?wrapped=1 deep link wrongly surfaced (PHA-1274).
+  const majorKey = majorWrappedStageKey(EVENT_ID);
+
   const [outcomes, allPicks] = await Promise.all([
     prisma.stageOutcome.findMany({ where: { eventId: EVENT_ID } }),
     prisma.pick.findMany({
-      where: { eventId: EVENT_ID, sectionId },
+      where: { eventId: EVENT_ID, sectionId: { in: groupSectionIds } },
       select: { playerId: true, sectionId: true, groupId: true, slotIndex: true, pickId: true },
     }),
   ]);
@@ -117,28 +140,35 @@ export default async function StageRevealPage({
     outcomeMap[o.sectionId][o.groupId] ??= {};
     outcomeMap[o.sectionId][o.groupId][o.slotIndex] = o.winnerPickId;
   }
-  const sectionResolved = !!outcomeMap[sectionId];
+  // Resolved if ANY section in the group has landed (a playoff reveal opens as
+  // soon as the quarterfinals resolve, then fills in as SF/GF land).
+  const groupResolved = groupSectionIds.some((id) => !!outcomeMap[id]);
 
   // Resolved-section history (from snapshots) → rank before/after this stage.
+  // For a multi-round playoff group the "after" rank is the latest resolved
+  // round and the "before" rank is whatever resolved just before the bracket
+  // began, so the rank move spans the whole run, not a single round.
   const resolvedSections = await snapshotSectionIds(EVENT_ID);
-  const prevSection = previousResolvedSection(resolvedSections, sectionId);
+  const resolvedInGroup = groupSectionIds.filter((id) => !!outcomeMap[id]);
+  const afterAnchor = resolvedInGroup.length ? resolvedInGroup[resolvedInGroup.length - 1] : sectionId;
+  const prevSection = previousResolvedSection(resolvedSections, groupSectionIds[0]);
   const [afterMap, beforeMap] = await Promise.all([
-    rankMapForSection(EVENT_ID, sectionId),
+    rankMapForSection(EVENT_ID, afterAnchor),
     rankMapForSection(EVENT_ID, prevSection),
   ]);
 
   // Not resolved yet → honest empty state.
-  if (!sectionResolved) {
+  if (!groupResolved) {
     return (
       <>
-        <RevealEyebrow stageIdx={stageIdx} />
-        <h1 className="font-display" style={heroTitle}>{stageLabel}</h1>
+        <RevealEyebrow text={eyebrowText} />
+        <h1 className="font-display" style={heroTitle}>{revealLabel}</h1>
         <div style={{ ...v3Card, textAlign: "center", padding: "40px 24px", marginTop: 16 }}>
           <p className="font-display" style={{ fontWeight: 700, fontSize: 20, textTransform: "uppercase", color: "var(--ink-hi)", margin: "0 0 6px" }}>
-            Stage not resolved yet
+            {playoff ? "Playoffs not resolved yet" : "Stage not resolved yet"}
           </p>
           <p style={{ color: "var(--ink-mid)", fontSize: 14, margin: 0 }}>
-            The reveal drops as soon as {stageLabel} results land.{" "}
+            The reveal drops as soon as {revealLabel} results land.{" "}
             <Link href="/leaderboard" style={{ color: "var(--heat)" }}>Back to standings</Link>.
           </p>
         </div>
@@ -149,20 +179,24 @@ export default async function StageRevealPage({
   // Field popularity per (slot → pickId), counted across players who picked.
   type SlotStat = { winnerPickId: number; tag: string | null; total: number; correctCount: number; total_field: number };
   const slotStats: SlotStat[] = [];
-  for (const group of sectionDef.groups) {
-    const gOut = outcomeMap[sectionId]?.[group.groupid] ?? {};
-    for (const slot of group.picks) {
-      const winner = gOut[slot.index];
-      if (winner === undefined) continue;
-      const field = allPicks.filter((p) => p.groupId === group.groupid && p.slotIndex === slot.index && p.pickId !== 0);
-      const correctCount = field.filter((p) => p.pickId === winner).length;
-      slotStats.push({
-        winnerPickId: winner,
-        tag: bucketLabelFor(sectionId, group, slot.index),
-        total: field.length,
-        correctCount,
-        total_field: field.length,
-      });
+  for (const sec of groupSections) {
+    for (const group of sec.groups) {
+      const gOut = outcomeMap[sec.sectionid]?.[group.groupid] ?? {};
+      for (const slot of group.picks) {
+        const winner = gOut[slot.index];
+        if (winner === undefined) continue;
+        const field = allPicks.filter(
+          (p) => p.sectionId === sec.sectionid && p.groupId === group.groupid && p.slotIndex === slot.index && p.pickId !== 0,
+        );
+        const correctCount = field.filter((p) => p.pickId === winner).length;
+        slotStats.push({
+          winnerPickId: winner,
+          tag: bucketLabelFor(sec.sectionid, group, slot.index),
+          total: field.length,
+          correctCount,
+          total_field: field.length,
+        });
+      }
     }
   }
   // Consensus = correct call the most players landed; Bold = correct call the
@@ -181,20 +215,25 @@ export default async function StageRevealPage({
     const leader = leaderId ? await prisma.player.findUnique({ where: { id: leaderId } }) : null;
     return (
       <>
-        {/* Stage Wrapped recap (PHA-1054) — auto-opens once per stage. Signed-out
-            visitors get the stage's moments + a sign-in outro, no personal slides.
-            Reached only on a resolved stage (we returned above when unresolved). */}
-        <StageWrappedAnnounce
-          stageKey={stageWrappedKey(EVENT_ID, sectionId)}
-          eventId={EVENT_ID}
-          sectionId={sectionId}
-          slides={buildStageWrappedDeck(sectionId, stageLabel, null, wrappedAssets)}
-          title={stageLabel}
-          resolved
-          forceOpen={wantsWrapped}
-        />
-        <RevealEyebrow stageIdx={stageIdx} />
-        <h1 className="font-display" style={heroTitle}>{stageLabel}</h1>
+        {/* Recap (PHA-1054/1274). For a playoff round the recap is the Major
+            Wrapped deck (the app-wide launcher already mounts it); ?wrapped=1
+            just replays it. For a Swiss stage it's that stage's own deck,
+            auto-opened once. Reached only on a resolved stage. */}
+        {playoff ? (
+          <WrappedReplayOnLoad stageKey={majorKey} active={wantsWrapped} />
+        ) : (
+          <StageWrappedAnnounce
+            stageKey={stageWrappedKey(EVENT_ID, sectionId)}
+            eventId={EVENT_ID}
+            sectionId={sectionId}
+            slides={buildStageWrappedDeck(sectionId, stageLabel, null, wrappedAssets)}
+            title={stageLabel}
+            resolved
+            forceOpen={wantsWrapped}
+          />
+        )}
+        <RevealEyebrow text={eyebrowText} />
+        <h1 className="font-display" style={heroTitle}>{revealLabel}</h1>
         <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "4px 0 0" }}>Stage Reveal · {afterMap.size} ranked</p>
         {leader && (
           <div style={{ ...v3Card, marginTop: 16 }}>
@@ -225,17 +264,23 @@ export default async function StageRevealPage({
     subjectPickMap[p.sectionId][p.groupId][p.slotIndex] = p.pickId;
   }
 
-  // Score for THIS stage only, and cumulative total across all resolved stages.
-  const stageOutcomes: OutcomeMap = outcomeMap[sectionId] ? { [sectionId]: outcomeMap[sectionId] } : {};
-  const stageBreak = scorePlayer(layout, subjectPickMap, stageOutcomes).bySection.find((b) => b.sectionId === sectionId);
-  const stagePoints = stageBreak?.points ?? 0;
-  const correct = stageBreak?.correct ?? 0;
+  // Score for THIS stage (the whole playoff group, when consolidated) only, and
+  // cumulative total across all resolved stages.
+  const stageOutcomes: OutcomeMap = {};
+  for (const id of groupSectionIds) if (outcomeMap[id]) stageOutcomes[id] = outcomeMap[id];
+  const groupBreaks = scorePlayer(layout, subjectPickMap, stageOutcomes).bySection.filter((b) =>
+    groupSectionIds.includes(b.sectionId),
+  );
+  const stagePoints = groupBreaks.reduce((a, b) => a + b.points, 0);
+  const correct = groupBreaks.reduce((a, b) => a + b.correct, 0);
   const totalPoints = scorePlayer(layout, subjectPickMap, outcomeMap).total;
 
   let resolvedSlots = 0;
-  for (const g of sectionDef.groups) {
-    const gOut = outcomeMap[sectionId]?.[g.groupid] ?? {};
-    for (const slot of g.picks) if (gOut[slot.index] !== undefined) resolvedSlots++;
+  for (const sec of groupSections) {
+    for (const g of sec.groups) {
+      const gOut = outcomeMap[sec.sectionid]?.[g.groupid] ?? {};
+      for (const slot of g.picks) if (gOut[slot.index] !== undefined) resolvedSlots++;
+    }
   }
 
   const rankAfter = afterMap.get(subject.id) ?? null;
@@ -250,67 +295,73 @@ export default async function StageRevealPage({
   // The viewer's CORRECT calls as "<pickId>:<bucket>" — feeds the Stage Wrapped
   // "YOU CALLED IT" reward when a pick matched a narrative moment (PHA-1054).
   const viewerClaims = new Set<string>();
-  for (const group of sectionDef.groups) {
-    const gOut = outcomeMap[sectionId]?.[group.groupid] ?? {};
-    const buckets = isSwissSection(sectionId) ? bucketSwissSlots(group.picks.length) : null;
-    for (const slot of group.picks) {
-      const pickId = subjectPickMap[sectionId]?.[group.groupid]?.[slot.index];
-      if (pickId == null || pickId === 0) continue;
-      const winner = gOut[slot.index];
-      if (winner === undefined) continue;
-      const bucket = buckets?.find((b) => b.slotIndexes.includes(slot.index)) ?? null;
-      const isCorrect = bucket
-        ? resolveBucketWinners(bucket.slotIndexes, gOut).winners.has(pickId)
-        : pickId === winner;
-      if (!isCorrect) continue;
-      const claimTag = bucketLabelFor(sectionId, group, slot.index);
-      if (claimTag) viewerClaims.add(`${pickId}:${claimTag}`);
-      const share = shareFor(slotConsensus, sectionId, group.groupid, slot.index, pickId);
-      const pct = share?.pct ?? 0;
-      const count = share?.count ?? 0;
-      const total = slotConsensus.get(consensusKey(sectionId, group.groupid, slot.index))?.total ?? 0;
-      if (bestCall === null || pct < bestCall.pct) {
-        bestCall = {
-          pickId,
-          teamName: teamMap.get(pickId)?.name ?? `#${pickId}`,
-          tag: bucketLabelFor(sectionId, group, slot.index),
-          pct,
-          count,
-          total,
-        };
+  for (const sec of groupSections) {
+    for (const group of sec.groups) {
+      const gOut = outcomeMap[sec.sectionid]?.[group.groupid] ?? {};
+      const buckets = isSwissSection(sec.sectionid) ? bucketSwissSlots(group.picks.length) : null;
+      for (const slot of group.picks) {
+        const pickId = subjectPickMap[sec.sectionid]?.[group.groupid]?.[slot.index];
+        if (pickId == null || pickId === 0) continue;
+        const winner = gOut[slot.index];
+        if (winner === undefined) continue;
+        const bucket = buckets?.find((b) => b.slotIndexes.includes(slot.index)) ?? null;
+        const isCorrect = bucket
+          ? resolveBucketWinners(bucket.slotIndexes, gOut).winners.has(pickId)
+          : pickId === winner;
+        if (!isCorrect) continue;
+        const claimTag = bucketLabelFor(sec.sectionid, group, slot.index);
+        if (claimTag) viewerClaims.add(`${pickId}:${claimTag}`);
+        const share = shareFor(slotConsensus, sec.sectionid, group.groupid, slot.index, pickId);
+        const pct = share?.pct ?? 0;
+        const count = share?.count ?? 0;
+        const total = slotConsensus.get(consensusKey(sec.sectionid, group.groupid, slot.index))?.total ?? 0;
+        if (bestCall === null || pct < bestCall.pct) {
+          bestCall = {
+            pickId,
+            teamName: teamMap.get(pickId)?.name ?? `#${pickId}`,
+            tag: bucketLabelFor(sec.sectionid, group, slot.index),
+            pct,
+            count,
+            total,
+          };
+        }
       }
     }
   }
 
   return (
     <>
-      {/* Stage Wrapped recap (PHA-1054 / PHA-1051) — explicit-open only. The
-          app-wide auto-launcher was removed (PHA-1269) because the full-screen
-          recap froze low-end mobile on login. This mount opens only on the
-          recap notification deep link (?wrapped=1 → forceOpen) or the "Replay
-          the recap" button below; it never pops up on its own. */}
-      <StageWrappedAnnounce
-        stageKey={stageWrappedKey(EVENT_ID, sectionId)}
-        eventId={EVENT_ID}
-        sectionId={sectionId}
-        slides={buildStageWrappedDeck(sectionId, stageLabel, {
-          displayName: subject.displayName,
-          stagePoints,
-          correct,
-          resolvedSlots,
-          totalPoints,
-          rankAfter,
-          rankMove: delta,
-          bestCall,
-          avatar: { src: subject.avatarUrl ?? null, label: subject.displayName },
-          claims: [...viewerClaims],
-        }, wrappedAssets)}
-        title={stageLabel}
-        resolved={false}
-        forceOpen={wantsWrapped}
-      />
-      <RevealEyebrow stageIdx={stageIdx} />
-      <h1 className="font-display" style={heroTitle}>{stageLabel}</h1>
+      {/* Recap (PHA-1054 / PHA-1051 / PHA-1274) — explicit-open only. The Swiss
+          stage's own deck opens on the ?wrapped=1 deep link / "Replay" button;
+          it never auto-pops (PHA-1269 froze low-end mobile on login). A playoff
+          round instead replays the Major Wrapped deck the app-wide launcher
+          already mounts — one bracket, one cinematic. */}
+      {playoff ? (
+        <WrappedReplayOnLoad stageKey={majorKey} active={wantsWrapped} />
+      ) : (
+        <StageWrappedAnnounce
+          stageKey={stageWrappedKey(EVENT_ID, sectionId)}
+          eventId={EVENT_ID}
+          sectionId={sectionId}
+          slides={buildStageWrappedDeck(sectionId, stageLabel, {
+            displayName: subject.displayName,
+            stagePoints,
+            correct,
+            resolvedSlots,
+            totalPoints,
+            rankAfter,
+            rankMove: delta,
+            bestCall,
+            avatar: { src: subject.avatarUrl ?? null, label: subject.displayName },
+            claims: [...viewerClaims],
+          }, wrappedAssets)}
+          title={stageLabel}
+          resolved={false}
+          forceOpen={wantsWrapped}
+        />
+      )}
+      <RevealEyebrow text={eyebrowText} />
+      <h1 className="font-display" style={heroTitle}>{revealLabel}</h1>
       <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "4px 0 0" }}>
         Stage Reveal · {subject.displayName}
       </p>
@@ -333,21 +384,22 @@ export default async function StageRevealPage({
         <span>How Your Picks Landed</span>
         <span style={{ color: "var(--heat)" }}>{correct}/{resolvedSlots}</span>
       </div>
-      <div className="reveal-picks">
-        {sectionDef.groups.flatMap((group) => {
-          // Swiss buckets are interchangeable: a pick is correct if its team
-          // landed ANYWHERE in the bucket, not at its exact slot (PHA-946/918).
-          // The clinch resolver fills winner rows in layout order, not pick
-          // order, so per-slot comparison strikes correct picks as misses and
-          // contradicts the set-based scorer in the header. Playoffs stay
-          // per-slot. (PHA-1015)
-          const gOut = outcomeMap[sectionId]?.[group.groupid] ?? {};
-          const buckets = isSwissSection(sectionId) ? bucketSwissSlots(group.picks.length) : null;
+      {groupSections.map((sec) => {
+        // Swiss buckets are interchangeable: a pick is correct if its team
+        // landed ANYWHERE in the bucket, not at its exact slot (PHA-946/918).
+        // The clinch resolver fills winner rows in layout order, not pick
+        // order, so per-slot comparison strikes correct picks as misses and
+        // contradicts the set-based scorer in the header. Playoffs stay
+        // per-slot. (PHA-1015)
+        const round = playoff ? playoffRoundForSection(sec.sectionid) : null;
+        const cards = sec.groups.flatMap((group) => {
+          const gOut = outcomeMap[sec.sectionid]?.[group.groupid] ?? {};
+          const buckets = isSwissSection(sec.sectionid) ? bucketSwissSlots(group.picks.length) : null;
           return group.picks.map((slot) => {
-            const pickId = subjectPickMap[sectionId]?.[group.groupid]?.[slot.index];
+            const pickId = subjectPickMap[sec.sectionid]?.[group.groupid]?.[slot.index];
             const winner = gOut[slot.index];
             const team = pickId != null ? teamMap.get(pickId) : undefined;
-            const tag = bucketLabelFor(sectionId, group, slot.index);
+            const tag = bucketLabelFor(sec.sectionid, group, slot.index);
             const resolved = winner !== undefined;
             const bucket = buckets?.find((b) => b.slotIndexes.includes(slot.index)) ?? null;
             const isCorrect = resolved && pickId != null && (
@@ -356,7 +408,7 @@ export default async function StageRevealPage({
                 : pickId === winner
             );
             return (
-              <div key={`${group.groupid}:${slot.index}`} style={{ display: "flex", flexDirection: "column" }}>
+              <div key={`${sec.sectionid}:${group.groupid}:${slot.index}`} style={{ display: "flex", flexDirection: "column" }}>
                 <div className={`pickcard${resolved && isCorrect ? " is-correct" : ""}${resolved && !isCorrect ? " is-miss" : ""}`}>
                   {resolved && (
                     <span
@@ -380,7 +432,7 @@ export default async function StageRevealPage({
                   {tag && <div style={tagStyle}>{tag}</div>}
                 </div>
                 <ConsensusBar
-                  consensus={slotConsensus.get(consensusKey(sectionId, group.groupid, slot.index))}
+                  consensus={slotConsensus.get(consensusKey(sec.sectionid, group.groupid, slot.index))}
                   teamMap={teamMap}
                   highlightPickId={pickId ?? undefined}
                   winnerPickId={winner}
@@ -389,8 +441,16 @@ export default async function StageRevealPage({
               </div>
             );
           });
-        })}
-      </div>
+        });
+        return (
+          <div key={sec.sectionid}>
+            {/* Round label only when the playoffs are consolidated — it splits
+                the one bracket reveal into QF / SF / GF bands. */}
+            {round && <div style={roundHeader}>{round.label}</div>}
+            <div className="reveal-picks">{cards}</div>
+          </div>
+        );
+      })}
 
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 20 }}>
         <Link href="/leaderboard" className="btn-heat">
@@ -398,9 +458,11 @@ export default async function StageRevealPage({
           <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
         </Link>
         <Link href={`/players/${encodeURIComponent(subject.id)}`} className="btn-ghost">Full profile</Link>
-        {stageWrappedHasContent(sectionId) && (
+        {playoff ? (
+          <StageWrappedReplay stageKey={majorKey} label="Watch the Wrapped recap" />
+        ) : stageWrappedHasContent(sectionId) ? (
           <StageWrappedReplay stageKey={stageWrappedKey(EVENT_ID, sectionId)} />
-        )}
+        ) : null}
       </div>
 
       <style>{`
@@ -502,11 +564,23 @@ const tagStyle = {
   textTransform: "uppercase" as const,
 };
 
-function RevealEyebrow({ stageIdx }: { stageIdx: number }) {
+// Round band header (QUARTERFINALS / SEMIFINALS / GRAND FINAL) that splits the
+// consolidated playoff reveal's pick grid into its three rounds (PHA-1274).
+const roundHeader = {
+  fontFamily: "var(--font-mono)",
+  fontSize: 12,
+  fontWeight: 600 as const,
+  letterSpacing: "0.18em",
+  textTransform: "uppercase" as const,
+  color: "var(--ink-mid)",
+  margin: "22px 0 10px",
+};
+
+function RevealEyebrow({ text }: { text: string }) {
   // v3 broadcast direction (PHA-1007): mono overline loses the literal [ ].
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <span className="eyebrow-mono" style={{ fontSize: 10.5, letterSpacing: "0.2em" }}>STAGE_REVEAL · {String(stageIdx + 1).padStart(2, "0")}</span>
+      <span className="eyebrow-mono" style={{ fontSize: 10.5, letterSpacing: "0.2em" }}>{text}</span>
     </div>
   );
 }
