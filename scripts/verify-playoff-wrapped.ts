@@ -193,8 +193,10 @@ check("no reactions → no bleachers slide", !missed.some((s) => s.id === "po-bl
 
 // Every authored moment ships a real, credited photo (no bare/uncredited stills).
 check("authored moments exist", COLOGNE_PLAYOFF_MOMENTS.length >= 2);
-check("every authored moment has a credited photo",
-  COLOGNE_PLAYOFF_MOMENTS.every((m) => !!m.photo && !!m.photo.src && !!m.photo.credit));
+check("every authored moment carries a visual (photo / clip / portrait)",
+  COLOGNE_PLAYOFF_MOMENTS.every((m) => !!m.photo?.src || !!m.video?.src || !!m.portrait?.src));
+check("any authored still is credited",
+  COLOGNE_PLAYOFF_MOMENTS.every((m) => !m.photo || !!m.photo.credit));
 check("photo catalog is credited", Object.values(COLOGNE_PHOTOS).every((p) => !!p.src && !!p.alt && !!p.credit));
 
 // Mid-bracket (NO champion) but authored moments → the deck now tells a story

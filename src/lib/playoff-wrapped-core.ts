@@ -167,6 +167,8 @@ export interface PlayoffMoment {
   /** A looping highlight clip for the beat (PHA-1274 — the magixx 1v4). When
    *  set it takes the band; `photo` doubles as its poster/fallback. */
   video?: { src: string; poster?: string; alt?: string; credit?: string };
+  /** A cut-out player portrait for the beat (PHA-1274 — donk, woxic). */
+  portrait?: { src: string; alt?: string };
 }
 
 /**
@@ -190,7 +192,7 @@ export const COLOGNE_PLAYOFF_MOMENTS: readonly PlayoffMoment[] = [
     headline: "donk turned the Swiss into a highlight reel.",
     body: "Spirit barely conceded a round on the way through Cologne — a clean 3-0 over NaVi, Aurora and 9z, with donk, the Major MVP at sixteen, posting one of the most dominant individual runs the Major has seen. For a stretch, the rest of the field was playing for second.",
     logoPickIds: [81],
-    photo: COLOGNE_PHOTOS.donk,
+    portrait: { src: "/wrapped/player-81.webp", alt: "donk" },
   },
   {
     id: "po-m-woxic",
@@ -200,7 +202,7 @@ export const COLOGNE_PLAYOFF_MOMENTS: readonly PlayoffMoment[] = [
     figureCaption: "Aurora clinch on Dust2, Stage 3",
     body: "With the Playoff berth on the line, woxic stood up in a 1v4 on Dust2 and won it — sealing Aurora's first run to a Major playoff stage since Copenhagen 2024, and the Turkish core back among the last eight.",
     logoPickIds: [134],
-    photo: COLOGNE_PHOTOS.woxic,
+    portrait: { src: "/wrapped/player-woxic.webp", alt: "woxic" },
   },
   {
     id: "po-m-cinderellas",
@@ -413,6 +415,7 @@ export function buildPlayoffWrappedDeck(
       teamLogos: logoRow(...(m.logoPickIds ?? [])),
       photo: m.photo,
       video: m.video,
+      portrait: m.portrait,
       autoAdvanceMs: AUTO_MS,
     });
   }
@@ -506,6 +509,9 @@ export function buildPlayoffWrappedDeck(
       headline: nameFor(t.pickId, assets),
       figureCaption: region ? region.label : undefined,
       body: t.blurb,
+      // The team's marquee player as the slide picture (PHA-1274) — cut-out
+      // HLTV portrait at /wrapped/player-<pickId>.webp; hides itself if absent.
+      portrait: { src: `/wrapped/player-${t.pickId}.webp`, alt: nameFor(t.pickId, assets) },
       teamLogos: logo(t.pickId),
       autoAdvanceMs: AUTO_MS,
     });
