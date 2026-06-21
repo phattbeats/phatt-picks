@@ -316,7 +316,7 @@ export default async function PlayerProfilePage({
       )}
 
       {/* Challenge coins (PHA-1278) — collectible Major-logo shelf */}
-      <ChallengeCoinShelf coins={challengeCoins} />
+      <ChallengeCoinShelf coins={challengeCoins} isSelf={isSelf} />
 
       {/* Your Majors (PHA-1283) — moved off Settings onto your own profile, where
           the rest of your record already lives. Self only. */}
