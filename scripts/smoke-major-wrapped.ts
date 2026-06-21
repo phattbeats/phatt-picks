@@ -103,7 +103,8 @@ check("champion slide carries a real photo", !!deck.find((s) => s.id === "po-cha
 check("all eight team pages present", COLOGNE_PLAYOFF_TEAMS.every((t) => ids.includes(`po-team-${t.pickId}`)));
 check("matched champion lights 'YOU CALLED THE CHAMPION'", deck.find((s) => s.id === "po-your-champion")?.calledIt?.label === "YOU CALLED THE CHAMPION");
 check("heartfelt -phaTT thank-you present", /phaTT/.test(deck.find((s) => s.id === "po-thanks")?.body ?? ""));
-check("closes on the 'Hotline will return' stinger", /Hotline will return/.test(deck[deck.length - 1]?.headline ?? ""));
+check("has the 'Hotline will return' stinger", deck.some((s) => /Hotline will return/.test(s.headline ?? "")));
+check("closes on the challenge-coin CTA (after everything else)", deck[deck.length - 1]?.id === "po-coin");
 check("every photo slide carries a credited src", deck.filter((s) => s.photo).every((s) => !!s.photo!.src && !!s.photo!.credit));
 
 console.log(`\nsmoke-major-wrapped: ${pass} passed, ${fail} failed`);
