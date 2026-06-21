@@ -503,16 +503,65 @@ function PhotoFigure({ photo }: { photo: NonNullable<WrappedSlide["photo"]> }) {
   );
 }
 
+/**
+ * A looping highlight clip in the band (PHA-1274 — the magixx 1v4). Muted +
+ * autoplay + loop + playsInline so it plays unprompted on mobile; only mounts
+ * for the active slide (the deck renders one SlideCard at a time, keyed by id),
+ * so no off-screen clip ever loads. The `muted` *property* is forced via ref —
+ * the attribute alone doesn't reliably satisfy autoplay policies — and a blocked
+ * play() or a load error falls back to the poster still, never an empty band.
+ */
+function VideoFigure({ video }: { video: NonNullable<WrappedSlide["video"]> }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.muted = true;
+    void el.play?.().catch(() => {
+      /* autoplay blocked — the poster stays; no throw, deck unaffected */
+    });
+  }, []);
+  if (failed) {
+    return video.poster ? (
+      <figure className="sw-photo">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={video.poster} alt={video.alt ?? ""} />
+        {video.credit && <figcaption>{video.credit}</figcaption>}
+      </figure>
+    ) : null;
+  }
+  return (
+    <figure className="sw-photo sw-video">
+      <video
+        ref={ref}
+        src={video.src}
+        poster={video.poster}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        aria-label={video.alt ?? "Highlight clip"}
+        onError={() => setFailed(true)}
+      />
+      {video.credit && <figcaption>{video.credit}</figcaption>}
+    </figure>
+  );
+}
+
 function SlideCard({ slide }: { slide: WrappedSlide }) {
   const logos = slide.teamLogos ?? [];
   const badge = slide.stageBadge;
   return (
     <div className={`sw-slide sw-kind-${slide.kind} sw-enter`}>
-      {/* Documentary photo (PHA-1274 "dank HLTV photo" twist) — a hero band that
-          leads the slide: the Cologne cathedral, the arena crowd, a player
-          mid-scream. Sits above the copy with a fade into the deck so the text
-          stays legible; credit rides along the bottom edge. */}
-      {slide.photo && <PhotoFigure photo={slide.photo} />}
+      {/* Band: a looping highlight clip if the slide has one (PHA-1274 — the
+          magixx 1v4), else the documentary still. The video takes the slot. */}
+      {slide.video ? (
+        <VideoFigure video={slide.video} />
+      ) : (
+        slide.photo && <PhotoFigure photo={slide.photo} />
+      )}
       {/* Brand mark (major / game logo) — cover + closer slides. Smaller when a
           stage badge is the hero so the STAGE logo leads. */}
       {slide.brandLogo && (

@@ -97,6 +97,13 @@ export interface WrappedSlide {
   avatar?: WrappedAvatar;
   /** A stylized STAGE logo lockup, for the cover + closer. */
   stageBadge?: WrappedStageBadge;
+  /**
+   * A looping highlight clip for the band (PHA-1274 — e.g. the magixx 1v4).
+   * Rendered muted + autoplay + loop + playsInline so it plays unprompted on
+   * mobile; `poster` (usually the slide's still) shows while it loads and is the
+   * fallback if the clip can't play. Takes the band slot in place of `photo`.
+   */
+  video?: { src: string; poster?: string; alt?: string; credit?: string };
   /** Personal reward: set when the viewer's pick matched this narrative moment. */
   calledIt?: { label: string; sub?: string };
   /**
