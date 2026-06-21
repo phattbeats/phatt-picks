@@ -20,6 +20,7 @@ import {
   reactionEntries,
   stageLockEntry,
   recapEntry,
+  coinEarnedEntry,
   assembleFeed,
   emptyReadContext,
   isRead,
@@ -207,6 +208,37 @@ check("filterEntriesByPrefs: all inApp=false → empty feed", (() => {
     announce:  { inApp: false, push: false },
   }));
   return filterEntriesByPrefs(allEntries, p).length === 0;
+})());
+
+// ── 6. Challenge coin earned (PHA-1278) ──────────────────────────────────────
+const COIN_NOW = 1_000 * 24 * 3600_000;
+check("coinEarnedEntry: fresh coin → entry with stable id + atMs", (() => {
+  const e = coinEarnedEntry(
+    { eventId: 26, eventName: "IEM Cologne 2026", tier: "diamond", earnedAtMs: COIN_NOW - 3600_000 },
+    COIN_NOW,
+  );
+  return !!e && e.id === "coin:26" && e.kind === "coin" && e.href === "/majors" && e.atMs === COIN_NOW - 3600_000;
+})());
+check("coinEarnedEntry: tier appears in the title", (() => {
+  const e = coinEarnedEntry({ eventId: 24, eventName: "Old Major", tier: "bronze", earnedAtMs: COIN_NOW }, COIN_NOW);
+  return !!e && /Bronze/.test(e.title);
+})());
+check("coinEarnedEntry: older than maxAge → null (no backfill)", (() => {
+  const e = coinEarnedEntry(
+    { eventId: 26, eventName: "X", tier: "gold", earnedAtMs: COIN_NOW - 40 * 24 * 3600_000 },
+    COIN_NOW,
+  );
+  return e === null;
+})());
+check("coin prefs default: in-app + push on", DEFAULT_NOTIF_PREFS.coin.inApp === true && DEFAULT_NOTIF_PREFS.coin.push === true);
+check("filterEntriesByPrefs: coin.inApp=false drops the coin entry", (() => {
+  const coin = coinEarnedEntry({ eventId: 26, eventName: "X", tier: "silver", earnedAtMs: COIN_NOW }, COIN_NOW)!;
+  const p = parseNotifPrefs(JSON.stringify({ coin: { inApp: false, push: false } }));
+  return filterEntriesByPrefs([coin], p).length === 0;
+})());
+check("parseNotifPrefs: coin falls back to defaults when absent", (() => {
+  const p = parseNotifPrefs(JSON.stringify({ reactions: { inApp: false, push: false } }));
+  return p.coin.inApp === true && p.coin.push === true;
 })());
 
 console.log(`\nverify-notifications: ${pass} passed, ${fail} failed`);

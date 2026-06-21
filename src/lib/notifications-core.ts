@@ -33,8 +33,9 @@
 
 import { getStamp } from "./bleachers-core";
 import { humanizeLockEta, DEFAULT_REMINDER_OFFSETS_MS } from "./notify-core";
+import type { CoinTier } from "./challenge-coin-core";
 
-export type NotifKind = "reaction" | "stage" | "recap" | "announcement";
+export type NotifKind = "reaction" | "stage" | "recap" | "announcement" | "coin";
 
 // ── NOTIFICATION PREFERENCES (PHA-1240) ──────────────────────────────────────
 
@@ -49,6 +50,7 @@ export interface NotifPrefs {
   stage: NotifTypePrefs;
   recap: NotifTypePrefs;
   announce: NotifTypePrefs;
+  coin: NotifTypePrefs;
 }
 
 export const DEFAULT_NOTIF_PREFS: NotifPrefs = {
@@ -56,6 +58,9 @@ export const DEFAULT_NOTIF_PREFS: NotifPrefs = {
   stage:     { inApp: true, push: true },
   recap:     { inApp: true, push: false },
   announce:  { inApp: true, push: false },
+  // Earning a Major coin is a rare, celebratory moment — push on by default so
+  // it "pings" (PHA-1278, Brandon).
+  coin:      { inApp: true, push: true },
 };
 
 /** Parse and normalise Player.notifPrefs JSON. Missing keys fall back to defaults. */
@@ -68,6 +73,7 @@ export function parseNotifPrefs(json: string | null | undefined): NotifPrefs {
       stage:     { ...DEFAULT_NOTIF_PREFS.stage,     ...(p.stage ?? {}) },
       recap:     { ...DEFAULT_NOTIF_PREFS.recap,      ...(p.recap ?? {}) },
       announce:  { ...DEFAULT_NOTIF_PREFS.announce,  ...(p.announce ?? {}) },
+      coin:      { ...DEFAULT_NOTIF_PREFS.coin,       ...(p.coin ?? {}) },
     };
   } catch {
     return DEFAULT_NOTIF_PREFS;
@@ -84,6 +90,7 @@ export function filterEntriesByPrefs(
     if (e.kind === "stage")        return prefs.stage.inApp;
     if (e.kind === "recap")        return prefs.recap.inApp;
     if (e.kind === "announcement") return prefs.announce.inApp;
+    if (e.kind === "coin")         return prefs.coin.inApp;
     return true;
   });
 }
@@ -346,6 +353,49 @@ export function recapEntry(
     // "/" did nothing once the localStorage seen-flag was set.
     href: `/reveal/${sectionId}?wrapped=1`,
     atMs: resolvedAtMs,
+  };
+}
+
+// ── CHALLENGE COIN EARNED (PHA-1278) ─────────────────────────────────────────
+
+export interface CoinEarnedInput {
+  eventId: number;
+  eventName: string;
+  tier: CoinTier;
+  /** Archive instant the coin minted at, epoch ms. */
+  earnedAtMs: number;
+}
+
+const TIER_LABEL: Record<CoinTier, string> = {
+  diamond: "Diamond",
+  gold: "Gold",
+  silver: "Silver",
+  bronze: "Bronze",
+};
+
+/**
+ * "You earned the {Major} challenge coin" — minted when a Major concludes and
+ * the player took part (PHA-1278). Capped at maxAgeMs so an old coin never
+ * backfills the feed long after it was earned (the coin itself lives forever on
+ * the shelf; only the notification is time-bound). `href` lands on the Majors
+ * page where the coin sits in its velvet case, ready to inspect.
+ */
+export function coinEarnedEntry(
+  input: CoinEarnedInput,
+  nowMs: number,
+  maxAgeMs: number = 30 * DAY_MS,
+): Omit<NotifEntry, "isNew" | "readAt"> | null {
+  const { eventId, eventName, tier, earnedAtMs } = input;
+  if (!Number.isFinite(earnedAtMs)) return null;
+  if (nowMs - earnedAtMs > maxAgeMs) return null; // too old — no backfill
+  return {
+    id: `coin:${eventId}`,
+    kind: "coin",
+    icon: "🪙",
+    title: `${TIER_LABEL[tier]} challenge coin earned`,
+    body: `Your ${eventName} challenge coin is ready — tap to inspect it.`,
+    href: "/majors",
+    atMs: earnedAtMs,
   };
 }
 

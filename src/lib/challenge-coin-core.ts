@@ -60,6 +60,9 @@ export interface CoinInput {
   finish: number | null;
   /** How many players took part. */
   fieldSize: number;
+  /** When the Major concluded (archive instant, epoch ms) — when the coin was
+   *  minted. Drives the "coin earned" notification's sort/unread (PHA-1278). */
+  earnedAtMs: number;
 }
 
 /** A coin the player owns, ready to render on the shelf. */
@@ -71,6 +74,8 @@ export interface ChallengeCoin {
   /** 1-based finish among the field, or null if unscored. */
   finish: number | null;
   fieldSize: number;
+  /** Archive instant (epoch ms) the coin was minted at. */
+  earnedAtMs: number;
 }
 
 /** A coin mints when the player took part AND the Major has concluded. */
@@ -135,6 +140,7 @@ export function deriveChallengeCoins(inputs: readonly CoinInput[]): ChallengeCoi
       tier: i.scored ? coinTierForFinish(i.finish, i.fieldSize) : "bronze",
       finish: i.finish,
       fieldSize: i.fieldSize,
+      earnedAtMs: i.earnedAtMs,
     });
   }
   return coins;
