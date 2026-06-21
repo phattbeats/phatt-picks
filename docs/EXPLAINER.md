@@ -160,9 +160,10 @@ You don't keep score yourself — HOTLINE does it automatically as real results 
 The key ideas:
 
 - **You earn points for correct calls.** If you said a team would go 3–0 and they did, that's points. If you said they'd bust out and they did, points.
-- **Harder calls are worth more.** HOTLINE scores using **Valve's own official weighting** — the same point values the real Steam Pick'Em uses. Predicting a surprise (an underdog overperforming, a favorite flopping) is worth more than the obvious calls everyone makes.
+- **HOTLINE uses Valve's own point values** — the same weighting the real Steam Pick'Em uses, read straight from Valve's tournament data, not invented by the app.
+- **Later stages are worth more.** Each Swiss stage has a flat value per correct pick that climbs as the tournament deepens: **1 point each in Stage I, 2 in Stage II, 3 in Stage III** (60 points up for grabs across the Swiss stages). Within a single stage, every correct call is worth the same — there's **no bonus for picking an upset over a favorite**; you just have to be right.
 - **Swiss picks are about the box, not the exact match.** You don't have to predict every single match result — you just have to get a team into the **right box** (advanced / 3–0 / eliminated). If you put a team in the "advances" box and they advance, you're right, however they got there.
-- **The playoff bracket** scores your picks as the real bracket plays out — every round you called correctly adds up, with the champion pick as the big one.
+- **The playoff bracket** scores each match you call correctly: **12 points for a quarter-final, 10 for a semi-final, 7 for the grand final** (75 points across the playoffs). A flawless tournament — every Swiss pick and every bracket match — is worth **135 points**.
 
 The result is a single point total per player that drives the leaderboard. No spreadsheets, no manual tallying.
 
@@ -193,9 +194,9 @@ These are the features that make HOTLINE more than a scoreboard. None of them ar
 
 - **Stage Wrapped** — a slick, click-through recap deck (think "Spotify Wrapped" but for the tournament stage). After a stage resolves, you get an animated slideshow of how it went: your hits, your misses, the big storylines, fun stats, even a soundtrack. There's a special **Playoffs Wrapped** finale recap at the very end.
 
-- **The Bleachers** — lightweight social reactions. On a friend's **revealed** pick, you can drop a fixed **reaction stamp** (a small set of emoji-style reactions — fire, bullseye, big-brain, ice-cold, stone-face). In the moment the reactions are **anonymous**, so you can chirp someone's terrible pick without immediately outing yourself; when the stage **resolves**, the masks come off and everyone sees who reacted to what.
+- **The Bleachers** — lightweight social reactions. On a friend's **revealed** pick, you can drop one fixed **reaction stamp** from a small set. Three are respect — **🔥 Fire**, **🎯 Called it**, **🧠 Bold** — and two are friendly jabs — **🧊 Ice cold** and **🗿 Cope**. You get one stamp per pick (dropping a new one swaps the old). In the moment the reactions are **anonymous**, so you can chirp someone's terrible pick without immediately outing yourself; when the stage **resolves**, the masks come off and everyone sees who reacted to what.
 
-- **Challenge Coins** — collectible commemorative coins, one per Major you take part in. They come in **tiers** (diamond / gold / silver / bronze) based on how well you placed, and they're displayed in a little 3D **display case** on your profile that you can spin and inspect. They're a keepsake of each season you played.
+- **Challenge Coins** — collectible commemorative coins, one per Major you take part in. The **tier** is set by where you finish: **diamond** for the top 10% (the outright winner always gets diamond), **gold** for the top 25%, **silver** for the top 50%, and **bronze** for everyone else who took part. You earn a coin once the Major wraps up, and they're displayed in a little 3D **display case** on your profile that you can spin and inspect. They're a keepsake of each season you played.
 
 - **Playoff Spotlight** — for the playoff teams, a per-team narrative and highlight panel, including **live betting-market odds** (pulled from a public prediction market) so you can see who the world thinks will win each matchup.
 
@@ -210,7 +211,7 @@ These are the features that make HOTLINE more than a scoreboard. None of them ar
 HOTLINE can nudge you so you never miss a deadline:
 
 - **Pre-lock reminders** — opt-in pings **24 hours and 1 hour** before each stage locks, so you have time to get your picks in.
-- **Real-time notifications** — when picks reveal, when reactions land on your picks, when a stage recap is ready, and the occasional broadcast announcement. There's an in-app inbox (the bell), and the app shows an unread badge.
+- **Real-time notifications** — when a stage is about to lock, when reactions land on your picks, when a stage recap is ready, when you earn a Challenge Coin, and the occasional broadcast announcement. There's an in-app inbox (the bell), and the app shows an unread badge. You can mark items read, mark all read, and filter to just the unread ones.
 - You control all of this under your settings — turn reminders on, send yourself a test, or switch things off.
 
 On a phone, these arrive as real push notifications (see the next section for the one catch on iPhone).
@@ -288,8 +289,8 @@ Plain definitions for every term you might bump into.
 | **Reveal** | The moment picks flip from private to public (when a stage locks) — and the board that shows everyone's picks. |
 | **Leaderboard** | The shared scoreboard ranking all players by total points. |
 | **Stage Wrapped** | The animated, click-through recap of how a stage went for you (Spotify-Wrapped style). |
-| **The Bleachers** | The reaction feature — drop an anonymous emoji-style stamp on a friend's revealed pick; unmasked when the stage resolves. |
-| **Challenge Coin** | A collectible commemorative coin (diamond/gold/silver/bronze tiers) earned for taking part in a Major, shown in a 3D case on your profile. |
+| **The Bleachers** | The reaction feature — drop one anonymous stamp (🔥 Fire / 🎯 Called it / 🧠 Bold, or the jabs 🧊 Ice cold / 🗿 Cope) on a friend's revealed pick; unmasked when the stage resolves. |
+| **Challenge Coin** | A collectible commemorative coin earned for taking part in a Major. Tier reflects your finish — diamond (top 10%) / gold (top 25%) / silver (top 50%) / bronze (everyone else) — shown in a 3D case on your profile. |
 | **Spotlight** | The per-team playoff narrative panel, including live betting-market odds. |
 | **PWA** | "Progressive Web App" — a website you can install to your phone's home screen so it acts like a native app. |
 | **Web Push** | The technology that delivers HOTLINE's notifications to your phone or desktop. |

@@ -78,7 +78,7 @@ Everything the app *remembers* (players, picks, scores, coins, reactions, push s
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Web Push notifications. Missing → the UI hides the opt-in. |
 | `WRITE_ENABLED` | Pushing picks **up to Valve** (destructive; default off). |
 | `TURNSTILE_SECRET_KEY` / `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | The signup CAPTCHA. Missing → CAPTCHA skipped. |
-| `OWNER_STEAM_ID` | Unlocks the owner-only admin tools (local-player cleanup). Unset → owner gate fails closed (nobody is owner). |
+| `OWNER_STEAM_ID` | Unlocks the owner-only admin tools (local-player cleanup, the `/admin/analytics` dashboard, and the manual news/outcomes ingest routes). Unset → owner gate fails closed (nobody is owner). |
 | `CRAWL4AI_URL` | The crawl4ai endpoint (see below). |
 
 Full var-by-var table with exact behaviors: **[OPERATIONS.md → Environment variables](OPERATIONS.md#environment-variables)**.
@@ -126,8 +126,9 @@ Each subsystem, what it does, and where it can fail. For the code-level data-flo
 ### Outcomes & scoring — "the answer key"
 This is the part most worth understanding, because it's where "a match finished but nobody scored" bugs live.
 - **The Valve oracle is the source of truth** once Valve seeds the official bracket layout: the app reads Valve's winning pick IDs and writes `StageOutcome` rows.
-- **Scoring** compares each player's picks to those `StageOutcome` rows, using **Valve's own weighting** (harder calls worth more), at **bucket grain** for Swiss (right bucket = correct, exact slot doesn't matter).
+- **Scoring** compares each player's picks to those `StageOutcome` rows, using **Valve's own per-stage weighting** read from the layout (Swiss 1/2/3 pts per pick in Stages I/II/III; playoffs 12/10/7 per QF/SF/GF match; flat within a stage — no upset bonus), at **bucket grain** for Swiss (right bucket = correct, exact slot doesn't matter).
 - **The live HLTV bridge** fills a gap: Valve publishes no win-loss mid-stage, so the app scores live 3-0/0-3 Swiss clinches from HLTV *before* Valve seeds the key.
+- **Liquipedia is a polite fallback** outcome source (≤1 request/30s, CC-BY-SA attribution required) for locked-but-unresolved stages where Valve hasn't yet exposed a result. HLTV and Valve sources validate winners against the *global* live field; Liquipedia keeps a stricter per-group check.
 - **Headless resolution.** Both the Swiss bridge and the Valve playoff answer key are poked by the in-process **live-results tick** (every ~5 min), so outcomes turn green without anyone loading a page or the owner running anything. There's also a **stale-outcome watchdog** that logs a loud `[live-tick] STALE playoff outcomes …` warning if a match is overdue — if you see that, a real match is genuinely stuck (see playbook).
 
 ### Live boards (crawl4ai)
@@ -136,15 +137,23 @@ This is the part most worth understanding, because it's where "a match finished 
 - **Display-only** — these boards don't feed scoring (except via the live Swiss bridge above).
 
 ### Notifications & the scheduler
-- **Web Push** delivers pre-lock reminders (24h + 1h before a stage locks), plus reveal/reaction/recap/broadcast notifications. There's an in-app inbox (the bell) with an unread badge.
-- The **in-process scheduler** (~5-min tick) fires the reminders and the live-results tick. It's **on by default**; set `PRELOCK_REMINDERS_DISABLED=1` to turn the reminder side off. Cutoffs come from the committed lock schedule unless overridden.
+- **Five notification kinds** flow through one inbox: `stage` (pre-lock reminders, 24h + 1h before a stage locks), `reaction` (a Bleachers stamp landed on your pick), `recap` (your Stage Wrapped is ready), `coin` (you earned a Challenge Coin), and `announcement` (an owner broadcast). There's an in-app inbox (the bell) with an unread badge, mark-read / mark-all-read, and an unread filter. Each kind has independent in-app and push toggles in the user's prefs.
+- **Web Push** mirrors all five kinds to the OS (gated by the `VAPID_*` keys; see §2). On iPhone, push only fires after the user installs the PWA to the home screen.
+- The **in-process scheduler** (~5-min tick, `src/instrumentation.ts`) runs **four push jobs** — pre-lock reminders, recap pushes, announcement pushes, and coin-earned pushes — alongside the separate **live-results tick** on the same timer. It's **on by default**; set `PRELOCK_REMINDERS_DISABLED=1` to turn the reminder side off. Cutoffs come from the committed lock schedule unless overridden. (Playoff QF/SF/GF collapse into one "Playoffs" cutoff, since the bracket is a single Pick'Em.)
+- **Real-time delivery** is a Server-Sent-Events stream (`GET /api/notifications/stream`) that drives the live badge and toasts. It is deliberately **self-limiting** — it polls the feed every ~30s, sends a keepalive every ~25s, and hard-recycles each connection at a **10-minute lifetime cap** so a dropped client can't leave an immortal loop (the PHA-1244 CPU-leak fix). Per-connection churn in the logs is normal, not a leak.
 
 ### The database
 - One **SQLite** file. Tables for players, picks, outcomes, the various caches, push subscriptions, reactions, coins, analytics page-views, etc.
 - Migrations are automatic on boot (`prisma db push`). To inspect or repair live data, run a throwaway container with Prisma pointed at a copy of the file (the live container's shell is typically locked down).
 
 ### Caches & refresh routes
-Several `/api/*/refresh` routes (`standings`, `team-stats`, `odds`) **synchronously warm** a cache. They take **no user input** (no SSRF — they only hit a hard-coded registry), write only public caches, and are rate-limited. They're safe to hit anytime; you mostly use them to warm a freshly deployed container during a live stage.
+Several `/api/*/refresh` routes (`standings`, `team-stats`, `odds`) **synchronously warm** a cache. They take **no user input** (no SSRF — they only hit a hard-coded registry), write only public caches, and are rate-limited (~1 crawl/hour per source via an atomic `SourceState` claim). They're safe to hit anytime; you mostly use them to warm a freshly deployed container during a live stage.
+
+### Analytics (built-in, privacy-first)
+HOTLINE ships its **own** lightweight traffic analytics — there is **no Umami, Plausible, or third-party tag**, and no extra container. It's all in the one app.
+- **Collection:** a tiny inline tracker posts page views (and a few custom events) to `POST /api/stats/collect`. The endpoint is same-origin only, honours Do-Not-Track, is body-size-capped and per-IP rate-limited.
+- **What's stored:** the `PageView` table holds path, device/browser/OS class, and country (from the `cf-ipcountry` header) — **no raw IP, no user id, no query strings, no cookies.** Repeat-visitor counting uses a **daily-rotating salted hash** of IP+UA that can't be reversed and resets every day. Privacy-by-construction.
+- **Dashboard:** the owner views it at **`/admin/analytics`** (gated by `OWNER_STEAM_ID`). It needs no configuration — it's on as soon as the app runs.
 
 ---
 
