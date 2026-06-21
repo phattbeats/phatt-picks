@@ -182,6 +182,22 @@ export function buildRecapPayload(args: {
   };
 }
 
+/** Build the push payload for a challenge coin being earned (PHA-1278). Tier-
+ *  agnostic on purpose — the push just "pings" that a coin landed; the in-app
+ *  entry and the shelf show which tier. */
+export function buildCoinPayload(args: {
+  eventName: string;
+  eventId: number;
+}): PreLockPayload {
+  return {
+    title: "HOTLINE",
+    body: `Your ${args.eventName} challenge coin is ready — see which tier you earned.`,
+    url: "/majors",
+    tag: `coin:${args.eventId}`,
+    actions: [{ action: "view", title: "View coin" }],
+  };
+}
+
 /** Build the push payload for a broadcast announcement. */
 export function buildAnnouncementPayload(args: {
   title: string;

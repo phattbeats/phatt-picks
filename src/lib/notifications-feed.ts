@@ -25,6 +25,7 @@ import {
   reactionEntries,
   stageLockEntry,
   recapEntry,
+  coinEarnedEntry,
   assembleFeed,
   filterEntriesByPrefs,
   parseNotifPrefs,
@@ -33,6 +34,7 @@ import {
   type PickLabeller,
   type ReadContext,
 } from "@/lib/notifications-core";
+import { getPlayerChallengeCoins } from "@/lib/challenge-coins";
 
 export const DEFAULT_FEED_LIMIT = 8;
 
@@ -153,6 +155,18 @@ export async function buildPlayerFeed(
         stageName: stageName(recapSection),
         resolvedAtMs: resolvedAtBySection.get(recapSection) ?? 0,
       },
+      nowMs,
+    );
+    if (e) rawEntries.push(e);
+  }
+
+  // Challenge coins earned (PHA-1278) — one entry per concluded Major the player
+  // took part in. getPlayerChallengeCoins is cross-event and short-circuits the
+  // live event, so this is empty (and cheap) until a Major archives.
+  const coins = await getPlayerChallengeCoins(playerId, nowMs);
+  for (const c of coins) {
+    const e = coinEarnedEntry(
+      { eventId: c.eventId, eventName: c.name, tier: c.tier, earnedAtMs: c.earnedAtMs },
       nowMs,
     );
     if (e) rawEntries.push(e);

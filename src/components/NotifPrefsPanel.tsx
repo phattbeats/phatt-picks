@@ -115,6 +115,12 @@ export function NotifPrefsPanel({ initialPrefs, hasPushSubscription }: Props) {
         showPush={false}
         onToggle={(ch) => toggle("announce", ch)}
       />
+      <PrefRow
+        label="Challenge coins"
+        pref={prefs.coin}
+        showPush={hasPushSubscription}
+        onToggle={(ch) => toggle("coin", ch)}
+      />
     </div>
   );
 }

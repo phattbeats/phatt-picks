@@ -48,7 +48,7 @@
 
 import { prisma } from "./db";
 import { getEventConfig, grandFinalSectionId, type EventConfig } from "./events-core";
-import { resolveEffectiveStatus } from "./event-lifecycle-core";
+import { resolveEffectiveStatus, GRAND_FINAL_ARCHIVE_GRACE_MS } from "./event-lifecycle-core";
 import type { EventStatus } from "./events-core";
 import {
   isEventArchived,
@@ -145,4 +145,29 @@ export async function isRevealForcedById(
 ): Promise<boolean> {
   const status = await resolveEffectiveStatusById(eventId, nowMs);
   return status === null ? false : isRevealForced(status);
+}
+
+/**
+ * WHEN did this event become archived (epoch ms), or null if it isn't archived
+ * yet? The archive instant is the earliest trigger that has already fired — the
+ * Grand Final's `resolvedAt` plus the 48h grace, or the `dates.end` calendar
+ * backstop — clamped to "in the past". Used to stamp a challenge coin's mint
+ * time (PHA-1278) so the "coin earned" notification sorts correctly. Returns
+ * null while the event is still live/upcoming (no coin, no notification).
+ */
+export async function eventArchivedAtMs(
+  eventId: number,
+  nowMs: number = Date.now(),
+): Promise<number | null> {
+  const status = await resolveEffectiveStatusById(eventId, nowMs);
+  if (status === null || !isEventArchived(status)) return null;
+  const cfg = getEventConfig(eventId);
+  if (!cfg) return null;
+  const gf = await grandFinalResolvedAtMs(cfg);
+  const end = Date.parse(cfg.dates.end);
+  const candidates: number[] = [];
+  if (gf !== null) candidates.push(gf + GRAND_FINAL_ARCHIVE_GRACE_MS);
+  if (!Number.isNaN(end)) candidates.push(end);
+  const past = candidates.filter((t) => t <= nowMs);
+  return past.length > 0 ? Math.min(...past) : nowMs;
 }
