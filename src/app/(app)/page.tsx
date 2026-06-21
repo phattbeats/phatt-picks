@@ -13,6 +13,7 @@ import { getWireItems } from "@/lib/news";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { WatchNow } from "@/components/watch/WatchNow";
 import { currentEventId } from "@/lib/events-core";
+import { majorChampion, majorWrappedSectionId, type MajorChampion } from "@/lib/stage-wrapped-launch";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ export default async function DashboardPage() {
   // and no added render latency. Mirrors the news wire's refreshWireOnRead.
   await refreshOutcomesOnRead(EVENT_ID);
 
-  const [resolvedRows, outcomeRows, allPicks, allPlayers, wireItemsAll] = await Promise.all([
+  const [resolvedRows, outcomeRows, allPicks, allPlayers, wireItemsAll, champion] = await Promise.all([
     prisma.stageOutcome.findMany({
       where: { eventId: EVENT_ID },
       select: { sectionId: true, groupId: true, slotIndex: true },
@@ -44,6 +45,9 @@ export default async function DashboardPage() {
       select: { id: true, displayName: true, avatarUrl: true },
     }),
     getWireItems(3),
+    // The crowned champion, or null until the Grand Final resolves. Non-null
+    // flips the whole dashboard into its "Major complete" send-off (PHA-1274).
+    majorChampion(EVENT_ID),
   ]);
 
   const wireItems = wireItemsAll;
@@ -144,7 +148,12 @@ export default async function DashboardPage() {
   }
 
   const eventStarted = resolvedRows.length > 0;
-  const eventLabel = eventStarted ? "Live now" : "Pre-event";
+  // Once the Grand Final crowns a champion the Major is DONE — the eyebrow stops
+  // saying "Live now" (which it would otherwise say forever, since outcomes stay
+  // resolved) and the hero becomes a send-off (PHA-1274: "the homepage needs
+  // updated").
+  const eventLabel = champion ? "Major complete" : eventStarted ? "Live now" : "Pre-event";
+  const wrappedHref = `/reveal/${majorWrappedSectionId()}?wrapped=1`;
 
   return (
     <>
@@ -155,7 +164,10 @@ export default async function DashboardPage() {
         </span>
       </div>
 
-      {/* Stage briefing */}
+      {/* Stage briefing — or, once a champion is crowned, the Major send-off. */}
+      {champion ? (
+        <ConcludedHero champion={champion} wrappedHref={wrappedHref} />
+      ) : (
       <section className="brk" style={{
         position: "relative",
         background: "var(--surf-1)",
@@ -248,6 +260,7 @@ export default async function DashboardPage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* Stats + Leaderboard cols */}
       <div className="dash-cols">
@@ -284,12 +297,16 @@ export default async function DashboardPage() {
               <div className="lbl">POINTS</div>
               <div className="val foil">{selfRow?.score ?? 0}</div>
               <div className="sub">
-                of {maxPoints} · {activeLabel}{" "}
-                {active.pick.pickable
-                  ? "open"
-                  : active.pick.reason === "locked-time-passed"
-                    ? "live"
-                    : "pending"}
+                of {maxPoints} ·{" "}
+                {champion
+                  ? "final"
+                  : `${activeLabel} ${
+                      active.pick.pickable
+                        ? "open"
+                        : active.pick.reason === "locked-time-passed"
+                          ? "live"
+                          : "pending"
+                    }`}
               </div>
             </div>
           </div>
@@ -372,6 +389,89 @@ export default async function DashboardPage() {
         }
       `}</style>
     </>
+  );
+}
+
+/**
+ * The dashboard hero AFTER the Major is decided (PHA-1274) — replaces the stage
+ * briefing the moment the Grand Final crowns a champion. Same broadcast shell as
+ * the briefing (keyline corners + faint HeatMark), but it names the champion and
+ * points everyone at the Wrapped recap and the final board instead of a now-dead
+ * "picks are locked, watch the live bracket" call.
+ */
+function ConcludedHero({
+  champion,
+  wrappedHref,
+}: {
+  champion: MajorChampion;
+  wrappedHref: string;
+}) {
+  return (
+    <section className="brk" style={{
+      position: "relative",
+      background: "var(--surf-1)",
+      border: "1px solid var(--hair-2)",
+      padding: "26px 28px 28px",
+      overflow: "hidden",
+    }}>
+      <span className="br-tr" />
+      <span className="br-bl" />
+      <div style={{
+        position: "absolute",
+        right: -20,
+        top: "50%",
+        transform: "translateY(-50%)",
+        width: 240,
+        height: 240,
+        opacity: 0.05,
+        pointerEvents: "none",
+      }}>
+        <HeatMark size={240} />
+      </div>
+      <div style={{ position: "relative", zIndex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+          <span className="eyebrow-mono">CHAMPIONS</span>
+          <span className="live-tag" style={{ color: "var(--ink-mid)", borderColor: "var(--hair-2)", background: "var(--surf-2)" }}>
+            That&apos;s a wrap
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 14 }}>
+          {champion.logoSrc && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={champion.logoSrc}
+              alt=""
+              width={64}
+              height={64}
+              style={{ objectFit: "contain", filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.5))", flexShrink: 0 }}
+            />
+          )}
+          <h1 className="font-display" style={{
+            fontWeight: 800,
+            fontSize: "clamp(34px, 5vw, 48px)",
+            textTransform: "uppercase",
+            lineHeight: 0.92,
+            margin: 0,
+          }}>
+            {champion.name}
+          </h1>
+        </div>
+        <p style={{ fontSize: 14, color: "var(--ink-mid)", margin: 0, maxWidth: 460, textWrap: "pretty" }}>
+          {champion.name} are your IEM Cologne Major 2026 champions. Thirty-two
+          walked in; one walks out with the trophy. Thanks for calling it with us
+          all Major long — the recap below has the whole run.
+        </p>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 18 }}>
+          <Link href={wrappedHref} className="btn-heat" prefetch={false}>
+            Watch the Wrapped recap
+            <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </Link>
+          <Link href="/leaderboard" className="btn-ghost" prefetch={false}>Final Ranks</Link>
+        </div>
+      </div>
+    </section>
   );
 }
 
