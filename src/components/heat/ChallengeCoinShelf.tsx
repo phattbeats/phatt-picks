@@ -4,9 +4,10 @@
  * and steel for taking part. Server component (no interactivity) — it just lays
  * out the pre-rendered coin art the pure core resolves.
  *
- * Empty by design until a Major concludes (coins mint on archive). For your own
- * profile an empty shelf shows a one-line nudge; on someone else's it stays
- * hidden so a fresh profile isn't cluttered with an empty rack.
+ * Empty by design until a Major concludes (coins mint on archive). An empty
+ * shelf stays hidden entirely — no explainer, no empty rack (PHA-1283: let the
+ * shelf speak for itself once coins land). It surfaces only when there's a coin
+ * to show.
  */
 
 import { type ChallengeCoin } from "@/lib/challenge-coin-core";
@@ -25,25 +26,12 @@ function ordSuffix(n: number): string {
 
 export function ChallengeCoinShelf({
   coins,
-  isSelf,
 }: {
   coins: ChallengeCoin[];
-  isSelf: boolean;
 }) {
-  if (coins.length === 0) {
-    if (!isSelf) return null;
-    return (
-      <section className="coin-shelf">
-        <div className="coin-shelf-head">
-          <span className="eyebrow-mono">CHALLENGE COINS</span>
-        </div>
-        <p className="coin-shelf-empty">
-          One coin per Major you play — they mint when the event wraps. Top
-          finishes strike gold; taking part strikes steel.
-        </p>
-      </section>
-    );
-  }
+  // Nothing to show until the first coin mints — no explainer, no empty rack
+  // (PHA-1283). The populated shelf below is self-explanatory.
+  if (coins.length === 0) return null;
 
   return (
     <section className="coin-shelf">
