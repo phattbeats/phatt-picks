@@ -17,7 +17,7 @@ import { getCommittedLayout, type Layout } from "./layout";
 import { scorePlayer, type OutcomeMap, type PlayerPickMap } from "./scoring";
 import { getEventConfig } from "./events-core";
 import { computeFinish } from "./majors-core";
-import { eventArchivedAtMs } from "./event-freeze";
+import { coinMintAtMs } from "./event-freeze";
 import {
   deriveChallengeCoins,
   type ChallengeCoin,
@@ -59,10 +59,11 @@ export async function getPlayerChallengeCoins(
 
   const inputs: CoinInput[] = [];
   for (const { eventId, cfg } of events) {
-    // Coins only mint on a concluded Major — short-circuit the live/unfinished
-    // event before any field scoring (zero added DB work while in flight). The
-    // archive instant doubles as the coin's mint time (earnedAtMs).
-    const archivedAtMs = await eventArchivedAtMs(eventId, nowMs);
+    // Coins mint the moment the Grand Final crowns a champion — short-circuit
+    // the live/unfinished event before any field scoring (zero added DB work
+    // while in flight). The GF-resolved instant doubles as the mint time
+    // (earnedAtMs); no 48h archive-grace wait (PHA-1274).
+    const archivedAtMs = await coinMintAtMs(eventId, nowMs);
     if (archivedAtMs === null) continue;
 
     const layout = layoutFor(eventId);

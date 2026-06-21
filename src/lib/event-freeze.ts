@@ -171,3 +171,25 @@ export async function eventArchivedAtMs(
   const past = candidates.filter((t) => t <= nowMs);
   return past.length > 0 ? Math.min(...past) : nowMs;
 }
+
+/**
+ * WHEN a Major's challenge coins mint (epoch ms), or null if not yet. Coins mint
+ * the instant the Grand Final crowns a champion — the Major is *decided* — and
+ * are deliberately NOT gated behind the 48h post-GF write-freeze grace that
+ * `eventArchivedAtMs` carries (that grace governs site warmth + the pick freeze,
+ * not the keepsake). The `dates.end` calendar backstop still applies for a
+ * never-ingested GF. PHA-1274 (Brandon): the coin lands on the shelf as soon as
+ * the final is in, not two days later.
+ */
+export async function coinMintAtMs(
+  eventId: number,
+  nowMs: number = Date.now(),
+): Promise<number | null> {
+  const cfg = getEventConfig(eventId);
+  if (!cfg) return null;
+  const gf = await grandFinalResolvedAtMs(cfg);
+  if (gf !== null && gf <= nowMs) return gf;
+  const end = Date.parse(cfg.dates.end);
+  if (!Number.isNaN(end) && end <= nowMs) return end;
+  return null;
+}
