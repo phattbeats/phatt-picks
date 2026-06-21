@@ -265,3 +265,59 @@ export async function prepareMajorWrappedAutoDeck(
     slides,
   };
 }
+
+/** The Grand Final section id for this format (the recap deep link target). */
+export function majorWrappedSectionId(): number {
+  return PLAYOFF_ROUNDS.find((r) => r.key === "GF")?.sectionId ?? 110;
+}
+
+export interface MajorChampion {
+  pickId: number;
+  name: string;
+  /** First logo tier for the crest (or null when none resolves). */
+  logoSrc: string | null;
+}
+
+/**
+ * WHO won the Major — the crowned champion, or null until the Grand Final
+ * resolves. Reuses the same bracket pipeline the Wrapped deck does
+ * (`buildPlayoffBracket` + `derivePlayoffStorylines`) so the home send-off names
+ * the exact team the recap crowns. Cheap: one query scoped to the playoff
+ * sections. Drives the dashboard's "Major complete" hero (PHA-1274).
+ */
+export async function majorChampion(eventId: number): Promise<MajorChampion | null> {
+  const layout = getCommittedLayout();
+  const playoffSectionIds = PLAYOFF_ROUNDS.map((r) => r.sectionId);
+  const playoffSections = layout.sections.filter((s) => playoffSectionIds.includes(s.sectionid));
+  if (playoffSections.length === 0) return null;
+
+  const outcomes = await prisma.stageOutcome.findMany({
+    where: { eventId, sectionId: { in: playoffSectionIds } },
+  });
+  if (outcomes.length === 0) return null;
+
+  const winnerByGroup = new Map<number, number>();
+  for (const o of outcomes) if (o.slotIndex === 0) winnerByGroup.set(o.groupId, o.winnerPickId);
+
+  const bracket = buildPlayoffBracket({ sections: playoffSections, winnerByGroup });
+  if (!isPlayoffWrapped(bracket)) return null; // no champion crowned yet
+
+  const teamMap = buildTeamMap(layout);
+  const facts = derivePlayoffStorylines(bracket, {
+    nameOf: (pid: number) => teamMap.get(pid)?.name ?? null,
+  });
+  if (facts.championPickId == null) return null;
+
+  const team = teamMap.get(facts.championPickId);
+  let logoSrc: string | null = null;
+  if (team) {
+    for (const tier of resolveLogoTiers(team)) {
+      if (tier.kind === "image") { logoSrc = tier.src; break; }
+    }
+  }
+  return {
+    pickId: facts.championPickId,
+    name: facts.championName ?? team?.name ?? "the champions",
+    logoSrc,
+  };
+}

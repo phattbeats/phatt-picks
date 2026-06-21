@@ -126,7 +126,8 @@ check("every track has a src + credit + mood", WRAPPED_TRACKS.every((t) => !!t.s
 check("every track is attributed (CC-BY / Kevin MacLeod)", WRAPPED_TRACKS.every((t) => /CC-BY/i.test(t.credit) && /MacLeod/i.test(t.credit)));
 check("track ids are unique", new Set(WRAPPED_TRACKS.map((t) => t.id)).size === WRAPPED_TRACKS.length);
 check("offers a bittersweet/somber ending mood", WRAPPED_TRACKS.some((t) => /bittersweet|somber/i.test(t.mood)));
-check("default track leads (index 0 = the epic theme)", WRAPPED_TRACKS[0].id === "descent");
+check("default track leads (index 0 = the bittersweet theme)", WRAPPED_TRACKS[0].id === "despair-triumph");
+check("the leading track's mood is bittersweet", /bittersweet/i.test(WRAPPED_TRACKS[0].mood));
 
 console.log(`\nstage-wrapped: ${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);

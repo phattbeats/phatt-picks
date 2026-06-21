@@ -170,24 +170,26 @@ export interface WrappedTrack {
 /**
  * The deck soundtrack options (PHA-1274, Brandon: "a few more epic musics with
  * more bittersweet or somber endings"). Index 0 is the default that plays on the
- * first sound-on; the track control cycles through the rest. Order puts the
- * triumphant theme first, then the bittersweet/somber pieces that suit a Major
- * sending its champion home and everyone else into the off-season.
+ * first sound-on; the track control cycles through the rest. The bittersweet
+ * theme leads (Brandon: "make the default music the bittersweet epic one … the
+ * music needs to be bittersweet") — it's the right send-off for a Major crowning
+ * its champion and sending everyone else into the off-season; the purely
+ * triumphant and somber pieces follow on the cycle.
  */
 export const WRAPPED_TRACKS: readonly WrappedTrack[] = [
-  {
-    id: "descent",
-    title: "The Descent",
-    src: "/audio/wrapped-theme.mp3",
-    credit: "“The Descent” — Kevin MacLeod (incompetech.com) · CC-BY 3.0",
-    mood: "Epic",
-  },
   {
     id: "despair-triumph",
     title: "Despair & Triumph",
     src: "/audio/wrapped-despair-triumph.mp3",
     credit: "“Despair and Triumph” — Kevin MacLeod (incompetech.com) · CC-BY 3.0",
     mood: "Bittersweet",
+  },
+  {
+    id: "descent",
+    title: "The Descent",
+    src: "/audio/wrapped-theme.mp3",
+    credit: "“The Descent” — Kevin MacLeod (incompetech.com) · CC-BY 3.0",
+    mood: "Epic",
   },
   {
     id: "long-note-three",

@@ -958,7 +958,11 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
    sparkle, clipped to the coin disc. Transform/opacity only (no blur/backdrop-
    filter — PHA-1269), staggered per coin via --shimmer-delay, off when the user
    prefers reduced motion. */
-.coin-shine { position: relative; display: block; width: 100%; height: 100%; border-radius: 50%; }
+/* overflow:hidden + the round radius CLIP the sweep to the coin. Without it the
+   sheen band parks at translateX(120%) for most of the cycle and sits as a stray
+   glossy bar just off the coin's right edge (PHA-1274: "what is this weird
+   artifact?"). The clip keeps the glide on the disc and nowhere else. */
+.coin-shine { position: relative; display: block; width: 100%; height: 100%; border-radius: 50%; overflow: hidden; }
 .coin-shine img { width: 100%; height: 100%; object-fit: contain; }
 .coin-shine::before {
   content: ""; position: absolute; inset: 0; pointer-events: none;
