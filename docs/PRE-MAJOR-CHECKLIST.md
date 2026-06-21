@@ -122,6 +122,10 @@ frozen snapshot is what renders until the first live crawl lands.
 - [ ] Logo manifest `src/fixtures/<event>-logos.json` built (monograms site-wide =
       stale manifest → re-run `scripts/build-logos.ts`); `public/logos/` is only the
       optional self-host SVG fallback.
+- [ ] Challenge-coin art — drop the four front faces
+      `public/coins/<event-slug>-{diamond,gold,silver,bronze}.png` (PHA-1278). The
+      reverses `public/coins/_back-{tier}.png` are shared, leave them. Coins mint
+      automatically once the Major archives — no DB, no per-team config.
 - [ ] `verify-team-stats`, `verify-team-stats-live`, `verify-lock-schedule`,
       `verify-regions` all green.
 - [ ] `prisma db push` ran on the deploy (creates `TeamStatsCache` +
