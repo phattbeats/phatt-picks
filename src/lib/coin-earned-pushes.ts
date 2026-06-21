@@ -24,7 +24,7 @@ import { sendPushToPlayer } from "@/lib/notify";
 import { buildCoinPayload } from "@/lib/notify-core";
 import { parseNotifPrefs } from "@/lib/notifications-core";
 import { EVENTS, getEventConfig } from "@/lib/events-core";
-import { eventArchivedAtMs } from "@/lib/event-freeze";
+import { coinMintAtMs } from "@/lib/event-freeze";
 
 /** Only ping for a Major archived within this window (bounds restart re-pings). */
 const RECENCY_MS = 7 * 24 * 60 * 60_000;
@@ -36,7 +36,7 @@ export async function runCoinEarnedPushes(now: number = Date.now()): Promise<voi
   for (const eventId of Object.keys(EVENTS).map(Number)) {
     if (fired.has(eventId)) continue;
 
-    const archivedAtMs = await eventArchivedAtMs(eventId, now);
+    const archivedAtMs = await coinMintAtMs(eventId, now);
     if (archivedAtMs === null) continue; // still live/upcoming
     if (now - archivedAtMs > RECENCY_MS) {
       // Archived too long ago to ping now (e.g. fresh process, old Major) — mark
