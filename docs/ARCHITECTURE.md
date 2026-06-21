@@ -10,9 +10,23 @@ or outcome resolution.
   share — WAL locking breaks on FUSE).
 - Deploys to the **`phattvip` Docker network** behind **SWAG** at `pickems.phatt.vip`.
 - Responsive **installable PWA** is the entire mobile story. No native apps.
-- Two shared services on the same network, reachable **by container name**:
+- Two shared services on the same network, reachable **by container name**. Neither
+  is a *hard* requirement — the app boots and serves every page without them:
   - `crawl4ai:11235` — renders/bypasses Cloudflare for the live HLTV scrape.
+    **Soft/runtime dependency:** only the two live-HLTV features (Swiss W-L standings
+    + team "Last 5" dossiers) need it, and they **degrade gracefully to empty/stale**
+    if it's unreachable (`CRAWL4AI_URL`, default `http://crawl4ai:11235`). Auth, picks,
+    leaderboard, reveals, brackets, and notifications don't touch it.
   - `browserless:3000` — real Chrome, used for screenshots / verification only.
+    **Not a runtime dependency** — the deployed app never calls it; it exists for
+    dev/QA tooling.
+
+The container's own **hard requirements** are just: a SQLite `/data` bind on real
+disk (`DATABASE_URL`), the public origin (`NEXTAUTH_URL`), a fixed session secret
+(`NEXTAUTH_SECRET`), the `phattvip` network, and SWAG fronting port 3000 — plus
+`STEAM_API_KEY` + `AUTH_CODE_ENCRYPTION_KEY` for live Steam read/write. Everything
+else (push/VAPID, crawl4ai, Turnstile, write-back) is feature-gated and optional.
+Full var-by-var table in [OPERATIONS.md](OPERATIONS.md#environment-variables).
 
 Deploy = Brandon **Force Update** on Unraid (pulls the new ghcr image and recreates).
 A fresh DB self-migrates on boot — the image `CMD` (`Dockerfile:74`) runs
