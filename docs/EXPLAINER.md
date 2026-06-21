@@ -59,7 +59,7 @@ You don't need to know anything about the game to use HOTLINE, but a little cont
 
 - **Counter-Strike 2 (CS2)** is a hugely popular competitive video game. Two teams of five pros play rounds against each other; first to a target number of rounds wins the map.
 - A **professional match** is usually a "best of three" (often shortened to **BO3**) — first team to win two maps wins the match. Some matches are a single map (**BO1**) or best of five (**BO5**) for finals.
-- A **Major** is the Counter-Strike world championship — the biggest, most prestigious tournament of the season, sponsored by Valve. The best ~24 teams in the world compete over a couple of weeks for the trophy and a huge prize pool.
+- A **Major** is the Counter-Strike world championship — the biggest, most prestigious tournament of the season, sponsored by Valve. The best teams in the world — a field of **32** — compete over a couple of weeks for the trophy and a huge prize pool, with the field narrowing stage by stage.
 - HOTLINE is currently pointed at **IEM Cologne 2026** (held in early-to-mid June 2026). The next one already lined up is **PGL Singapore 2026**.
 
 When HOTLINE asks you to "pick teams," it's asking you to predict how these real pro teams will do at the real tournament.
@@ -182,7 +182,8 @@ So the rhythm of each stage is: *everyone commits in secret → the deadline hit
 
 ## 9. The leaderboard and comparing
 
-- The **Leaderboard** is the shared scoreboard — every player ranked by total points. This is the bragging-rights centerpiece.
+- The **home screen** greets you with a quick-look snapshot: the current stage, the top few players, and where you sit — so you see the state of play the moment you open the app.
+- The **Leaderboard** is the full shared scoreboard — every player ranked by total points. This is the bragging-rights centerpiece.
 - **Compare** lets you put your picks head-to-head against a specific friend, stage by stage, to see exactly where you agreed, where you split, and who came out ahead.
 - The app also surfaces fun details like a **"lone pick"** — when you were the *only* person brave (or foolish) enough to call a particular result.
 
@@ -192,17 +193,17 @@ So the rhythm of each stage is: *everyone commits in secret → the deadline hit
 
 These are the features that make HOTLINE more than a scoreboard. None of them are required to play — they're the flavor.
 
-- **Stage Wrapped** — a slick, click-through recap deck (think "Spotify Wrapped" but for the tournament stage). After a stage resolves, you get an animated slideshow of how it went: your hits, your misses, the big storylines, fun stats, even a soundtrack. There's a special **Playoffs Wrapped** finale recap at the very end.
+- **Stage Wrapped** — a slick, click-through recap deck (think "Spotify Wrapped" but for the tournament stage). After a stage resolves, you can **replay** an animated slideshow of how it went — your hits, your misses, the big storylines, fun stats, even an optional soundtrack — from the Reveal board. (Stage recaps open on demand, not automatically.) The one exception is the grand **Playoffs Wrapped** finale: when the Major crowns its champion, that championship recap pops up on its own the next time you open the app.
 
 - **The Bleachers** — lightweight social reactions. On a friend's **revealed** pick, you can drop one fixed **reaction stamp** from a small set. Three are respect — **🔥 Fire**, **🎯 Called it**, **🧠 Bold** — and two are friendly jabs — **🧊 Ice cold** and **🗿 Cope**. You get one stamp per pick (dropping a new one swaps the old). In the moment the reactions are **anonymous**, so you can chirp someone's terrible pick without immediately outing yourself; when the stage **resolves**, the masks come off and everyone sees who reacted to what.
 
 - **Challenge Coins** — collectible commemorative coins, one per Major you take part in. The **tier** is set by where you finish: **diamond** for the top 10% (the outright winner always gets diamond), **gold** for the top 25%, **silver** for the top 50%, and **bronze** for everyone else who took part. You earn a coin once the Major wraps up, and they're displayed in a little 3D **display case** on your profile that you can spin and inspect. They're a keepsake of each season you played.
 
-- **Playoff Spotlight** — for the playoff teams, a per-team narrative and highlight panel, including **live betting-market odds** (pulled from a public prediction market) so you can see who the world thinks will win each matchup.
+- **Playoff Spotlight** — for the playoff teams, a per-team narrative and highlight panel. When a matchup's market is available, it also shows **live betting-market odds** (pulled from a public prediction market) so you can see who the world thinks will win; until those are wired up for a matchup, the panel just says the odds are coming soon.
 
-- **News** — a simple in-app feed of relevant updates.
+- **News** — a lightweight in-app "wire" for tournament updates. It only shows real, curated items — when there's nothing to report it honestly says so rather than padding the feed.
 
-- **Player profiles** — every player has a profile page with their avatar, their coins, and their pick history.
+- **Player profiles** — every player has a profile page showing their avatar, their current **rank and points** (broken down stage by stage), their **Challenge Coin** case, the reaction stamps left on their picks, and their full pick history once each stage has revealed. Your own **"Your Majors"** page collects your finish and coin from every Major you've played.
 
 ---
 
