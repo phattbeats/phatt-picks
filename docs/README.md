@@ -13,7 +13,7 @@ Read these in roughly this order. Each is self-contained.
 | Doc | What it answers | Read it when |
 |---|---|---|
 | **[EXPLAINER.md](EXPLAINER.md)** | What HOTLINE *is*, in plain English, top to bottom — the product, the game, every feature, a full glossary. **No technical background needed.** | You're a player, a new group member, or anyone who wants the friendly tour before the engineering docs. |
-| **[ADMIN-GUIDE.md](ADMIN-GUIDE.md)** | The operator's handbook, front to back — requirements, infrastructure, a plain explainer of every component, and a symptom→cause→fix troubleshooting playbook. Summarizes and links the deep-reference docs. | You **run** HOTLINE: deploying, configuring, or debugging a live problem and you want one cohesive read. |
+| **[ADMIN-GUIDE.md](ADMIN-GUIDE.md)** | The operator's handbook, front to back — requirements, infrastructure, a plain explainer of every component, a **zero-to-deployed "run it on your own hardware" walkthrough**, and a symptom→cause→fix troubleshooting playbook. Summarizes and links the deep-reference docs. | You **run or self-host** HOTLINE: deploying it on your own box, configuring, or debugging a live problem and you want one cohesive read. |
 | **[ARCHITECTURE.md](ARCHITECTURE.md)** | How the whole thing fits together — data flow, the core modules, the patterns that repeat. | You're new, or you're about to change how picks / scoring / brackets work. |
 | **[NEXT-MAJOR.md](NEXT-MAJOR.md)** | The runbook to re-point the app at a *new* Major (the one that matters most for "more majors"). The code-seam map: every constant/fixture that changes per-event, in order, with a checklist. | A new Major is announced and you need to stand it up. |
 | **[PRE-MAJOR-CHECKLIST.md](PRE-MAJOR-CHECKLIST.md)** | The field guide that *pairs* with NEXT-MAJOR: a tickable checklist for gathering the inputs — HLTV event ids, the 32-team field → pickids, and the per-stage stats-refresh routine. | You're collecting the facts for a new event before wiring them in. |
@@ -34,8 +34,9 @@ mirror them up to Valve, and compete on a shared leaderboard scored on Valve's o
 weighting. Built **generically** so it can be re-pointed at the next Major by
 editing a handful of committed config seams.
 
-Live target as of this writing: **IEM Cologne 2026** (June 2–21); the next Major,
-**PGL Singapore 2026**, is already seeded in the event registry (eventId 27).
+First season: **IEM Cologne 2026** (June 2–21) — now **complete and archived**. The
+next Major, **PGL Singapore 2026**, is already seeded in the event registry
+(eventId 27), to be stood up when it comes around.
 
 ## Why the docs live here
 

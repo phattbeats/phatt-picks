@@ -1,0 +1,80 @@
+# HOTLINE — portable self-host compose.
+#
+# This is the "deploy it to your own hardware" path: a self-contained stack with
+# NO external network, NO Unraid/SWAG assumptions, and a local ./data folder for
+# the database. The production stack the maintainer runs lives in the sibling
+# docker-compose.yml (Unraid + the shared `phattvip` network + SWAG) — this file
+# is the generic equivalent anyone can run on any Docker host.
+#
+# Quick start (full walkthrough in docs/ADMIN-GUIDE.md → "Run it yourself"):
+#   1. cp .env.example .env   then fill in the REPLACE_ME values (see that guide
+#      for the exact secret-generation commands).
+#   2. docker compose -f docker-compose.selfhost.yml up -d --build
+#   3. open http://localhost:3000
+#
+# Compose automatically reads the .env file in this directory, so every
+# ${VAR} below is filled from there.
+
+services:
+  phatt-picks:
+    # Build from this checkout. To use the prebuilt image instead, comment out
+    # `build: .` and uncomment the image line.
+    build: .
+    # image: ghcr.io/phattbeats/phatt-picks:latest
+    container_name: phatt-picks
+    restart: unless-stopped
+    ports:
+      # Reach the app directly at http://localhost:3000. Put a reverse proxy in
+      # front of this for a real domain + HTTPS (see the guide).
+      - "3000:3000"
+    volumes:
+      # The SQLite database. A plain local folder — back up this directory and
+      # you've backed up everything. (Avoid networked/FUSE filesystems: SQLite's
+      # WAL locking can corrupt on them.)
+      - ./data:/data
+    environment:
+      - DATABASE_URL=file:/data/phatt-picks.db
+      # MUST match the URL you actually reach the app on (scheme + host + port),
+      # or Steam login and invite links break. For a domain behind a proxy set
+      # this to e.g. https://picks.example.com.
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:?set NEXTAUTH_SECRET in .env}
+      - STEAM_API_KEY=${STEAM_API_KEY:?set STEAM_API_KEY in .env}
+      - AUTH_CODE_ENCRYPTION_KEY=${AUTH_CODE_ENCRYPTION_KEY:?set AUTH_CODE_ENCRYPTION_KEY in .env}
+      # Your SteamID64 — unlocks the owner-only admin tools + /admin/analytics.
+      - OWNER_STEAM_ID=${OWNER_STEAM_ID:-}
+      # Web Push (optional). Leave blank to ship without push — the UI just hides
+      # the opt-in. Generate with: npx web-push generate-vapid-keys
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
+      - VAPID_SUBJECT=${VAPID_SUBJECT:-mailto:admin@example.com}
+      # Signup CAPTCHA (optional). Both unset → CAPTCHA skipped.
+      - NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}
+      - TURNSTILE_SECRET_KEY=${TURNSTILE_SECRET_KEY:-}
+      # Destructive write-back of picks to Valve. Leave false unless you mean it.
+      - WRITE_ENABLED=${WRITE_ENABLED:-false}
+      # Live HLTV standings come from the optional crawl4ai service below.
+      - CRAWL4AI_URL=${CRAWL4AI_URL:-http://crawl4ai:11235}
+      - CRAWL4AI_API_TOKEN=${CRAWL4AI_API_TOKEN:-}
+      - NODE_ENV=production
+    depends_on:
+      - crawl4ai
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # OPTIONAL. crawl4ai fetches HLTV pages (which block a direct fetch) to power
+  # the *live* mid-stage Swiss standings and the team "Last 5" form panels. It is
+  # NOT required: delete this service (and the depends_on above) and the app runs
+  # fine — those two panels just stay empty. Everything else (login, picks,
+  # scoring, leaderboard, reveals, recaps, reactions, notifications) is unaffected.
+  crawl4ai:
+    image: unclecode/crawl4ai:latest
+    container_name: crawl4ai
+    restart: unless-stopped
+    shm_size: "1g"
+    expose:
+      - "11235"
