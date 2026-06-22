@@ -60,7 +60,7 @@ You don't need to know anything about the game to use HOTLINE, but a little cont
 - **Counter-Strike 2 (CS2)** is a hugely popular competitive video game. Two teams of five pros play rounds against each other; first to a target number of rounds wins the map.
 - A **professional match** is usually a "best of three" (often shortened to **BO3**) — first team to win two maps wins the match. Some matches are a single map (**BO1**) or best of five (**BO5**) for finals.
 - A **Major** is the Counter-Strike world championship — the biggest, most prestigious tournament of the season, sponsored by Valve. The best teams in the world — a field of **32** — compete over a couple of weeks for the trophy and a huge prize pool, with the field narrowing stage by stage.
-- HOTLINE is currently pointed at **IEM Cologne 2026** (held in early-to-mid June 2026). The next one already lined up is **PGL Singapore 2026**.
+- HOTLINE's first full season ran on **IEM Cologne 2026** (June 2026), which has now **wrapped up** — that tournament is in the books and archived. The next Major already lined up is **PGL Singapore 2026** (later in 2026), which the group will play when it comes around.
 
 When HOTLINE asks you to "pick teams," it's asking you to predict how these real pro teams will do at the real tournament.
 
@@ -253,7 +253,7 @@ You can skip this section entirely and still use the app perfectly. It's here fo
 
 - **Deploys.** When the app is updated, the owner pulls the new version and the server swaps it in. The database survives the swap, so nobody loses their picks or scores.
 
-If you want the deep technical version, the project keeps a developer knowledge base in its `docs/` folder (architecture, operations, the runbook for standing up the next Major, and a list of hard-won gotchas). This explainer is the friendly front door to all of that.
+If you want the deep technical version, the project keeps a developer knowledge base in its `docs/` folder (architecture, operations, the runbook for standing up the next Major, and a list of hard-won gotchas). This explainer is the friendly front door to all of that. And if you ever want to run your **own** copy of HOTLINE, the **[Admin & Operator Guide](ADMIN-GUIDE.md)** walks you through deploying it on your own hardware, start to finish.
 
 ---
 
@@ -261,8 +261,8 @@ If you want the deep technical version, the project keeps a developer knowledge 
 
 HOTLINE is built to **come back for every Major**, not to be thrown away after one.
 
-- The app is **generic by design** — when a new Major is announced, a small amount of configuration re-points it at the new event (the teams, the schedule, the stages), and the whole group plays again from scratch. The next event, **PGL Singapore 2026**, is already lined up in the app.
-- Past seasons aren't deleted — they're **archived**, so you can look back at old leaderboards, and your **Challenge Coins** from previous Majors stay in your display case as a record of every tournament you played.
+- The app is **generic by design** — when a new Major is announced, a small amount of configuration re-points it at the new event (the teams, the schedule, the stages), and the whole group plays again from scratch. With **IEM Cologne 2026** now finished, the next event, **PGL Singapore 2026**, is already lined up in the app for when it rolls around later in the year.
+- Past seasons aren't deleted — they're **archived**. Cologne 2026 is now the first season in that archive, so you can look back at its leaderboard, and your **Challenge Coins** from it (and every Major after) stay in your display case as a record of every tournament you played.
 
 So it's less of a one-off and more of an ongoing, season-after-season tradition for the group.
 

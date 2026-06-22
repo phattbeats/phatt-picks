@@ -18,11 +18,12 @@
 2. [Requirements](#2-requirements)
 3. [Infrastructure & topology](#3-infrastructure--topology)
 4. [The components, explained](#4-the-components-explained)
-5. [Deploying & updating](#5-deploying--updating)
-6. [Configuration & secrets](#6-configuration--secrets)
-7. [Troubleshooting playbook](#7-troubleshooting-playbook)
-8. [Routine operations](#8-routine-operations)
-9. [Standing up the next Major](#9-standing-up-the-next-major)
+5. [Run it yourself — deploy on your own hardware](#5-run-it-yourself--deploy-on-your-own-hardware)
+6. [Deploying & updating (the maintainer's setup)](#6-deploying--updating-the-maintainers-setup)
+7. [Configuration & secrets](#7-configuration--secrets)
+8. [Troubleshooting playbook](#8-troubleshooting-playbook)
+9. [Routine operations](#9-routine-operations)
+10. [Standing up the next Major](#10-standing-up-the-next-major)
 
 ---
 
@@ -66,7 +67,7 @@ Everything the app *remembers* (players, picks, scores, coins, reactions, push s
 |---|---|
 | **A SQLite path on real disk** (`DATABASE_URL`) | The app's entire memory. **Must be a cache/appdata bind, never a FUSE `/mnt/user` share** — SQLite's WAL locking corrupts on FUSE. |
 | **Public origin** (`NEXTAUTH_URL`) | Must match the SWAG host exactly (`https://pickems.phatt.vip`), or Steam login and invite links break. |
-| **Session secret** (`NEXTAUTH_SECRET`) | Signs the login cookie. **Must be a fixed value in the Unraid template** — see the warning in §6. |
+| **Session secret** (`NEXTAUTH_SECRET`) | Signs the login cookie. **Must be a fixed value in the Unraid template** — see the warning in §7. |
 | **Steam Web API key** (`STEAM_API_KEY`) | Needed for Steam login, reading Valve picks, and the answer key. |
 | **Auth-code encryption key** (`AUTH_CODE_ENCRYPTION_KEY`) | 32-byte hex; encrypts each user's Steam Pick'Em code at rest. |
 | **The `phattvip` Docker network + SWAG** | The network lets the container reach shared services by name; SWAG gives it a secure public address on port 3000. |
@@ -162,9 +163,74 @@ HOTLINE ships its **own** lightweight traffic analytics — there is **no Umami,
 
 ---
 
-## 5. Deploying & updating
+## 5. Run it yourself — deploy on your own hardware
 
-**The reliable deploy path is Brandon hitting "Force Update" on the Unraid template** — it pulls the new ghcr image and recreates the container. (The `phatt-claw` Docker socket proxy can inspect containers and in some cases pull+recreate, but treat Force Update as the canonical path.)
+> The maintainer runs HOTLINE on one specific box (Unraid + SWAG + the shared `phattvip` network); that's §6. **This section is the portable path** — how *anyone* can stand up their own copy on *any* Docker host. The repo ships a self-contained **`docker-compose.selfhost.yml`** for exactly this (no external network, no Unraid assumptions, a local `./data` folder for the database).
+
+### What you need
+- A machine with **Docker + Docker Compose** — a Linux box, a NAS, a cheap VPS, even a laptop.
+- A free **Steam Web API key** from <https://steamcommunity.com/dev/apikey> (powers Steam login + reading Valve picks).
+- *(Optional)* a **domain name**, only if you want it on the public internet with HTTPS. A LAN/localhost trial needs none.
+
+### Step 1 — Get the code
+```bash
+git clone https://github.com/phattbeats/phatt-picks.git
+cd phatt-picks
+```
+
+### Step 2 — Make your secrets
+```bash
+cp .env.example .env
+```
+Generate each secret (these commands are also in `.env.example`):
+```bash
+openssl rand -base64 32                                              # → NEXTAUTH_SECRET
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"  # → AUTH_CODE_ENCRYPTION_KEY
+npx web-push generate-vapid-keys                                     # → VAPID_* (optional; skip to ship without push)
+```
+In `.env`: paste those in, set `STEAM_API_KEY`, set `OWNER_STEAM_ID` to **your own SteamID64** (so you get the admin tools + `/admin/analytics`), and set `NEXTAUTH_URL` to wherever you'll actually open the app — `http://localhost:3000` for a local trial, or your `https://…` domain.
+
+### Step 3 — Bring it up
+```bash
+docker compose -f docker-compose.selfhost.yml up -d --build
+```
+This builds the app, starts it (plus the optional crawl4ai helper), and **creates the database schema automatically on first boot** (`prisma db push`) under `./data`. Confirm it's healthy, then open it:
+```bash
+docker compose -f docker-compose.selfhost.yml ps
+curl http://localhost:3000/api/health     # → {"status":"ok","db":"ok"}
+```
+Open **<http://localhost:3000>** and sign in. Because your SteamID is the owner, you'll see the owner tools.
+
+### Step 4 — Put it on the internet (optional)
+The container speaks plain HTTP on port 3000. To expose it on a real domain with HTTPS, point **any** reverse proxy at `http://<host>:3000` and set `NEXTAUTH_URL` to the public `https://` URL. The proxy is your choice — e.g. **Caddy** (auto-HTTPS, two lines):
+```
+picks.example.com {
+    reverse_proxy localhost:3000
+}
+```
+nginx, Traefik, or a Cloudflare Tunnel work the same way — terminate TLS, forward to port 3000. Two rules that bite if you skip them:
+- **`NEXTAUTH_URL` must exactly match the public URL** (scheme + host) the browser uses, or Steam login and invite links break.
+- A proxy that terminates TLS and forwards plain HTTP is fine — the app already accepts the forwarded `https` host (this is the iPhone-sign-out trap in the playbook).
+
+### Running it for development
+To hack on the code instead of running the image:
+```bash
+npm ci --legacy-peer-deps
+npx prisma db push          # create the local SQLite schema
+npm run dev                 # → http://localhost:3000
+```
+A local `.env`/`.env.local` supplies the same variables; with no Turnstile keys set, the signup CAPTCHA is skipped for convenience.
+
+### Pointing it at a different Major
+The app is built to be re-pointed at the next Major by editing a handful of committed config seams — its own runbook. See §10 and **[NEXT-MAJOR.md](NEXT-MAJOR.md)**.
+
+---
+
+## 6. Deploying & updating (the maintainer's setup)
+
+Everything above is the general path; this is the **specific instance the maintainer runs** — useful as a worked example and for anyone operating *this* deployment.
+
+**The reliable deploy path here is Brandon hitting "Force Update" on the Unraid template** — it pulls the new ghcr image and recreates the container. (The `phatt-claw` Docker socket proxy can inspect containers and in some cases pull+recreate, but treat Force Update as the canonical path.)
 
 **Deploy discipline:**
 1. Pushing code makes it **code-ready, not deployed.** Nothing is live until the image is pulled and the container recreated.
@@ -176,7 +242,7 @@ HOTLINE ships its **own** lightweight traffic analytics — there is **no Umami,
 
 ---
 
-## 6. Configuration & secrets
+## 7. Configuration & secrets
 
 All config is environment variables on the Unraid template. The complete table is in [OPERATIONS.md](OPERATIONS.md#environment-variables). The two you must handle carefully:
 
@@ -192,12 +258,12 @@ All config is environment variables on the Unraid template. The complete table i
 
 ---
 
-## 7. Troubleshooting playbook
+## 8. Troubleshooting playbook
 
 Symptom → likely cause → fix. The deeper war stories are in [GOTCHAS.md](GOTCHAS.md).
 
 ### "Everyone got logged out after an update"
-- **Cause:** `NEXTAUTH_SECRET` rotated — almost always because it was set ad-hoc on the container instead of in the template, and a Force Update dropped it. (See §6.)
+- **Cause:** `NEXTAUTH_SECRET` rotated — almost always because it was set ad-hoc on the container instead of in the template, and a Force Update dropped it. (See §7.)
 - **Fix:** set a fixed `NEXTAUTH_SECRET` in the Unraid template so it survives recreation. Users re-login once; it won't recur.
 
 ### "Live standings / playoff bracket are blank"
@@ -235,7 +301,7 @@ Symptom → likely cause → fix. The deeper war stories are in [GOTCHAS.md](GOT
 
 ---
 
-## 8. Routine operations
+## 9. Routine operations
 
 ```bash
 # Is it healthy?
@@ -254,7 +320,7 @@ GET  http://phatt-picks:3000/api/odds/refresh        # playoff Spotlight odds (n
 
 ---
 
-## 9. Standing up the next Major
+## 10. Standing up the next Major
 
 HOTLINE is built to re-point at each new Major by editing a handful of committed config seams (event ids, the team field, the stage schedule). **PGL Singapore 2026 is already seeded.** Don't do this by hand from memory — follow the runbook:
 
