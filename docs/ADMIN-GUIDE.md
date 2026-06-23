@@ -18,11 +18,12 @@
 2. [Requirements](#2-requirements)
 3. [Infrastructure & topology](#3-infrastructure--topology)
 4. [The components, explained](#4-the-components-explained)
-5. [Deploying & updating](#5-deploying--updating)
-6. [Configuration & secrets](#6-configuration--secrets)
-7. [Troubleshooting playbook](#7-troubleshooting-playbook)
-8. [Routine operations](#8-routine-operations)
-9. [Standing up the next Major](#9-standing-up-the-next-major)
+5. [Run it yourself — deploy on your own hardware](#5-run-it-yourself--deploy-on-your-own-hardware)
+6. [Deploying & updating (the maintainer's setup)](#6-deploying--updating-the-maintainers-setup)
+7. [Configuration & secrets](#7-configuration--secrets)
+8. [Troubleshooting playbook](#8-troubleshooting-playbook)
+9. [Routine operations](#9-routine-operations)
+10. [Standing up the next Major](#10-standing-up-the-next-major)
 
 ---
 
@@ -66,7 +67,7 @@ Everything the app *remembers* (players, picks, scores, coins, reactions, push s
 |---|---|
 | **A SQLite path on real disk** (`DATABASE_URL`) | The app's entire memory. **Must be a cache/appdata bind, never a FUSE `/mnt/user` share** — SQLite's WAL locking corrupts on FUSE. |
 | **Public origin** (`NEXTAUTH_URL`) | Must match the SWAG host exactly (`https://pickems.phatt.vip`), or Steam login and invite links break. |
-| **Session secret** (`NEXTAUTH_SECRET`) | Signs the login cookie. **Must be a fixed value in the Unraid template** — see the warning in §6. |
+| **Session secret** (`NEXTAUTH_SECRET`) | Signs the login cookie. **Must be a fixed value in the Unraid template** — see the warning in §7. |
 | **Steam Web API key** (`STEAM_API_KEY`) | Needed for Steam login, reading Valve picks, and the answer key. |
 | **Auth-code encryption key** (`AUTH_CODE_ENCRYPTION_KEY`) | 32-byte hex; encrypts each user's Steam Pick'Em code at rest. |
 | **The `phattvip` Docker network + SWAG** | The network lets the container reach shared services by name; SWAG gives it a secure public address on port 3000. |
@@ -78,8 +79,13 @@ Everything the app *remembers* (players, picks, scores, coins, reactions, push s
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Web Push notifications. Missing → the UI hides the opt-in. |
 | `WRITE_ENABLED` | Pushing picks **up to Valve** (destructive; default off). |
 | `TURNSTILE_SECRET_KEY` / `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | The signup CAPTCHA. Missing → CAPTCHA skipped. |
-| `OWNER_STEAM_ID` | Unlocks the owner-only admin tools (local-player cleanup). Unset → owner gate fails closed (nobody is owner). |
-| `CRAWL4AI_URL` | The crawl4ai endpoint (see below). |
+| `OWNER_STEAM_ID` | Unlocks the owner-only admin tools (local-player cleanup, the `/admin/analytics` dashboard, and the manual news/outcomes ingest routes). Unset → owner gate fails closed (nobody is owner). |
+| `CRAWL4AI_URL` | The crawl4ai endpoint (see below). Default `http://crawl4ai:11235`. |
+| `CRAWL4AI_API_TOKEN` | Bearer token for crawl4ai (live HLTV refresh + gather tooling). Defaults to a shared token if unset. |
+| `TRUSTED_PROXY_HOPS` | How many reverse-proxy hops to trust when deriving the client IP from `X-Forwarded-For`. Default `1` (the single SWAG hop); leave it unless you add another proxy. |
+| `NODE_ENV` | Set to `production` in the image; gates the session cookie's `secure` flag. Only drop from `production` for local HTTP dev. |
+| `PRELOCK_REMINDERS_DISABLED` | Set `=1` to turn **off** the pre-lock reminder scheduler. **On by default** (no env needed) since the PHA-996 fix. |
+| `EVENT_ID` / `STAGE_LOCKS_JSON` | Dry-run overrides: pin a specific Valve event id, or supply per-stage lock cutoffs as JSON. Unset → the app uses the clock-derived current event and the committed lock schedule. |
 
 Full var-by-var table with exact behaviors: **[OPERATIONS.md → Environment variables](OPERATIONS.md#environment-variables)**.
 
@@ -126,8 +132,9 @@ Each subsystem, what it does, and where it can fail. For the code-level data-flo
 ### Outcomes & scoring — "the answer key"
 This is the part most worth understanding, because it's where "a match finished but nobody scored" bugs live.
 - **The Valve oracle is the source of truth** once Valve seeds the official bracket layout: the app reads Valve's winning pick IDs and writes `StageOutcome` rows.
-- **Scoring** compares each player's picks to those `StageOutcome` rows, using **Valve's own weighting** (harder calls worth more), at **bucket grain** for Swiss (right bucket = correct, exact slot doesn't matter).
+- **Scoring** compares each player's picks to those `StageOutcome` rows, using **Valve's own per-stage weighting** read from the layout (Swiss 1/2/3 pts per pick in Stages I/II/III; playoffs 12/10/7 per QF/SF/GF match; flat within a stage — no upset bonus), at **bucket grain** for Swiss (right bucket = correct, exact slot doesn't matter).
 - **The live HLTV bridge** fills a gap: Valve publishes no win-loss mid-stage, so the app scores live 3-0/0-3 Swiss clinches from HLTV *before* Valve seeds the key.
+- **Liquipedia is a polite fallback** outcome source (≤1 request/30s, CC-BY-SA attribution required) for locked-but-unresolved stages where Valve hasn't yet exposed a result. HLTV and Valve sources validate winners against the *global* live field; Liquipedia keeps a stricter per-group check.
 - **Headless resolution.** Both the Swiss bridge and the Valve playoff answer key are poked by the in-process **live-results tick** (every ~5 min), so outcomes turn green without anyone loading a page or the owner running anything. There's also a **stale-outcome watchdog** that logs a loud `[live-tick] STALE playoff outcomes …` warning if a match is overdue — if you see that, a real match is genuinely stuck (see playbook).
 
 ### Live boards (crawl4ai)
@@ -136,21 +143,94 @@ This is the part most worth understanding, because it's where "a match finished 
 - **Display-only** — these boards don't feed scoring (except via the live Swiss bridge above).
 
 ### Notifications & the scheduler
-- **Web Push** delivers pre-lock reminders (24h + 1h before a stage locks), plus reveal/reaction/recap/broadcast notifications. There's an in-app inbox (the bell) with an unread badge.
-- The **in-process scheduler** (~5-min tick) fires the reminders and the live-results tick. It's **on by default**; set `PRELOCK_REMINDERS_DISABLED=1` to turn the reminder side off. Cutoffs come from the committed lock schedule unless overridden.
+- **Five notification kinds** flow through one inbox: `stage` (pre-lock reminders, 24h + 1h before a stage locks), `reaction` (a Bleachers stamp landed on your pick), `recap` (your Stage Wrapped is ready), `coin` (you earned a Challenge Coin), and `announcement` (an owner broadcast). There's an in-app inbox (the bell) with an unread badge, mark-read / mark-all-read, and an unread filter. Each kind has independent in-app and push toggles in the user's prefs.
+- **Web Push** mirrors all five kinds to the OS (gated by the `VAPID_*` keys; see §2). On iPhone, push only fires after the user installs the PWA to the home screen.
+- The **in-process scheduler** (~5-min tick, `src/instrumentation.ts`) runs **four push jobs** — pre-lock reminders, recap pushes, announcement pushes, and coin-earned pushes — alongside the separate **live-results tick** on the same timer. It's **on by default**; set `PRELOCK_REMINDERS_DISABLED=1` to turn the reminder side off. Cutoffs come from the committed lock schedule unless overridden. (Playoff QF/SF/GF collapse into one "Playoffs" cutoff, since the bracket is a single Pick'Em.)
+- **Real-time delivery** is a Server-Sent-Events stream (`GET /api/notifications/stream`) that drives the live badge and toasts. It is deliberately **self-limiting** — it polls the feed every ~30s, sends a keepalive every ~25s, and hard-recycles each connection at a **10-minute lifetime cap** so a dropped client can't leave an immortal loop (the PHA-1244 CPU-leak fix). Per-connection churn in the logs is normal, not a leak.
 
 ### The database
 - One **SQLite** file. Tables for players, picks, outcomes, the various caches, push subscriptions, reactions, coins, analytics page-views, etc.
 - Migrations are automatic on boot (`prisma db push`). To inspect or repair live data, run a throwaway container with Prisma pointed at a copy of the file (the live container's shell is typically locked down).
 
 ### Caches & refresh routes
-Several `/api/*/refresh` routes (`standings`, `team-stats`, `odds`) **synchronously warm** a cache. They take **no user input** (no SSRF — they only hit a hard-coded registry), write only public caches, and are rate-limited. They're safe to hit anytime; you mostly use them to warm a freshly deployed container during a live stage.
+Several `/api/*/refresh` routes (`standings`, `team-stats`, `odds`) **synchronously warm** a cache. They take **no user input** (no SSRF — they only hit a hard-coded registry), write only public caches, and are rate-limited (~1 crawl/hour per source via an atomic `SourceState` claim). They're safe to hit anytime; you mostly use them to warm a freshly deployed container during a live stage.
+
+### Analytics (built-in, privacy-first)
+HOTLINE ships its **own** lightweight traffic analytics — there is **no Umami, Plausible, or third-party tag**, and no extra container. It's all in the one app.
+- **Collection:** a tiny inline tracker posts page views (and a few custom events) to `POST /api/stats/collect`. The endpoint is same-origin only, honours Do-Not-Track, is body-size-capped and per-IP rate-limited.
+- **What's stored:** the `PageView` table holds path, device/browser/OS class, and country (from the `cf-ipcountry` header) — **no raw IP, no user id, no query strings, no cookies.** Repeat-visitor counting uses a **daily-rotating salted hash** of IP+UA that can't be reversed and resets every day. Privacy-by-construction.
+- **Dashboard:** the owner views it at **`/admin/analytics`** (gated by `OWNER_STEAM_ID`). It needs no configuration — it's on as soon as the app runs.
 
 ---
 
-## 5. Deploying & updating
+## 5. Run it yourself — deploy on your own hardware
 
-**The reliable deploy path is Brandon hitting "Force Update" on the Unraid template** — it pulls the new ghcr image and recreates the container. (The `phatt-claw` Docker socket proxy can inspect containers and in some cases pull+recreate, but treat Force Update as the canonical path.)
+> The maintainer runs HOTLINE on one specific box (Unraid + SWAG + the shared `phattvip` network); that's §6. **This section is the portable path** — how *anyone* can stand up their own copy on *any* Docker host. The repo ships a self-contained **`docker-compose.selfhost.yml`** for exactly this (no external network, no Unraid assumptions, a local `./data` folder for the database).
+
+### What you need
+- A machine with **Docker + Docker Compose** — a Linux box, a NAS, a cheap VPS, even a laptop.
+- A free **Steam Web API key** from <https://steamcommunity.com/dev/apikey> (powers Steam login + reading Valve picks).
+- *(Optional)* a **domain name**, only if you want it on the public internet with HTTPS. A LAN/localhost trial needs none.
+
+### Step 1 — Get the code
+```bash
+git clone https://github.com/phattbeats/phatt-picks.git
+cd phatt-picks
+```
+
+### Step 2 — Make your secrets
+```bash
+cp .env.example .env
+```
+Generate each secret (these commands are also in `.env.example`):
+```bash
+openssl rand -base64 32                                              # → NEXTAUTH_SECRET
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"  # → AUTH_CODE_ENCRYPTION_KEY
+npx web-push generate-vapid-keys                                     # → VAPID_* (optional; skip to ship without push)
+```
+In `.env`: paste those in, set `STEAM_API_KEY`, set `OWNER_STEAM_ID` to **your own SteamID64** (so you get the admin tools + `/admin/analytics`), and set `NEXTAUTH_URL` to wherever you'll actually open the app — `http://localhost:3000` for a local trial, or your `https://…` domain.
+
+### Step 3 — Bring it up
+```bash
+docker compose -f docker-compose.selfhost.yml up -d --build
+```
+This builds the app, starts it (plus the optional crawl4ai helper), and **creates the database schema automatically on first boot** (`prisma db push`) under `./data`. Confirm it's healthy, then open it:
+```bash
+docker compose -f docker-compose.selfhost.yml ps
+curl http://localhost:3000/api/health     # → {"status":"ok","db":"ok"}
+```
+Open **<http://localhost:3000>** and sign in. Because your SteamID is the owner, you'll see the owner tools.
+
+### Step 4 — Put it on the internet (optional)
+The container speaks plain HTTP on port 3000. To expose it on a real domain with HTTPS, point **any** reverse proxy at `http://<host>:3000` and set `NEXTAUTH_URL` to the public `https://` URL. The proxy is your choice — e.g. **Caddy** (auto-HTTPS, two lines):
+```
+picks.example.com {
+    reverse_proxy localhost:3000
+}
+```
+nginx, Traefik, or a Cloudflare Tunnel work the same way — terminate TLS, forward to port 3000. Two rules that bite if you skip them:
+- **`NEXTAUTH_URL` must exactly match the public URL** (scheme + host) the browser uses, or Steam login and invite links break.
+- A proxy that terminates TLS and forwards plain HTTP is fine — the app already accepts the forwarded `https` host (this is the iPhone-sign-out trap in the playbook).
+
+### Running it for development
+To hack on the code instead of running the image:
+```bash
+npm ci --legacy-peer-deps
+npx prisma db push          # create the local SQLite schema
+npm run dev                 # → http://localhost:3000
+```
+A local `.env`/`.env.local` supplies the same variables; with no Turnstile keys set, the signup CAPTCHA is skipped for convenience.
+
+### Pointing it at a different Major
+The app is built to be re-pointed at the next Major by editing a handful of committed config seams — its own runbook. See §10 and **[NEXT-MAJOR.md](NEXT-MAJOR.md)**.
+
+---
+
+## 6. Deploying & updating (the maintainer's setup)
+
+Everything above is the general path; this is the **specific instance the maintainer runs** — useful as a worked example and for anyone operating *this* deployment.
+
+**The reliable deploy path here is Brandon hitting "Force Update" on the Unraid template** — it pulls the new ghcr image and recreates the container. (The `phatt-claw` Docker socket proxy can inspect containers and in some cases pull+recreate, but treat Force Update as the canonical path.)
 
 **Deploy discipline:**
 1. Pushing code makes it **code-ready, not deployed.** Nothing is live until the image is pulled and the container recreated.
@@ -162,7 +242,7 @@ Several `/api/*/refresh` routes (`standings`, `team-stats`, `odds`) **synchronou
 
 ---
 
-## 6. Configuration & secrets
+## 7. Configuration & secrets
 
 All config is environment variables on the Unraid template. The complete table is in [OPERATIONS.md](OPERATIONS.md#environment-variables). The two you must handle carefully:
 
@@ -178,12 +258,12 @@ All config is environment variables on the Unraid template. The complete table i
 
 ---
 
-## 7. Troubleshooting playbook
+## 8. Troubleshooting playbook
 
 Symptom → likely cause → fix. The deeper war stories are in [GOTCHAS.md](GOTCHAS.md).
 
 ### "Everyone got logged out after an update"
-- **Cause:** `NEXTAUTH_SECRET` rotated — almost always because it was set ad-hoc on the container instead of in the template, and a Force Update dropped it. (See §6.)
+- **Cause:** `NEXTAUTH_SECRET` rotated — almost always because it was set ad-hoc on the container instead of in the template, and a Force Update dropped it. (See §7.)
 - **Fix:** set a fixed `NEXTAUTH_SECRET` in the Unraid template so it survives recreation. Users re-login once; it won't recur.
 
 ### "Live standings / playoff bracket are blank"
@@ -221,7 +301,7 @@ Symptom → likely cause → fix. The deeper war stories are in [GOTCHAS.md](GOT
 
 ---
 
-## 8. Routine operations
+## 9. Routine operations
 
 ```bash
 # Is it healthy?
@@ -240,7 +320,7 @@ GET  http://phatt-picks:3000/api/odds/refresh        # playoff Spotlight odds (n
 
 ---
 
-## 9. Standing up the next Major
+## 10. Standing up the next Major
 
 HOTLINE is built to re-point at each new Major by editing a handful of committed config seams (event ids, the team field, the stage schedule). **PGL Singapore 2026 is already seeded.** Don't do this by hand from memory — follow the runbook:
 
