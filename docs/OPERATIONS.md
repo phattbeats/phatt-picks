@@ -57,7 +57,11 @@ missing.
 | `/news` | open | `src/app/(app)/news/page.tsx` |
 | `/players` | open (directory) | `src/app/(app)/players/page.tsx` |
 | `/players/[id]` | open | `src/app/(app)/players/[id]/page.tsx` |
-| `/profile` | session-gated | `src/app/(app)/profile/page.tsx` |
+| `/profile` | session-gated | Thin redirect (PHA-1275): signed in → `/players/{you}`, signed out → `/settings`. `src/app/(app)/profile/page.tsx` |
+| `/settings` | session-gated | Settings hub (PHA-1275): identity/avatar, notification prefs, invite link, cross-device login, claim-guest-picks, owner local-player admin. Gear cog on your own profile links here. (Help & guides moved out to `/info`, and Your Majors to your profile card — PHA-1283.) `src/app/(app)/settings/page.tsx` |
+| `/info` | open | Help & guides hub (PHA-1283): links to How-it-works, FAQ, Steam auth-code, player directory, and PWA install. Desktop INFO nav tab; mobile reaches it from Settings. `src/app/(app)/info/page.tsx` |
+| `/notifications` | session-gated | Notifications inbox (PHA-1236): every feed item (reactions, stage locks, recap, broadcasts) with per-item read state + mark-all. `src/app/(app)/notifications/page.tsx` |
+| `/admin/analytics` | session + owner | Self-hosted traffic + product dashboard (PHA-1277). 403 / hidden for non-owners. `src/app/(app)/admin/analytics/page.tsx` |
 | `/faq` | open | `src/app/(app)/faq/page.tsx` |
 | `/how-to-play` | open (rules explainer for newcomers — PHA-987) | `src/app/(app)/how-to-play/page.tsx` |
 | `/majors` | open (per-player Major history — PHA-949) | `src/app/(app)/majors/page.tsx` |
@@ -81,7 +85,7 @@ missing.
 | `POST` | `/api/auth/local/token` | session (local players only) | Mint/rotate the caller's cross-device login token (`Player.loginToken`). Returns `{ token }`. Lets a local player sign in on another device without Steam (PHA-1210). Surfaced as the "Sign in on another device" panel on `/profile`. |
 | `GET` | `/api/auth/token-login?t=…` | open | Validate a local-player `loginToken`, mint a session cookie, redirect home. Unknown/invalid token → back to login. Paired with the token-paste panel on `/login/local` (PHA-1225). |
 | `POST` | `/api/auth/local/claim` | session (Steam) + same-origin | Bring a guest/local account's picks onto the signed-in **Steam** account (local→Steam merge, PHA-1232). The Steam callback never merges a pre-existing local player, so picks made as a guest would otherwise be stranded; this claims them. Origin-guarded (403 on bad origin). |
-| `POST` | `/api/reactions` | session + same-origin | Drop a **Bleachers** stamp on another player's revealed pick (PHA-1211). Body identifies the pick slot + `stampId` (validated against `bleachers-core` `STAMPS`). One stamp per sender per pick — the `@@unique([senderId,eventId,sectionId,groupId,slotIndex])` upsert makes a repeat a **swap**, not additive spam. Sender stays masked in the UI until the stage resolves. 403 on bad origin. |
+| `POST` | `/api/reactions` | session + same-origin | Drop a **Bleachers** stamp on another player's revealed pick (PHA-1211). Body identifies the pick slot + `targetPlayerId` + `stampId` (validated against `bleachers-core` `STAMPS`). One stamp per sender per **target** pick — the `@@unique([senderId,eventId,sectionId,groupId,slotIndex,targetPlayerId])` upsert makes a repeat a **swap**, not additive spam (the `targetPlayerId` is essential because playoff bracket groups are shared across players — PHA-1262). Sender stays masked until the stage resolves. Playoff matches stay reactable one-at-a-time (the resolved→read-only gate is exempted for playoff sections; Swiss stays whole-stage gated). 403 on bad origin. |
 | `POST` | `/api/auth/logout` | same-origin | Clear session cookie, 303 redirect to `/login`. POST-only + Origin/Referer guard (PHA-1045 CSRF); a cross-site GET can no longer force a logout. |
 | `GET` | `/api/invite` | session | Mint/return the session player's stable invite code + absolute `/join` URL. |
 | `GET` | `/api/picks?sectionId=…` | session | List the session player's stored picks. |
@@ -99,6 +103,10 @@ missing.
 | `POST` | `/api/push/subscribe` | session | Store a browser `PushSubscription`. Idempotent on endpoint. |
 | `POST` | `/api/push/unsubscribe` | session | Remove a subscription by endpoint. No-op if not ours. |
 | `POST` | `/api/push/test` | session | Send a sample pre-lock reminder to the caller's own devices. |
+| `GET` / `POST` | `/api/notifications` | session | GET assembles the player's notification feed (reactions on their picks, upcoming stage locks at 24h + 1h, recap availability, broadcasts, and coin-earned pings); POST marks everything seen (stamps `Player.notificationsSeenAt`). PHA-1211/1236. |
+| `GET` / `PATCH` | `/api/notifications/prefs` | session | Read / update per-kind in-app + push toggles (`Player.notifPrefs` JSON). PHA-1237/1240. |
+| `GET` | `/api/notifications/stream` | session | **SSE** (`text/event-stream`) real-time delivery — replaced the old 45s poll. Emits `init` + `update` on feed-fingerprint change, 25s keepalive, hard 10-min lifetime cap + `cancel` flag so a dropped client can't pin CPU (PHA-1241/1244). |
+| `POST` | `/api/stats/collect` | open (same-origin, DNT-aware) | Anonymous analytics beacon (PHA-1277). Writes one `PageView` row; honors Do-Not-Track; per-IP rate-limited; **no PII** (country from `CF-IPCountry`, `visitor` = daily-rotating salted IP+UA hash). Same-origin guarded. |
 | `GET` | `/api/players/local` | session + owner | Owner-only list of local-only Players (`isLocal && steamId IS NULL`) with `pickCount` and `lastActivity`. 403 for any other session. |
 | `DELETE` | `/api/players/local/:id` | session + owner | Owner-only hard delete of one local Player; Prisma cascade wipes their `Pick` + `PushSubscription` rows. Refuses Steam-linked players (400 `not_local`) and self-delete (400 `self_delete`). |
 
@@ -107,7 +115,7 @@ missing.
 **The image self-creates its schema on every boot** — the container `CMD`
 (`Dockerfile:74`) runs `prisma db push --skip-generate` before starting the server,
 so a fresh SQLite file is migrated automatically. New models (`SourceState`,
-`SwissStandingsCache`, …) are part of the Prisma schema and get pushed the same way —
+`SwissStandingsCache`, `PageView`, `NotificationRead`, …) are part of the Prisma schema and get pushed the same way —
 no separate migration step. (This is why a Force Update that introduces a new model
 "just works" once the new image boots.)
 
@@ -135,8 +143,8 @@ If it shows `Add your Steam auth code to sync`, hit `/help/auth-code` and paste.
 
 ## Remaining stages — playoffs readiness
 
-> Snapshot as of **2026-06-16** (Stages I, II, III complete; playoffs Jun 18–21). Sections:
-> `108` QF · `109` SF · `110` GF.
+> Snapshot as of **2026-06-20** (Stages I, II, III complete; playoffs underway — QF/SF done,
+> Grand Final Jun 21). Sections: `108` QF · `109` SF · `110` GF.
 
 ### Stage III (section 107) — **COMPLETE** (locked Jun 11, 10:30 UTC)
 - Locked + scored. Source = HLTV event hub `8301` (`events-core.ts` → `sectionSources[107]`).
@@ -158,6 +166,16 @@ If it shows `Add your Steam auth code to sync`, hit `/help/auth-code` and paste.
   **"Playoffs"** pre-lock cutoff (keyed at the first QF), so an opted-in player gets one
   "Playoffs picks lock in …" warning (24h + 1h) — not a separate Quarterfinals / Semifinals /
   Grand Final ping. Per-round locks remain in `COLOGNE_LOCK_SCHEDULE` for the countdown/reveal.
+- **Outcomes resolve headlessly (PHA-1273):** `refreshLiveResultsTick` drives `ingestOutcomes`
+  (the Valve answer key) on every in-process tick, so QF/SF/GF turn green without an owner trigger —
+  trusting Valve's live bracket field (which is dynamically seeded) rather than the committed fixture
+  seeds. A `detectStalePlayoffOutcomes` watchdog logs `[live-tick] STALE …` if a match is overdue
+  past its scheduled start + 6h. If a winner never turns green while early QFs lag later ones
+  ("temporally backwards"), it's the seed-swap / off-roster rejection class — see GOTCHAS.
+- **"Awaiting official result" (PHA-1016):** a playoff match whose committed start has passed but
+  whose winner hasn't resolved yet shows a heat-tinted ⏳ notice on the live bracket (`awaitingResult`
+  in `buildPlayoffBracket` + `LivePlayoffBracket`) — the normal ~1h Valve answer-key lag is *not* a
+  bug; it self-heals on the next resolve.
 - **Deferred polish:** the HLTV map-score overlay on the playoff bracket was a PHA-903
   follow-up — pick up if desired once the bracket is live.
 
