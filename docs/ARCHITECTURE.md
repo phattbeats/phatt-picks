@@ -9,7 +9,9 @@ or outcome resolution.
 - **Prisma + SQLite** on a `/data` bind mount (a real disk, never a FUSE `/mnt/user`
   share — WAL locking breaks on FUSE).
 - Deploys to the **`phattvip` Docker network** behind **SWAG** at `pickems.phatt.vip`.
-- Responsive **installable PWA** is the entire mobile story. No native apps.
+- Responsive **installable PWA** is the entire mobile story. No native apps. A small
+  **service worker** (`public/sw.js`) handles web-push and self-heals stale cached builds —
+  see *Client resilience* below.
 - Two shared services on the same network, reachable **by container name**. Neither
   is a *hard* requirement — the app boots and serves every page without them:
   - `crawl4ai:11235` — renders/bypasses Cloudflare for the live HLTV scrape.
@@ -126,7 +128,9 @@ leaves / pure helpers) or the verifier can't load it standalone.
   into `StageOutcome` rows.
 - `refreshOutcomesOnRead` fires that resolve from every outcome-reading surface, using an
   **atomic SourceState claim + Next `after()`** so only one request does the work and the
-  response isn't blocked.
+  response isn't blocked. Every on-read driver (outcomes, Swiss standings, team stats,
+  Spotlight odds, news) shares this claim / stamp / defer machinery from
+  `src/lib/source-refresh.ts` — PHA-1271 folded six byte-identical copies into one helper.
 - `scoring.ts` scores picks against `StageOutcome` with **bucket-aware** weighting (a Swiss
   bucket pick is right if the team landed in that bucket, not a single exact slot).
 
@@ -179,10 +183,20 @@ leaves / pure helpers) or the verifier can't load it standalone.
 ### The Bleachers — semi-anonymous pick reactions (PHA-1211)
 - On a **revealed** pick, players drop a fixed **stamp** (one of `bleachers-core.ts` `STAMPS`) via
   `POST /api/reactions` → a `Reaction` row. Pure tally/sort logic is in `bleachers-core.ts`; the
-  `BleachersStrip` component renders the public count per stamp. **One stamp per sender per pick**
-  (`@@unique([senderId,eventId,sectionId,groupId,slotIndex])`, a repeat is a swap), and the **sender
-  stays masked** in the UI until the stage resolves — anonymous in the moment, unmasked at resolve.
-  Unknown `stampId`s are rejected at the API boundary and skipped on read.
+  `BleachersStrip` component renders the public count per stamp. **One stamp per sender per target
+  pick** (`@@unique([senderId,eventId,sectionId,groupId,slotIndex,targetPlayerId])`, a repeat is a
+  swap), and the **sender stays masked** in the UI until the stage resolves — anonymous in the
+  moment, unmasked at resolve. Unknown `stampId`s are rejected at the API boundary and skipped on read.
+- **`targetPlayerId` is part of the unique key for a reason (PHA-1262).** Playoff bracket groups are
+  shared across all players (everyone picks into the same QF/SF/GF slots), so without the target in
+  the key, reacting to a second player at the same `(section,group,slot)` collided with and silently
+  re-stamped the first. Include the target.
+- **Reactions stay open match-by-match in the playoffs (PHA-1262/1266).** A Swiss stage closes
+  reactions for the whole stage once it resolves, but the playoff bracket resolves one match at a
+  time, so the "resolved → read-only" gate is exempted for playoff sections (on the profile page,
+  the compare page, and the `POST /api/reactions` 409 guard) — a decided QF still accepts stamps
+  until the whole bracket is archived. After lock the viewer's own bracket renders read-only rather
+  than hidden (PHA-1263), so crowns and their stamps stay visible.
 
 ### Cross-device local login + local→Steam claim (PHA-1210 / 1232)
 - A local (no-Steam) player can play on a second device without re-onboarding: `POST /api/auth/local/token`
@@ -198,11 +212,75 @@ leaves / pure helpers) or the verifier can't load it standalone.
   Gated empty until the `PLAYOFF_MARKET_SLUGS` registry (`spotlight-odds-core.ts`) is seeded.
   Display-only — never touches scoring.
 
-### Stage Wrapped (recap)
+### Stage Wrapped (recap) + Major Wrapped (PHA-1274)
 - A click-through "Stage Wrapped" recap popup driven by `stage-wrapped-core.ts` (data-driven
   `WrappedSlide[]`) + `stage-wrapped-launch(-core).ts`, gated app-wide by `StageWrappedGate` in
   `(app)/layout.tsx` (PHA-1051/1052). Content lives in `stage-wrapped-content.ts`. Presentational —
-  no scoring path. Content model: [STAGE-WRAPPED-CONTENT-MODEL.md](STAGE-WRAPPED-CONTENT-MODEL.md).
+  no scoring path. The shell carries a `WRAPPED_TRACKS` soundtrack registry (**bittersweet** default →
+  epic → somber) with a mood cycle beside the off-by-default sound toggle. Content model:
+  [STAGE-WRAPPED-CONTENT-MODEL.md](STAGE-WRAPPED-CONTENT-MODEL.md).
+- **Major Wrapped** is the end-of-event finale recap — same `WrappedSlide[]` shell, no new UI. It
+  reuses the deck as a *32-teams-walked-in-one-walked-out* arc (`playoff-wrapped-core.ts` builds the
+  deck; `playoff-wrapped-derive.ts` → `prepareMajorWrappedAutoDeck()` derives the storylines from the
+  resolved `StageOutcome` rows — champion road, runner-up, biggest upset, Cinderella). It is **hard
+  GF-gated**: the derive returns `null` until the Grand Final has a winner, so the deck stays empty
+  mid-bracket and auto-opens (deferred-to-idle, once per viewer) only after the champion is crowned.
+  Curated per-Major historic-moment photos live in `public/wrapped/` (credited in
+  `public/wrapped/CREDITS.md`). The playoffs reveal as a **single** "Playoffs" stage (not per-round
+  QF/SF/GF), and the home recap CTA / recap notification open the real Major Wrapped deck; the final
+  slide sends you to the coin you just earned (PHA-1274).
+
+### Notifications (PHA-1211 / 1236–1245)
+- A unified in-app notification feed for signed-in players. `notifications-core.ts` assembles a
+  typed `kind: "reaction" | "stage" | "recap" | "announcement" | "coin"` feed (reactions on your
+  picks, upcoming stage-lock reminders at 24h + 1h, recap availability, author-in-code broadcasts,
+  and the celebratory **coin-earned** ping when a Major you played concludes — `coin-earned-pushes.ts`,
+  push-on by default, PHA-1278);
+  `notifications-feed.ts` is its server fetcher. Read state is per-item (`NotificationRead` rows,
+  keyed `(playerId, entryId)`) over a `Player.notificationsSeenAt` watermark; per-kind in-app/push
+  toggles live in `Player.notifPrefs` (JSON).
+- Routes: `GET/POST /api/notifications` (feed / mark-all-seen), `GET/PATCH /api/notifications/prefs`,
+  and `GET /api/notifications/stream` — an **SSE** stream that replaced the old 45s poll for instant
+  delivery + toasts. The SSE loop is CPU-hardened (a `cancel` flag + `safeEnqueue` + a 10-minute
+  lifetime cap) after a poll-loop leak pinned CPU (PHA-1244 — see GOTCHAS).
+- Web-push parity for every kind (`notify-core.ts` payload builders + the `public/sw.js` push
+  handler) plus a PWA app-icon badge and `(N)` tab-title prefix (PHA-1238). Push needs the VAPID
+  keys (OPERATIONS → env); without them the feed still works in-app, push just hides.
+
+### Client resilience — service worker & freeze defenses (PHA-1267/1268/1269)
+- `public/sw.js` is deliberately **cache-light**: it never caches app content (everything is live,
+  server-rendered), interposes only on top-level document navigations, and stays out of SSE / API /
+  static-asset requests so it never holds streaming buffers. Its job is *recovery*: `skipWaiting()` +
+  `clients.claim()` on activate, it **purges all Cache Storage** and broadcast-reloads stuck clients
+  onto the fresh build — the one mechanism that reaches an installed PWA pinned to stale HTML. A
+  ChunkLoadError / failed-`/_next/static` self-heal (inline script in `layout.tsx`, sessionStorage
+  loop-guard) drops the SW + caches and hard-reloads on a stale-build white screen. `/sw.js` is
+  served uncacheable so updates land immediately.
+- The "freezes the whole browser" class of bug was **GPU/compositor, not JS heap** — full-viewport
+  `backdrop-filter: blur()` re-blurred every frame. Those blurs were removed; the rule and the rest
+  of the saga (AutoRefresh heap bound, SSE pause on hidden tab, prefetch-storm) are in GOTCHAS.
+
+### Analytics — self-hosted, cookieless (PHA-1277)
+- First-party, in-app, **one container** (no Umami, no external service). A tiny inline tracker
+  `sendBeacon()`s to `POST /api/stats/collect`, which writes one `PageView` row. No PII: `country`
+  comes from the `CF-IPCountry` header (never an IP), `visitor` is a daily-rotating salted IP+UA
+  hash (counts unique visitors / sessions without cross-day tracking), and the collector is
+  same-origin-guarded, Do-Not-Track-aware, and per-IP rate-limited. Pure parsing/sessionizing lives
+  in `analytics-core.ts`. The owner dashboard `/admin/analytics` shows traffic, device/browser/OS/
+  country splits, referrers, entry/exit, bounce, sessions, custom events, and product metrics.
+
+### Challenge coins — collectible Major keepsakes (PHA-1278)
+- A collectible coin per Major you **participated in** (≥1 real pick) once that Major **concludes** —
+  it mints the moment the Grand Final crowns a champion (`grandFinalResolvedAtMs`; `dates.end` is only
+  a backstop), **not** after the GF+48h archive grace (PHA-1274). `isCoinEarned` (`participated &&
+  archived`) in `challenge-coin-core.ts`. The tier (diamond / gold / silver / bronze) is your
+  finish percentile (`coinTierForFinish` against `TIER_CUTOFFS`; the outright winner is always
+  diamond). Pure derivation only — **no new table**; `challenge-coins.ts` reads the same picks +
+  `StageOutcome` rows as `/majors` and short-circuits to zero work until an event archives.
+- Rendered as a red-velvet display case (`ChallengeCoinShelf`) on `/players/{id}` and on each
+  concluded `/majors` row, with a drag-to-rotate CSS-3D `CoinInspector` (no WebGL). Art is a
+  **per-Major seam**: front PNGs `public/coins/<event-slug>-{tier}.png` (`coinArtSrc`) over shared
+  reverses `public/coins/_back-{tier}.png` — see NEXT-MAJOR.
 
 ## Where the per-major seams are
 
