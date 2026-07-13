@@ -12,7 +12,7 @@ import { WireFeed } from "@/components/heat/WireFeed";
 import { getWireItems } from "@/lib/news";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { WatchNow } from "@/components/watch/WatchNow";
-import { currentEventId } from "@/lib/events-core";
+import { currentEventId, nextUpcomingEvent } from "@/lib/events-core";
 import { majorChampion, majorWrappedStageKey, type MajorChampion } from "@/lib/stage-wrapped-launch";
 import { StageWrappedReplay } from "@/components/heat/StageWrappedReplay";
 
@@ -171,7 +171,7 @@ export default async function DashboardPage() {
 
       {/* Stage briefing — or, once a champion is crowned, the Major send-off. */}
       {champion ? (
-        <ConcludedHero champion={champion} wrappedStageKey={wrappedStageKey} />
+        <ConcludedHero champion={champion} wrappedStageKey={wrappedStageKey} next={nextUpcomingEvent(now)} now={now} />
       ) : (
       <section className="brk" style={{
         position: "relative",
@@ -407,10 +407,21 @@ export default async function DashboardPage() {
 function ConcludedHero({
   champion,
   wrappedStageKey,
+  next,
+  now,
 }: {
   champion: MajorChampion;
   wrappedStageKey: string;
+  /** The next Major on the registry's clock (PHA-1328), or null if none is
+   *  staged yet — keeps the off-season home alive with a real countdown. */
+  next: ReturnType<typeof nextUpcomingEvent>;
+  /** Caller's per-request timestamp — reused here so this stays pure (no
+   *  second Date.now() call in a server component render). */
+  now: number;
 }) {
+  const daysOut = next
+    ? Math.max(0, Math.ceil((Date.parse(next.dates.start) - now) / (24 * 60 * 60 * 1000)))
+    : null;
   return (
     <section className="brk" style={{
       position: "relative",
@@ -474,6 +485,39 @@ function ConcludedHero({
           </StageWrappedReplay>
           <Link href="/leaderboard" className="btn-ghost" prefetch={false}>Final Ranks</Link>
         </div>
+        {next && daysOut !== null && (
+          <div style={{
+            marginTop: 20,
+            paddingTop: 18,
+            borderTop: "1px solid var(--hair-2)",
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            flexWrap: "wrap",
+          }}>
+            <div>
+              <div style={{
+                fontFamily: "var(--font-mono)",
+                fontWeight: 700,
+                fontSize: "clamp(24px, 4vw, 32px)",
+                lineHeight: 1,
+                color: "var(--ink-hi)",
+                fontVariantNumeric: "tabular-nums",
+              }}>
+                {daysOut}
+                <span style={{ fontSize: 12, fontWeight: 600, marginLeft: 6, color: "var(--ink-low)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                  days
+                </span>
+              </div>
+              <div style={{ fontSize: 12, color: "var(--ink-mid)", marginTop: 2 }}>
+                until {next.name.replace("CS2 ", "")}
+              </div>
+            </div>
+            <Link href="/majors" className="btn-ghost" prefetch={false} style={{ marginLeft: "auto" }}>
+              Cologne story + your coins →
+            </Link>
+          </div>
+        )}
       </div>
     </section>
   );
