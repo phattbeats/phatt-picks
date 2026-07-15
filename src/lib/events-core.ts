@@ -281,6 +281,22 @@ export function currentEventId(nowMs: number = Date.now()): number {
 }
 
 /**
+ * The next Major on the registry's clock, regardless of its anticipation
+ * window (PHA-1328) — for off-season "what's next" surfaces that want to
+ * count down to the real next event even while `currentEvent` is still
+ * serving the last archived Major. Soonest `dates.start` wins; null once no
+ * event is staged `upcoming` (or its start is unparseable/past).
+ */
+export function nextUpcomingEvent(nowMs: number = Date.now()): EventConfig | null {
+  const upcoming = Object.values(EVENTS)
+    .filter((e) => e.status === "upcoming")
+    .map((e) => ({ e, start: Date.parse(e.dates.start) }))
+    .filter((t) => Number.isFinite(t.start) && t.start > nowMs)
+    .sort((a, b) => a.start - b.start || a.e.eventId - b.e.eventId);
+  return upcoming[0]?.e ?? null;
+}
+
+/**
  * The event currently being run. Now CLOCK-DERIVED (PHA-950): it returns the
  * event whose *effective* status — baseline `status` advanced by the wall clock
  * — makes it the one to serve, so the registry transitions upcoming→live→
