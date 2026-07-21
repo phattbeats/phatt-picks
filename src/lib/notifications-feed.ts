@@ -110,10 +110,10 @@ export async function buildPlayerFeed(
   // Playoffs are ONE bracket Pick'Em (QF/SF/GF lock together at the first QF), so
   // they get a SINGLE "Playoffs locks soon" entry, not one per round (PHA-1245) —
   // mirrors the push reminder collapse in stageLocksFromSchedule.
-  const playoffIds = playoffSectionIds();
+  const playoffIds = playoffSectionIds(event.playoffSchedule);
   let earliestPlayoff: { sectionId: number; lockAtMs: number } | null = null;
   for (const s of layout.sections) {
-    const iso = lockTimeForSection(s.sectionid);
+    const iso = lockTimeForSection(s.sectionid, event.lockSchedule);
     if (!iso) continue;
     const lockAtMs = Date.parse(iso);
     if (playoffIds.has(s.sectionid)) {

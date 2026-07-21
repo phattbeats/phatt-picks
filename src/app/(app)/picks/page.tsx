@@ -37,7 +37,7 @@ import { recordsByPickId } from "@/lib/swiss-results-core";
 import { refreshTeamStatsOnRead, getLiveTeamStats } from "@/lib/team-stats";
 import { refreshSpotlightOddsOnRead, getSpotlightMarket } from "@/lib/spotlight-odds";
 import { AutoRefresh } from "@/components/AutoRefresh";
-import { currentEventId } from "@/lib/events-core";
+import { currentEventId, getEventConfig } from "@/lib/events-core";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +48,7 @@ export default async function PicksPage({
 }) {
   // Per-request active event (PHA-1046) — force-dynamic, follows the clock across Majors.
   const EVENT_ID = currentEventId();
+  const event = getEventConfig(EVENT_ID);
   const params = await searchParams;
   await refreshLayoutOnRead(EVENT_ID); // live driver — throttled, deferred past render
   const layout = await getEffectiveLayout(EVENT_ID);
@@ -95,7 +96,7 @@ export default async function PicksPage({
   // once in layout order, then keyed by id for the tab/lock rendering below.
   const orderedPickability = layout.sections.map((s) =>
     isStagePickable(layout, s.sectionid, {
-      lockedByTime: isLockTimePassed(s.sectionid, nowMs),
+      lockedByTime: isLockTimePassed(s.sectionid, nowMs, event?.lockSchedule),
     }),
   );
   const sectionPickability: Map<number, StagePickability> = new Map(
@@ -147,7 +148,7 @@ export default async function PicksPage({
     const sec = playoffSections.find((s) => s.sectionid === def.sectionId);
     const games = (sec?.groups ?? []).map((_g, i) => ({
       label: def.key === "GF" ? "Grand Final" : `Match ${i + 1}`,
-      iso: playoffGameTime(def.sectionId, i),
+      iso: playoffGameTime(def.sectionId, i, event?.playoffSchedule),
     }));
     return { short: def.short, label: def.label, games };
   });
@@ -179,7 +180,7 @@ export default async function PicksPage({
   // picks are STILL open — and stays up after lock. Before that reveal instant we
   // don't render it (and the crawl is gated off). Playoff sections have no lock
   // time → isBracketRevealed is false; they render via the playoff branch below.
-  const bracketRevealed = isBracketRevealed(activeSectionId, nowMs);
+  const bracketRevealed = isBracketRevealed(activeSectionId, nowMs, event?.lockSchedule);
   const showLiveBracket = !!section && isSwiss && (showLineup || bracketRevealed);
   const matchTeams = layout.teams.map((t) => ({ pickid: t.pickid, name: t.name }));
 
@@ -276,7 +277,7 @@ export default async function PicksPage({
       if (t > latest) latest = t;
     }
     playoffResolvedAtIso = latest > 0 ? new Date(latest).toISOString() : null;
-    playoffBracket = buildPlayoffBracket({ sections: playoffSections, userPickByGroup, winnerByGroup, nowMs });
+    playoffBracket = buildPlayoffBracket({ sections: playoffSections, userPickByGroup, winnerByGroup, nowMs, playoffSchedule: event?.playoffSchedule });
   }
 
   // Live dossier map for the picker's [i] affordance (PHA-921). Only read when
@@ -322,7 +323,7 @@ export default async function PicksPage({
           <div className="cath-sub">Single Elimination &middot; Eight Remain</div>
           {anyPlayoffPickable && (
             <div style={{ display: "flex", justifyContent: "center", marginTop: 13 }}>
-              <LockCountdown lockAt={lockTimeForSection(playoffSectionIds[0])} />
+              <LockCountdown lockAt={lockTimeForSection(playoffSectionIds[0], event?.lockSchedule)} />
             </div>
           )}
         </div>
@@ -338,7 +339,7 @@ export default async function PicksPage({
             {activeLabel}
           </h1>
           {activePickability.pickable && (
-            <LockCountdown lockAt={lockTimeForSection(activeSectionId)} />
+            <LockCountdown lockAt={lockTimeForSection(activeSectionId, event?.lockSchedule)} />
           )}
         </div>
       )}

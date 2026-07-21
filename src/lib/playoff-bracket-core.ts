@@ -152,6 +152,13 @@ export interface PlayoffInputs {
    * ever marked awaiting (the bracket renders exactly as before).
    */
   nowMs?: number;
+  /**
+   * The active event's per-game playoff schedule (sectionId -> ISO start times,
+   * bracket order), used to derive `awaitingResult`. Omit to fall back to the
+   * committed Cologne schedule (PHA-1327: callers thread their event's own
+   * `playoffSchedule` from the registry; this stays a pure, injectable param).
+   */
+  playoffSchedule?: Readonly<Record<number, readonly string[]>>;
 }
 
 /** Reduce a layout group name to its short match label ("...| Match 1" → "Match 1"). */
@@ -169,7 +176,7 @@ function matchLabel(name: string): string {
  * never fabricates a team or a result.
  */
 export function buildPlayoffBracket(inputs: PlayoffInputs): PlayoffBracket {
-  const { sections, userPickByGroup, winnerByGroup, scoreByGroup, nowMs } = inputs;
+  const { sections, userPickByGroup, winnerByGroup, scoreByGroup, nowMs, playoffSchedule } = inputs;
   const byId = new Map<number, Section>();
   for (const s of sections) byId.set(s.sectionid, s);
 
@@ -205,7 +212,7 @@ export function buildPlayoffBracket(inputs: PlayoffInputs): PlayoffBracket {
         userResult = decided ? (userPick === winner ? "hit" : "miss") : "pending";
       }
 
-      const scheduledAtIso = playoffGameTime(def.sectionId, matchIndex);
+      const scheduledAtIso = playoffGameTime(def.sectionId, matchIndex, playoffSchedule);
       const awaitingResult =
         seeded &&
         !decided &&

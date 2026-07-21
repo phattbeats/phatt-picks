@@ -23,11 +23,21 @@ app *work* for the new event. The rest sharpens it.
 > PHA-1048) keeps the just-archived Major as the face of the site until the new
 > one is near go-live, so a registry entry staged 5 months out doesn't blank the
 > site with an empty countdown the instant the prior Major ends; the hand-over to
-> the countdown happens on its own ~6 weeks before the new event. The registry currently
-> *references* the committed `COLOGNE_*` constants below rather than owning their
-> values — the full cutover (inverting the domain modules' default params to read
-> the active event's config) is a follow-up, deliberately deferred until after
-> Cologne's Grand Final. Verify: `node scripts/verify-events.ts`.
+> the countdown happens on its own ~6 weeks before the new event. `EventConfig` now
+> also carries `playoffSchedule` (sectionId → per-game ISO times, mirrors
+> `COLOGNE_PLAYOFF_SCHEDULE`'s shape). **The cutover is DONE (PHA-1327).** Every call
+> site that used to lean on `lock-schedule-core.ts`'s Cologne-shaped default
+> parameters now resolves the active event via `currentEventId()`/`currentEvent()`/
+> `getEventConfig()` and threads that event's own `lockSchedule` / `matchWindows` /
+> `playoffSchedule` / `sectionNames` into `lockTimeForSection`, `isLockTimePassed`,
+> `isBracketRevealed`, `playoffGameTime`, `playoffLockTime`, `isWithinRefreshWindow`,
+> `isWithinAnyMatchWindow`, `playoffSectionIds` and `stageLocksFromSchedule` explicitly.
+> `lock-schedule-core.ts` keeps its Cologne-default params (tests/verify scripts still
+> rely on them as a safe fallback) but production call sites no longer depend on them
+> falling through. Standing up the next Major is now: fill `SINGAPORE_2026`'s
+> `lockSchedule` / `matchWindows` / `playoffSchedule` / `sectionNames` (see Phase 1
+> below) — no code changes needed in the call sites themselves. Verify:
+> `node scripts/verify-events.ts`.
 
 > Nomenclature: a **section** is a Valve `sectionid`. For Cologne 2026 they are
 > `105` Stage I · `106` Stage II · `107` Stage III · `108` QF · `109` SF · `110` GF.
@@ -73,7 +83,24 @@ list and a sample predictions blob — refresh them from the same capture.
 > leave two events' fixtures both wired in.
 
 ### 1b. Lock schedule + match windows — `src/lib/lock-schedule-core.ts`
-Three committed constants:
+
+> **PHA-1327: the cutover is done — call sites read the registry, not this file's
+> defaults.** Every page/route/lib now resolves the active event (`currentEvent()` /
+> `getEventConfig()`) and passes **that event's own** `lockSchedule` / `matchWindows` /
+> `playoffSchedule` into `lock-schedule-core`'s functions. So re-pointing at a new Major
+> is filling `SINGAPORE_2026`'s (or the next Major's) registry fields in
+> `events-core.ts` — you no longer edit `COLOGNE_LOCK_SCHEDULE` et al. directly and
+> expect it to flow through. The constants below stay the *pattern* to copy: either
+> add a sibling `singapore-lock-schedule.ts` module with equivalent
+> `SINGAPORE_LOCK_SCHEDULE` / `SINGAPORE_PLAYOFF_SCHEDULE` / `SINGAPORE_MATCH_WINDOWS`
+> constants and point the registry entry's fields at them, or inline the new Major's
+> schedule straight into its `EventConfig` literal in `events-core.ts` if it's small
+> enough — either is fine, the registry is what matters. `lock-schedule-core.ts`'s
+> exported functions keep their Cologne-shaped default parameters (verify scripts and
+> tests lean on them as a safe fallback), but nothing in the live app depends on that
+> fallback anymore.
+
+Three committed constants (today, Cologne's):
 - **`COLOGNE_LOCK_SCHEDULE`**: `sectionId → ISO-8601 lock instant (UTC)`. This is when each
   stage's picker freezes and picks reveal. Set the **Swiss** stages to each stage's
   **first-match** time (the playoff locks are derived — see the third constant below).
@@ -205,9 +232,13 @@ Once live, each stage start is a small recurring routine:
                                   (no hand flip — the lifecycle lights it live, PHA-950)
 [ ] cologne-layout.json        → new event's sections + pickids        (Phase 1a)
 [ ] cologne-items/predictions  → refreshed from same capture           (Phase 1a)
-[ ] COLOGNE_LOCK_SCHEDULE      → each Swiss stage's first-match instant  (Phase 1b)
-[ ] COLOGNE_PLAYOFF_SCHEDULE   → per-game playoff times (derives locks)  (Phase 1b)
-[ ] COLOGNE_MATCH_WINDOWS      → each stage's played date-span          (Phase 1b)
+[ ] registry lockSchedule      → each Swiss stage's first-match instant, on the new
+                                  EventConfig entry, NOT edited into COLOGNE_LOCK_SCHEDULE
+                                  (Phase 1b, PHA-1327)
+[ ] registry playoffSchedule   → per-game playoff times (derives locks), on the new
+                                  EventConfig entry                      (Phase 1b, PHA-1327)
+[ ] registry matchWindows      → each stage's played date-span, on the new
+                                  EventConfig entry                      (Phase 1b, PHA-1327)
 [ ] sectionSources (events-core.ts registry) → HLTV event URL per Swiss stage (Phase 2a)
 [ ] verify-events.ts GREEN     → reveal config consistent (lock∩window⊇source) (PHA-943)
 [ ] cologne-logos.json         → re-run build-logos.ts                  (Phase 3)
