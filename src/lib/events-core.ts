@@ -18,12 +18,20 @@
  * gets exactly the 26 it hardcoded before — nothing about the live event
  * changes. (PHA-1046 removed the module-load-bound `ACTIVE_EVENT_ID`/
  * `SECTION_SOURCES` constants; resolve per request, never cache at module
- * scope.) The full
- * *cutover* (inverting the domain modules' default params so they read the
- * active event's `lockSchedule` / `matchWindows` instead of their own
- * `COLOGNE_*` constant) is deliberately deferred to the follow-up workstream so
- * we don't destabilise Cologne mid-event. Until then this registry *references*
- * those committed constants rather than owning them; see the field docs below.
+ * scope.)
+ *
+ * CUTOVER DONE (PHA-1327). Call sites now resolve the active event via
+ * `currentEventId()` / `currentEvent()` / `getEventConfig()` and pass that
+ * event's own `lockSchedule` / `matchWindows` / `playoffSchedule` /
+ * `sectionNames` explicitly into `lock-schedule-core`'s functions, instead of
+ * relying on that module's Cologne-shaped default parameters. Cologne is still
+ * the only live event, so every output is byte-identical to before — but the
+ * next Major (Singapore) lights up by filling its own registry fields, not by
+ * editing `COLOGNE_*` constants. `lock-schedule-core.ts` keeps its Cologne
+ * defaults (tests/verify scripts rely on them as a safe fallback) but stays a
+ * pure leaf with no import of this module, so the dependency here — this
+ * module imports FROM `lock-schedule-core`, never the reverse — remains
+ * one-directional and acyclic.
  *
  * Pure module — no `@/` alias, no prisma, no fetch, no JSON import — so the
  * verify harness (scripts/verify-events.ts) can import it directly under
@@ -36,6 +44,7 @@ import {
   COLOGNE_LOCK_SCHEDULE,
   COLOGNE_MATCH_WINDOWS,
   COLOGNE_SECTION_NAMES,
+  COLOGNE_PLAYOFF_SCHEDULE,
   lockTimeForSection,
   bracketRevealTime,
   type LockSchedule,
@@ -86,6 +95,13 @@ export interface EventConfig {
   lockSchedule: LockSchedule;
   /** sectionId -> the date span the stage is played. */
   matchWindows: Readonly<Record<number, MatchWindow>>;
+  /**
+   * Playoff sectionId -> per-game UTC ISO start instants, bracket order (mirrors
+   * `COLOGNE_PLAYOFF_SCHEDULE`'s shape). Drives `playoffGameTime`/
+   * `playoffLockTime`/`playoffSectionIds` for this event (PHA-1327 cutover) —
+   * empty for a Major whose bracket hasn't published yet.
+   */
+  playoffSchedule: Readonly<Record<number, readonly string[]>>;
   /** sectionId -> live HLTV event page for the Swiss standings/bracket crawl. */
   sectionSources: Readonly<Record<number, SectionSource>>;
 
@@ -141,6 +157,7 @@ const COLOGNE_2026: EventConfig = {
   sectionNames: COLOGNE_SECTION_NAMES,
   lockSchedule: COLOGNE_LOCK_SCHEDULE,
   matchWindows: COLOGNE_MATCH_WINDOWS,
+  playoffSchedule: COLOGNE_PLAYOFF_SCHEDULE,
   sectionSources: {
     105: {
       url: "https://www.hltv.org/events/9028/iem-cologne-major-2026-stage-1",
@@ -219,6 +236,7 @@ const SINGAPORE_2026: EventConfig = {
   sectionNames: {},
   lockSchedule: {},
   matchWindows: {},
+  playoffSchedule: {},
   sectionSources: {},
   fixtures: { layout: "pgl-singapore-2026-layout", logos: "pgl-singapore-2026-logos" },
   teamMaps: {

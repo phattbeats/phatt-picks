@@ -25,7 +25,7 @@ import { validatePickAgainstLayout } from "@/lib/layout";
 import { getEffectiveLayout } from "@/lib/layout-state";
 import { isStageWritable } from "@/lib/reveal-core";
 import { isLockTimePassed } from "@/lib/lock-schedule-core";
-import { currentEventId } from "@/lib/events-core";
+import { currentEventId, getEventConfig } from "@/lib/events-core";
 import { isWriteFrozenById } from "@/lib/event-freeze";
 import { isPlayoffSection, PLAYOFF_ROUNDS, playoffFieldTeams } from "@/lib/playoff-bracket-core";
 
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
   // write so a crafted POST can't slip a pick past the (now Locked) UI (PHA-898).
   // Same lockedByTime signal the reveal gate uses, so writable and revealed stay
   // exact inverses (no edit-but-can't-compare dead zone).
-  const lockedByTime = isLockTimePassed(lockSectionId, Date.now());
+  const lockedByTime = isLockTimePassed(lockSectionId, Date.now(), getEventConfig(evtId)?.lockSchedule);
 
   if (lockSection.groups.some((g) => !isStageWritable(g, hasOutcome, lockedByTime))) {
     return NextResponse.json({ error: "stage_locked" }, { status: 409 });

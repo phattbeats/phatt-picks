@@ -267,7 +267,8 @@ export async function refreshStandingsOnRead(
 ): Promise<void> {
   if (await isEventFrozenById(eventId, nowMs)) return; // PHA-949/954: frozen (effectively archived) Majors never re-crawl
   if (!hasStandingsSource(eventId, sectionId)) return; // nothing to refresh
-  if (!isWithinRefreshWindow(sectionId, nowMs)) return; // outside the reveal→end window — serve cache
+  const evt = getEventConfig(eventId);
+  if (!isWithinRefreshWindow(sectionId, nowMs, evt?.lockSchedule, evt?.matchWindows)) return; // outside the reveal→end window — serve cache
   if (!(await claimStandingsRefreshSlot())) return; // within floor or lost the race
   runDeferred(() => ingestStandings(eventId, sectionId), "standings");
 }
@@ -312,7 +313,8 @@ export async function warmStandings(
   nowMs: number = Date.now(),
 ): Promise<WarmResult> {
   if (!hasStandingsSource(eventId, sectionId)) return { section: sectionId, status: "no-source", rows: 0 };
-  if (!isWithinRefreshWindow(sectionId, nowMs)) return { section: sectionId, status: "off-window", rows: 0 };
+  const evt = getEventConfig(eventId);
+  if (!isWithinRefreshWindow(sectionId, nowMs, evt?.lockSchedule, evt?.matchWindows)) return { section: sectionId, status: "off-window", rows: 0 };
   const cold = !(await hasCachedSection(eventId, sectionId));
   // Warm cache → respect the ~1h floor (don't re-crawl on every poke). Cold
   // cache → always crawl, so a stamped-but-empty slot can't wedge it shut.
