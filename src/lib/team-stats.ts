@@ -44,6 +44,7 @@ import {
 import { statsForPickid, type TeamStats } from "./team-stats-core";
 import { isWithinAnyMatchWindow } from "./lock-schedule-core";
 import { isEventFrozenById } from "./event-freeze";
+import { getEventConfig } from "./events-core";
 
 // crawl4ai on the phattvip network — same hostname in workspace + deployed
 // container; CRAWL4AI_URL overrides for other topologies (mirrors swiss-results).
@@ -288,7 +289,7 @@ export async function refreshTeamStatsOnRead(
   nowMs: number = Date.now(),
 ): Promise<void> {
   if (await isEventFrozenById(eventId, nowMs)) return; // PHA-949/954: frozen (effectively archived) Majors never re-crawl
-  if (!isWithinAnyMatchWindow(nowMs)) return; // off-day — serve cache, don't crawl
+  if (!isWithinAnyMatchWindow(nowMs, getEventConfig(eventId)?.matchWindows)) return; // off-day — serve cache, don't crawl
   if (!(await claimRefreshSlot())) return; // within floor or lost the race
   runDeferred(() => ingestTeamStats(eventId), "team-stats");
 }
@@ -324,7 +325,7 @@ export async function warmTeamStats(
   eventId: number,
   nowMs: number = Date.now(),
 ): Promise<WarmTeamStatsResult> {
-  if (!isWithinAnyMatchWindow(nowMs)) return { status: "off-window", teams: 0 };
+  if (!isWithinAnyMatchWindow(nowMs, getEventConfig(eventId)?.matchWindows)) return { status: "off-window", teams: 0 };
   const cold = !(await hasCache(eventId));
   if (!cold && !(await claimRefreshSlot())) return { status: "fresh", teams: 0 };
   const teams = await ingestTeamStats(eventId);

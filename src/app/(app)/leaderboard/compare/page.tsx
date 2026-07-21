@@ -35,7 +35,7 @@ import {
 } from "@/lib/swiss-bucket-core";
 import { isBucketImpossibleByRecord } from "@/lib/swiss-standings-core";
 import { getSwissRecords } from "@/lib/swiss-results";
-import { currentEventId } from "@/lib/events-core";
+import { currentEventId, getEventConfig } from "@/lib/events-core";
 import { isRevealForcedById } from "@/lib/event-freeze";
 
 export const dynamic = "force-dynamic";
@@ -186,6 +186,7 @@ export default async function ComparePage({
   searchParams: Promise<{ a?: string; b?: string }>;
 }) {
   const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
+  const event = getEventConfig(EVENT_ID);
   const params = await searchParams;
   const layout = getCommittedLayout();
   const teamMap = buildTeamMap(layout);
@@ -328,7 +329,7 @@ export default async function ComparePage({
       const revealed = arePicksRevealed(
         group,
         groupHasOutcome.has(groupOutcomeKey(section.sectionid, group.groupid)),
-        isLockTimePassed(section.sectionid, nowMs),
+        isLockTimePassed(section.sectionid, nowMs, event?.lockSchedule),
         eventArchived,
       );
       revealedByGroup.set(gKey, revealed);

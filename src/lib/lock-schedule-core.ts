@@ -17,6 +17,18 @@
  *
  * Pure module (no `@/` alias, no prisma, no fetch) so the verify script can
  * import it directly under `node`.
+ *
+ * CUTOVER DONE (PHA-1327). Every exported function below keeps a Cologne-shaped
+ * default parameter (e.g. `schedule: LockSchedule = COLOGNE_LOCK_SCHEDULE`) as a
+ * safe fallback for tests and the verify harness, but production call sites no
+ * longer lean on that default — they resolve the ACTIVE event via the registry
+ * (`src/lib/events-core.ts`'s `currentEvent()` / `getEventConfig()`) and pass its
+ * own `lockSchedule` / `matchWindows` / `playoffSchedule` / `sectionNames`
+ * explicitly. This file stays a pure, zero-`@/`-import leaf on purpose — it must
+ * NOT import from `events-core.ts`, which imports FROM here; adding that import
+ * would create a cycle. The next Major's schedule lives on its own `EventConfig`
+ * entry (or a sibling constants module, same pattern as `COLOGNE_*` below), never
+ * by editing the Cologne constants in place.
  */
 
 /** sectionId -> ISO-8601 lock instant (UTC, e.g. "2026-06-01T09:00:00Z"). */
