@@ -290,6 +290,9 @@ short version:
 
 - `lock-schedule-core.ts` — `COLOGNE_LOCK_SCHEDULE` (section → lock instant) + `COLOGNE_MATCH_WINDOWS`
   + `COLOGNE_PLAYOFF_SCHEDULE` (per-game playoff times that derive the playoff locks, PHA-1007).
+  Post-PHA-1327 these live on the new `EventConfig` entry in `events-core.ts` (`lockSchedule` /
+  `matchWindows` / `playoffSchedule`); the `COLOGNE_*` constants are the fallback/pattern, not what
+  call sites read.
 - `events-core.ts` — the per-section HLTV event URLs live in the `EventConfig.sectionSources` registry
   (the old module-level `SECTION_SOURCES` const in `swiss-results.ts` was removed in PHA-1046; resolved
   per request via `sectionSourcesFor(eventId)`).

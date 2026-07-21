@@ -276,7 +276,7 @@ Plain definitions for every term you might bump into.
 |---|---|
 | **Counter-Strike 2 / CS2** | The competitive video game this is all about: two teams of five pros, round-based shooter. |
 | **Major** | The Counter-Strike world championship — the biggest tournament of the season, run with Valve's backing. |
-| **IEM Cologne 2026** | The specific Major HOTLINE is currently pointed at (June 2026). |
+| **IEM Cologne 2026** | HOTLINE's first season (June 2026), now complete and archived. |
 | **PGL Singapore 2026** | The next Major, already lined up in the app. |
 | **Valve** | The company that makes Counter-Strike and runs the official prediction game. |
 | **Pick'Em** | A prediction game — you "pick 'em" (choose teams you think will do well) and earn points for being right. |

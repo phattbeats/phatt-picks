@@ -24,12 +24,18 @@ HLTV is the source of truth for teams, rankings, results and the bracket.
       **first-match time** of each stage's day 1. CEST is UTC+2; record in UTC.
 - [ ] Record the **playoff window** and, once published, per-round day + time.
 
-These feed two committed configs in `src/lib/lock-schedule-core.ts`:
+> **PHA-1327 — call sites read the registry, not these constants.** Put the new Major's schedule
+> on its `EventConfig` entry in `src/lib/events-core.ts` (`lockSchedule` / `matchWindows` /
+> `playoffSchedule` — inline, or via a sibling `SINGAPORE_*` module the entry points at). The
+> `COLOGNE_*` constants below are the **pattern to copy** (and the test/verify fallback), not what
+> the live app reads.
+
+These are the two configs to fill (shown as Cologne's committed pattern in `src/lib/lock-schedule-core.ts`):
 
 | Config | What it drives | Fill in |
 |---|---|---|
-| `COLOGNE_LOCK_SCHEDULE` | the lock countdown per stage | sectionId → UTC instant of that stage's first match |
-| `COLOGNE_MATCH_WINDOWS` | gates the hourly live crawls to match days | sectionId → `{ start, end }` UTC span |
+| `lockSchedule` (Cologne: `COLOGNE_LOCK_SCHEDULE`) | the lock countdown per stage | sectionId → UTC instant of that stage's first match |
+| `matchWindows` (Cologne: `COLOGNE_MATCH_WINDOWS`) | gates the hourly live crawls to match days | sectionId → `{ start, end }` UTC span |
 
 Section ids map to the committed layout fixture: `105` Stage I, `106` Stage II,
 `107` Stage III, `108` QF, `109` SF, `110` GF. Leave a stage **out** of these
@@ -114,9 +120,10 @@ frozen snapshot is what renders until the first live crawl lands.
 
 ## 5. Go-live config sanity pass
 
-- [ ] `COLOGNE_LOCK_SCHEDULE` has every dated stage; playoff per-game times go in
-      `COLOGNE_PLAYOFF_SCHEDULE` and fold in automatically (Cologne's are committed, PHA-1007).
-- [ ] `COLOGNE_MATCH_WINDOWS` covers every stage that should crawl live.
+- [ ] The event's `lockSchedule` has every dated stage; playoff per-game times go in its
+      `playoffSchedule` and fold in automatically (Cologne's `COLOGNE_PLAYOFF_SCHEDULE` is the
+      committed pattern, PHA-1007).
+- [ ] The event's `matchWindows` covers every stage that should crawl live.
 - [ ] `WRITE_ENABLED`, `STEAM_API_KEY`, CAPTCHA + VAPID keys set (see
       [OPERATIONS.md](OPERATIONS.md)).
 - [ ] Logo manifest `src/fixtures/<event>-logos.json` built (monograms site-wide =
@@ -125,7 +132,8 @@ frozen snapshot is what renders until the first live crawl lands.
 - [ ] Challenge-coin art — drop the four front faces
       `public/coins/<event-slug>-{diamond,gold,silver,bronze}.png` (PHA-1278). The
       reverses `public/coins/_back-{tier}.png` are shared, leave them. Coins mint
-      automatically once the Major archives — no DB, no per-team config.
+      automatically the moment the Grand Final crowns a champion (`coinMintAtMs` — **not** after
+      the 48h archive grace; PHA-1274) — no DB, no per-team config.
 - [ ] `verify-team-stats`, `verify-team-stats-live`, `verify-lock-schedule`,
       `verify-regions` all green.
 - [ ] `prisma db push` ran on the deploy (creates `TeamStatsCache` +

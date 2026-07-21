@@ -29,7 +29,7 @@ missing.
 | `TURNSTILE_SECRET_KEY` | optional | `src/lib/captcha.ts:27` | Cloudflare Turnstile secret for the local-signup CAPTCHA. When unset, CAPTCHA enforcement is **skipped** (signups still work, no challenge). |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | optional | `src/app/login/local/page.tsx` | Public Turnstile site key for the CAPTCHA widget. Name must match **exactly** (a misspelled var = silent no-widget — see GOTCHAS). |
 | `TRUSTED_PROXY_HOPS` | optional, default `1` | `src/app/api/auth/local/route.ts:47` | Number of trusted reverse-proxy hops when deriving the client IP from `X-Forwarded-For` for the local-signup per-IP account limit (PHA-1045). Unset / blank / non-positive → `1` (the single SWAG hop). Raise only if you add another trusted proxy in front of SWAG. |
-| `STAGE_LOCKS_JSON` | optional | `src/lib/prelock-reminders.ts` | Per-section pick cutoffs for the pre-lock reminder scheduler, e.g. `{"105":{"name":"Stage I","lockAt":"2026-06-02T10:30:00Z"}}`. When unset, uses the committed `COLOGNE_LOCK_SCHEDULE`. |
+| `STAGE_LOCKS_JSON` | optional | `src/lib/prelock-reminders.ts` | Per-section pick cutoffs for the pre-lock reminder scheduler, e.g. `{"105":{"name":"Stage I","lockAt":"2026-06-02T10:30:00Z"}}`. When unset, uses the active event's committed `lockSchedule` from the registry (Cologne's `COLOGNE_LOCK_SCHEDULE` today). |
 | `EVENT_ID` | optional, default = clock-derived current event | `src/lib/prelock-reminders.ts:67` | Valve tournament event id (the layout's internal id, **not** the HLTV event id). Read by the in-process reminder scheduler. When unset it pins to the registry's current event via `currentEventId(now)` (PHA-1046 removed the old hardcoded `26` default); set it only to pin one specific event for a pre-go-live dry run. |
 | `PRELOCK_REMINDERS_DISABLED` | optional, default off | `src/instrumentation.ts` | Set to `1` to turn OFF the in-process pre-lock reminder scheduler. Since PHA-996 the scheduler is **ON by default** with no env required — the old opt-in (`PRELOCK_REMINDERS_ENABLED=1`) lived only on the container and a template Force-Update silently dropped it. A leftover explicit `PRELOCK_REMINDERS_ENABLED=0` also disables. |
 
@@ -143,6 +143,9 @@ If it shows `Add your Steam auth code to sync`, hit `/help/auth-code` and paste.
 
 ## Remaining stages — playoffs readiness
 
+> **Historical** — Cologne 2026 is now complete and archived; this section is kept as the worked
+> example of a live-playoffs config, not a live status board.
+>
 > Snapshot as of **2026-06-20** (Stages I, II, III complete; playoffs underway — QF/SF done,
 > Grand Final Jun 21). Sections: `108` QF · `109` SF · `110` GF.
 
