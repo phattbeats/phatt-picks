@@ -12,7 +12,8 @@
  * to ANNOUNCEMENTS with a publish/expiry window and ship it.
  */
 
-import { playoffLockTime } from "./lock-schedule-core";
+import { playoffLockTime, playoffSectionIds } from "./lock-schedule-core";
+import { currentEvent } from "./events-core";
 
 export interface Announcement {
   id: string;
@@ -33,10 +34,21 @@ export interface Announcement {
  * single static message (PHA-1245 follow-up): the teaser window ends exactly
  * where the live window begins, so at lock the teaser drops and a fresh
  * "Reactions are live" announcement appears (a new unread item + popup + push,
- * since it's a distinct id). Derived from the committed schedule so it stays
- * truthful if the bracket time moves; falls back to the committed first QF.
+ * since it's a distinct id). Derived from the ACTIVE event's committed schedule
+ * (PHA-1327: resolved per call via `currentEvent`, never cached at module load —
+ * same class of bug PHA-1046 fixed elsewhere) so it stays truthful across a
+ * Major cutover; falls back to the committed Cologne first QF as a last resort.
  */
-const REACTIONS_LIVE_AT = playoffLockTime() ?? "2026-06-18T13:45:00Z";
+function reactionsLiveAt(nowMs: number): string {
+  const event = currentEvent(nowMs);
+  return (
+    playoffLockTime(event.lockSchedule, playoffSectionIds(event.playoffSchedule)) ??
+    "2026-06-18T13:45:00Z"
+  );
+}
+
+/** Placeholder swapped for `reactionsLiveAt(nowMs)` at read time (see below). */
+const REACTIONS_LIVE_AT_PLACEHOLDER = "__REACTIONS_LIVE_AT__";
 
 /**
  * The live broadcast list. Keep it short — these are deliberate, app-wide pings.
@@ -49,7 +61,7 @@ export const ANNOUNCEMENTS: readonly Announcement[] = [
     body: "Check the Compare page once the playoff matches go live — there's a surprise.",
     href: "/leaderboard/compare",
     publishedAt: "2026-06-18T03:00:00Z",
-    expiresAt: REACTIONS_LIVE_AT, // teaser ends exactly when reactions unlock
+    expiresAt: REACTIONS_LIVE_AT_PLACEHOLDER, // teaser ends exactly when reactions unlock
   },
   {
     id: "reactions-live",
@@ -57,14 +69,19 @@ export const ANNOUNCEMENTS: readonly Announcement[] = [
     title: "Reactions are live",
     body: "Drop your take on everyone's playoff picks — open the Compare page and react.",
     href: "/leaderboard/compare",
-    publishedAt: REACTIONS_LIVE_AT, // unlocks the moment the bracket locks
+    publishedAt: REACTIONS_LIVE_AT_PLACEHOLDER, // unlocks the moment the bracket locks
     expiresAt: "2026-06-22T00:00:00Z",
   },
 ];
 
 /** Announcements currently within their publish→expiry window, newest first. */
 export function activeAnnouncements(nowMs: number): Announcement[] {
-  return ANNOUNCEMENTS.filter((a) => {
+  const liveAt = reactionsLiveAt(nowMs);
+  return ANNOUNCEMENTS.map((a) => ({
+    ...a,
+    publishedAt: a.publishedAt === REACTIONS_LIVE_AT_PLACEHOLDER ? liveAt : a.publishedAt,
+    expiresAt: a.expiresAt === REACTIONS_LIVE_AT_PLACEHOLDER ? liveAt : a.expiresAt,
+  })).filter((a) => {
     const start = Date.parse(a.publishedAt);
     const end = Date.parse(a.expiresAt);
     return Number.isFinite(start) && Number.isFinite(end) && start <= nowMs && nowMs < end;

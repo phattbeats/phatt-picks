@@ -35,7 +35,12 @@ const BEFORE = PUB - 6 * 3_600_000;
 const AFTER = Date.parse("2026-06-23T00:00:00Z");
 
 check("shipped list is non-empty", ANNOUNCEMENTS.length >= 1);
-check("every announcement has valid start < expiry", ANNOUNCEMENTS.every((a) => {
+// PHA-1327: ANNOUNCEMENTS is now a template — the "reactions live" instant is a
+// placeholder resolved per-call (via reactionsLiveAt) against the active event's
+// registry config, not a module-load-bound constant. Assert well-formedness on
+// the RESOLVED view (activeAnnouncements at a moment every entry is live).
+const resolvedAll = [...activeAnnouncements(DURING), ...activeAnnouncements(LOCK + 60_000)];
+check("every announcement has valid start < expiry", resolvedAll.every((a) => {
   const s = Date.parse(a.publishedAt), e = Date.parse(a.expiresAt);
   return Number.isFinite(s) && Number.isFinite(e) && s < e && !!a.id && !!a.href;
 }));

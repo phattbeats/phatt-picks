@@ -12,7 +12,7 @@ import { WireFeed } from "@/components/heat/WireFeed";
 import { getWireItems } from "@/lib/news";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { WatchNow } from "@/components/watch/WatchNow";
-import { currentEventId, nextUpcomingEvent } from "@/lib/events-core";
+import { currentEventId, getEventConfig, nextUpcomingEvent } from "@/lib/events-core";
 import { majorChampion, majorWrappedStageKey, type MajorChampion } from "@/lib/stage-wrapped-launch";
 import { StageWrappedReplay } from "@/components/heat/StageWrappedReplay";
 
@@ -24,6 +24,7 @@ export default async function DashboardPage() {
   // without a redeploy. (A module-level `ACTIVE_EVENT_ID` would pin the value for
   // the whole process lifetime and serve the stale event.)
   const EVENT_ID = currentEventId();
+  const event = getEventConfig(EVENT_ID);
   const layout = getCommittedLayout();
   const session = await getSession();
 
@@ -74,7 +75,7 @@ export default async function DashboardPage() {
   const stageStatuses = layout.sections.map((s) => ({
     section: s,
     pick: isStagePickable(layout, s.sectionid, {
-      lockedByTime: isLockTimePassed(s.sectionid, now),
+      lockedByTime: isLockTimePassed(s.sectionid, now, event?.lockSchedule),
     }),
   }));
   const activeIdx = selectCurrentStageIndex(stageStatuses.map((s) => s.pick));
@@ -220,7 +221,7 @@ export default async function DashboardPage() {
           />
           {active.pick.pickable && (
             <div style={{ marginTop: 16 }}>
-              <LockCountdown lockAt={lockTimeForSection(active.section.sectionid)} />
+              <LockCountdown lockAt={lockTimeForSection(active.section.sectionid, event?.lockSchedule)} />
             </div>
           )}
           <div style={{

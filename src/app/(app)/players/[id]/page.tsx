@@ -27,7 +27,7 @@ import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { getSwissRecords } from "@/lib/swiss-results";
 import { buildBucketConsensus, bucketShareFor } from "@/lib/consensus-core";
 import type { Section } from "@/lib/layout";
-import { currentEventId } from "@/lib/events-core";
+import { currentEventId, getEventConfig } from "@/lib/events-core";
 import { isRevealForcedById } from "@/lib/event-freeze";
 import { BleachersStrip, type TallyLine } from "@/components/heat/BleachersStrip";
 import { tallyReactions, pickTargetKey, type ReactionLike } from "@/lib/bleachers-core";
@@ -66,6 +66,7 @@ export default async function PlayerProfilePage({
   params: Promise<{ id: string }>;
 }) {
   const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
+  const event = getEventConfig(EVENT_ID);
   const { id } = await params;
   const layout = getCommittedLayout();
   const teamMap = buildTeamMap(layout);
@@ -383,7 +384,7 @@ export default async function PlayerProfilePage({
               arePicksRevealed(
                 group,
                 groupHasOutcome.has(groupOutcomeKey(section.sectionid, group.groupid)),
-                isLockTimePassed(section.sectionid, nowMs),
+                isLockTimePassed(section.sectionid, nowMs, event?.lockSchedule),
                 eventArchived,
               );
             if (!revealed) {
@@ -454,7 +455,7 @@ export default async function PlayerProfilePage({
                 const lockRevealed = arePicksRevealed(
                   group,
                   groupHasOutcome.has(groupOutcomeKey(section.sectionid, group.groupid)),
-                  isLockTimePassed(section.sectionid, nowMs),
+                  isLockTimePassed(section.sectionid, nowMs, event?.lockSchedule),
                   eventArchived,
                 );
                 const revealed = isSelf || lockRevealed;

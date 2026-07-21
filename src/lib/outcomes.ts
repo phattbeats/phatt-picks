@@ -40,9 +40,9 @@ import { bucketSwissSlots, isSwissSection } from "./swiss-bucket-core";
 import {
   isLockTimePassed,
   isWithinRefreshWindow,
-  COLOGNE_PLAYOFF_SCHEDULE,
   playoffSectionIds,
 } from "./lock-schedule-core";
+import { getEventConfig } from "./events-core";
 
 export interface IngestSummary {
   eventId: number;
@@ -289,7 +289,7 @@ export async function bridgeSwissOutcomes(
     if (!isSwissSection(section.sectionid)) continue;
     // Results can only exist once the pick window has closed. Schedule-driven
     // lock (PHA-898), independent of the fixture's picks_allowed flag.
-    if (!isLockTimePassed(section.sectionid, nowMs)) continue;
+    if (!isLockTimePassed(section.sectionid, nowMs, getEventConfig(eventId)?.lockSchedule)) continue;
 
     // Gather terminal-record candidates from EVERY reliable source in the SAME
     // cached crawl, then keep the most-current (most games played) record per
@@ -431,7 +431,10 @@ export async function refreshLiveResultsTick(
 
   let ingested = 0;
   for (const sectionId of standingsSectionIds(eventId)) {
-    if (!isWithinRefreshWindow(sectionId, nowMs)) continue; // off-window → serve cache, don't crawl
+    {
+      const evt = getEventConfig(eventId);
+      if (!isWithinRefreshWindow(sectionId, nowMs, evt?.lockSchedule, evt?.matchWindows)) continue; // off-window → serve cache, don't crawl
+    }
     try {
       ingested += await ingestStandingsNow(eventId, sectionId);
     } catch (e) {
@@ -478,7 +481,8 @@ export async function refreshLiveResultsTick(
   // the logs (and on the returned tick) instead of hidden. Best-effort: never throws.
   let stale = 0;
   try {
-    const playoffSections = [...playoffSectionIds()];
+    const eventPlayoffSchedule = getEventConfig(eventId)?.playoffSchedule;
+    const playoffSections = [...playoffSectionIds(eventPlayoffSchedule)];
     if (playoffSections.length > 0) {
       const rows = await prisma.stageOutcome.findMany({
         where: { eventId, sectionId: { in: playoffSections } },
@@ -493,7 +497,7 @@ export async function refreshLiveResultsTick(
       const resolvedCounts = new Map<number, number>();
       for (const [sectionId, set] of groupsBySection) resolvedCounts.set(sectionId, set.size);
       const staleSections = detectStalePlayoffOutcomes(
-        COLOGNE_PLAYOFF_SCHEDULE,
+        eventPlayoffSchedule ?? {},
         resolvedCounts,
         nowMs,
         PLAYOFF_RESOLVE_GRACE_MS,
