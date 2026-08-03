@@ -13,6 +13,9 @@ entire mobile story (no native apps).
 > [next-Major runbook](docs/NEXT-MAJOR.md), [operations](docs/OPERATIONS.md), and
 > [hard-won gotchas](docs/GOTCHAS.md). Start there before changing the system or
 > standing up a new Major. **Keep it true: update the relevant doc in the same PR.**
+>
+> **📖 The story → [`docs/PROJECT_NARRATIVE.md`](docs/PROJECT_NARRATIVE.md)** — the complete
+> record of how this got built, origin through the Cologne close.
 
 ## What's inside
 

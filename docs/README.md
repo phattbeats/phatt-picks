@@ -25,6 +25,7 @@ Read these in roughly this order. Each is self-contained.
 
 - **[STAGE-WRAPPED-CONTENT-MODEL.md](STAGE-WRAPPED-CONTENT-MODEL.md)** / **[STAGE-WRAPPED-S1-S2-DRAFT.md](STAGE-WRAPPED-S1-S2-DRAFT.md)** — design rationale + authored content behind the shipped "Stage Wrapped" recap (`src/lib/stage-wrapped-*.ts`). The shipped data model differs from the early proposals — see the banner atop each.
 - **[AUDIT-2026-06-13.md](AUDIT-2026-06-13.md)** — a dated point-in-time repo audit (PHA-1015). A historical snapshot, not a live reference; most findings have since shipped fixes.
+- **[PROJECT_NARRATIVE.md](PROJECT_NARRATIVE.md)** — the complete project narrative: how HOTLINE was designed, de-risked, built and reviewed, origin through the Cologne close. Not a runbook — the story, with Brandon's words quoted verbatim.
 
 ## What this app is, in three sentences
 
