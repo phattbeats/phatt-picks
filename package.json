@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "verify": "node scripts/verify-all.mjs",
+    "verify:single": "node --experimental-strip-types --import ./scripts/register-ts-resolve.mjs --no-warnings"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
