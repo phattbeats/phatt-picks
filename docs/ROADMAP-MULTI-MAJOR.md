@@ -41,11 +41,12 @@ Major is a new registry entry" has been exercised end-to-end.*
    Final resolve signal. Archive fires at `grandFinalResolvedAt + 48h` grace (PHA-954 safety
    net). Drivers skip non-live events; reminders/watchers iterate from the registry.
 
-**Remaining — PHA-952 (cutover):** the full inversion of domain-module defaults — so every
-page/API reads `getEventConfig(currentEventId())` instead of its local `COLOGNE_*` constant.
-Deliberately deferred until after Cologne's Grand Final (Jun 21). That cutover makes adding the
-next Major truly turnkey: drop in a registry entry and all surfaces update automatically.
-Cologne becomes event #1 in the archive the moment it ends.
+**Done — PHA-952 / PHA-1327 (cutover):** the full inversion of domain-module defaults shipped
+post-GF. Every page/API now reads `getEventConfig(currentEventId())` and threads *that* event's own
+`lockSchedule` / `matchWindows` / `playoffSchedule`, instead of its local `COLOGNE_*` constant (which
+survives only as the test/verify fallback and the pattern to copy). Adding the next Major is now
+truly turnkey: drop in a registry entry and all surfaces update automatically. Cologne became event
+#1 in the archive the moment it concluded.
 
 ## The plan — three workstreams
 
@@ -53,7 +54,8 @@ Cologne becomes event #1 in the archive the moment it ends.
 The registry (`events-core.ts`) is the single source of truth. `resolveActiveEvent(now)` /
 `getEventConfig(id)` / `currentEventId(now)` replace the old hardcoded `= 26` (resolved
 per-request — PHA-1046 removed the module-level `ACTIVE_EVENT_ID`). Adding a Major is one new
-registry entry. Full domain-module cutover deferred to PHA-952 post-GF.
+registry entry. Full domain-module cutover shipped post-GF (PHA-952 / PHA-1327): call sites read the
+registry entry's own schedule config, not the `COLOGNE_*` constants.
 
 ### B. Historic scores & "look back" — **DONE (PHA-949), since extended**
 `/majors` route: every event you played, your score and finish, linked into its full profile.
@@ -67,7 +69,8 @@ deck. The pattern holds: "look back" features are read + UI over rows that alrea
 Clock-derived status transitions, registry-driven drivers/reminders, 48h GF grace arc.
 The running app handles `upcoming → live → archived` without any human flip.
 
-**Dependencies:** A → (B ∥ C). All three shipped; remaining work is the PHA-952 cutover.
+**Dependencies:** A → (B ∥ C). All three workstreams shipped, including the PHA-952 / PHA-1327
+cutover — no outstanding multi-major work.
 
 ## Tracking
 PHA-948/949/950/952/954 are the child issues. This doc is their shared spec.
