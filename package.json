@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prepare": "npm run hooks:install",
+    "hooks:install": "git config core.hooksPath .githooks",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

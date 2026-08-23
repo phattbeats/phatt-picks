@@ -14,6 +14,11 @@ entire mobile story (no native apps).
 > [hard-won gotchas](docs/GOTCHAS.md). Start there before changing the system or
 > standing up a new Major. **Keep it true: update the relevant doc in the same PR.**
 >
+> **🔒 Authorship gate — every commit on `phatt-picks` must be authored by `phattbeats` with zero
+> `Co-authored-by` trailers. See [`docs/AUTHORSHIP.md`](docs/AUTHORSHIP.md).** Enforced locally by
+> a `commit-msg` hook (installed by `npm install`) and in CI by
+> `.github/workflows/authorship-check.yml`.
+>
 > **📖 The story → [`docs/PROJECT_NARRATIVE.md`](docs/PROJECT_NARRATIVE.md)** — the complete
 > record of how this got built, origin through the Cologne close.
 
