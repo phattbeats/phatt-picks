@@ -77,19 +77,30 @@ export async function register(): Promise<void> {
   // independently of the pre-lock reminder opt-out below — they're separate
   // concerns and disabling reminders must NOT freeze live scoring.
   {
+    // PHA-1410: iterate liveEvents(now) — mirror prelock-reminders' registry-driven
+    // pattern — so the next live event's outcomes start background-crawling the
+    // moment it goes live, not when the previous one archives and currentEventId
+    // advances. The explicit overlap window (one Major archiving on GF-resolve
+    // while the next is already live) is supported upstream; this just makes the
+    // background tick honor it.
     const { refreshLiveResultsTick } = await import("@/lib/outcomes");
-    const { currentEventId } = await import("@/lib/events-core");
+    const { liveEvents } = await import("@/lib/events-core");
     let liveTickInFlight = false;
     const liveTick = async (): Promise<void> => {
       if (liveTickInFlight) return;
       liveTickInFlight = true;
       try {
-        const r = await refreshLiveResultsTick(currentEventId());
-        if (r.ingested > 0 || r.resolved > 0 || r.stale > 0) {
-          console.log(
-            `[live-tick] event ${r.eventId}: ingested ${r.ingested}, resolved ${r.resolved} slot(s)` +
-              (r.stale > 0 ? `, ${r.stale} playoff match(es) OVERDUE` : ""),
-          );
+        const events = liveEvents();
+        // Empty list is a valid state between Majors (live › soonest-upcoming gap
+        // is empty if no event is currently in its live window). Nothing to do.
+        for (const ev of events) {
+          const r = await refreshLiveResultsTick(ev.id);
+          if (r.ingested > 0 || r.resolved > 0 || r.stale > 0) {
+            console.log(
+              `[live-tick] event ${r.eventId}: ingested ${r.ingested}, resolved ${r.resolved} slot(s)` +
+                (r.stale > 0 ? `, ${r.stale} playoff match(es) OVERDUE` : ""),
+            );
+          }
         }
       } catch (err) {
         console.error("[live-tick] tick failed:", err);
