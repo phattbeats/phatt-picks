@@ -49,7 +49,7 @@ import { getEventConfig } from "./events-core";
 // crawl4ai on the phattvip network — same hostname in workspace + deployed
 // container; CRAWL4AI_URL overrides for other topologies (mirrors swiss-results).
 const CRAWL4AI_URL = (process.env.CRAWL4AI_URL ?? "http://crawl4ai:11235").replace(/\/+$/, "");
-const CRAWL4AI_TOKEN = process.env.CRAWL4AI_API_TOKEN ?? "Phatt-tech-2026";
+const CRAWL4AI_TOKEN = process.env.CRAWL4AI_API_TOKEN ?? "";
 
 // ~Hourly refresh floor — the dossier's recent results only move when teams play,
 // so one batch crawl per hour during a stage is plenty.

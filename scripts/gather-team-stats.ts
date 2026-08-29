@@ -37,7 +37,7 @@ import {
 } from "../src/lib/team-stats-sources.ts";
 
 const CRAWL_URL = process.env.CRAWL4AI_URL ?? "http://crawl4ai:11235";
-const CRAWL_TOKEN = process.env.CRAWL4AI_API_TOKEN ?? "Phatt-tech-2026";
+const CRAWL_TOKEN = process.env.CRAWL4AI_API_TOKEN ?? "";
 const CHECK_ONLY = process.argv.includes("--check");
 
 const HERE = dirname(fileURLToPath(import.meta.url));

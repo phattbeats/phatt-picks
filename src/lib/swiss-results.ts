@@ -72,7 +72,7 @@ const CRAWL4AI_URL = (process.env.CRAWL4AI_URL ?? "http://crawl4ai:11235").repla
 // crawl4ai instance, so they must present the same auth — otherwise, the day the
 // service starts requiring the token, the user-visible standings crawl 401s while
 // team-stats keeps working and the W-L table silently freezes.
-const CRAWL4AI_TOKEN = process.env.CRAWL4AI_API_TOKEN ?? "Phatt-tech-2026";
+const CRAWL4AI_TOKEN = process.env.CRAWL4AI_API_TOKEN ?? "";
 
 // ~Hourly refresh floor (Brandon: "refreshing every hour"). The driver attempts
 // at most one pull per hour across the whole cluster.

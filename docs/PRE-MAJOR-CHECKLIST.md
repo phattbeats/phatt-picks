@@ -50,7 +50,7 @@ new major you need, per team: the pickid (from Valve's layout), the HLTV team id
       ```bash
       # via the in-network crawl4ai service
       curl -s -X POST http://crawl4ai:11235/crawl \
-        -H "Authorization: Bearer Phatt-tech-2026" -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $CRAWL4AI_API_TOKEN" -H "Content-Type: application/json" \
         -d '{"urls":["https://www.hltv.org/events/<EVENT_ID>/<slug>"]}' \
         | grep -oE '/team/[0-9]+/[a-z0-9-]+' | sort -u
       ```
