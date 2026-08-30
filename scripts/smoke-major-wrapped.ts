@@ -90,7 +90,7 @@ check("a Cinderella moment derived from the seeds", (facts.moments ?? []).some((
 
 console.log("\nsmoke - the deck the routine will publish");
 const personal: PlayoffWrappedPersonal = {
-  displayName: "Emily", avatar: { src: null, label: "Emily" },
+  displayName: "Casey", avatar: { src: null, label: "Casey" },
   bracketHits: 5, bracketResolved: 7, championPickId: 85, rankAfter: 2,
   rankMove: { delta: 3, direction: "up" }, reactionsPlaced: 4,
 };

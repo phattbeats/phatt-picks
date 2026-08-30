@@ -8,7 +8,7 @@
 
 **The game.** *Counter-Strike 2* (CS2) is Valve's competitive shooter. A few times a year there's a **Major**, the biggest tournament on the calendar, 32 teams over about three weeks. **IEM Cologne 2026** (June 2 to 21) is the one this project targets.
 
-**Pick'Em.** Valve runs an official prediction game alongside each Major called the **Pick'Em Challenge**: you predict which teams advance and who wins, you earn points for correct calls, and if you do well enough you unlock a cosmetic in-game trophy, the **coin** (Bronze through Diamond). To play, you buy a **Viewer Pass** (roughly $10, per Major). The tournament runs in stages: three **Swiss** stages (a format where teams play until they rack up three wins or three losses), then a single-elimination **playoff** bracket, Quarterfinals (QF), Semifinals (SF), Grand Final (GF). Brandon's wife Emily and a friend group of five to twenty play every Major; the social ritual of comparing picks and trash-talking the leaderboard is the whole appeal.
+**Pick'Em.** Valve runs an official prediction game alongside each Major called the **Pick'Em Challenge**: you predict which teams advance and who wins, you earn points for correct calls, and if you do well enough you unlock a cosmetic in-game trophy, the **coin** (Bronze through Diamond). To play, you buy a **Viewer Pass** (roughly $10, per Major). The tournament runs in stages: three **Swiss** stages (a format where teams play until they rack up three wins or three losses), then a single-elimination **playoff** bracket, Quarterfinals (QF), Semifinals (SF), Grand Final (GF). Brandon's wife and a friend group of five to twenty play every Major; the social ritual of comparing picks and trash-talking the leaderboard is the whole appeal.
 
 **The app.** "phaTT Picks" is a private companion app for that friend group. It lets each person log in with their Steam account, set or mirror their official Valve picks through Steam's API, and compete on one shared leaderboard scored exactly the way Valve scores it. It also supports a **local player** mode for anyone who hasn't bought the Viewer Pass or doesn't want to connect Steam, they still get a board slot, just without the official sync. It is mobile-first, runs as a single web app, and is built generically so it can be re-pointed at every future Major. It deploys at `pickems.phatt.vip` on Brandon's home server (an Unraid box, behind a reverse proxy called SWAG).
 
@@ -37,7 +37,7 @@ It started with a small loss. The very first message of the whole thing was Bran
 
 It hadn't. A search turned up an old match guide and an esports dashboard, but no Pick'Em. And the reaction to that loss is the actual origin of the project, not regret but a decision:
 
-> "thats alright. it was not great anyway. but.... the next major approaches. and with it, a way for me to build something fun for my friends and emily. she loves the pickems.
+> "thats alright. it was not great anyway. but.... the next major approaches. and with it, a way for me to build something fun for my friends and my wife. she loves the pickems.
 >
 > we're going to do it right. not shooting from the hip and trying to make things up."
 
@@ -63,7 +63,7 @@ That second paragraph set the tone for everything that followed. The throwaway H
 >
 > start off with questions, then do a turn of deep reserach, then we build the plan."
 
-(HLTV is the main CS news and stats site; browserless, crawl4ai, and flaresolverr are scraping tools on Brandon's server for getting at sites that block bots.) Almost every load-bearing decision the project eventually made was latent in that message: templateable-for-all-future-Majors, hand-it-to-friends, set picks *officially* via the Steam API, one shared leaderboard mirroring the in-game one, pick comparison, and a deliberate "questions, then research, then plan" cadence that he'd hold the planning partner to for the rest of the project. The "she loves the pickems" is Emily, and she stays load-bearing the whole way through.
+(HLTV is the main CS news and stats site; browserless, crawl4ai, and flaresolverr are scraping tools on Brandon's server for getting at sites that block bots.) Almost every load-bearing decision the project eventually made was latent in that message: templateable-for-all-future-Majors, hand-it-to-friends, set picks *officially* via the Steam API, one shared leaderboard mirroring the in-game one, pick comparison, and a deliberate "questions, then research, then plan" cadence that he'd hold the planning partner to for the rest of the project. The "she loves the pickems" is his wife, and she stays load-bearing the whole way through.
 
 The first round of clarifying questions came back, and Brandon's answers were fast and opinionated:
 
@@ -87,19 +87,19 @@ The research came back and the skepticism folded, cleanly, on evidence:
 
 (That endpoint name is the specific Steam API call that submits picks; the point is simply that it exists and is usable.) **Win:** the central feasibility question got answered by going to the source instead of arguing from priors. **Tone decision that paid off:** "you were right" stated plainly as a finding, not softened or buried.
 
-A small but telling correction landed here. The planning partner had justified the local-player mode (play without connecting Steam) by imagining Emily as a casual who didn't own Steam's Prime status. Brandon shut that down with affection:
+A small but telling correction landed here. The planning partner had justified the local-player mode (play without connecting Steam) by imagining his wife as a casual who didn't own Steam's Prime status. Brandon shut that down with affection:
 
-> "emily has prime dawg i wouldnt leave her hanging like that"
+> "my wife has prime dawg i wouldnt leave her hanging like that"
 
 The retraction was immediate:
 
-> "Noted, and corrected, my bad. I had Emily pegged as a casual when she's apparently been holding Prime the whole time. Retracting that."
+> "Noted, and corrected, my bad. I had your wife pegged as a casual when she's apparently been holding Prime the whole time. Retracting that."
 
 And then, the important part, the feature *survived on a better argument*. Brandon insisted on it directly:
 
 > "keep the 'local player' exactly right. someone less into it might want in, and we need a good way to do so."
 
-So local play stopped being an Emily-justification and became what it should have been all along: a deliberately lowered barrier for anyone less invested, backed by the fact that the app already stores every pick locally before attempting to sync it to Steam, so a "local player" is just "a synced player minus the sync." **This became one of the project's load-bearing principles: local play is first-class, not a courtesy.** When the Viewer Pass (not Prime) later turned out to be the real thing standing between a casual player and the official Pick'Em, that principle proved exactly right.
+So local play stopped being a wife-justification and became what it should have been all along: a deliberately lowered barrier for anyone less invested, backed by the fact that the app already stores every pick locally before attempting to sync it to Steam, so a "local player" is just "a synced player minus the sync." **This became one of the project's load-bearing principles: local play is first-class, not a courtesy.** When the Viewer Pass (not Prime) later turned out to be the real thing standing between a casual player and the official Pick'Em, that principle proved exactly right.
 
 ---
 
@@ -325,11 +325,11 @@ The app shipped to the home server and Brandon logged in. The hard parts held �
 
 That second paragraph is the whole act in two sentences. *So many edge cases handled, but the basics are broken.* The project had spent its skepticism budget on the exotic failure modes — the bigint trap, the pick-lock, the all-open test data — and the thing that actually stopped a friend at the door was a session cookie that didn't survive a single click. Brandon's diagnosis ("remnants of other tasks fighting eachother") was also exactly right: overlapping auth work had left two mechanisms stepping on each other, and the fix was to dedupe them down to one.
 
-Emily found the rest of the floor:
+His wife found the rest of the floor:
 
-> "emily got a 502 when trying to sign in. but i could. brandons-mac. also, when you click the user at the top right it brings you to a sign in page, even though youre signed in. and size of mobile experience is gigantic. needs to fit moble viewports. on android and ios."
+> "my wife got a 502 when trying to sign in. but i could. brandons-mac. also, when you click the user at the top right it brings you to a sign in page, even though youre signed in. and size of mobile experience is gigantic. needs to fit moble viewports. on android and ios."
 
-Three separate basics in one message, and note who hit them: not Brandon, who built it, but Emily, the actual user, on an actual phone. "but i could" is the tell — the app worked perfectly for the one person whose setup it had been tested against, and fell over for the one it was built for. Same shape as every bug in Act VIII: *correct in the one state that can't expose the flaw.* The desktop, the builder's own already-warm session, the dev viewport — all green. The phone, the cold login, the second click — all red.
+Three separate basics in one message, and note who hit them: not Brandon, who built it, but his wife, the actual user, on an actual phone. "but i could" is the tell — the app worked perfectly for the one person whose setup it had been tested against, and fell over for the one it was built for. Same shape as every bug in Act VIII: *correct in the one state that can't expose the flaw.* The desktop, the builder's own already-warm session, the dev viewport — all green. The phone, the cold login, the second click — all red.
 
 **Win:** these were caught the only way they could be, by a real person on a real device hitting the live URL, and they were cheap once named — the auth dedup, a top-bar that knows you're signed in, mobile viewports that fit. The definition of done from the very first spec ("a friend opens it on a phone, logs in with Steam, sees their picks") finally got tested against a friend on a phone instead of against a fixture. And the payoff landed: once the floor was solid, a real stage of picks locked in, in-app, and survived the round-trip into the actual CS2 client — the write path from Act I, the one that "changed the project," doing the thing it was for.
 
@@ -405,13 +405,13 @@ And underneath all of it, the thing from the very first message: *we're going to
 
 ---
 
-*When the project ships, this is set up for a closing section: what actually broke during Cologne, what the friends thought, and whether Emily's leaderboard trash-talk lived up to the build.*
+*When the project ships, this is set up for a closing section: what actually broke during Cologne, what the friends thought, and whether his wife's leaderboard trash-talk lived up to the build.*
 
 ---
 
 ## Coda, May 30 2026: the rebrand, and what's open now
 
-The throughline above was written looking back at the planning and the first build. It holds through the live deploy without a single amendment — the auth that broke, the sleek-but-empty redesign, the basics Emily found on a cold phone were all the same shape it already named: *something that looks correct because it was only ever checked in the one state that can't expose the flaw.* The cure was the same too: go look at the real thing — a real friend, a real phone, a real headline on the wire, real picks locked into the real CS2 client. Brandon's instinct to rename once the product had grown past its old name is that same discipline pointed at the brand: name the thing you can actually see, not the thing you hope it'll be.
+The throughline above was written looking back at the planning and the first build. It holds through the live deploy without a single amendment — the auth that broke, the sleek-but-empty redesign, the basics his wife found on a cold phone were all the same shape it already named: *something that looks correct because it was only ever checked in the one state that can't expose the flaw.* The cure was the same too: go look at the real thing — a real friend, a real phone, a real headline on the wire, real picks locked into the real CS2 client. Brandon's instinct to rename once the product had grown past its old name is that same discipline pointed at the brand: name the thing you can actually see, not the thing you hope it'll be.
 
 Two days out from the Cologne opener (June 2), this is the honest state.
 
@@ -428,16 +428,16 @@ Everything in the original list still stands. The rebrand adds one:
 
 ---
 
-*This narrative now runs from a lost HTML file to a rebrand. The closing section is still owed — and it's a bigger one than the original imagined. When HOTLINE goes live for Cologne: what actually broke during the Major, whether Emily's leaderboard trash-talk lived up to the build, and the first real evidence of whether the bigger HOTLINE vision is real or just a sharp name. The first message said we're going to do it right. The name says we're going to do it big. Cologne is where both claims get tested for real.*
+*This narrative now runs from a lost HTML file to a rebrand. The closing section is still owed — and it's a bigger one than the original imagined. When HOTLINE goes live for Cologne: what actually broke during the Major, whether his wife's leaderboard trash-talk lived up to the build, and the first real evidence of whether the bigger HOTLINE vision is real or just a sharp name. The first message said we're going to do it right. The name says we're going to do it big. Cologne is where both claims get tested for real.*
 
 
 ---
 
 # Part Two: Cologne, live — Coda, June 20 2026
 
-*The closing the document kept promising — "what actually broke during Cologne, whether Emily's leaderboard trash-talk lived up to the build" — could only be written after the Major ran. The Major ran. IEM Cologne 2026 went from 32 teams to one champion, and HOTLINE was live underneath the whole thing, with real friends logged in on real phones the entire three weeks. This is that closing.*
+*The closing the document kept promising — "what actually broke during Cologne, whether his wife's leaderboard trash-talk lived up to the build" — could only be written after the Major ran. The Major ran. IEM Cologne 2026 went from 32 teams to one champion, and HOTLINE was live underneath the whole thing, with real friends logged in on real phones the entire three weeks. This is that closing.*
 
-*The voice changes hands one more time. Part One narrated from the planning chat. Part Two narrates from the board, where a fleet of agents now picks up issues by the dozen, redesigns screens, reviews each other's diffs, and self-deploys to the home server. Brandon's voice does not change. It is the same voice from the first message — "we're going to do it right" — now firing in real time at a live event instead of a spec. The bugs are no longer hypothetical. They are Emily, on her actual phone, while an actual Major is on.*
+*The voice changes hands one more time. Part One narrated from the planning chat. Part Two narrates from the board, where a fleet of agents now picks up issues by the dozen, redesigns screens, reviews each other's diffs, and self-deploys to the home server. Brandon's voice does not change. It is the same voice from the first message — "we're going to do it right" — now firing in real time at a live event instead of a spec. The bugs are no longer hypothetical. They are his wife, on her actual phone, while an actual Major is on.*
 
 ---
 
@@ -487,9 +487,9 @@ and one standing requirement, the same one he'd attached to everything since the
 
 The worst bug of the Major did not corrupt data or drop a score. It froze people's computers. The report is the single most quotable line of the live era, because it is the project's entire stated purpose turning against the one person it was built for:
 
-> "it causes Emily to have to restsrrnher computer because it uses all the resources so much she can't even visit the page. Wtf?"
+> "it causes my wife to have to restsrrnher computer because it uses all the resources so much she can't even visit the page. Wtf?"
 
-Emily — *she loves the pickems*, the load-bearing user since the first message — could not open the app without restarting her machine. And it got worse before it got better:
+His wife — *she loves the pickems*, the load-bearing user since the first message — could not open the app without restarting her machine. And it got worse before it got better:
 
 > "it is NOT FINE. crashing for android users 5-10 seconds after opening. it works for a second, freezes, crashes the chrome app."
 
@@ -499,7 +499,7 @@ The early rounds chased a memory leak in the JavaScript heap, and found real one
 
 That is the throughline in its most distilled form the project ever produced. The app was, once again, *correct in the one state that can't expose the flaw* — and this time the safe state was literally "the automated test environment," the place built to catch exactly this. The fix was to find the real state: emulate no-preference media, mint a live session token, and profile the authenticated pages the way a logged-in friend actually loads them. Then remove the blurs. The freeze was gone.
 
-**Win:** the cause was caught only by reproducing the *real* state — a real session, motion enabled, the authed home page — instead of the green-by-default lab. **Loss (recovered):** the app the project exists to hand to Emily became, for a stretch, the reason Emily's computer needed restarting. **Lesson:** "it freezes the whole browser and isn't reproducible in headless" is not a memory leak — it is the GPU, and headless can't see it because headless turns the animation off. The lab being green was not evidence; it was the bug.
+**Win:** the cause was caught only by reproducing the *real* state — a real session, motion enabled, the authed home page — instead of the green-by-default lab. **Loss (recovered):** the app the project exists to hand to his wife became, for a stretch, the reason his wife's computer needed restarting. **Lesson:** "it freezes the whole browser and isn't reproducible in headless" is not a memory leak — it is the GPU, and headless can't see it because headless turns the animation off. The lab being green was not evidence; it was the bug.
 
 ---
 
@@ -631,14 +631,14 @@ The May coda asked three questions and promised to answer them once Cologne ran.
 
 **What actually broke during Cologne?** Not the dangerous bugs the plan spent six rounds bracing for. Those *held*. The bigint trap never corrupted a live ID. The scoring engine read its 135/60/75 straight from Valve and never drifted. The coin gate refused every disqualifying case exactly as designed. Every exotic landmine the planning chat hardened against stayed defused. What broke, over and over, was the same humble thing Part One already named: *something correct only in the one state that couldn't expose the flaw.* The leaderboard that scored the 8-team fixture but not the 16-team live Swiss. The browser-freeze invisible to a headless lab that turns animations off. The reactions that only collided in shared playoff slots. The bracket that trusted the seeding over the event. The plan's deepest fear never fired; the plan's actual recurring enemy fired five more times, in public, live — and got named and killed each time by the same move: *go look at the real thing.* A real eliminated team. A real session on a real phone with motion on. A real API POST as a real user. The real seeded bracket.
 
-**Did Emily's leaderboard trash-talk live up to the build?** The honest answer is layered. The app that Emily once had to restart her computer to avoid became the app the whole group reacted on, got pushed notifications from, locked real picks into the real CS2 client through, and watched their Major Wrapped on at the end. The floor that collapsed under her in Act IX and Act XV got solid enough to stand the social layer on top of it. In keeping with this document's one unbreakable rule — never dress an inference as a quote — Emily's own verdict, in her own words, is not in the board's record, so it does not get a blockquote here. What *is* in the record is that the ritual the whole project was built to host finally happened inside the thing built to host it. That is as far as the evidence goes, and the rule says stop there.
+**Did his wife's leaderboard trash-talk live up to the build?** The honest answer is layered. The app that his wife once had to restart her computer to avoid became the app the whole group reacted on, got pushed notifications from, locked real picks into the real CS2 client through, and watched their Major Wrapped on at the end. The floor that collapsed under her in Act IX and Act XV got solid enough to stand the social layer on top of it. In keeping with this document's one unbreakable rule — never dress an inference as a quote — his wife's own verdict, in her own words, is not in the board's record, so it does not get a blockquote here. What *is* in the record is that the ritual the whole project was built to host finally happened inside the thing built to host it. That is as far as the evidence goes, and the rule says stop there.
 
 **Is HOTLINE real, or just a sharp name?** The Act XII tell was that the name was bigger than the product — *name larger than product is the sign the name is a target, not a label.* Cologne is the product reaching the target. The wire, the universal notifications, the live bracket redrawing under you, the Wrapped finale — every one of them a reason to keep the line open on a match you have no pick in — all shipped, and all got used during a live Major by real people. The name pointed past the build, and the build caught up to it, one more time, exactly the way the rename was supposed to predict.
 
 And the throughline, now battle-tested across a live three-week event instead of a planning chat: *verify at the source — and the live event is the ultimate source. Lead with the win, isolate the bite. Every "we'll do it later" comes due, usually mid-Major, exactly when you least want to touch it. And everything that broke broke because it was only ever checked in the one state that couldn't expose it.* The first message said **we're going to do it right.** The rebrand said **we're going to do it big.** The finale added the last word the project was always reaching for: **make it heartfelt.** Cologne tested all three, live, and they held.
 
 ### Still open, honestly, as of June 20 2026
-- **Emily's verdict, in her own words,** belongs in this document and isn't in the board's record yet — the one quote the closing genuinely wants and the rule won't let it fake. Worth capturing before the memory of the Major cools.
+- **His wife's verdict, in her own words,** belongs in this document and isn't in the board's record yet — the one quote the closing genuinely wants and the rule won't let it fake. Worth capturing before the memory of the Major cools.
 - **The Grand Final send-off.** The Major Wrapped finale (PHA-1274) is built and scheduled to derive from the resolved bracket and fire post-GF; this coda is written with the champion all but crowned. The very last beat — the friends' reaction to the heartfelt -phaTT closer and the "will return" stinger — happens after this line.
 - **Rotate the Steam access credentials** — flagged since the original close, still the highest-priority non-code task until confirmed done. The live era did not retire it.
 - **The next Major.** PGL Singapore is already seeded as an upcoming event in the registry. HOTLINE was built templateable from the first message for exactly this; Singapore is where "one Major as the opening of a line that could run much wider" stops being a thesis and gets its second data point.
@@ -652,7 +652,7 @@ And the throughline, now battle-tested across a live three-week event instead of
 
 # Coda, June 22 2026: the Cathedral — first major, complete
 
-*The June-20 closing was written with the Grand Final "all but crowned" and three honest gaps left open: what actually happened at the Final, the in-app send-off, and Emily's verdict. Two days later the trigger arrived, in the flattest possible Brandon register:*
+*The June-20 closing was written with the Grand Final "all but crowned" and three honest gaps left open: what actually happened at the Final, the in-app send-off, and his wife's verdict. Two days later the trigger arrived, in the flattest possible Brandon register:*
 
 > "major is done."
 
@@ -699,7 +699,7 @@ And the Marvel stinger he asked for, the *"will return"* beat, is the post-credi
 
 *Make it heartfelt* got made. The thing the first message swore not to shoot from the hip turned, on its last screen, into a love letter to the friends who showed up — and a promise to do it again.
 
-**Win:** the project's purpose-built moment arrived intact — a champion crowned, a perfect personal bracket, a seven-person board contested to the final call, two rescued friends finishing it out, and a heartfelt send-off shipped exactly as briefed. Everything the first message asked for, delivered against a live Major. **The one honest gap, held to the end:** Emily's verdict, in her own words, still is not in the board's record — none of the seven handles self-identifies as her, and this document does not guess. The board is the evidence the ritual happened; her quote, if it comes, is the one line still owed, and it will not be faked to round the story off.
+**Win:** the project's purpose-built moment arrived intact — a champion crowned, a perfect personal bracket, a seven-person board contested to the final call, two rescued friends finishing it out, and a heartfelt send-off shipped exactly as briefed. Everything the first message asked for, delivered against a live Major. **The one honest gap, held to the end:** his wife's verdict, in her own words, still is not in the board's record — none of the seven handles self-identifies as her, and this document does not guess. The board is the evidence the ritual happened; her quote, if it comes, is the one line still owed, and it will not be faked to round the story off.
 
 ---
 
@@ -714,20 +714,20 @@ The first message said **we're going to do it right.** The rebrand said **we're 
 
 ---
 
-# Coda, June 23 2026: Emily's verdict — the last line, delivered
+# Coda, June 23 2026: his wife's verdict — the last line, delivered
 
-*This document held one line open on purpose. From the very first version it flagged a closing it could not yet write — "whether Emily's leaderboard trash-talk lived up to the build" — and through every revision since, it refused to fake it. When the Major ended (Act XX), the gap was still open, and the document said so plainly rather than round the story off with an invented quote: Emily's verdict, in words on the record, was the one thing still owed.*
+*This document held one line open on purpose. From the very first version it flagged a closing it could not yet write — "whether his wife's leaderboard trash-talk lived up to the build" — and through every revision since, it refused to fake it. When the Major ended (Act XX), the gap was still open, and the document said so plainly rather than round the story off with an invented quote: his wife's verdict, in words on the record, was the one thing still owed.*
 
 *It arrived the day after the Major closed, from Brandon:*
 
-> "emily enjoyed it alot. it became her source for pickems isntead of launching the game each time, and she really looked forward to checking the score."
+> "my wife enjoyed it alot. it became her source for pickems isntead of launching the game each time, and she really looked forward to checking the score."
 
 That is the whole project, answered in one sentence by the one person it was always for.
 
-Read it against the first message. *"she loves the pickems"* was the reason the thing got built at all — Emily, load-bearing from the opening line, the casual whose enjoyment was the actual spec. Eighteen months of acts later, the verdict isn't "it works" or "the bugs are fixed." It is bigger than the build dared to claim for itself: **it became her source for pick'ems instead of launching the game.** The official Valve client — the thing HOTLINE was nominally a companion to — got replaced, for the user who matters most, by the companion. A companion that supplants the thing it companions is not a companion anymore. It's the destination.
+Read it against the first message. *"she loves the pickems"* was the reason the thing got built at all — his wife, load-bearing from the opening line, the casual whose enjoyment was the actual spec. Eighteen months of acts later, the verdict isn't "it works" or "the bugs are fixed." It is bigger than the build dared to claim for itself: **it became her source for pick'ems instead of launching the game.** The official Valve client — the thing HOTLINE was nominally a companion to — got replaced, for the user who matters most, by the companion. A companion that supplants the thing it companions is not a companion anymore. It's the destination.
 
-And that is the HOTLINE thesis (Act XII) proven without a single inference. The rename argued that the product had outgrown "phaTT Picks" — that it had become *a line you stay plugged into* rather than *a form you fill out*. Here is the evidence, finally, in human terms instead of feature terms: someone *looked forward to checking the score.* Not "set her picks and left." Came back, on purpose, to a match's aftermath — the leaderboard pull, the standings redrawing, the score worth checking. The reason to keep the line open turned out to be real, and it was real for Emily first.
+And that is the HOTLINE thesis (Act XII) proven without a single inference. The rename argued that the product had outgrown "phaTT Picks" — that it had become *a line you stay plugged into* rather than *a form you fill out*. Here is the evidence, finally, in human terms instead of feature terms: someone *looked forward to checking the score.* Not "set her picks and left." Came back, on purpose, to a match's aftermath — the leaderboard pull, the standings redrawing, the score worth checking. The reason to keep the line open turned out to be real, and it was real for his wife first.
 
-**Win:** the document's hardest rule — *never dress an inference as a quote; wait for the real thing* — held all the way to the last line, and was rewarded. The gap stayed honestly empty across three revisions, and then the truth came in better than any invention would have dared: not that Emily liked it, but that it replaced the game for her. **The throughline, one final time:** the project's whole method was *go look at the real thing instead of the clean-looking guess.* It only felt right to close it the same way — on a real sentence from the real user, not a flourish. The first message asked whether an old throwaway had survived. The last line answers a bigger question than it knew to ask: the new one didn't just survive. It became where Emily goes.
+**Win:** the document's hardest rule — *never dress an inference as a quote; wait for the real thing* — held all the way to the last line, and was rewarded. The gap stayed honestly empty across three revisions, and then the truth came in better than any invention would have dared: not that his wife liked it, but that it replaced the game for her. **The throughline, one final time:** the project's whole method was *go look at the real thing instead of the clean-looking guess.* It only felt right to close it the same way — on a real sentence from the real user, not a flourish. The first message asked whether an old throwaway had survived. The last line answers a bigger question than it knew to ask: the new one didn't just survive. It became where his wife goes.
 
 *First Major: complete. Every act written, every gap filled, the one owed line delivered. Hotline will return — next stop, Singapore. But this story, the first one, is finished. She looked forward to checking the score. That's the whole thing. That was always the whole thing.*

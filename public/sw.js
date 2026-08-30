@@ -14,7 +14,7 @@
  * response's buffers in the SW's OWN heap, which the page-level heap reclaim
  * (AutoRefresh, PHA-1268) can never reach — so over a multi-hour live session,
  * across the server's periodic stream recycles, that memory accrues unbounded and
- * starves low-RAM machines (Emily: "freezes the whole browser"). The fix: do NOT
+ * starves low-RAM machines (real-user report: "freezes the whole browser"). The fix: do NOT
  * call respondWith for streams / API / RSC / static — let the browser fetch them
  * natively with zero SW interposition. We keep a respondWith only for top-level
  * navigations (a single request per full page load) so Chrome still sees a

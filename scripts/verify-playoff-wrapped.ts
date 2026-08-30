@@ -176,7 +176,7 @@ check("all eight playoff-team pages survive the rescope", COLOGNE_PLAYOFF_TEAMS.
 
 // ---- Invariant 4 (negative): wrong title pick must NOT light the reward. ----
 const missedPersonal: PlayoffWrappedPersonal = {
-  displayName: "Emily",
+  displayName: "Casey",
   bracketHits: 2,
   bracketResolved: 7,
   championPickId: 139, // Falcons — not the champion
