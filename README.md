@@ -1,9 +1,12 @@
 # HOTLINE
 
-A CS2 Major Pick'Em companion for a small private group, targeting **IEM Cologne 2026**
-(June 2–21). Members log in with Steam (or play locally — no Steam needed), set/mirror their
-picks, and compete on a shared leaderboard scored on Valve's own weighting. Built generically so
-it can be re-pointed at future Majors.
+A CS2 Major Pick'Em companion for a small private group. Members log in with Steam (or play
+locally — no Steam needed), set/mirror their picks, and compete on a shared leaderboard scored
+on Valve's own weighting. Built generically so it can be re-pointed at future Majors.
+
+First season, **IEM Cologne 2026**, is complete and archived. The next Major, **PGL Singapore
+2026**, is already seeded in the event registry and will stand up automatically when it comes
+around.
 
 Next.js (App Router) + TypeScript + Prisma/SQLite. Deploys as a single container on the
 `phattvip` network behind SWAG at `pickems.phatt.vip`. The responsive **installable PWA** is the
@@ -60,7 +63,7 @@ See `.env.example`. Summary:
 | `WRITE_ENABLED` | `"true"` enables the stage-batched write-back to Valve (**destructive** — overwrites the owner's live picks). Defaults `false`; leave off for the first tournament run, flip on only for deploy-smoke. |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web Push keypair. Generate: `npx web-push generate-vapid-keys`. |
 | `VAPID_SUBJECT` | `mailto:` contact for push. |
-| `PRELOCK_REMINDERS_DISABLED` | (optional) `1`/`true` turns OFF the in-process pre-lock reminder scheduler. It is **ON by default** (PHA-996) with no env required. |
+| `PRELOCK_REMINDERS_DISABLED` | (optional) `1`/`true` turns OFF the in-process pre-lock reminder scheduler. It is **ON by default** with no env required. |
 | `STAGE_LOCKS_JSON` | (optional) **override** for the reminder cutoffs; defaults to the committed `COLOGNE_LOCK_SCHEDULE` when unset. |
 
 ## PWA install & push reminders
@@ -77,7 +80,7 @@ each stage locks) are delivered via Web Push.
 Enable reminders under **You → Pick-lock reminders**, then **Send a test reminder** to confirm.
 
 The real 24h/1h reminders are fired by an **in-process scheduler** (`src/instrumentation.ts`, a
-~5-min tick) — **no external cron/sidecar**. The scheduler is ON by default (PHA-996); set
+~5-min tick) — **no external cron/sidecar**. The scheduler is ON by default; set
 `PRELOCK_REMINDERS_DISABLED=1` to turn it off. Cutoffs come from the committed
 `COLOGNE_LOCK_SCHEDULE`; `STAGE_LOCKS_JSON` is an optional override. Pure scheduling logic
 is in `src/lib/prelock-reminders.ts` and `src/lib/notify-core.ts`.
@@ -119,7 +122,7 @@ server {
 }
 ```
 
-## Outcome ingestion cadence (PHA-844)
+## Outcome ingestion cadence
 
 `POST /api/outcomes/ingest` is event-gated, not poll-driven. It returns
 `source: "none", reason: "no-locked-unresolved"` whenever the live layout has
