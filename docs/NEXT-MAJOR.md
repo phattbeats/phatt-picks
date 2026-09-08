@@ -17,8 +17,8 @@ app *work* for the new event. The rest sharpens it.
 > id at module scope). With the self-sustaining lifecycle
 > (PHA-950) you no longer flip `status` by hand on go-live day: stage the new
 > entry as `status: "upcoming"` with real `dates` + `lockSchedule` and it goes
-> live on its staging lead while the old one archives at its `dates.end` — see
-> `docs/ROADMAP-MULTI-MAJOR.md`. **Seed the next Major as early as you like** —
+> live on its staging lead while the old one archives at its `dates.end`.
+> **Seed the next Major as early as you like** —
 > the off-season *anticipation window* (`ANTICIPATION_LEAD_MS` ≈ 45 days,
 > PHA-1048) keeps the just-archived Major as the face of the site until the new
 > one is near go-live, so a registry entry staged 5 months out doesn't blank the

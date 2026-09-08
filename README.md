@@ -34,6 +34,8 @@ entire mobile story (no native apps).
 - **Stage Reveal & Wrapped** — per-stage reveal boards and a click-through "Stage Wrapped" recap.
 - **The Bleachers** — drop a fixed reaction stamp on someone's revealed pick; anonymous in the moment, unmasked when the stage resolves.
 - **Playoff Spotlight** — per-team narrative + highlight, with live Polymarket implied odds.
+- **Challenge coins** — a tiered collectible minted per Major you played, once the Grand Final crowns a champion.
+- **Notifications inbox** — an in-app bell for reactions, reveals, and other activity, alongside push.
 - **PWA + Web Push** — installable, with opt-in 24h/1h pre-lock reminders.
 - **Multi-Major by design** — an event registry + clock-derived lifecycle re-points the app at the
   next Major from committed config (PGL Singapore 2026 is already seeded).

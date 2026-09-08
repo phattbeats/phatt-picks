@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "community.cloudflare.steamstatic.com" },
     ],
   },
-  // The service worker is the recovery vector (PHA-1269): its activate handler
+  // The service worker is the recovery vector: its activate handler
   // purges caches + broadcast-reloads stuck clients onto the fresh build, so it
   // must update INSTANTLY. By default `/sw.js` (a public/ file, which the
   // middleware skips because it has a file extension) was served cacheable, and

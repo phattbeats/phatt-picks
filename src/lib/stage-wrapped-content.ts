@@ -4,7 +4,7 @@
  * The PHA-1052 shell consumes a `WrappedSlide[]` and knows nothing about how
  * the slides are sourced. This module is that source for the resolved Swiss
  * stages: the authored "craziest moments" for each stage (real IEM Cologne 2026
- * data — see `docs/STAGE-WRAPPED-S1-S2-DRAFT.md`) plus a pure builder that folds
+ * data — see `docs/STAGE-WRAPPED-HISTORY.md`) plus a pure builder that folds
  * in the viewer's personal beats (stage score, rank move, best call) reused from
  * the reveal/rank-snapshot data the reveal page already computes.
  *

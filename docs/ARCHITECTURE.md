@@ -178,7 +178,7 @@ leaves / pure helpers) or the verifier can't load it standalone.
   just-archived Major as the face of the site through the off-season until the next is near go-live;
   `GRAND_FINAL_ARCHIVE_GRACE_MS` (48h) delays archive after the Grand Final. Seeding a new Major as
   `status:"upcoming"` with real dates is all it takes — no hand flip. PGL Singapore 2026 (eventId 27)
-  is already seeded this way. See [ROADMAP-MULTI-MAJOR.md](ROADMAP-MULTI-MAJOR.md).
+  is already seeded this way. See [NEXT-MAJOR.md](NEXT-MAJOR.md).
 
 ### The Bleachers — semi-anonymous pick reactions (PHA-1211)
 - On a **revealed** pick, players drop a fixed **stamp** (one of `bleachers-core.ts` `STAMPS`) via
@@ -217,8 +217,8 @@ leaves / pure helpers) or the verifier can't load it standalone.
   `WrappedSlide[]`) + `stage-wrapped-launch(-core).ts`, gated app-wide by `StageWrappedGate` in
   `(app)/layout.tsx` (PHA-1051/1052). Content lives in `stage-wrapped-content.ts`. Presentational —
   no scoring path. The shell carries a `WRAPPED_TRACKS` soundtrack registry (**bittersweet** default →
-  epic → somber) with a mood cycle beside the off-by-default sound toggle. Content model:
-  [STAGE-WRAPPED-CONTENT-MODEL.md](STAGE-WRAPPED-CONTENT-MODEL.md).
+  epic → somber) with a mood cycle beside the off-by-default sound toggle. Design record:
+  [STAGE-WRAPPED-HISTORY.md](STAGE-WRAPPED-HISTORY.md).
 - **Major Wrapped** is the end-of-event finale recap — same `WrappedSlide[]` shell, no new UI. It
   reuses the deck as a *32-teams-walked-in-one-walked-out* arc (`playoff-wrapped-core.ts` builds the
   deck; `playoff-wrapped-derive.ts` → `prepareMajorWrappedAutoDeck()` derives the storylines from the

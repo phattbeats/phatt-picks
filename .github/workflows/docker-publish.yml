@@ -11,7 +11,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }} # phattbeats/phatt-picks
   # GitHub forces JS actions onto Node 24 on 2026-06-02. Opt in early so the
-  # forced cutover is a no-op for us. Verified green via workflow_dispatch (PHA-837).
+  # forced cutover is a no-op for us. Verified green via workflow_dispatch.
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:

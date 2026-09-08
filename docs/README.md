@@ -19,12 +19,10 @@ Read these in roughly this order. Each is self-contained.
 | **[PRE-MAJOR-CHECKLIST.md](PRE-MAJOR-CHECKLIST.md)** | The field guide that *pairs* with NEXT-MAJOR: a tickable checklist for gathering the inputs — HLTV event ids, the 32-team field → pickids, and the per-stage stats-refresh routine. | You're collecting the facts for a new event before wiring them in. |
 | **[OPERATIONS.md](OPERATIONS.md)** | Every env var, every HTTP route, one-time setup, smoke checks. The ops reference. | You're deploying, flipping a flag, or debugging a 500. |
 | **[GOTCHAS.md](GOTCHAS.md)** | Hard-won lessons. The bugs that cost hours, why they happened, and the rule that prevents the repeat. | Something is behaving strangely, or you're touching iOS / crawl4ai / browserless / deploy / the shared checkout. |
-| **[ROADMAP-MULTI-MAJOR.md](ROADMAP-MULTI-MAJOR.md)** | The forward plan: make HOTLINE self-sustaining, turnkey for every Major, with historic scores you can look back on. Grounded in the already-event-scoped data model. | You're thinking about the next Major, the event registry, or the history/archive feature. |
 
 **Also in this directory** (reference / design records, not part of the core runbook):
 
-- **[STAGE-WRAPPED-CONTENT-MODEL.md](STAGE-WRAPPED-CONTENT-MODEL.md)** / **[STAGE-WRAPPED-S1-S2-DRAFT.md](STAGE-WRAPPED-S1-S2-DRAFT.md)** — design rationale + authored content behind the shipped "Stage Wrapped" recap (`src/lib/stage-wrapped-*.ts`). The shipped data model differs from the early proposals — see the banner atop each.
-- **[AUDIT-2026-06-13.md](AUDIT-2026-06-13.md)** — a dated point-in-time repo audit (PHA-1015). A historical snapshot, not a live reference; most findings have since shipped fixes.
+- **[STAGE-WRAPPED-HISTORY.md](STAGE-WRAPPED-HISTORY.md)** — condensed design record behind the shipped "Stage Wrapped" recap (`src/lib/stage-wrapped-*.ts`): the media policy, the selection logic, and why it works the way it does.
 - **[PROJECT_NARRATIVE.md](PROJECT_NARRATIVE.md)** — the complete project narrative: how HOTLINE was designed, de-risked, built and reviewed, origin through the Cologne close. Not a runbook — the story, with Brandon's words quoted verbatim.
 
 ## What this app is, in three sentences
