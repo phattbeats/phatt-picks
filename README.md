@@ -16,6 +16,7 @@ entire mobile story (no native apps).
 > [next-Major runbook](docs/NEXT-MAJOR.md), [operations](docs/OPERATIONS.md), and
 > [hard-won gotchas](docs/GOTCHAS.md). Start there before changing the system or
 > standing up a new Major. **Keep it true: update the relevant doc in the same PR.**
+> If you're picking this up cold — see **[docs/CONTINUITY.md](docs/CONTINUITY.md)** first.
 >
 > **🔒 Authorship gate — every commit on `phatt-picks` must be authored by `phattbeats` with zero
 > `Co-authored-by` trailers. See [`docs/AUTHORSHIP.md`](docs/AUTHORSHIP.md).** Enforced locally by

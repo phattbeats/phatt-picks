@@ -19,6 +19,7 @@ Read these in roughly this order. Each is self-contained.
 | **[PRE-MAJOR-CHECKLIST.md](PRE-MAJOR-CHECKLIST.md)** | The field guide that *pairs* with NEXT-MAJOR: a tickable checklist for gathering the inputs — HLTV event ids, the 32-team field → pickids, and the per-stage stats-refresh routine. | You're collecting the facts for a new event before wiring them in. |
 | **[OPERATIONS.md](OPERATIONS.md)** | Every env var, every HTTP route, one-time setup, smoke checks. The ops reference. | You're deploying, flipping a flag, or debugging a 500. |
 | **[GOTCHAS.md](GOTCHAS.md)** | Hard-won lessons. The bugs that cost hours, why they happened, and the rule that prevents the repeat. | Something is behaving strangely, or you're touching iOS / crawl4ai / browserless / deploy / the shared checkout. |
+| **[CONTINUITY.md](CONTINUITY.md)** | The "hit by a bus" doc — what a human *or* an LLM with zero context needs to keep HOTLINE running or stand up a fresh copy, what's deliberately not documented (personal account access) and why, and the single biggest undone risk (no off-box DB backup). | Brandon is unreachable, you're taking over cold, or you just want to know the plan for that case. |
 
 **Also in this directory** (reference / design records, not part of the core runbook):
 

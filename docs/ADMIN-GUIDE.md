@@ -7,6 +7,7 @@
 > - **[ARCHITECTURE.md](ARCHITECTURE.md)** — how the code fits together, the data-flow diagram, the `-core` pattern.
 > - **[GOTCHAS.md](GOTCHAS.md)** — the war stories behind the troubleshooting playbook below.
 > - **[NEXT-MAJOR.md](NEXT-MAJOR.md)** + **[PRE-MAJOR-CHECKLIST.md](PRE-MAJOR-CHECKLIST.md)** — standing up the next tournament.
+> - **[CONTINUITY.md](CONTINUITY.md)** — what to do if you're operating this with zero prior context and no access to the maintainer's personal infrastructure.
 >
 > When a number or symbol here disagrees with one of those, **they win** — they sit next to the code.
 
@@ -316,6 +317,8 @@ GET  http://phatt-picks:3000/api/odds/refresh        # playoff Spotlight odds (n
 - **Check what's actually live:** read the running container's image revision label (via phatt-claw inspect) — don't assume a push is deployed.
 - **Inspect/repair the DB:** run a throwaway container with Prisma against a copy of the `/data` SQLite file rather than poking the live container.
 - **Back up:** copy the SQLite file off the `/data` bind. That single file is everything.
+  **Nothing does this automatically today** — it's a manual step, and the biggest single
+  continuity risk in the project. See [CONTINUITY.md §4](CONTINUITY.md#4-the-single-biggest-real-risk-there-is-no-off-box-backup-today).
 - **Watch the logs** for `[session] …` (secret presence), `[live-tick] …` (outcome resolution + stale warnings), and crawl errors.
 
 ---

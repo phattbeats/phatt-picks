@@ -17,6 +17,8 @@ These cost real hours. Add to this file whenever a bug burns you.
 - **Rule:** after pushing, the change is *code-ready*, not *deployed*. State the deploy gate
   explicitly ("live until Brandon Force-Updates to `<sha>`"). Verify live by reading the
   container's image revision label via phatt-claw, not by assuming.
+- **This is a real single point of failure**, not just a workflow quirk — see
+  [CONTINUITY.md](CONTINUITY.md) for what to do about it if Brandon isn't the one deploying.
 
 ### New Prisma model? It needs `prisma db push` on boot
 - **Cause:** new models (`SourceState`, `SwissStandingsCache`, …) aren't in the live DB
