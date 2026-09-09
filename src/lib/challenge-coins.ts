@@ -7,9 +7,10 @@
  *
  * Read-only: picks/outcomes are already persisted per eventId, so no schema and
  * no crawl. The live (unfinished) Major is short-circuited BEFORE its field is
- * scored — `isEventFrozenById` is false for it — so this adds ZERO database work
+ * scored — `coinMintAtMs` returns null for it — so this adds ZERO database work
  * while an event is in flight; it only does a concluded Major's scoring once,
- * post-archive. The pure tiering/earn logic lives in challenge-coin-core.ts.
+ * its Grand Final has resolved. The pure tiering/earn logic lives in
+ * challenge-coin-core.ts.
  */
 
 import { prisma } from "./db";

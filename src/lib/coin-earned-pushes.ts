@@ -3,8 +3,8 @@
  * (PHA-1278, "challenge coin notification as well when it pings").
  *
  * Runs on every scheduler tick (instrumentation.ts). A challenge coin mints the
- * moment a Major becomes effectively archived (its Grand Final resolved + the
- * 48h grace, or the dates.end backstop) — see eventArchivedAtMs. On the first
+ * moment the Grand Final resolves (no 48h archive grace — PHA-1274 lands it
+ * immediately), or the dates.end backstop — see coinMintAtMs. On the first
  * tick after that instant we ping everyone who took part.
  *
  * Dedup is an in-process `fired` Set keyed by eventId (same pattern as

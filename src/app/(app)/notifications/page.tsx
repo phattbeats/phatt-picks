@@ -26,8 +26,8 @@ export default async function NotificationsPage({
 }) {
   const session = await getSession();
   if (!session) {
-    // Anonymous viewers get bounced to the sign-in surface, same as the rest
-    // of the (app) routes.
+    // There's no inbox without an account, so this route redirects — unlike
+    // most (app) routes, which render an anonymous-friendly view in place.
     redirect("/login?next=/notifications");
   }
 

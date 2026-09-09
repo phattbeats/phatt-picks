@@ -2,7 +2,7 @@
  * verify-stage-wrapped-content — offline proof for the Stage Wrapped content +
  * deck builder (PHA-1054). The shell (PHA-1052) is proven separately; this pins
  * the *content* invariants the popup leans on:
- *   - NO-OP: an unauthored section (e.g. Stage III 107, or any stage the caller
+ *   - NO-OP: an unauthored section (e.g. Playoffs 108, or any stage the caller
  *     hasn't authored) yields an EMPTY deck → the launcher never opens. This is
  *     the "verify it no-ops before Stage 1 resolves" guard at the data layer
  *     (paired with the reveal page's `resolved` gate).

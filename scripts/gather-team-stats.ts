@@ -23,7 +23,7 @@
  *   node … scripts/gather-team-stats.ts --check   # crawl + report, write nothing
  *
  * NOT part of the app build or CI — crawl4ai is only reachable from the deploy
- * network, so this is a manual dev/ops tool, same as scripts/spike-steam-auth.
+ * network, so this is a manual dev/ops tool, same as scripts/gather-roster.ts.
  */
 
 import { readFileSync, writeFileSync } from "node:fs";

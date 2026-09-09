@@ -2,7 +2,7 @@
  * Owner check — single-owner admin gate.
  *
  * The owner is whoever's SteamID64 matches OWNER_STEAM_ID. Used to gate the
- * local-player cleanup endpoints + the /profile admin section. A missing or
+ * local-player cleanup endpoints + the /settings admin section. A missing or
  * empty env var disables the gate (nobody is owner) — fail closed.
  */
 

@@ -34,11 +34,11 @@ import { runDeferred } from "./source-refresh";
  * Read the wire, newest-first, capped at `limit`. Never throws.
  *
  * Triggers a best-effort self-refresh first so the wire stays populated with
- * zero ops — no external cron is needed for the closed alpha (and the ingest
- * route is session-gated, so a headless scheduler can't drive it anyway). The
- * refresh is gated by a single atomic floor claim and the slow HLTV network
- * pull is deferred off the render path, so a render never blocks on the network
- * and concurrent renders don't stampede the DB. (PHA-859 / PHA-863 / alpha.)
+ * zero ops — no external cron is needed (and the ingest route is session-gated,
+ * so a headless scheduler can't drive it anyway). The refresh is gated by a
+ * single atomic floor claim and the slow HLTV network pull is deferred off the
+ * render path, so a render never blocks on the network and concurrent renders
+ * don't stampede the DB. (PHA-859 / PHA-863.)
  */
 export async function getWireItems(limit = 30): Promise<WireItem[]> {
   await refreshWireOnRead().catch(() => {}); // belt-and-suspenders; already never throws

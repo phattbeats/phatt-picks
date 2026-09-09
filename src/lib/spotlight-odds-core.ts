@@ -14,12 +14,13 @@
  * outcomes `["FURIA","The MongolZ"]`, outcomePrices `["0.62","0.38"]`. The price
  * is the implied win probability (0..1). No auth, ~160ms.
  *
- * GATED BY DESIGN: {@link PLAYOFF_MARKET_SLUGS} is LEFT EMPTY until Valve seeds
- * the playoff bracket (~Jun 16 2026, PHA-993). A team has no opponent — and so no
- * matchup slug to target — before then, so an empty registry means the refresh
- * no-ops and the modal keeps its honest "coming soon" state (zero live change).
- * An editor fills one entry per seeded matchup at clinch time (alongside PHA-1065
- * Spotlight authoring), verifying the rendered line against the live response.
+ * GATED BY DESIGN: {@link PLAYOFF_MARKET_SLUGS} starts empty until Valve seeds
+ * the playoff bracket (PHA-993). A team has no opponent — and so no matchup slug
+ * to target — before then, so an empty registry means the refresh no-ops and the
+ * modal keeps its honest "coming soon" state (zero live change). An editor fills
+ * one entry per seeded matchup at clinch time (alongside PHA-1065 Spotlight
+ * authoring), verifying the rendered line against the live response, and repoints
+ * entries each round (see the registry below).
  */
 
 /** A live market line for the team's next/active playoff matchup (1h refresh). */

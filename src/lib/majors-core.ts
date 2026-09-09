@@ -14,10 +14,10 @@
  *    and the reveal gate all decide the same way.
  *
  *    Safety note: the live-driver and write guards key on `archived`
- *    SPECIFICALLY, not on `!== "live"`. The active event is always `live`, so
- *    these are exact no-ops today; keying on `archived` means a mis-edited
- *    registry can never accidentally freeze the live event (it fails open —
- *    the live Major keeps updating), honouring "don't break what we have now".
+ *    SPECIFICALLY, not on `!== "live"`, so a mis-edited registry can never
+ *    accidentally freeze a `live`/`upcoming` Major (it fails open — that
+ *    Major keeps updating); they only fire once an event is truly `archived`
+ *    (Cologne, since PHA-1318).
  *
  * 2. HISTORY AGGREGATION. `computeFinish` turns a scored, sorted field into a
  *    1-based placement, and `buildMajorsHistory` orders a player's played
@@ -89,8 +89,8 @@ export interface MajorHistoryRow {
   start: string;
   /**
    * Whether this Major's layout fixture was loadable, so `score`/`finish` are a
-   * REAL result and not the 0/null fallback (PHA-1046). Today only the live
-   * event's layout is loadable; once a 2nd Major archives and per-event fixtures
+   * REAL result and not the 0/null fallback (PHA-1046). Today only Cologne's
+   * layout is loadable; once a 2nd Major archives and per-event fixtures
    * land, an unloadable layout degrades to an honest "score unavailable" row
    * instead of a misleading genuine 0.
    */

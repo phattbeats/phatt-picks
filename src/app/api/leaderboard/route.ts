@@ -1,5 +1,5 @@
 /**
- * Leaderboard API — scores all players for event 26 against resolved outcomes.
+ * Leaderboard API — scores all players for the active event against resolved outcomes.
  *
  * Returns all players (local + synced) on one board.
  * Coin visibility gated server-side: only sends coinTier when synced && hasViewerPass && hasValveCoin.

@@ -37,8 +37,9 @@
  * read-only "old Major" history. The GF's `resolvedAt` (not a boolean) is what
  * lets this module measure that window.
  *
- * Behind current behavior: Cologne is effective-`live` until its GF resolves /
- * its (generous) `dates.end`, so every function here is a no-op today.
+ * Cologne's GF resolved and its 48h grace elapsed (PHA-1318): every function
+ * here is now live for it (writes 409, drivers stop, reveal is forced) — they
+ * stay a no-op only for whichever Major is currently effectively live.
  *
  * I/O module (imports prisma) — deliberately NOT imported by the verify harness.
  * The pure pieces it composes (`resolveEffectiveStatus`, `grandFinalSectionId`,
@@ -106,7 +107,7 @@ async function resolveEffectiveStatusById(
  * crawling a finished Major. By EFFECTIVE status, not the raw registry flag, so
  * the freeze fires on the real Grand Final with no human flip. Unregistered ids
  * fail open (not frozen) — the guard can only ever stop a driver for an event
- * the clock/GF says is over. No-op for Cologne today (effective-live).
+ * the clock/GF says is over, which now includes archived Cologne (PHA-1318).
  */
 export async function isEventFrozenById(
   eventId: number,
@@ -136,8 +137,8 @@ export async function isWriteFrozenById(
  * per-stage lock gate? The compare and player-profile reveal pages call this and
  * pass the result as reveal-core's `eventArchived` signal, so a finished Major
  * shows every pick even for a stage that never locked on schedule. By effective
- * status. No-op today (the active event is effective-live, so this is false and
- * the per-stage lock gate alone decides reveal, exactly as before).
+ * status. Now true for archived Cologne (PHA-1318): every stage force-reveals
+ * regardless of its own lock gate; stays false for a live/upcoming Major.
  */
 export async function isRevealForcedById(
   eventId: number,

@@ -617,8 +617,8 @@ export function buildPlayoffWrappedDeck(
 
   // The challenge-coin CTA is the VERY LAST beat (Brandon: "make sure the
   // challenge coin is after everything else"). A Major mints a collectible coin
-  // (PHA-1278) on archive — so the recap signs off by sending them to their
-  // shelf; the one-tap CTA closes the deck en route.
+  // (PHA-1278) the moment the Grand Final crowns a champion — so the recap signs
+  // off by sending them to their shelf; the one-tap CTA closes the deck en route.
   slides.push({
     id: "po-coin",
     kind: "moment",

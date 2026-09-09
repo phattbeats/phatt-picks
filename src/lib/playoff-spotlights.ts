@@ -5,10 +5,9 @@
  * dossier on the *playoffs* picks page with a story, an event highlight, and a
  * live market line, while the roster / last-5 "tape" stays one tap below.
  *
- * DRAFT STATUS (2026-06-13): the real eight aren't seeded until Valve publishes
- * the bracket (~Jun 16, see PHA-993). FURIA (pickid 85) is the first real entry,
- * authored the moment they clinched 3-0; the others below are samples until each
- * team locks. This file is the single place an editor fills per team.
+ * STATUS: all eight playoff qualifiers are authored (see the "All eight playoff
+ * teams are now authored" note near the bottom of SPOTLIGHTS). This file is the
+ * single place an editor fills per team.
  *
  * HOW EACH OF THE EIGHT IS WRITTEN (the authoring template, Brandon asked):
  *   1. TRIGGER. A team is written the moment it clinches a playoff berth, using

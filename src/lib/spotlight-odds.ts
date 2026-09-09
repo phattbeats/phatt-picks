@@ -9,10 +9,10 @@
  * `spotlight-odds-core.ts` (verifiable offline); this file is just the I/O +
  * throttle + persistence shell.
  *
- * GATED: {@link PLAYOFF_MARKET_SLUGS} is empty until Valve seeds the bracket
- * (~Jun 16 2026, PHA-993). Empty registry ⇒ every entry point no-ops, the cache
- * stays empty, and {@link getSpotlightMarket} returns {} so the modal keeps its
- * "coming soon" state. Zero live change until an editor fills a matchup.
+ * GATED: {@link PLAYOFF_MARKET_SLUGS} starts empty until Valve seeds the bracket
+ * (PHA-993). Empty registry ⇒ every entry point no-ops, the cache stays empty,
+ * and {@link getSpotlightMarket} returns {} so the modal keeps its "coming soon"
+ * state. Zero live change until an editor fills a matchup.
  *
  * Graceful by contract: a source outage / parse miss degrades to the last cache
  * and NEVER blanks a good prior line — a team fetched live earlier keeps its line

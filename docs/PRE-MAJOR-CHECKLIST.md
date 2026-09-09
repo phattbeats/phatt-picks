@@ -24,15 +24,21 @@ HLTV is the source of truth for teams, rankings, results and the bracket.
       **first-match time** of each stage's day 1. CEST is UTC+2; record in UTC.
 - [ ] Record the **playoff window** and, once published, per-round day + time.
 
-These feed two committed configs in `src/lib/lock-schedule-core.ts`:
+These feed the two schedule fields on the new event's `EventConfig` entry in the
+registry (`src/lib/events-core.ts`) — see [NEXT-MAJOR.md](NEXT-MAJOR.md) Phase 1b for the
+current (post-PHA-1327) wiring: fill a sibling lock-schedule module (mirroring
+Cologne's `COLOGNE_LOCK_SCHEDULE` / `COLOGNE_MATCH_WINDOWS` in
+`src/lib/lock-schedule-core.ts`) and point the registry entry at it. Don't edit
+`COLOGNE_LOCK_SCHEDULE` itself for a future Major — it stays Cologne's own committed
+schedule (and the fallback default for verify scripts/tests).
 
-| Config | What it drives | Fill in |
+| Field on the new `EventConfig` | What it drives | Fill in |
 |---|---|---|
-| `COLOGNE_LOCK_SCHEDULE` | the lock countdown per stage | sectionId → UTC instant of that stage's first match |
-| `COLOGNE_MATCH_WINDOWS` | gates the hourly live crawls to match days | sectionId → `{ start, end }` UTC span |
+| `lockSchedule` | the lock countdown per stage | sectionId → UTC instant of that stage's first match |
+| `matchWindows` | gates the hourly live crawls to match days | sectionId → `{ start, end }` UTC span |
 
-Section ids map to the committed layout fixture: `105` Stage I, `106` Stage II,
-`107` Stage III, `108` QF, `109` SF, `110` GF. Leave a stage **out** of these
+Section ids map to the new event's layout fixture (Cologne's: `105` Stage I, `106` Stage II,
+`107` Stage III, `108` QF, `109` SF, `110` GF). Leave a stage **out** of these
 maps until its date is authoritative — `lockTimeForSection` returns `null` (no
 clock) and `isWithinMatchWindow` returns `true` (don't freeze an undated stage).
 
@@ -114,9 +120,11 @@ frozen snapshot is what renders until the first live crawl lands.
 
 ## 5. Go-live config sanity pass
 
-- [ ] `COLOGNE_LOCK_SCHEDULE` has every dated stage; playoff per-game times go in
-      `COLOGNE_PLAYOFF_SCHEDULE` and fold in automatically (Cologne's are committed, PHA-1007).
-- [ ] `COLOGNE_MATCH_WINDOWS` covers every stage that should crawl live.
+- [ ] The new event's registry `lockSchedule` has every dated stage; playoff per-game times go in
+      its `playoffSchedule` and fold in automatically (PHA-1007 shape; Cologne's are committed as
+      `COLOGNE_LOCK_SCHEDULE` / `COLOGNE_PLAYOFF_SCHEDULE` — don't edit those for a new Major, add
+      sibling constants and wire them into the new `EventConfig`, per NEXT-MAJOR.md Phase 1b).
+- [ ] The new event's registry `matchWindows` covers every stage that should crawl live.
 - [ ] `WRITE_ENABLED`, `STEAM_API_KEY`, CAPTCHA + VAPID keys set (see
       [OPERATIONS.md](OPERATIONS.md)).
 - [ ] Logo manifest `src/fixtures/<event>-logos.json` built (monograms site-wide =

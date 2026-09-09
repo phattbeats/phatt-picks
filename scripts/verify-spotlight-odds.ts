@@ -7,8 +7,10 @@
  *   - orienting the two-way market to "this team" by name (never guessing a side),
  *   - the "updated N ago" label bucketing against the ~1h refresh floor,
  *   - assembling the modal-ready SpotlightMarketLine.
- * Also asserts the GATED invariant: PLAYOFF_MARKET_SLUGS ships EMPTY until Valve
- * seeds the bracket, so the feature is inert (modal "coming soon") until authored.
+ * Also asserts PLAYOFF_MARKET_SLUGS (now authored with the QF matchups) is
+ * well-formed: every pickid maps to a non-empty slug + teamName, and each
+ * slug is shared by exactly the two pickids on both sides of that matchup.
+ * An unlisted pickid still falls back to the modal's "coming soon" state.
  *
  * Run: node scripts/verify-spotlight-odds.ts
  */

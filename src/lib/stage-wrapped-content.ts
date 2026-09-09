@@ -11,9 +11,10 @@
  * Framework-free and deterministic so `verify-stage-wrapped-content.ts` can
  * exercise it offline. The two invariants the verify pins:
  *   1. NO-OP before content exists — a section with no authored moments (e.g.
- *      Stage III before it's written, or any stage pre-resolve when the caller
- *      gates on `sectionResolved`) yields an EMPTY deck. The shell then shows its
- *      honest "nothing to wrap yet" card and the launcher never auto-opens.
+ *      a future stage before it's written, or any stage pre-resolve when the
+ *      caller gates on `sectionResolved`) yields an EMPTY deck. The shell then
+ *      shows its honest "nothing to wrap yet" card and the launcher never
+ *      auto-opens.
  *   2. The personal slides only appear when personal data is supplied (a
  *      signed-in viewer with a resolved stage); signed-out gets the stage's
  *      moments + a sign-in outro, never fabricated personal numbers.
@@ -107,10 +108,10 @@ interface AuthoredStage {
 
 /**
  * Authored stage decks — real, sourced IEM Cologne 2026 beats. Keyed by Swiss
- * section id (105 = Stage I, 106 = Stage II). A section absent here has no recap
- * yet, so `buildStageWrappedDeck` returns an empty deck for it (the no-op).
- * The shipped slide renderer shows eyebrow + figure + headline + body (no logo
- * slot yet), so each matchup is carried in the figure/caption copy.
+ * section id (105 = Stage I, 106 = Stage II, 107 = Stage III). A section absent
+ * here has no recap yet, so `buildStageWrappedDeck` returns an empty deck for it
+ * (the no-op). `logoPickIds` resolves to a `teamLogos` row on the rendered slide;
+ * the figure/caption copy still carries the matchup narrative.
  */
 const AUTHORED: Record<number, AuthoredStage> = {
   // Stage I (HLTV 9028) — the favorites fell and the impossible happened.

@@ -193,9 +193,10 @@ const COLOGNE_2026: EventConfig = {
 /**
  * PGL Major Singapore 2026 — the NEXT Major, pre-seeded as `upcoming` (PHA-1055,
  * leaning on the multi-major backbone PHA-948/949/950). It resolves `upcoming`
- * purely from the clock today and has ZERO impact on live Cologne:
- * `selectCurrentEvent` prefers the effectively-live event, so Cologne stays the
- * served Major until it archives, after which the site counts down to this one.
+ * purely from the clock and has ZERO impact on Cologne: `selectCurrentEvent`
+ * prefers live, then an upcoming event only once it's within its anticipation
+ * window (PHA-1048) — so archived Cologne (PHA-1318) keeps being served until
+ * this one is close enough to take over.
  *
  * Confirmed facts (PHA-1048 research): PGL · Singapore Indoor Stadium · 32 teams
  * · $1.25M prize pool · BO5 Grand Final. Main event runs Nov 25 – Dec 13 2026,
@@ -269,8 +270,9 @@ export function getEventConfig(id: number): EventConfig | null {
  * archived at its `dates.end` ceiling — see `resolveEffectiveStatus`). This is
  * what the on-read drivers / watchers / reminders iterate instead of a single
  * hardcoded id, so the next Major's reminders fire on schedule with nobody
- * editing the registry. Today this is exactly `[Cologne]` — behind current
- * behavior. Normally length 1; 0 between Majors, briefly >1 across an overlap.
+ * editing the registry. Today this is `[]` — Cologne has archived (PHA-1318)
+ * and Singapore isn't live yet. Normally length 1; 0 between Majors (as now),
+ * briefly >1 across an overlap.
  */
 export function liveEvents(nowMs: number = Date.now()): EventConfig[] {
   return Object.values(EVENTS).filter((e) => isEffectivelyLive(e, nowMs));
@@ -283,7 +285,7 @@ export function liveEvents(nowMs: number = Date.now()): EventConfig[] {
  * off-season keeps showing the last Major's results until the next one is near
  * rather than flipping to a barely-seeded future event — PHA-1048). Throws only
  * if the registry is empty, which is a build error, never a runtime state.
- * Clock-derived; Cologne today.
+ * Clock-derived; Cologne today (archived, since Singapore isn't anticipated yet).
  */
 export function currentEvent(nowMs: number = Date.now()): EventConfig {
   const e = selectCurrentEvent(Object.values(EVENTS), nowMs) as EventConfig | null;
@@ -318,8 +320,9 @@ export function nextUpcomingEvent(nowMs: number = Date.now()): EventConfig | nul
  * The event currently being run. Now CLOCK-DERIVED (PHA-950): it returns the
  * event whose *effective* status — baseline `status` advanced by the wall clock
  * — makes it the one to serve, so the registry transitions upcoming→live→
- * archived across Majors with no human flipping the `status` field. Today that
- * is Cologne (effective `live`), so every existing caller is unchanged. Kept
+ * archived across Majors with no human flipping the `status` field. Today
+ * that's archived Cologne (its GF grace elapsed, PHA-1318) served as the
+ * most-recently-concluded Major, since Singapore isn't anticipated yet. Kept
  * with a no-arg signature for the PHA-948 call sites; takes `nowMs` for tests.
  */
 export function resolveActiveEvent(nowMs: number = Date.now()): EventConfig {

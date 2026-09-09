@@ -14,8 +14,9 @@
  * Unlike the standings (one HLTV EVENT page per section), the dossier is keyed by
  * each team's HLTV PROFILE — global across stages — so the cache is a single blob
  * per event and the gate is `isWithinAnyMatchWindow` (any stage playing), not the
- * per-section window. One crawl4ai request batches all 32 profiles, retrying the
- * teams HLTV challenges and accumulating coverage across hourly cycles.
+ * per-section window. The 32 profiles are crawled in small sequential sub-batches
+ * (PHA-1036, CRAWL_CHUNK_SIZE), retrying the teams HLTV challenges and
+ * accumulating coverage across hourly cycles.
  *
  * Graceful by contract: a source outage / parse miss degrades to the last cache,
  * and the read path ALWAYS merges over the committed frozen snapshot, so the
@@ -59,10 +60,11 @@ const TEAM_STATS_REFRESH_SOURCE = "hltv-team-stats";
 // The per-pass timeout + multi-pass retry/budget policy live in the pure
 // team-stats-sources module (CRAWL_PASS_TIMEOUT_MS / MAX_TOTAL_CRAWL_MS /
 // MAX_CRAWL_PASSES) so the verify harness can prove the retry + partial-discard
-// behaviour offline. crawl4ai renders the 32 profiles in ONE request
-// SEQUENTIALLY (a burst of parallel requests trips HLTV's Cloudflare challenge);
-// measured ~120s for the full field. Runs deferred (off the render path) on the
-// on-read path; the warm route awaits it (a one-shot ops/deploy poke).
+// behaviour offline. crawl4ai renders the 32 profiles in small SEQUENTIAL
+// sub-batches of CRAWL_CHUNK_SIZE (PHA-1036: a single 32-URL request let the
+// dispatcher render them all at once and froze the box); measured ~120s for the
+// full field. Runs deferred (off the render path) on the on-read path; the warm
+// route awaits it (a one-shot ops/deploy poke).
 
 /** The persisted blob shape (data column of TeamStatsCache). */
 interface TeamStatsBlob {

@@ -16,7 +16,7 @@ type LoadState =
   | { kind: "error"; message: string };
 
 /**
- * Owner-only admin section embedded in /profile. Lists every local-only Player
+ * Owner-only admin section embedded in /settings. Lists every local-only Player
  * (isLocal && !steamId), with pick count and last-activity, plus a confirm
  * delete button per row. See PHA-854 for the cleanup motivation.
  *

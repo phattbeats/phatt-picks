@@ -29,7 +29,7 @@ missing.
 | `TURNSTILE_SECRET_KEY` | optional | `src/lib/captcha.ts:27` | Cloudflare Turnstile secret for the local-signup CAPTCHA. When unset, CAPTCHA enforcement is **skipped** (signups still work, no challenge). |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | optional | `src/app/login/local/page.tsx` | Public Turnstile site key for the CAPTCHA widget. Name must match **exactly** (a misspelled var = silent no-widget — see GOTCHAS). |
 | `TRUSTED_PROXY_HOPS` | optional, default `1` | `src/app/api/auth/local/route.ts:47` | Number of trusted reverse-proxy hops when deriving the client IP from `X-Forwarded-For` for the local-signup per-IP account limit (PHA-1045). Unset / blank / non-positive → `1` (the single SWAG hop). Raise only if you add another trusted proxy in front of SWAG. |
-| `STAGE_LOCKS_JSON` | optional | `src/lib/prelock-reminders.ts` | Per-section pick cutoffs for the pre-lock reminder scheduler, e.g. `{"105":{"name":"Stage I","lockAt":"2026-06-02T10:30:00Z"}}`. When unset, uses the committed `COLOGNE_LOCK_SCHEDULE`. |
+| `STAGE_LOCKS_JSON` | optional | `src/lib/prelock-reminders.ts` | Per-section pick cutoffs for the pre-lock reminder scheduler, e.g. `{"105":{"name":"Stage I","lockAt":"2026-06-02T10:30:00Z"}}`. When unset, the scheduler is registry-driven (PHA-950): it reads the `lockSchedule` of whichever event is currently effectively live — today that's Cologne's committed `COLOGNE_LOCK_SCHEDULE`, but a future Major's reminders follow its own registry entry automatically, with no re-pointing. |
 | `EVENT_ID` | optional, default = clock-derived current event | `src/lib/prelock-reminders.ts:67` | Valve tournament event id (the layout's internal id, **not** the HLTV event id). Read by the in-process reminder scheduler. When unset it pins to the registry's current event via `currentEventId(now)` (PHA-1046 removed the old hardcoded `26` default); set it only to pin one specific event for a pre-go-live dry run. |
 | `PRELOCK_REMINDERS_DISABLED` | optional, default off | `src/instrumentation.ts` | Set to `1` to turn OFF the in-process pre-lock reminder scheduler. Since PHA-996 the scheduler is **ON by default** with no env required — the old opt-in (`PRELOCK_REMINDERS_ENABLED=1`) lived only on the container and a template Force-Update silently dropped it. A leftover explicit `PRELOCK_REMINDERS_ENABLED=0` also disables. |
 
@@ -141,31 +141,26 @@ open /picks (Steam session)        → Lock In to Steam button visible
 If `Lock In` shows `Steam sync disabled by owner`, `WRITE_ENABLED` isn't set true.
 If it shows `Add your Steam auth code to sync`, hit `/help/auth-code` and paste.
 
-## Remaining stages — playoffs readiness
+## Playoff bracket mechanics (reference)
 
-> Snapshot as of **2026-06-20** (Stages I, II, III complete; playoffs underway — QF/SF done,
-> Grand Final Jun 21). Sections: `108` QF · `109` SF · `110` GF.
+IEM Cologne 2026 (sections `105`–`110`) ran its full arc — Stages I–III, then the QF/SF/GF
+bracket — and is now **complete and archived**; there's no "remaining stages" tracking left to
+do for it. The mechanics below are evergreen and apply to whichever event is currently live
+(PGL Singapore 2026 is next up — see [NEXT-MAJOR.md](NEXT-MAJOR.md)):
 
-### Stage III (section 107) — **COMPLETE** (locked Jun 11, 10:30 UTC)
-- Locked + scored. Source = HLTV event hub `8301` (`events-core.ts` → `sectionSources[107]`).
-  Match window `COLOGNE_MATCH_WINDOWS[107]` covers Jun 11–15. Stage III outcomes seeded the
-  QF bracket via the committed layout + `StageOutcome` on-read resolve.
-
-### Playoffs (sections 108/109/110) — **Jun 18–21, SEEDED**
 - **Bracket:** the single interactive QF→SF→GF picker (`PlayoffBracketPicker` +
   `playoff-bracket-core.ts`) renders from the committed layout + `StageOutcome` (no crawl).
-  The eight QF matchups are committed (PHA-1007); tap a winner and they advance to the GF.
-- **Schedule is live (PHA-1007):** the per-game playoff times are committed in
-  `COLOGNE_PLAYOFF_SCHEDULE` (`lock-schedule-core.ts`) — QF Jun 18–19, SF Jun 20, GF Jun 21 —
-  and fold into `COLOGNE_LOCK_SCHEDULE` via `derivePlayoffLocks`. The whole bracket locks at the
-  first quarterfinal (Jun 18 13:45 UTC); the `/picks` page renders a per-game schedule + countdown
-  below the bracket. (Truthful-by-construction: a section with no committed game time stays dark,
-  so removing a time degrades gracefully.)
+  QF matchups come from the committed layout; tap a winner and they advance to the GF.
+- **Schedule (PHA-1007):** per-game playoff times are committed per event (Cologne's in
+  `COLOGNE_PLAYOFF_SCHEDULE`, `lock-schedule-core.ts`) and fold into that event's lock schedule
+  via `derivePlayoffLocks`. The whole bracket locks at the first quarterfinal; the `/picks` page
+  renders a per-game schedule + countdown below the bracket. (Truthful-by-construction: a section
+  with no committed game time stays dark, so removing a time degrades gracefully.)
 - **One playoff reminder, not three (PHA-1245):** because the bracket is a single Pick'Em that
-  locks all at once, `stageLocksFromSchedule` collapses sections 108/109/110 into a single
+  locks all at once, `stageLocksFromSchedule` collapses the playoff sections into a single
   **"Playoffs"** pre-lock cutoff (keyed at the first QF), so an opted-in player gets one
   "Playoffs picks lock in …" warning (24h + 1h) — not a separate Quarterfinals / Semifinals /
-  Grand Final ping. Per-round locks remain in `COLOGNE_LOCK_SCHEDULE` for the countdown/reveal.
+  Grand Final ping. Per-round locks remain in the event's lock schedule for the countdown/reveal.
 - **Outcomes resolve headlessly (PHA-1273):** `refreshLiveResultsTick` drives `ingestOutcomes`
   (the Valve answer key) on every in-process tick, so QF/SF/GF turn green without an owner trigger —
   trusting Valve's live bracket field (which is dynamically seeded) rather than the committed fixture
@@ -176,8 +171,6 @@ If it shows `Add your Steam auth code to sync`, hit `/help/auth-code` and paste.
   whose winner hasn't resolved yet shows a heat-tinted ⏳ notice on the live bracket (`awaitingResult`
   in `buildPlayoffBracket` + `LivePlayoffBracket`) — the normal ~1h Valve answer-key lag is *not* a
   bug; it self-heals on the next resolve.
-- **Deferred polish:** the HLTV map-score overlay on the playoff bracket was a PHA-903
-  follow-up — pick up if desired once the bracket is live.
 
 ## Verify scripts
 

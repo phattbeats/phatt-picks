@@ -4,7 +4,7 @@
  * Renders UNDER the viewer's build on a locked Swiss stage: every team in the
  * stage with its running win-loss record, round differential, and advance /
  * eliminated status, sourced live from the HLTV event page (refreshed hourly,
- * server-side). Where LiveSwissBracket shows "what you called" off Valve's
+ * server-side). Where LiveSwissBracketBoard shows "what you called" off Valve's
  * answer key, this shows "what's actually happening" off a real results feed —
  * the running record Valve's Pick'Em never exposes.
  *

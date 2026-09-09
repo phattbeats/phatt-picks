@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
  *
  * Share is the primary action — the native share sheet is the word-of-mouth
  * engine on mobile; copy is the desktop/manual fallback. Client-side so
- * /profile stays read-only on render (the code is minted lazily by the API on
+ * /settings stays read-only on render (the code is minted lazily by the API on
  * first call).
  */
 const SHARE_TEXT =

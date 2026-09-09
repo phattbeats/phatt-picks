@@ -3,9 +3,10 @@
  *
  * Pulls a player's live Valve predictions and mirrors them into the local Pick
  * table as non-local rows (isLocal=false), keyed by event_id (rule #9), with
- * itemids carried through as strings (rule #2). The picks screen and (later)
- * the leaderboard read from the Pick table, so a single mirror feeds the whole
- * UI without the rest of the app ever touching the Steam read path (rule #6).
+ * itemids carried through as strings (rule #2). The picks screen and the
+ * leaderboard both read from the Pick table, so a single mirror feeds the
+ * whole UI without the rest of the app ever touching the Steam read path
+ * (rule #6).
  *
  * Degrades gracefully (rules #7/#8): a missing steamId/auth code or any Valve
  * error leaves stored picks untouched and returns the reason — a failed read

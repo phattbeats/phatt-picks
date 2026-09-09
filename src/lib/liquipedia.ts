@@ -142,9 +142,9 @@ async function liquipediaParse(page: string): Promise<string> {
  * Map a Liquipedia tournament bracket page into resolved slots.
  *
  * The bracket→slot extraction is tournament-specific and depends on the live
- * page's match templates. Until IEM Cologne 2026 actually plays out (June
- * 2026) the bracket has no completed matches, so this yields []. The parser
- * contract: walk completed `{{Match|...|winner=N}}` templates, map each to
+ * page's match templates. Before a tournament's bracket has any completed
+ * matches, this yields []. The parser contract: walk completed
+ * `{{Match|...|winner=N}}` templates, map each to
  * its (sectionId, groupId, slotIndex) via `slotMapper`, and emit the winning
  * team's layout pickid. Unresolved or unmappable matches are skipped.
  */

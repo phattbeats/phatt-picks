@@ -4,8 +4,8 @@
  * The mockup-17 wire is a populated headline feed (source · time-ago meta,
  * headline, image slot). News was cut from the Beta floor, so the design rule
  * mirrors the lock-schedule (PHA-856): never fabricate a headline. The wire is
- * driven by a real source — a committed *curated* seed for the Beta, and, when
- * wired, an automated pull (RSS / HLTV) through the same ingestion path. When
+ * driven by a real source — a committed *curated* seed for the Beta, plus an
+ * automated HLTV RSS pull (PHA-859) through the same ingestion path. When
  * both the DB and the seed are empty the page degrades to the honest
  * "No signal yet" state instead of inventing content.
  *

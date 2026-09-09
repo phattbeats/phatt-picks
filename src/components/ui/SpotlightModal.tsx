@@ -24,7 +24,7 @@ interface Props {
   /** Live per-stage dossier (PHA-921); preferred over the frozen snapshot. */
   liveStats?: TeamStats;
   liveAsOf?: string;
-  /** Live market line for this team's matchup; omitted until wired (PHA-1043 follow-up). */
+  /** Live market line for this team's matchup (PHA-1066); omitted until a matchup/odds exist. */
   market?: SpotlightMarketLine;
 }
 

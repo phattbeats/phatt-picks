@@ -302,10 +302,11 @@ export interface WarmResult {
  * route (and a deploy smoke) call so the cache is guaranteed populated without
  * depending on `after()` or a user happening to load the page.
  *
- * Safe to expose: only crawls the hard-coded HLTV event (no user input) and is
- * gated — off-window → no-op; if a cache already exists it's bounded by the same
- * ~1h SourceState claim so it can't be hammered; a COLD cache always crawls so a
- * stamped-but-empty state self-heals. Never throws.
+ * Safe to expose: only crawls the active event's configured HLTV sources (no
+ * arbitrary URL from user input) and is gated — off-window → no-op; if a cache
+ * already exists it's bounded by the same ~1h SourceState claim so it can't be
+ * hammered; a COLD cache always crawls so a stamped-but-empty state self-heals.
+ * Never throws.
  */
 export async function warmStandings(
   eventId: number,

@@ -504,14 +504,6 @@ function PhotoFigure({ photo }: { photo: NonNullable<WrappedSlide["photo"]> }) {
 }
 
 /**
- * A looping highlight clip in the band (PHA-1274 — the magixx 1v4). Muted +
- * autoplay + loop + playsInline so it plays unprompted on mobile; only mounts
- * for the active slide (the deck renders one SlideCard at a time, keyed by id),
- * so no off-screen clip ever loads. The `muted` *property* is forced via ref —
- * the attribute alone doesn't reliably satisfy autoplay policies — and a blocked
- * play() or a load error falls back to the poster still, never an empty band.
- */
-/**
  * A transparent player portrait (PHA-1274) — the team's marquee, used as the
  * picture for the team slides + player moments. HLTV bodyshots are cut-out
  * WebPs, so they sit as a centered hero over the slide's dark backdrop (no band
@@ -528,6 +520,14 @@ function PlayerPortrait({ portrait }: { portrait: NonNullable<WrappedSlide["port
   );
 }
 
+/**
+ * A looping highlight clip in the band (PHA-1274 — the magixx 1v4). Muted +
+ * autoplay + loop + playsInline so it plays unprompted on mobile; only mounts
+ * for the active slide (the deck renders one SlideCard at a time, keyed by id),
+ * so no off-screen clip ever loads. The `muted` *property* is forced via ref —
+ * the attribute alone doesn't reliably satisfy autoplay policies — and a blocked
+ * play() or a load error falls back to the poster still, never an empty band.
+ */
 function VideoFigure({ video }: { video: NonNullable<WrappedSlide["video"]> }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [failed, setFailed] = useState(false);
