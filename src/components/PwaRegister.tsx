@@ -7,7 +7,7 @@ import { useEffect } from "react";
  * Mounted in the root layout so every route is PWA-installable (and so iOS
  * Web Push works once the user adds the app to their home screen).
  *
- * AUTO-UPDATE (PHA-1269): an installed PWA / open tab can keep running an old
+ * AUTO-UPDATE (#1269): an installed PWA / open tab can keep running an old
  * build long after a deploy — exactly the "loads the cached version" report. So
  * we (1) ask the browser to check for a fresh `sw.js` on load, and (2) when a new
  * worker takes control (`controllerchange`, which fires after the new SW's

@@ -1,5 +1,5 @@
 /**
- * verify-consensus - offline proof for PHA-889 (pick consensus %).
+ * verify-consensus - offline proof for #889 (pick consensus %).
  *
  * The consensus signal must be honest read-side arithmetic:
  *   1. The denominator is the field that actually picked the slot — pickId 0
@@ -54,7 +54,7 @@ const slotB: ConsensusPickRow[] = [
   { sectionId: 105, groupId: 271, slotIndex: 1, pickId: 7 },
 ];
 
-console.log("\nconsensus - distribution math (PHA-889)");
+console.log("\nconsensus - distribution math (#889)");
 
 const c = buildConsensus([...slotA, ...slotB]);
 const a = c.get(consensusKey(105, 271, 0))!;
@@ -97,7 +97,7 @@ check(
   buildConsensus([{ sectionId: 2, groupId: 2, slotIndex: 0, pickId: 0 }]).size === 0,
 );
 
-console.log("\nbucket consensus - Swiss slots are interchangeable within a bucket (PHA-900)");
+console.log("\nbucket consensus - Swiss slots are interchangeable within a bucket (#900)");
 
 // The 0:3 bucket is slots 8 & 9 (sec 105). Five players each name two 0:3 teams.
 // Thunder Down Under (pickId 50) is on EVERY player's 0:3 — but four of them put

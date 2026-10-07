@@ -1,5 +1,5 @@
 /**
- * Pick consensus (PHA-889) — field-wide popularity of each team choice.
+ * Pick consensus (#889) — field-wide popularity of each team choice.
  *
  * Companion pick'em sites surface a consensus signal — "X% of players picked
  * this team to go 3-0 / advance / 0-3" — which drives engagement and orients
@@ -95,7 +95,7 @@ export function shareFor(
   return slot.shares.find((s) => s.pickId === pickId) ?? null;
 }
 
-/* ── Bucket-level consensus (PHA-900 follow-up) ───────────────────────────────
+/* ── Bucket-level consensus (#900 follow-up) ───────────────────────────────
  *
  * Per-slot consensus (above) asks "who else put this team in THIS exact slot".
  * Inside a Swiss stage that's the wrong grain: the 3:0 slots are equivalent to

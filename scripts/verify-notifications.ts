@@ -1,6 +1,6 @@
 /**
- * verify-notifications — offline proof for the PHA-1211 universal notification
- * feed + PHA-1237 per-notification read state.
+ * verify-notifications — offline proof for the #1211 universal notification
+ * feed + #1237 per-notification read state.
  *
  *   1. reactionEntries group inbound reactions by pick, tally stamps, and
  *      resolve the team/stage label (no isNew — that's layered on later).
@@ -10,7 +10,7 @@
  *      dropped (no backfill).
  *   4. assembleFeed + ReadContext: explicit per-entry read beats the
  *      notificationsSeenAt watermark; a re-emerging entry (atMs after the
- *      read's readAt) goes back to unread. PHA-1237.
+ *      read's readAt) goes back to unread. #1237.
  *   5. unknown stampIds are dropped, never counted.
  *
  * Pure module, no DB. Run: node scripts/verify-notifications.ts
@@ -82,12 +82,12 @@ check("lock too far out → null", stageLockEntry({ sectionId: 106, stageName: "
 const recentRecap = recapEntry({ sectionId: 107, stageName: "Stage III", resolvedAtMs: NOW - DAY }, NOW);
 check("recent recap → entry", recentRecap !== null && recentRecap.kind === "recap");
 check("stale recap → null (no backfill)", recapEntry({ sectionId: 105, stageName: "Stage I", resolvedAtMs: NOW - 30 * DAY }, NOW) === null);
-// PHA-1245 follow-up: recap deep-links to the stage's reveal page + force-opens
+// #1245 follow-up: recap deep-links to the stage's reveal page + force-opens
 // the cinematic deck (clicking "/" did nothing once the device dismissed it).
 check("recap href deep-links to the reveal page with ?wrapped=1",
   recentRecap?.href === "/reveal/107?wrapped=1");
 
-// ── ReadContext: explicit per-entry read beats the watermark (PHA-1237) ──
+// ── ReadContext: explicit per-entry read beats the watermark (#1237) ──
 const explicitReadAt = NOW - 6 * HOUR; // player marked read 6h ago
 const rcExplicit: ReadContext = {
   seenAtMs: 0,
@@ -169,7 +169,7 @@ check("isRead: watermark covers older entry", isRead(probe, { seenAtMs: NOW, rea
 check("isRead: future entry vs old watermark is unread", isRead({ id: "x", atMs: NOW + HOUR }, { seenAtMs: NOW - DAY, readSet: new Set(), readAtByEntry: new Map() }) === false);
 check("isRead: fresh entry, no watermark, no explicit set → unread", isRead(probe, emptyReadContext(0)) === false);
 
-// ── parseNotifPrefs + filterEntriesByPrefs (PHA-1240) ──────────────────────────
+// ── parseNotifPrefs + filterEntriesByPrefs (#1240) ──────────────────────────
 const allEntries: Omit<NotifEntry, "isNew" | "readAt">[] = [
   { id: "reaction:1:1:0", kind: "reaction", icon: "🔥", title: "t", body: "b", href: "/", atMs: NOW, stamps: [] },
   { id: "stage:107", kind: "stage", icon: "⏰", title: "t", body: "b", href: "/", atMs: NOW },
@@ -210,7 +210,7 @@ check("filterEntriesByPrefs: all inApp=false → empty feed", (() => {
   return filterEntriesByPrefs(allEntries, p).length === 0;
 })());
 
-// ── 6. Challenge coin earned (PHA-1278) ──────────────────────────────────────
+// ── 6. Challenge coin earned (#1278) ──────────────────────────────────────
 const COIN_NOW = 1_000 * 24 * 3600_000;
 check("coinEarnedEntry: fresh coin → entry with stable id + atMs", (() => {
   const e = coinEarnedEntry(

@@ -1,5 +1,5 @@
 /**
- * verify-playoff-wrapped-derive — offline proof for PHA-1274's storyline brain.
+ * verify-playoff-wrapped-derive — offline proof for #1274's storyline brain.
  *
  * Brandon: "it needs to check if it's wrapped, start finding the storylines,
  * and go from there." This pins that the derivation is honest arithmetic over a

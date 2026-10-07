@@ -6,7 +6,7 @@ export const metadata = { title: "Wire · HOTLINE" };
 export const dynamic = "force-dynamic";
 
 /**
- * The wire (PHA-857). Renders the mockup-17 headline feed when there is real
+ * The wire (#857). Renders the mockup-17 headline feed when there is real
  * signal — a committed curated seed and/or ingested rows. When the wire is dry
  * it degrades to the honest "No signal yet" state below: news was first on the
  * handoff cut list ("mark cancelled, don't silently drop"), and we never

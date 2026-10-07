@@ -19,7 +19,7 @@ import { StageWrappedReplay } from "@/components/heat/StageWrappedReplay";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  // Resolve the active event PER REQUEST (PHA-1046): this RSC is force-dynamic, so
+  // Resolve the active event PER REQUEST (#1046): this RSC is force-dynamic, so
   // when one Major archives and the next goes live the dashboard follows the clock
   // without a redeploy. (A module-level `ACTIVE_EVENT_ID` would pin the value for
   // the whole process lifetime and serve the stale event.)
@@ -28,7 +28,7 @@ export default async function DashboardPage() {
   const layout = getCommittedLayout();
   const session = await getSession();
 
-  // Live driver (PHA-866): one atomic 30s claim gates a deferred background ingest
+  // Live driver (#866): one atomic 30s claim gates a deferred background ingest
   // (via `after`), so "Live now" standings track each finished match with no cron
   // and no added render latency. Mirrors the news wire's refreshWireOnRead.
   await refreshOutcomesOnRead(EVENT_ID);
@@ -48,7 +48,7 @@ export default async function DashboardPage() {
     }),
     getWireItems(3),
     // The crowned champion, or null until the Grand Final resolves. Non-null
-    // flips the whole dashboard into its "Major complete" send-off (PHA-1274).
+    // flips the whole dashboard into its "Major complete" send-off (#1274).
     majorChampion(EVENT_ID),
   ]);
 
@@ -71,7 +71,7 @@ export default async function DashboardPage() {
 
   // First stage whose pick window is still open; while nothing is open, the
   // stage currently in progress — never a future stage that hasn't opened yet
-  // (PHA-1007: the hero spotlit the un-seeded Grand Final a week early).
+  // (#1007: the hero spotlit the un-seeded Grand Final a week early).
   const stageStatuses = layout.sections.map((s) => ({
     section: s,
     pick: isStagePickable(layout, s.sectionid, {
@@ -82,7 +82,7 @@ export default async function DashboardPage() {
   const active = stageStatuses[activeIdx];
 
   // The three single-elim sections (108/109/110) read as ONE "Playoffs" stage on
-  // the hero, the same way the picks page consolidates them (PHA-1007). Once Stage
+  // the hero, the same way the picks page consolidates them (#1007). Once Stage
   // III is over and Valve seeds the bracket, selectCurrentStageIndex promotes a
   // playoff section to "current" and the hero transitions from Stage III to
   // Playoffs — with bracket-appropriate copy, not Swiss 3-0/0-3 language.
@@ -92,7 +92,7 @@ export default async function DashboardPage() {
 
   // How many of the active section's slots the signed-in player has already
   // locked. Without this the briefing always reads "you haven't called your
-  // picks yet" even after a full lock-in (PHA-883). Count distinct filled
+  // picks yet" even after a full lock-in (#883). Count distinct filled
   // slots so a re-saved pick can't inflate the tally past the slot count.
   const activeSlotCount = active.section.groups.reduce(
     (acc, g) => acc + g.picks.length,
@@ -152,13 +152,13 @@ export default async function DashboardPage() {
   const eventStarted = resolvedRows.length > 0;
   // Once the Grand Final crowns a champion the Major is DONE — the eyebrow stops
   // saying "Live now" (which it would otherwise say forever, since outcomes stay
-  // resolved) and the hero becomes a send-off (PHA-1274: "the homepage needs
+  // resolved) and the hero becomes a send-off (#1274: "the homepage needs
   // updated").
   const eventLabel = champion ? "Major complete" : eventStarted ? "Live now" : "Pre-event";
   // Re-open the actual Major Wrapped deck (the app-wide launcher mounted in the
   // layout) via the replay bus — NOT a /reveal/<GF>?wrapped=1 link, which only
   // force-opens that one section's own wrap ("Grand Final — nothing to wrap
-  // yet") instead of the cinematic recap (PHA-1274).
+  // yet") instead of the cinematic recap (#1274).
   const wrappedStageKey = majorWrappedStageKey(EVENT_ID);
 
   return (
@@ -384,7 +384,7 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      {/* Watch the official streams (PHA-942) — sits below everything else */}
+      {/* Watch the official streams (#942) — sits below everything else */}
       <WatchNow />
 
       <style>{`
@@ -399,7 +399,7 @@ export default async function DashboardPage() {
 }
 
 /**
- * The dashboard hero AFTER the Major is decided (PHA-1274) — replaces the stage
+ * The dashboard hero AFTER the Major is decided (#1274) — replaces the stage
  * briefing the moment the Grand Final crowns a champion. Same broadcast shell as
  * the briefing (keyline corners + faint HeatMark), but it names the champion and
  * points everyone at the Wrapped recap and the final board instead of a now-dead
@@ -413,7 +413,7 @@ function ConcludedHero({
 }: {
   champion: MajorChampion;
   wrappedStageKey: string;
-  /** The next Major on the registry's clock (PHA-1328), or null if none is
+  /** The next Major on the registry's clock (#1328), or null if none is
    *  staged yet — keeps the off-season home alive with a real countdown. */
   next: ReturnType<typeof nextUpcomingEvent>;
   /** Caller's per-request timestamp — reused here so this stays pure (no
@@ -570,7 +570,7 @@ function StageBody({
   filledSlots: number;
   totalSlots: number;
   /** The active stage is the single-elim playoff bracket — use bracket copy,
-   *  not the Swiss 3-0 / 0-3 / advancing-eight language (PHA-1007). */
+   *  not the Swiss 3-0 / 0-3 / advancing-eight language (#1007). */
   isPlayoff?: boolean;
 }) {
   const complete = totalSlots > 0 && filledSlots >= totalSlots;

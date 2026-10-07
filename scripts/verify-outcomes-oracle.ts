@@ -1,5 +1,5 @@
 /**
- * verify-outcomes-oracle — offline proof of the Valve layout outcome oracle (PHA-869).
+ * verify-outcomes-oracle — offline proof of the Valve layout outcome oracle (#869).
  *
  * The live resolver reads results from Valve's GetTournamentLayout: once a stage
  * resolves, each pick slot's `pickids` holds the correct-answer team(s). This is

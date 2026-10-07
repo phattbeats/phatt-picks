@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 /**
- * Build the singleton PrismaClient and put SQLite into WAL mode (PHA-863).
+ * Build the singleton PrismaClient and put SQLite into WAL mode (#863).
  *
  * Default (rollback-journal) SQLite takes an exclusive lock for the whole of
  * every write, so the read-path upserts (news self-refresh, mirror-on-read)

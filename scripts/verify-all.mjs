@@ -1,4 +1,4 @@
-// PHA-925 — run the entire offline verify-*.ts harness through one command.
+// #925 — run the entire offline verify-*.ts harness through one command.
 //
 //   node scripts/verify-all.mjs
 //

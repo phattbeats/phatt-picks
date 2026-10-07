@@ -41,7 +41,7 @@ export interface SlotRef {
  * Why locked-only: results can only exist after picks lock. Filtering on
  * "unresolved" alone (the old behavior) treats every open stage as a candidate
  * pre-event, which makes the ingest tick call the source on every poll — the
- * Liquipedia bug that triggered PHA-844. Locked-and-unresolved yields the empty
+ * Liquipedia bug that triggered #844. Locked-and-unresolved yields the empty
  * set against the all-open layout, so the caller can short-circuit before any
  * source request.
  *
@@ -76,12 +76,12 @@ export function pickLockedUnresolvedSlots(
  * scheduled start. A BO3 runs ~2.5h and a BO5 grand final ~4h+, so 6h clears the
  * longest real match plus Valve's answer-key posting lag without ever false-firing
  * on a game that is merely still in progress. Tunable; the live tick re-checks it
- * every cycle, so this is the *detection* deadline, not a retry interval. (PHA-1273)
+ * every cycle, so this is the *detection* deadline, not a retry interval. (#1273)
  */
 export const PLAYOFF_RESOLVE_GRACE_MS = 6 * 60 * 60 * 1000;
 
 /** A playoff round (section) carrying matches that should have finished by now but
- *  have no StageOutcome — the stuck-ingest watchdog signal (PHA-1273). */
+ *  have no StageOutcome — the stuck-ingest watchdog signal (#1273). */
 export interface StalePlayoffSection {
   sectionId: number;
   /** Games whose scheduled start + grace has elapsed (a winner is expected). */
@@ -96,7 +96,7 @@ export interface StalePlayoffSection {
 
 /**
  * Watchdog: which playoff rounds have unresolved matches that are *overdue*
- * (PHA-1273). `refreshLiveResultsTick` already re-pokes the Valve oracle every
+ * (#1273). `refreshLiveResultsTick` already re-pokes the Valve oracle every
  * cycle, so a transiently-stuck match self-heals on the next tick — the half that
  * was missing is NOTICING when a match stays unresolved long past when it should
  * have finished. Cologne QF1/QF2 sat un-green for ~2 days behind a normalizer
@@ -152,7 +152,7 @@ export interface LayoutOracleResult {
 }
 
 /**
- * Resolve outcomes from a LIVE Valve layout's answer key (PHA-869).
+ * Resolve outcomes from a LIVE Valve layout's answer key (#869).
  *
  * Valve's GetTournamentLayout returns each pick slot with a `pickids` array.
  * Pre-event / pre-resolution it is empty (see cologne-layout.json — every slot
@@ -162,7 +162,7 @@ export interface LayoutOracleResult {
  * ordering is Valve's own, identical to the ordering stored predictions use,
  * which is the only ordering the strict-index scorer (scoring.ts) can score
  * against. (An external source like Liquipedia can't know Valve's slot order,
- * which is why it can't resolve the set-valued Swiss buckets — see PHA-869.)
+ * which is why it can't resolve the set-valued Swiss buckets — see #869.)
  *
  * Per-slot policy:
  *   - `pickids.length === 0` → unresolved, skipped.
@@ -245,12 +245,12 @@ export function normalizeOutcomes(
   // broader field instead of the committed per-group roster, because both read a
   // winner that the live tournament structure already proves is real:
   //
-  //   • HLTV bridge (PHA-1109): derives Swiss clinches from the LIVE field, which
+  //   • HLTV bridge (#1109): derives Swiss clinches from the LIVE field, which
   //     can be larger than a section's committed per-group roster — Cologne Stage
   //     III's pick'em group carries 8 teams but the live Swiss runs 16, so a real
   //     0:3 (B8) / 3:0 (Spirit) clinch would otherwise be rejected "not eligible
   //     for group" and never score.
-  //   • Valve oracle (PHA-1273): reads the winner straight from the LIVE layout
+  //   • Valve oracle (#1273): reads the winner straight from the LIVE layout
   //     group's pick slot (resolveOutcomesFromLayout), so it is by construction one
   //     of that live group's two teams. But the playoff bracket is DYNAMICALLY
   //     SEEDED — the committed fixture's per-group roster is a pre-seed guess that

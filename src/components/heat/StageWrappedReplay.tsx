@@ -4,7 +4,7 @@ import { type ReactNode, useEffect } from "react";
 import { replayStageWrapped } from "./StageWrapped";
 
 /**
- * Replay entry point for the Stage Wrapped deck (PHA-1054). The deck auto-opens
+ * Replay entry point for the Stage Wrapped deck (#1054). The deck auto-opens
  * once per stage (localStorage-gated in `StageWrappedAnnounce`); this button lets
  * a viewer re-open it any time via the replay bus. Tiny client island so the
  * reveal page (and the home send-off) can stay server components. No-ops
@@ -36,7 +36,7 @@ export function StageWrappedReplay({
  * `?wrapped=1` deep link's client arm. Re-opens the recap even on a device that
  * already dismissed the once-per-viewer auto-popup, by poking the app-wide
  * launcher through the replay bus rather than mounting a second copy of the deck
- * (PHA-1274). Deferred (and fired twice) so the launcher's own replay listener
+ * (#1274). Deferred (and fired twice) so the launcher's own replay listener
  * is attached first — effects run children-before-parents, and the launcher
  * lives in the layout above this page. Idempotent: opening an already-open deck
  * is a no-op.

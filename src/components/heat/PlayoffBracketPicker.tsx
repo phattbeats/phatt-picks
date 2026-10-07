@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Interactive playoff bracket predictor (PHA-1204).
+ * Interactive playoff bracket predictor (#1204).
  *
  * Brandon: "Playoffs: it is ONE stage, you place the whole bracket at once. You
  * could visualize it as the entire bracket as is, and the player drags their
@@ -80,7 +80,7 @@ export function PlayoffBracketPicker({
   eventId: number;
   signedIn: boolean;
   steamLinked: boolean;
-  /** Server-derived: every saved bracket pick is already on Steam (PHA-1214). */
+  /** Server-derived: every saved bracket pick is already on Steam (#1214). */
   initiallySynced?: boolean;
   liveTeamStats?: Record<number, TeamStats>;
   liveStatsAsOf?: string;
@@ -106,7 +106,7 @@ export function PlayoffBracketPicker({
 
   const resolved = useMemo(() => resolveBracketPicks(model, picks), [model, picks]);
 
-  // Persistence is a debounced, single-flight sync (PHA-1204). A bracket edit
+  // Persistence is a debounced, single-flight sync (#1204). A bracket edit
   // can cascade across rounds and the user can crown several matches faster than
   // a round-trip; firing one fetch per click with a shared "last saved" snapshot
   // raced and clobbered earlier picks. Instead we keep the latest desired state
@@ -199,7 +199,7 @@ export function PlayoffBracketPicker({
 
   return (
     <div className="cath-nave">
-      {/* Header — bracket-free overline (v3 Cathedral, PHA-1065), accent budget
+      {/* Header — bracket-free overline (v3 Cathedral, #1065), accent budget
           spent on the live counter, not the label. */}
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--ink-mid)" }}>
@@ -221,7 +221,7 @@ export function PlayoffBracketPicker({
             {!steamLinked && signedIn ? " Saves as you go." : null}
           </>
         ) : (
-          // PHA-1263: locked read-only — the bracket the viewer crowned, frozen.
+          // #1263: locked read-only — the bracket the viewer crowned, frozen.
           <>
             Picks are locked — this is the bracket you called, your crowned
             champion at the bottom. Tap{" "}
@@ -238,7 +238,7 @@ export function PlayoffBracketPicker({
         <Tree model={model} resolved={resolved} teamMap={teamMap} geo={GEO_DESKTOP} enabled={enabled} dragOver={dragOver} setDragOver={setDragOver} onCrown={crown} onSpotlight={setStatsTeam} />
       </div>
 
-      {/* Your champion (PHA-1007): the floating arch outline above the card read
+      {/* Your champion (#1007): the floating arch outline above the card read
           goofy, so it's gone — the champion is now carried by a big, legible team
           logo instead. Clean card, logo forward. */}
       {champion && (
@@ -435,7 +435,7 @@ function PickCell({
         transition: "border-color 140ms var(--ease)",
       }}
     >
-      {/* Scout only in the Quarterfinals (PHA-1204): from the SF on it's the
+      {/* Scout only in the Quarterfinals (#1204): from the SF on it's the
           same eight teams advancing, so a Scout button on every later round is
           redundant noise (Brandon). The bracket carries it once, where the field
           is first introduced. */}
@@ -523,7 +523,7 @@ function PickSide({
         </span>
       </span>
       {/* Spotlight button — a labelled pill, not a lone star, so it reads as
-          "click me" rather than decoration (Brandon, PHA-1204). Sibling tap
+          "click me" rather than decoration (Brandon, #1204). Sibling tap
           target with stopPropagation so it stays usable while the whole row is
           also the crown-the-winner button. Wears the team's accent. Quarterfinals
           only — the later rounds replay the same eight teams. */}

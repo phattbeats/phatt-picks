@@ -1,9 +1,9 @@
 /**
  * coin-earned-pushes — fan-out push when a player earns a challenge coin
- * (PHA-1278, "challenge coin notification as well when it pings").
+ * (#1278, "challenge coin notification as well when it pings").
  *
  * Runs on every scheduler tick (instrumentation.ts). A challenge coin mints the
- * moment the Grand Final resolves (no 48h archive grace — PHA-1274 lands it
+ * moment the Grand Final resolves (no 48h archive grace — #1274 lands it
  * immediately), or the dates.end backstop — see coinMintAtMs. On the first
  * tick after that instant we ping everyone who took part.
  *

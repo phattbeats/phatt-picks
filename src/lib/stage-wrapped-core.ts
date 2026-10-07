@@ -1,6 +1,6 @@
 /**
  * Stage Wrapped — the data + state core for the click-through recap deck
- * (PHA-1052). When a Swiss stage resolves we want to hand the player a short,
+ * (#1052). When a Swiss stage resolves we want to hand the player a short,
  * Spotify-Wrapped-style story: a handful of slides they tap through (their
  * picks, the stage's big moments, where they landed). This module is the pure,
  * testable spine of that feature — the *shell*: the typed slide model and the
@@ -46,7 +46,7 @@ export interface WrappedAvatar {
 }
 
 /**
- * A documentary photo for a slide — the "dank HLTV photo" twist (PHA-1274): the
+ * A documentary photo for a slide — the "dank HLTV photo" twist (#1274): the
  * Cologne cathedral, the arena crowd, a player mid-scream. Rendered as a hero
  * band behind/above the copy. `credit` is shown small so attribution rides with
  * the image (every shipped photo must carry a real, licensable source).
@@ -98,19 +98,19 @@ export interface WrappedSlide {
   /** A stylized STAGE logo lockup, for the cover + closer. */
   stageBadge?: WrappedStageBadge;
   /**
-   * A looping highlight clip for the band (PHA-1274 — e.g. the magixx 1v4).
+   * A looping highlight clip for the band (#1274 — e.g. the magixx 1v4).
    * Rendered muted + autoplay + loop + playsInline so it plays unprompted on
    * mobile; `poster` (usually the slide's still) shows while it loads and is the
    * fallback if the clip can't play. Takes the band slot in place of `photo`.
    */
   video?: { src: string; poster?: string; alt?: string; credit?: string };
-  /** A cut-out player portrait (PHA-1274) — the team's marquee on team slides /
+  /** A cut-out player portrait (#1274) — the team's marquee on team slides /
    *  player moments. Rendered as a centered transparent hero, not a photo band. */
   portrait?: { src: string; alt?: string };
   /** Personal reward: set when the viewer's pick matched this narrative moment. */
   calledIt?: { label: string; sub?: string };
   /**
-   * Optional call-to-action link rendered as a button on the slide (PHA-1274 —
+   * Optional call-to-action link rendered as a button on the slide (#1274 —
    * e.g. "See your coin" → /profile). Navigating away naturally closes the deck.
    */
   cta?: { href: string; label: string };
@@ -146,7 +146,7 @@ export function resolveAutoAdvanceMs(
 }
 
 /* ------------------------------------------------------------------ */
-/* Soundtrack (PHA-1054 + PHA-1274)                                     */
+/* Soundtrack (#1054 + #1274)                                     */
 /* ------------------------------------------------------------------ */
 
 /**
@@ -168,7 +168,7 @@ export interface WrappedTrack {
 }
 
 /**
- * The deck soundtrack options (PHA-1274, Brandon: "a few more epic musics with
+ * The deck soundtrack options (#1274, Brandon: "a few more epic musics with
  * more bittersweet or somber endings"). Index 0 is the default that plays on the
  * first sound-on; the track control cycles through the rest. The bittersweet
  * theme leads (Brandon: "make the default music the bittersweet epic one … the

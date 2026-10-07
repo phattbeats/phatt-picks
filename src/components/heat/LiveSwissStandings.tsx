@@ -1,5 +1,5 @@
 /**
- * Live Swiss W-L standings (PHA-902) — the HLTV/BLAST-style table.
+ * Live Swiss W-L standings (#902) — the HLTV/BLAST-style table.
  *
  * Renders UNDER the viewer's build on a locked Swiss stage: every team in the
  * stage with its running win-loss record, round differential, and advance /

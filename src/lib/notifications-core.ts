@@ -1,6 +1,6 @@
 /**
- * Universal in-app notifications (PHA-1211 follow-up; per-notification read
- * state added in PHA-1237).
+ * Universal in-app notifications (#1211 follow-up; per-notification read
+ * state added in #1237).
  *
  * One feed, several kinds — reactions on your picks, upcoming stage locks,
  * recaps, and broadcast announcements. All are DERIVED from the clock +
@@ -9,7 +9,7 @@
  * route via ReadContext:
  *   - the legacy `notificationsSeenAt` watermark (cheap bulk-clear on
  *     bell open; still works for entries that pre-date the read table)
- *   - the per-entry NotificationRead set (PHA-1237) — explicit dismissals
+ *   - the per-entry NotificationRead set (#1237) — explicit dismissals
  *     that survive across the bell and the /notifications inbox
  *
  * Either source marking an entry read is sufficient; the explicit set is the
@@ -37,7 +37,7 @@ import type { CoinTier } from "./challenge-coin-core";
 
 export type NotifKind = "reaction" | "stage" | "recap" | "announcement" | "coin";
 
-// ── NOTIFICATION PREFERENCES (PHA-1240) ──────────────────────────────────────
+// ── NOTIFICATION PREFERENCES (#1240) ──────────────────────────────────────
 
 export interface NotifTypePrefs {
   inApp: boolean;
@@ -59,7 +59,7 @@ export const DEFAULT_NOTIF_PREFS: NotifPrefs = {
   recap:     { inApp: true, push: false },
   announce:  { inApp: true, push: false },
   // Earning a Major coin is a rare, celebratory moment — push on by default so
-  // it "pings" (PHA-1278, Brandon).
+  // it "pings" (#1278, Brandon).
   coin:      { inApp: true, push: true },
 };
 
@@ -120,7 +120,7 @@ export interface NotifEntry {
   atMs: number;
   isNew: boolean;
   /**
-   * When the player explicitly marked this read (PHA-1237). Null when the
+   * When the player explicitly marked this read (#1237). Null when the
    * item is "read" only via the bulk watermark (implicit). Defaults to null
    * for builder output; `withReadState` fills it from the read context.
    */
@@ -140,7 +140,7 @@ export interface FeedView {
 }
 
 /**
- * PHA-1237 read context. `readSet` is the player's set of explicitly-read
+ * #1237 read context. `readSet` is the player's set of explicitly-read
  * entry ids (NotificationRead rows whose readAt is at or after the entry's
  * atMs). `readAtByEntry` carries the actual readAt epoch ms so the assembled
  * entry can surface "read at 14:32 yesterday". `seenAtMs` is the player's
@@ -349,14 +349,14 @@ export function recapEntry(
     body: "Your stage recap is ready — see how you stacked up.",
     // Deep-link to the stage's own reveal page (the actual recap), with
     // ?wrapped=1 so the cinematic deck re-opens even on a device that already
-    // dismissed the once-per-stage auto-popup (PHA-1245 follow-up). Landing on
+    // dismissed the once-per-stage auto-popup (#1245 follow-up). Landing on
     // "/" did nothing once the localStorage seen-flag was set.
     href: `/reveal/${sectionId}?wrapped=1`,
     atMs: resolvedAtMs,
   };
 }
 
-// ── CHALLENGE COIN EARNED (PHA-1278) ─────────────────────────────────────────
+// ── CHALLENGE COIN EARNED (#1278) ─────────────────────────────────────────
 
 export interface CoinEarnedInput {
   eventId: number;
@@ -375,7 +375,7 @@ const TIER_LABEL: Record<CoinTier, string> = {
 
 /**
  * "You earned the {Major} challenge coin" — minted when a Major concludes and
- * the player took part (PHA-1278). Capped at maxAgeMs so an old coin never
+ * the player took part (#1278). Capped at maxAgeMs so an old coin never
  * backfills the feed long after it was earned (the coin itself lives forever on
  * the shelf; only the notification is time-bound). `href` lands on the Majors
  * page where the coin sits in its velvet case, ready to inspect.
@@ -403,7 +403,7 @@ export function coinEarnedEntry(
 
 /**
  * Merge all notification kinds into one feed: unread (new) first, then most
- * recent. Read state is applied from the ReadContext (PHA-1237). Capped at
+ * recent. Read state is applied from the ReadContext (#1237). Capped at
  * `limit` items; the caller gets `total` to know how many were available
  * before slicing (drives the "See all" badge on the bell + the "showing N of
  * M" copy on the inbox page).

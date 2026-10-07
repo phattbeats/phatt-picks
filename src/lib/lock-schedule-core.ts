@@ -1,5 +1,5 @@
 /**
- * Per-stage pick-lock schedule (pure, PHA-856).
+ * Per-stage pick-lock schedule (pure, #856).
  *
  * The countdown clock in mockup-02 ("00:58:14 until picks lock") needs a real
  * per-stage lock timestamp. We confirmed Valve's layout/predictions payload
@@ -18,7 +18,7 @@
  * Pure module (no `@/` alias, no prisma, no fetch) so the verify script can
  * import it directly under `node`.
  *
- * CUTOVER DONE (PHA-1327). Every exported function below keeps a Cologne-shaped
+ * CUTOVER DONE (#1327). Every exported function below keeps a Cologne-shaped
  * default parameter (e.g. `schedule: LockSchedule = COLOGNE_LOCK_SCHEDULE`) as a
  * safe fallback for tests and the verify harness, but production call sites no
  * longer lean on that default — they resolve the ACTIVE event via the registry
@@ -35,7 +35,7 @@
 export type LockSchedule = Readonly<Record<number, string>>;
 
 /**
- * Committed IEM Cologne 2026 per-stage lock schedule (PHA-865).
+ * Committed IEM Cologne 2026 per-stage lock schedule (#865).
  *
  * Section ids map to the committed cologne-layout fixture:
  *   105 Stage I · 106 Stage II · 107 Stage III ·
@@ -48,11 +48,11 @@ export type LockSchedule = Readonly<Record<number, string>>;
  * SWISS STAGES are lit: HLTV, Liquipedia and cs.money all give a 12:30 CEST
  * (= 10:30 UTC) first match for Stage 1 (Jun 2), Stage 2 (Jun 6) and Stage 3.
  * Stage 3's date is Liquipedia/cs.money's Jun 11 (Wikipedia says Jun 12) —
- * confirmed with Brandon on PHA-865 before go-live.
+ * confirmed with Brandon on #865 before go-live.
  *
  * PLAYOFF sections (108/109/110) are NOT in this Swiss map — their per-game times
  * live in COLOGNE_PLAYOFF_SCHEDULE below (committed from the published bracket,
- * PHA-1007) and fold into COLOGNE_LOCK_SCHEDULE via derivePlayoffLocks. A section
+ * #1007) and fold into COLOGNE_LOCK_SCHEDULE via derivePlayoffLocks. A section
  * with no committed game time still renders no countdown — the truthful default.
  */
 const COLOGNE_SWISS_LOCKS: LockSchedule = {
@@ -62,7 +62,7 @@ const COLOGNE_SWISS_LOCKS: LockSchedule = {
 };
 
 /**
- * Committed IEM Cologne 2026 PER-GAME playoff schedule (PHA-1007).
+ * Committed IEM Cologne 2026 PER-GAME playoff schedule (#1007).
  *
  * Each playoff section runs several games on the day, and the Pick'Em window for
  * the whole bracket closes when the FIRST quarterfinal begins. So unlike the
@@ -77,7 +77,7 @@ const COLOGNE_SWISS_LOCKS: LockSchedule = {
  * lives here only once it is the published, authoritative time. EMPTY by default
  * → no playoff lock, no countdown, no game-time chips.
  *
- * Committed from the authoritative published bracket (PHA-1007): Liquipedia +
+ * Committed from the authoritative published bracket (#1007): Liquipedia +
  * the ESL Pro Tour schedule for IEM Cologne 2026 playoffs (Jun 18–21), times
  * converted from CEST (UTC+2) to the UTC instants below. Bo3 quarters/semis,
  * Bo5 grand final:
@@ -98,7 +98,7 @@ export const COLOGNE_PLAYOFF_SCHEDULE: Readonly<Record<number, readonly string[]
  * together at that instant. Using each section's own earliest game (the old
  * behaviour) left SF/GF picks unrevealed on player profiles after QF1 locked,
  * and caused the Bleachers reaction API to reject those picks as "not-revealed"
- * (PHA-1262). A section with no committed games contributes nothing (stays dark),
+ * (#1262). A section with no committed games contributes nothing (stays dark),
  * so an empty COLOGNE_PLAYOFF_SCHEDULE is still a no-op.
  */
 function derivePlayoffLocks(
@@ -169,8 +169,8 @@ export const COLOGNE_LOCK_SCHEDULE: LockSchedule = {
  * The single instant the whole playoff bracket closes = the EARLIEST committed
  * playoff game across all rounds (they lock together at the first quarterfinal).
  * This is also when the playoffs' matches go live — the moment The Bleachers
- * reactions on revealed picks unlock (PHA-1211) — so a broadcast can flip its
- * copy from "coming soon" to "live" off this same instant (PHA-1245 follow-up).
+ * reactions on revealed picks unlock (#1211) — so a broadcast can flip its
+ * copy from "coming soon" to "live" off this same instant (#1245 follow-up).
  * Returns `null` when no playoff games are committed (empty schedule / a future
  * major before its bracket publishes). Pure; schedule + ids injectable.
  */
@@ -211,7 +211,7 @@ export function playoffGameTime(
 /**
  * Human stage names per section id — the single committed source for the
  * "Stage I / II / III" labels. Kept beside the schedule so a label and its lock
- * instant can never drift. Used by the pre-lock reminder copy (PHA-929).
+ * instant can never drift. Used by the pre-lock reminder copy (#929).
  */
 export const COLOGNE_SECTION_NAMES: Readonly<Record<number, string>> = {
   105: "Stage I",
@@ -232,7 +232,7 @@ export interface StageLock {
 /**
  * Derive the {sectionId: {name, lockAt}} map the pre-lock reminder job iterates
  * over from the committed lock schedule + section names — so there is exactly
- * ONE source of truth for stage cutoffs (PHA-929). Previously the reminder job
+ * ONE source of truth for stage cutoffs (#929). Previously the reminder job
  * read a separate STAGE_LOCKS_JSON env (empty by default → it silently never
  * fired); deriving from COLOGNE_LOCK_SCHEDULE means a reminder fires for the same
  * instant the countdown clock and the pick lock-gate already use.
@@ -241,7 +241,7 @@ export interface StageLock {
  * without one is skipped, never handed a fabricated cutoff. A section missing a
  * name falls back to "Section {id}". Pure; injectable for tests and future majors.
  *
- * PLAYOFFS COLLAPSE TO ONE STAGE (PHA-1245). The playoff rounds (QF/SF/GF) share
+ * PLAYOFFS COLLAPSE TO ONE STAGE (#1245). The playoff rounds (QF/SF/GF) share
  * a single bracket picker that all locks together when the FIRST quarterfinal
  * begins, so they are ONE Pick'Em stage — not three. The schedule still carries a
  * per-round lock (108=QF1, 109=SF1, 110=GF) for the countdown/reveal, but for
@@ -287,7 +287,7 @@ export interface MatchWindow {
 }
 
 /**
- * Committed per-stage competition windows (PHA-902). A Swiss stage plays over
+ * Committed per-stage competition windows (#902). A Swiss stage plays over
  * several days, and the live HLTV standings/bracket only change while games are
  * being played — so the hourly on-read refresh is gated to these windows
  * (`isWithinMatchWindow`) and stays idle on off-days (before a stage starts,
@@ -305,7 +305,7 @@ export interface MatchWindow {
 export const COLOGNE_MATCH_WINDOWS: Readonly<Record<number, MatchWindow>> = {
   105: { start: "2026-06-02T00:00:00Z", end: "2026-06-05T23:59:59Z" }, // Stage I   — Jun 2–5
   106: { start: "2026-06-06T00:00:00Z", end: "2026-06-09T23:59:59Z" }, // Stage II  — Jun 6–9
-  107: { start: "2026-06-11T00:00:00Z", end: "2026-06-15T23:59:59Z" }, // Stage III — Jun 11–15 (clinches ran into Jun 15; a too-early end froze the crawl while teams were still clinching — PHA-1109)
+  107: { start: "2026-06-11T00:00:00Z", end: "2026-06-15T23:59:59Z" }, // Stage III — Jun 11–15 (clinches ran into Jun 15; a too-early end froze the crawl while teams were still clinching — #1109)
 };
 
 /**
@@ -331,7 +331,7 @@ export function isWithinMatchWindow(
 
 /**
  * How long BEFORE a stage's lock (= its first match) its live bracket goes live
- * (PHA-943). Brandon: "the bracket should go live 24 hours before the start of
+ * (#943). Brandon: "the bracket should go live 24 hours before the start of
  * the stage, or whenever the first round of matches are announced." The 24h lead
  * is the committed trigger; the "or whenever announced" half is data-driven — the
  * crawl window opens at the same instant (`isWithinRefreshWindow`), so the moment
@@ -375,7 +375,7 @@ export function isBracketRevealed(
 
 /**
  * Should the live standings/bracket crawl run for this section right now
- * (PHA-943)? The refresh window OPENS 24h before the stage's lock — so the
+ * (#943)? The refresh window OPENS 24h before the stage's lock — so the
  * opening matchups land before picks even close — and CLOSES at the end of its
  * committed competition window (no point crawling a decided stage). This widens
  * the old play-days-only gate (`isWithinMatchWindow`) earlier by the reveal lead.
@@ -404,7 +404,7 @@ export function isWithinRefreshWindow(
 
 /**
  * Is `nowMs` inside ANY committed competition window — i.e. is *some* stage of
- * the event playing games right now (PHA-921)?
+ * the event playing games right now (#921)?
  *
  * The team dossier's recent-results refresh isn't section-scoped the way the
  * Swiss standings are: it crawls each team's HLTV PROFILE, which changes whenever
@@ -439,7 +439,7 @@ export function lockTimeForSection(
 }
 
 /**
- * Has a section's published lock instant already passed (PHA-898)?
+ * Has a section's published lock instant already passed (#898)?
  *
  * "A stage's picks lock when its first match begins" — the same instant Valve
  * flips `picks_allowed` off (see the schedule doc above). Our committed layout

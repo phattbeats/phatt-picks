@@ -1,5 +1,5 @@
 /**
- * verify-analytics — offline proof for the built-in pageview counter (PHA-1277).
+ * verify-analytics — offline proof for the built-in pageview counter (#1277).
  *
  * The collector stores only what analytics-core lets through, so these rules ARE
  * the privacy guarantee:

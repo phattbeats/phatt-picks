@@ -1,5 +1,5 @@
 /**
- * Same-origin (CSRF) guard for cookie-authed mutating routes (PHA-1045).
+ * Same-origin (CSRF) guard for cookie-authed mutating routes (#1045).
  *
  * The audit asked for an Origin/Referer allowlist on mutating routes, not just
  * logout: any state-changing POST that authenticates via the session cookie can
@@ -28,7 +28,7 @@ const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
  * The allowed set blends three sources so the guard tracks how the app is really
  * reached: the request's own origin, the configured NEXTAUTH_URL, and BOTH
  * scheme variants of the forwarded Host. The last one matters behind the TLS-
- * terminating proxy (PHA-1225): the container sees http while the browser uses
+ * terminating proxy (#1225): the container sees http while the browser uses
  * https, so without the https variant a genuine same-origin sign-out 403'd.
  */
 export function isSameOrigin(req: NextRequest): boolean {

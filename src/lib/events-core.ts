@@ -1,6 +1,6 @@
 /**
  * Event registry — the single committed source for "which Major are we running
- * and what is its per-event config" (PHA-948, multi-major workstream A).
+ * and what is its per-event config" (#948, multi-major workstream A).
  *
  * THE PROBLEM THIS REPLACES
  * Every page and API route declared its own `const EVENT_ID = 26`, and the
@@ -12,15 +12,15 @@
  * entry plus the per-fixture swaps the re-point runbook already describes
  * (docs/NEXT-MAJOR.md), and going live is flipping one `status` field.
  *
- * SEQUENCING (PHA-948). This is the BACKBONE that lands *behind current
+ * SEQUENCING (#948). This is the BACKBONE that lands *behind current
  * behavior*: `resolveActiveEvent()` returns Cologne (eventId 26, the sole
  * `live` entry), so every consumer that resolves `currentEventId()` per request
  * gets exactly the 26 it hardcoded before — nothing about the live event
- * changes. (PHA-1046 removed the module-load-bound `ACTIVE_EVENT_ID`/
+ * changes. (#1046 removed the module-load-bound `ACTIVE_EVENT_ID`/
  * `SECTION_SOURCES` constants; resolve per request, never cache at module
  * scope.)
  *
- * CUTOVER DONE (PHA-1327). Call sites now resolve the active event via
+ * CUTOVER DONE (#1327). Call sites now resolve the active event via
  * `currentEventId()` / `currentEvent()` / `getEventConfig()` and pass that
  * event's own `lockSchedule` / `matchWindows` / `playoffSchedule` /
  * `sectionNames` explicitly into `lock-schedule-core`'s functions, instead of
@@ -98,7 +98,7 @@ export interface EventConfig {
   /**
    * Playoff sectionId -> per-game UTC ISO start instants, bracket order (mirrors
    * `COLOGNE_PLAYOFF_SCHEDULE`'s shape). Drives `playoffGameTime`/
-   * `playoffLockTime`/`playoffSectionIds` for this event (PHA-1327 cutover) —
+   * `playoffLockTime`/`playoffSectionIds` for this event (#1327 cutover) —
    * empty for a Major whose bracket hasn't published yet.
    */
   playoffSchedule: Readonly<Record<number, readonly string[]>>;
@@ -145,14 +145,14 @@ const COLOGNE_2026: EventConfig = {
   status: "live",
   // `end` is the calendar BACKSTOP for the archive transition, not the real
   // trigger — that is the Grand Final StageOutcome resolving PLUS its 48h grace
-  // window (PHA-954, via `grandFinalResolvedAtMs` + GRAND_FINAL_ARCHIVE_GRACE_MS).
+  // window (#954, via `grandFinalResolvedAtMs` + GRAND_FINAL_ARCHIVE_GRACE_MS).
   // It must sit comfortably past `GF + 48h` so the backstop never preempts the
   // grace: the GF is scheduled ~Jun 21 and could slip a day, its outcome row
   // lands ~1h+ late, then the site stays warm 48h (news settles, pickems
   // browsable) before archiving. So the ceiling is set generously to Jun 26 —
   // late enough that even a slipped GF gets its full grace, while still being a
   // hard failsafe for a GF that is somehow NEVER ingested. The GF signal — not
-  // the clock — fires the real archive. See PHA-954.
+  // the clock — fires the real archive. See #954.
   dates: { start: "2026-06-02T00:00:00Z", end: "2026-06-26T23:59:59Z" },
   sectionNames: COLOGNE_SECTION_NAMES,
   lockSchedule: COLOGNE_LOCK_SCHEDULE,
@@ -167,7 +167,7 @@ const COLOGNE_2026: EventConfig = {
       url: "https://www.hltv.org/events/9029/iem-cologne-major-2026-stage-2",
       label: "HLTV",
     },
-    // Stage III (PHA-926). Unlike Stages I/II, HLTV did NOT mint a dedicated
+    // Stage III (#926). Unlike Stages I/II, HLTV did NOT mint a dedicated
     // sub-event id for Stage 3 — it runs Stage 3 + Playoffs under the parent
     // major hub (event 8301). Verified on the live hub (2026-06-09): its
     // crawled markdown renders the active stage's `Group Swiss | … | Record`
@@ -191,14 +191,14 @@ const COLOGNE_2026: EventConfig = {
 };
 
 /**
- * PGL Major Singapore 2026 — the NEXT Major, pre-seeded as `upcoming` (PHA-1055,
- * leaning on the multi-major backbone PHA-948/949/950). It resolves `upcoming`
+ * PGL Major Singapore 2026 — the NEXT Major, pre-seeded as `upcoming` (#1055,
+ * leaning on the multi-major backbone #948/949/950). It resolves `upcoming`
  * purely from the clock and has ZERO impact on Cologne: `selectCurrentEvent`
  * prefers live, then an upcoming event only once it's within its anticipation
- * window (PHA-1048) — so archived Cologne (PHA-1318) keeps being served until
+ * window (#1048) — so archived Cologne (#1318) keeps being served until
  * this one is close enough to take over.
  *
- * Confirmed facts (PHA-1048 research): PGL · Singapore Indoor Stadium · 32 teams
+ * Confirmed facts (#1048 research): PGL · Singapore Indoor Stadium · 32 teams
  * · $1.25M prize pool · BO5 Grand Final. Main event runs Nov 25 – Dec 13 2026,
  * playoffs/finals Dec 10–13. These descriptive facts (org/prize/format/venue)
  * have no field on `EventConfig` and intentionally live in this doc comment —
@@ -209,12 +209,12 @@ const COLOGNE_2026: EventConfig = {
  * (an empty config has nothing to validate) and nothing renders half-built:
  *   • `sectionNames` — empty. Declaring "Stage N" names before their section ids
  *     are wired into `isSwissSection` would trip `validateSwissClassification`
- *     (the PHA-946 regression guard). Fill when the layout fixture lands.
+ *     (the #946 regression guard). Fill when the layout fixture lands.
  *   • `lockSchedule` / `matchWindows` — empty. Only the overall window + the
  *     Dec 10–13 finals are dated today; precise stage day-splits are unpublished.
  *   • `sectionSources` — empty. HLTV mints per-stage event ids (mirror Cologne's
  *     9028/9029 + the 8301 hub) only once stage pages exist (~Oct/Nov). The
- *     PHA-926-style watcher pulls them the moment they publish.
+ *     #926-style watcher pulls them the moment they publish.
  *
  * `eventId: 27` is PROVISIONAL — Valve's tournament id for this Major isn't
  * published yet (Cologne is 26; 27 is the natural next). It's only a unique
@@ -230,7 +230,7 @@ const SINGAPORE_2026: EventConfig = {
   // Main event Nov 25 – Dec 13 2026 (playoffs/finals Dec 10–13, Singapore Indoor
   // Stadium). `end` is the calendar BACKSTOP for the archive transition, set a
   // touch past the Dec 13 finals so it sits comfortably beyond GF + the 48h grace
-  // (PHA-954) — the real archive fires on the Grand Final resolving, not this
+  // (#954) — the real archive fires on the Grand Final resolving, not this
   // ceiling (mirrors Cologne's reasoning). Refine both dates when stage day-
   // splits publish.
   dates: { start: "2026-11-25T00:00:00Z", end: "2026-12-15T23:59:59Z" },
@@ -264,13 +264,13 @@ export function getEventConfig(id: number): EventConfig | null {
 
 /**
  * The events that are effectively LIVE at `nowMs` — derived from the clock, not
- * a hand-set flag (PHA-950, workstream C). A registry entry's `status` is the
+ * a hand-set flag (#950, workstream C). A registry entry's `status` is the
  * staged baseline; `event-lifecycle-core` advances it forward as time passes
  * (an `upcoming` Major flips to live on its staging lead, a `live` one to
  * archived at its `dates.end` ceiling — see `resolveEffectiveStatus`). This is
  * what the on-read drivers / watchers / reminders iterate instead of a single
  * hardcoded id, so the next Major's reminders fire on schedule with nobody
- * editing the registry. Today this is `[]` — Cologne has archived (PHA-1318)
+ * editing the registry. Today this is `[]` — Cologne has archived (#1318)
  * and Singapore isn't live yet. Normally length 1; 0 between Majors (as now),
  * briefly >1 across an overlap.
  */
@@ -283,7 +283,7 @@ export function liveEvents(nowMs: number = Date.now()): EventConfig[] {
  * the gaps a self-sustaining multi-Major site has (live › soonest-upcoming
  * once it's within its anticipation window › most-recently-archived, so the
  * off-season keeps showing the last Major's results until the next one is near
- * rather than flipping to a barely-seeded future event — PHA-1048). Throws only
+ * rather than flipping to a barely-seeded future event — #1048). Throws only
  * if the registry is empty, which is a build error, never a runtime state.
  * Clock-derived; Cologne today (archived, since Singapore isn't anticipated yet).
  */
@@ -302,7 +302,7 @@ export function currentEventId(nowMs: number = Date.now()): number {
 
 /**
  * The next Major on the registry's clock, regardless of its anticipation
- * window (PHA-1328) — for off-season "what's next" surfaces that want to
+ * window (#1328) — for off-season "what's next" surfaces that want to
  * count down to the real next event even while `currentEvent` is still
  * serving the last archived Major. Soonest `dates.start` wins; null once no
  * event is staged `upcoming` (or its start is unparseable/past).
@@ -317,13 +317,13 @@ export function nextUpcomingEvent(nowMs: number = Date.now()): EventConfig | nul
 }
 
 /**
- * The event currently being run. Now CLOCK-DERIVED (PHA-950): it returns the
+ * The event currently being run. Now CLOCK-DERIVED (#950): it returns the
  * event whose *effective* status — baseline `status` advanced by the wall clock
  * — makes it the one to serve, so the registry transitions upcoming→live→
  * archived across Majors with no human flipping the `status` field. Today
- * that's archived Cologne (its GF grace elapsed, PHA-1318) served as the
+ * that's archived Cologne (its GF grace elapsed, #1318) served as the
  * most-recently-concluded Major, since Singapore isn't anticipated yet. Kept
- * with a no-arg signature for the PHA-948 call sites; takes `nowMs` for tests.
+ * with a no-arg signature for the #948 call sites; takes `nowMs` for tests.
  */
 export function resolveActiveEvent(nowMs: number = Date.now()): EventConfig {
   return currentEvent(nowMs);
@@ -331,7 +331,7 @@ export function resolveActiveEvent(nowMs: number = Date.now()): EventConfig {
 
 /**
  * Validate that an event's per-section reveal config is internally consistent —
- * the guard that keeps the 24h bracket/standings reveal (PHA-943) working for
+ * the guard that keeps the 24h bracket/standings reveal (#943) working for
  * FUTURE majors, not just Cologne. Returns human-readable problems (empty =
  * healthy); verify-events.ts asserts it's empty for EVERY registered event
  * (live, upcoming, or archived), so a half-filled config for the next Major
@@ -349,7 +349,7 @@ export function resolveActiveEvent(nowMs: number = Date.now()): EventConfig {
  *   D. every `lockSchedule` value is a valid ISO whose reveal instant
  *      (`lockAt − 24h`) resolves strictly before the lock.
  *   E. `dates.start` and `dates.end` are both valid ISO instants, and start ≤
- *      end (PHA-1046). An unparseable `dates.start` with no published lock
+ *      end (#1046). An unparseable `dates.start` with no published lock
  *      schedule makes `goLiveMs` return +Infinity, so the lifecycle never flips
  *      the event to `live` — it silently never goes live. Catching it at CI is
  *      the difference between a loud build failure and a Major that no-shows.
@@ -413,7 +413,7 @@ function isStructurallySwiss(sectionName: string): boolean {
 }
 
 /**
- * Future-proof guard for PHA-946 (compare/scoring bucket grain). Returns the
+ * Future-proof guard for #946 (compare/scoring bucket grain). Returns the
  * list of sections where the structural Swiss-ness declared by the registry's
  * `sectionNames` disagrees with `isSwissSection`'s hardcoded id set. Empty = OK.
  *
@@ -421,13 +421,13 @@ function isStructurallySwiss(sectionName: string): boolean {
  * the picks board and the consensus line ALL branch on `isSwissSection`. If a
  * future major registers a Swiss stage whose id isn't in that set, every one of
  * them silently reverts to strict per-slot matching — re-introducing the exact
- * PHA-946 bug (a correct pick in a non-winner slot reads as a miss) AND breaking
+ * #946 bug (a correct pick in a non-winner slot reads as a miss) AND breaking
  * the score, with no divergence between them to catch it at runtime. This guard
  * fails the build the moment a registered "Stage N" id isn't recognized as
  * Swiss (or a playoff round wrongly is), so the misconfig can never ship.
  *
  * Pure; no I/O. The canonical long-term fix is to make `isSwissSection` read the
- * active event's sections directly (the PHA-952 registry cutover); until then
+ * active event's sections directly (the #952 registry cutover); until then
  * this keeps the hardcoded set honest against whatever event is live.
  */
 export function validateSwissClassification(event: EventConfig): string[] {
@@ -438,7 +438,7 @@ export function validateSwissClassification(event: EventConfig): string[] {
     const declaredSwiss = isStructurallySwiss(name);
     const recognizedSwiss = isSwissSection(id);
     if (declaredSwiss && !recognizedSwiss)
-      problems.push(`${tag}: section ${id} "${name}" is a Swiss stage but isSwissSection() does not recognize it — compare/scoring/picks would judge it per-slot (PHA-946 regression)`);
+      problems.push(`${tag}: section ${id} "${name}" is a Swiss stage but isSwissSection() does not recognize it — compare/scoring/picks would judge it per-slot (#946 regression)`);
     if (!declaredSwiss && recognizedSwiss)
       problems.push(`${tag}: section ${id} "${name}" is a playoff round but isSwissSection() treats it as Swiss — interchangeable bucketing would be applied to per-match picks`);
   }
@@ -447,7 +447,7 @@ export function validateSwissClassification(event: EventConfig): string[] {
 
 /**
  * The section id of a Major's Grand Final — the terminal playoff round whose
- * resolution ends the event (PHA-954). Derived STRUCTURALLY from `sectionNames`
+ * resolution ends the event (#954). Derived STRUCTURALLY from `sectionNames`
  * (the section whose display name reads "Grand Final"), so it's correct for any
  * registered Major with no hand-maintained id to keep in sync. This is the
  * section the freeze watches: a StageOutcome row for it means the Grand Final
@@ -466,7 +466,7 @@ export function grandFinalSectionId(event: EventConfig): number | null {
 }
 
 /*
- * PHA-1046 — the module-load-bound `ACTIVE_EVENT_ID` and `SECTION_SOURCES`
+ * #1046 — the module-load-bound `ACTIVE_EVENT_ID` and `SECTION_SOURCES`
  * constants were REMOVED. Both were evaluated once at import time, which pinned
  * the active event for the whole process lifetime: when one Major archived and
  * the next went live without a redeploy, every consumer kept serving the stale

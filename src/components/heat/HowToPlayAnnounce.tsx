@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 /**
  * One-time, dismissable "how to play" nudge shown app-wide to every signed-in
- * user (PHA-987). The dashboard's NEW HERE card only fired for players with
+ * user (#987). The dashboard's NEW HERE card only fired for players with
  * zero picks, so existing users never saw the explainer existed.
  * This shows once for everyone — until they open the guide or dismiss it — so
  * nobody misses it.

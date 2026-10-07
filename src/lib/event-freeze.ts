@@ -1,11 +1,11 @@
 /**
- * Event-freeze resolution (PHA-954) — the chokepoint where workstream B's
+ * Event-freeze resolution (#954) — the chokepoint where workstream B's
  * read-only-history freeze meets workstream C's clock-derived lifecycle.
  *
  * THE PROBLEM THIS RECONCILES
- * B (PHA-949) gave the freeze pure predicates (majors-core: `isEventArchived` /
+ * B (#949) gave the freeze pure predicates (majors-core: `isEventArchived` /
  * `isWriteFrozen` / `shouldRunLiveDriver` / `isRevealForced`) that each decide
- * off an event STATUS. C (PHA-950) gave the clock-derived `resolveEffectiveStatus`
+ * off an event STATUS. C (#950) gave the clock-derived `resolveEffectiveStatus`
  * (event-lifecycle-core), which advances a Major upcoming→live→archived on its
  * own. As merged the two DISAGREED: B fed its predicates the registry's
  * *baseline* `status` field — the hand-set flag C's whole promise was to remove.
@@ -30,14 +30,14 @@
  * registry sets that end generously past the likely GF so the drivers stay
  * un-frozen long enough to INGEST the GF outcome (see COLOGNE_2026.dates).
  *
- * POST-GF GRACE (PHA-954, Brandon's safety net). Even after the GF resolves the
+ * POST-GF GRACE (#954, Brandon's safety net). Even after the GF resolves the
  * event stays `live` for GRAND_FINAL_ARCHIVE_GRACE_MS (48h): the news/standings
  * drivers keep updating, a re-ingested/corrected outcome can settle, and players
  * can browse their pickems while the result is fresh — only then does it become
  * read-only "old Major" history. The GF's `resolvedAt` (not a boolean) is what
  * lets this module measure that window.
  *
- * Cologne's GF resolved and its 48h grace elapsed (PHA-1318): every function
+ * Cologne's GF resolved and its 48h grace elapsed (#1318): every function
  * here is now live for it (writes 409, drivers stop, reveal is forced) — they
  * stay a no-op only for whichever Major is currently effectively live.
  *
@@ -107,7 +107,7 @@ async function resolveEffectiveStatusById(
  * crawling a finished Major. By EFFECTIVE status, not the raw registry flag, so
  * the freeze fires on the real Grand Final with no human flip. Unregistered ids
  * fail open (not frozen) — the guard can only ever stop a driver for an event
- * the clock/GF says is over, which now includes archived Cologne (PHA-1318).
+ * the clock/GF says is over, which now includes archived Cologne (#1318).
  */
 export async function isEventFrozenById(
   eventId: number,
@@ -137,7 +137,7 @@ export async function isWriteFrozenById(
  * per-stage lock gate? The compare and player-profile reveal pages call this and
  * pass the result as reveal-core's `eventArchived` signal, so a finished Major
  * shows every pick even for a stage that never locked on schedule. By effective
- * status. Now true for archived Cologne (PHA-1318): every stage force-reveals
+ * status. Now true for archived Cologne (#1318): every stage force-reveals
  * regardless of its own lock gate; stays false for a live/upcoming Major.
  */
 export async function isRevealForcedById(
@@ -153,7 +153,7 @@ export async function isRevealForcedById(
  * yet? The archive instant is the earliest trigger that has already fired — the
  * Grand Final's `resolvedAt` plus the 48h grace, or the `dates.end` calendar
  * backstop — clamped to "in the past". Used to stamp a challenge coin's mint
- * time (PHA-1278) so the "coin earned" notification sorts correctly. Returns
+ * time (#1278) so the "coin earned" notification sorts correctly. Returns
  * null while the event is still live/upcoming (no coin, no notification).
  */
 export async function eventArchivedAtMs(
@@ -179,7 +179,7 @@ export async function eventArchivedAtMs(
  * are deliberately NOT gated behind the 48h post-GF write-freeze grace that
  * `eventArchivedAtMs` carries (that grace governs site warmth + the pick freeze,
  * not the keepsake). The `dates.end` calendar backstop still applies for a
- * never-ingested GF. PHA-1274 (Brandon): the coin lands on the shelf as soon as
+ * never-ingested GF. #1274 (Brandon): the coin lands on the shelf as soon as
  * the final is in, not two days later.
  */
 export async function coinMintAtMs(

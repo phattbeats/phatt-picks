@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Coin inspector (PHA-1278) — Brandon: "the user should be able to inspect and
+ * Coin inspector (#1278) — Brandon: "the user should be able to inspect and
  * drag rotate them." Tap a coin → a lightbox opens with a real 3D coin you spin
  * with a drag (pointer or touch): front face, struck reverse, and a knurled edge
  * ring, all in CSS `preserve-3d` (no WebGL). Idles with a slow auto-spin so it
@@ -163,7 +163,7 @@ export function CoinInspector({
   );
   // Portal to <body> so the fixed-position lightbox escapes the velvet shelf's
   // overflow + any transformed ancestor (which would otherwise clip the coin
-  // to the card — PHA-1274 "fix clipping"). Mirrors StageWrapped/SpotlightModal.
+  // to the card — #1274 "fix clipping"). Mirrors StageWrapped/SpotlightModal.
   return typeof document === "undefined" ? null : createPortal(tree, document.body);
 }
 

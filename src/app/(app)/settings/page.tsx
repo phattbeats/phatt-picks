@@ -14,7 +14,7 @@ import { parseNotifPrefs } from "@/lib/notifications-core";
 
 /**
  * Settings — every account control, reached by the gear cog on your profile
- * (PHA-1275). The profile itself (/players/{you}) stays a clean stat card; this
+ * (#1275). The profile itself (/players/{you}) stays a clean stat card; this
  * page owns identity, notifications, invites, devices, and the help links that
  * most people never open — collapsed into disclosures so the page opens calm.
  */
@@ -86,7 +86,7 @@ export default async function SettingsPage() {
         </div>
         {!connected && (
           <>
-            {/* PHA-1213: a local player has no Steam identity to push to —
+            {/* #1213: a local player has no Steam identity to push to —
                 /api/auth/steam would sign them in as a SEPARATE Steam account
                 and strand the picks they made here. So Steam sync is shown
                 disabled, not as an active CTA. Reassurance lives below. */}
@@ -210,7 +210,7 @@ export default async function SettingsPage() {
             </div>
           )}
 
-          {/* Bring over guest picks — Steam players only (PHA-1232). */}
+          {/* Bring over guest picks — Steam players only (#1232). */}
           {connected && (
             <div>
               <div className="panel-title">[ Bring over guest picks ]</div>
@@ -235,7 +235,7 @@ export default async function SettingsPage() {
         </div>
       </details>
 
-      {/* Help & guides moved to their own INFO page (PHA-1283) — a desktop nav
+      {/* Help & guides moved to their own INFO page (#1283) — a desktop nav
           tab, and reachable here on mobile. Your Majors moved to your profile. */}
       <Link href="/info" className="settings-fold brk" style={{ display: "block", textDecoration: "none" }}>
         <span className="br-tr" />
@@ -249,7 +249,7 @@ export default async function SettingsPage() {
       {owner && <AdminLocalPlayers />}
 
       {/* Sign out — always one tap away. POST so a cross-site GET can't force a
-          logout (PHA-1045 CSRF). */}
+          logout (#1045 CSRF). */}
       <form action="/api/auth/logout" method="post" style={{ margin: "4px 0 0" }}>
         <button type="submit" className="btn-ghost" style={{ width: "100%", justifyContent: "center", color: "var(--ink-mid)" }}>
           Sign out

@@ -15,7 +15,7 @@ import { getSession } from "@/lib/session";
 import { currentEventId } from "@/lib/events-core";
 
 export async function GET() {
-  const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
+  const EVENT_ID = currentEventId(); // per-request active event (#1046)
   const session = await getSession();
   const layout = getCommittedLayout();
 

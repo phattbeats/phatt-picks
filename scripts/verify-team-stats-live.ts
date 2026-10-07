@@ -1,8 +1,8 @@
 /**
- * verify-team-stats-live — offline proof for PHA-921 (live per-stage dossier).
+ * verify-team-stats-live — offline proof for #921 (live per-stage dossier).
  *
  * The dossier's "Last 5 matches" now refresh on their own, keyed to stage match
- * windows, mirroring PHA-902's live standings. The crawl/persist needs the deploy
+ * windows, mirroring #902's live standings. The crawl/persist needs the deploy
  * network so it can't run in CI — but the PURE pieces that decide WHAT to crawl,
  * HOW to parse it, WHEN to refresh, and HOW to merge over the frozen snapshot all
  * run under plain node. This asserts those so a typo can't silently ship a dead
@@ -76,7 +76,7 @@ check(
   targets.every((t) => FIELD.includes(t.pickid) && t.url.startsWith("https://www.hltv.org/team/")),
 );
 
-// ── Result → team matching by HLTV id (PHA-1044) ───────────────────────────────
+// ── Result → team matching by HLTV id (#1044) ───────────────────────────────
 // The chunk crawl matches a crawl4ai result back to the team we asked for by the
 // stable `/team/<id>/` segment in the result url, NOT by submitted-url equality or
 // position — so a redirect-normalised / reordered result can't hand one team's
@@ -179,7 +179,7 @@ check(
   !isWithinAnyMatchWindow(ms("2027-09-01T12:00:00Z"), futureWindows),
 );
 
-// ── Multi-pass crawl: retry + accumulate + partial-discard guard (PHA-944) ─────
+// ── Multi-pass crawl: retry + accumulate + partial-discard guard (#944) ─────
 // A parseable HLTV "Recent results" page for a fake team, so the injected crawl
 // returns markdown the real parser turns into ≥1 match.
 const teamMd = (opp: string) =>
@@ -208,7 +208,7 @@ const allTargets = teamStatsCrawlTargets();
 }
 
 // (b) THE FIX: pass 1 lands 27, pass 2 THROWS (transient crawl4ai 5xx). The 27
-// must survive — before PHA-944 the throw unwound past the caller's persist and
+// must survive — before #944 the throw unwound past the caller's persist and
 // discarded them, blanking a good partial for ~1h.
 {
   let n = 0;
@@ -290,7 +290,7 @@ const allTargets = teamStatsCrawlTargets();
 }
 
 // (f) PARSE-ISOLATED: a parser that THROWS on one team's markdown must not drop
-// the other teams in the same pass, nor the accumulated earlier passes (PHA-944
+// the other teams in the same pass, nor the accumulated earlier passes (#944
 // hardening — future-proofs against an HLTV reformat / parser swap that throws).
 {
   const crawl = async (

@@ -1,5 +1,5 @@
 /**
- * verify-swiss-standings - offline proof for the live Swiss lineup (PHA-898).
+ * verify-swiss-standings - offline proof for the live Swiss lineup (#898).
  *
  * buildSwissStandings turns the resolved answer key (StageOutcome) + the
  * viewer's picks into a team-by-status lineup. This loads the committed Stage I
@@ -75,7 +75,7 @@ check("slot 8 winner -> eliminated", byId.get(tOut)?.status === "eliminated");
 check("unresolved teams stay live", byId.get(teamIds[5])?.status === "live");
 check("resolvedTeamCount === 3", resolved.resolvedTeamCount === 3);
 
-console.log("\nswiss-standings - viewer picks tagged hit / miss / pending (bucket-aware, PHA-918)");
+console.log("\nswiss-standings - viewer picks tagged hit / miss / pending (bucket-aware, #918)");
 
 // Bucket-aware: a pick is a HIT when the team clinched the bucket the viewer
 // slotted it into, a MISS when it clinched a DIFFERENT bucket, and PENDING only
@@ -114,13 +114,13 @@ const missed = buildSwissStandings(stage1, missOutcome, bucketSwissSlots, missPi
 check("team that clinched a different bucket -> miss", missed.userPicks[0]?.result === "miss");
 check("miss counts toward neither hits nor pending", missed.userHits === 0 && missed.userPending === 0);
 
-console.log("\nswiss-standings - off-roster resolved winner still gets a status (PHA-1207)");
+console.log("\nswiss-standings - off-roster resolved winner still gets a status (#1207)");
 
 // Cologne Stage III: the committed per-group roster is a PARTIAL pick'em field
 // (8 teams) but the live HLTV Swiss runs 16, so the answer key resolves teams
-// that are NOT in any group's committed roster (PHA-1109 validates them against
+// that are NOT in any group's committed roster (#1109 validates them against
 // the GLOBAL roster on the write side). Those off-roster winners must still flow
-// into the team set so the locked-picks board can color them — before PHA-1207
+// into the team set so the locked-picks board can color them — before #1207
 // they were dropped and the viewer's pick for them stayed neutral forever even
 // though the stage was over.
 const OFF_ROSTER = 99135; // a pickid that is NOT in the Stage I fixture roster
@@ -149,7 +149,7 @@ console.log("\nswiss-standings - pickId 0 (cleared slot) is ignored");
 const clearedPick = buildSwissStandings(stage1, {}, bucketSwissSlots, { [groupId]: { 0: 0 } });
 check("a cleared (0) pick is not counted", clearedPick.userTotal === 0);
 
-console.log("\nswiss-standings - confirmPick: locked-pick green/red/pending (PHA-902)");
+console.log("\nswiss-standings - confirmPick: locked-pick green/red/pending (#902)");
 
 check("predicted 3:0, team still in play -> pending", confirmPick("3:0 ADVANCED", "live") === "pending");
 check("no status yet -> pending", confirmPick("3:0 ADVANCED", undefined) === "pending");
@@ -162,7 +162,7 @@ check("predicted advance, team eliminated -> wrong", confirmPick("3:1 / 3:2 ADVA
 check("predicted 0:3, team eliminated -> right", confirmPick("0:3 ELIMINATED", "eliminated") === "right");
 check("predicted 0:3, team advanced -> wrong", confirmPick("0:3 ELIMINATED", "advanced") === "wrong");
 
-console.log("\nswiss-standings - pick'em unwinnable when the bucket fills with others (PHA-902)");
+console.log("\nswiss-standings - pick'em unwinnable when the bucket fills with others (#902)");
 
 // My pick = team 999, predicted 3:0. The 3:0 bucket holds 2.
 const twoOthers3_0: Array<readonly [number, SwissTeamStatus]> = [
@@ -177,7 +177,7 @@ check("confirmPick: live team + bucket NOT full -> still pending", confirmPick("
 check("confirmPick: a team that already clinched ignores the fullness flag (still right)", confirmPick("3:0 ADVANCED", "advanced-3-0", true) === "right");
 check("0:3 bucket full of 2 others -> live 0:3 pick impossible", isPredictedBucketFull("0:3 ELIMINATED", 999, [[21, "eliminated"], [22, "eliminated"], [999, "live"]], 2) === true);
 
-console.log("\nswiss-standings - early red: a pick's own partial record rules its bucket out (PHA-951)");
+console.log("\nswiss-standings - early red: a pick's own partial record rules its bucket out (#951)");
 
 // Brandon: "Tyloo was my 0-3, they won a game today — lock it red." A 3:0 pick
 // dies on the first loss; a 0:3 pick dies on the first win; an advance pick dies

@@ -1,5 +1,5 @@
 /**
- * Shared on-read refresh primitives (PHA-863/866). Every external-source driver
+ * Shared on-read refresh primitives (#863/866). Every external-source driver
  * (news wire, outcomes, Swiss standings, team stats, spotlight odds, live
  * layout) gates its self-refresh the same way: ONE atomic compare-and-set on
  * `SourceState` claims the slot against a per-source floor, then the slow work

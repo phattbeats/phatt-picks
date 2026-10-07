@@ -44,7 +44,7 @@ The knowledge this project has accumulated lived in three fragile places:
 
 1. **Agent memory** — per-agent, not shared, invisible to humans.
 2. **Commit messages** — searchable but scattered; nobody reads 60 commits to learn the system.
-3. **Brandon's head** — the single point of failure this issue (PHA-922) exists to fix.
+3. **Brandon's head** — the single point of failure this issue (#922) exists to fix.
 
 A markdown wiki in `docs/` fixes all three at once:
 

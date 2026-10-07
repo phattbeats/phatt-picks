@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
           }
         }
 
-        // Issue a session JWT. PHA-982: 30-day TTL (was 7d) and sliding —
+        // Issue a session JWT. #982: 30-day TTL (was 7d) and sliding —
         // the middleware re-stamps an active session, so a Steam user (who
         // eats a 2FA prompt on every re-login) is effectively never bounced
         // back through Steam while they keep using the app.

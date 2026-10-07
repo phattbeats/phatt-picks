@@ -27,8 +27,8 @@ const TRUTHY_FLAGS: ReadonlySet<string> = new Set(["1", "true", "yes", "on"]);
 const FALSY_FLAGS: ReadonlySet<string> = new Set(["0", "false", "no", "off"]);
 
 /**
- * Scheduler gate (PHA-996): default ON. The original opt-in env
- * (PRELOCK_REMINDERS_ENABLED, PHA-929) lived only on the container, so an
+ * Scheduler gate (#996): default ON. The original opt-in env
+ * (PRELOCK_REMINDERS_ENABLED, #929) lived only on the container, so an
  * Unraid-template Force-Update recreated the container without it and the
  * reminders died silently. Defaulting on in code removes the env dependency:
  *  - PRELOCK_REMINDERS_DISABLED truthy  → off (the one supported opt-out)
@@ -173,7 +173,7 @@ export function buildRecapPayload(args: {
   return {
     title: "HOTLINE",
     body: `Your ${args.stageName} recap is ready — see how you stacked up.`,
-    // Deep-link to the stage reveal page + re-open the cinematic deck (PHA-1245
+    // Deep-link to the stage reveal page + re-open the cinematic deck (#1245
     // follow-up). "/" only re-showed the popup on a device that hadn't dismissed
     // it; the reveal page always renders the recap.
     url: `/reveal/${args.sectionId}?wrapped=1`,
@@ -182,7 +182,7 @@ export function buildRecapPayload(args: {
   };
 }
 
-/** Build the push payload for a challenge coin being earned (PHA-1278). Tier-
+/** Build the push payload for a challenge coin being earned (#1278). Tier-
  *  agnostic on purpose — the push just "pings" that a coin landed; the in-app
  *  entry and the shelf show which tier. */
 export function buildCoinPayload(args: {

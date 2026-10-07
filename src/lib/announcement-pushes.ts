@@ -1,5 +1,5 @@
 /**
- * announcement-pushes — one-shot push per new broadcast announcement (PHA-1239).
+ * announcement-pushes — one-shot push per new broadcast announcement (#1239).
  *
  * Compares currently-active announcements against an in-process `fired` Set
  * keyed by announcement id. Each newly-active announcement triggers a fan-out

@@ -85,7 +85,7 @@ Everything the app *remembers* (players, picks, scores, coins, reactions, push s
 | `CRAWL4AI_API_TOKEN` | Bearer token for crawl4ai (live HLTV refresh + gather tooling). Defaults to a shared token if unset. |
 | `TRUSTED_PROXY_HOPS` | How many reverse-proxy hops to trust when deriving the client IP from `X-Forwarded-For`. Default `1` (the single SWAG hop); leave it unless you add another proxy. |
 | `NODE_ENV` | Set to `production` in the image; gates the session cookie's `secure` flag. Only drop from `production` for local HTTP dev. |
-| `PRELOCK_REMINDERS_DISABLED` | Set `=1` to turn **off** the pre-lock reminder scheduler. **On by default** (no env needed) since the PHA-996 fix. |
+| `PRELOCK_REMINDERS_DISABLED` | Set `=1` to turn **off** the pre-lock reminder scheduler. **On by default** (no env needed) since the #996 fix. |
 | `EVENT_ID` / `STAGE_LOCKS_JSON` | Dry-run overrides: pin a specific Valve event id, or supply per-stage lock cutoffs as JSON. Unset → the app uses the clock-derived current event and the committed lock schedule. |
 
 Full var-by-var table with exact behaviors: **[OPERATIONS.md → Environment variables](OPERATIONS.md#environment-variables)**.
@@ -147,7 +147,7 @@ This is the part most worth understanding, because it's where "a match finished 
 - **Five notification kinds** flow through one inbox: `stage` (pre-lock reminders, 24h + 1h before a stage locks), `reaction` (a Bleachers stamp landed on your pick), `recap` (your Stage Wrapped is ready), `coin` (you earned a Challenge Coin), and `announcement` (an owner broadcast). There's an in-app inbox (the bell) with an unread badge, mark-read / mark-all-read, and an unread filter. Each kind has independent in-app and push toggles in the user's prefs.
 - **Web Push** mirrors all five kinds to the OS (gated by the `VAPID_*` keys; see §2). On iPhone, push only fires after the user installs the PWA to the home screen.
 - The **in-process scheduler** (~5-min tick, `src/instrumentation.ts`) runs **four push jobs** — pre-lock reminders, recap pushes, announcement pushes, and coin-earned pushes — alongside the separate **live-results tick** on the same timer. It's **on by default**; set `PRELOCK_REMINDERS_DISABLED=1` to turn the reminder side off. Cutoffs come from the committed lock schedule unless overridden. (Playoff QF/SF/GF collapse into one "Playoffs" cutoff, since the bracket is a single Pick'Em.)
-- **Real-time delivery** is a Server-Sent-Events stream (`GET /api/notifications/stream`) that drives the live badge and toasts. It is deliberately **self-limiting** — it polls the feed every ~30s, sends a keepalive every ~25s, and hard-recycles each connection at a **10-minute lifetime cap** so a dropped client can't leave an immortal loop (the PHA-1244 CPU-leak fix). Per-connection churn in the logs is normal, not a leak.
+- **Real-time delivery** is a Server-Sent-Events stream (`GET /api/notifications/stream`) that drives the live badge and toasts. It is deliberately **self-limiting** — it polls the feed every ~30s, sends a keepalive every ~25s, and hard-recycles each connection at a **10-minute lifetime cap** so a dropped client can't leave an immortal loop (the #1244 CPU-leak fix). Per-connection churn in the logs is normal, not a leak.
 
 ### The database
 - One **SQLite** file. Tables for players, picks, outcomes, the various caches, push subscriptions, reactions, coins, analytics page-views, etc.

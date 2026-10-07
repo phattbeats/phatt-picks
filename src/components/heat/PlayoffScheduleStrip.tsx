@@ -1,7 +1,7 @@
 import { GameTime } from "@/components/heat/GameTime";
 
 /**
- * Playoff schedule strip (PHA-1007).
+ * Playoff schedule strip (#1007).
  *
  * Brandon: "stages ship with each game having its date and time attached."
  * The playoffs are one Pick'Em stage spanning several games over a few days, so
@@ -29,7 +29,7 @@ export function PlayoffScheduleStrip({ rounds }: { rounds: ScheduleRound[] }) {
 
   return (
     <div className="panel" style={{ padding: "16px 18px 16px" }}>
-      {/* PHA-1007: section labels were tiny robotic mono and hard to read; now
+      {/* #1007: section labels were tiny robotic mono and hard to read; now
           the display font at a legible size — proper headings, not micro-tags. */}
       <div
         style={{

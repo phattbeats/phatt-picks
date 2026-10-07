@@ -26,7 +26,7 @@ HLTV is the source of truth for teams, rankings, results and the bracket.
 
 These feed the two schedule fields on the new event's `EventConfig` entry in the
 registry (`src/lib/events-core.ts`) — see [NEXT-MAJOR.md](NEXT-MAJOR.md) Phase 1b for the
-current (post-PHA-1327) wiring: fill a sibling lock-schedule module (mirroring
+current (post-#1327) wiring: fill a sibling lock-schedule module (mirroring
 Cologne's `COLOGNE_LOCK_SCHEDULE` / `COLOGNE_MATCH_WINDOWS` in
 `src/lib/lock-schedule-core.ts`) and point the registry entry at it. Don't edit
 `COLOGNE_LOCK_SCHEDULE` itself for a future Major — it stays Cologne's own committed
@@ -65,7 +65,7 @@ new major you need, per team: the pickid (from Valve's layout), the HLTV team id
 - [ ] Update the `TEAM_SOURCES` map in `src/lib/team-stats-sources.ts`
       (pickid → `{ hltvId, slug, name }`) — the single field-of-record that BOTH
       the gather tool (the by-hand snapshot) and the live runtime refresh
-      (PHA-921) crawl, so they can never point at different profiles.
+      (#921) crawl, so they can never point at different profiles.
 - [ ] Refresh the other pickid-keyed maps for the new field:
       `src/lib/regions-core.ts` (region per team) and the logo manifest
       (`scripts/build-logos.ts` → `src/fixtures/<event>-logos.json`, re-run when the
@@ -92,7 +92,7 @@ new major you need, per team: the pickid (from Valve's layout), the HLTV team id
 > stage 2 the stage 1 team should have refreshed stats and the stage two teams
 > should have their stats."
 
-**This is now automated (PHA-921).** The dossier's "Last 5 matches" refresh on
+**This is now automated (#921).** The dossier's "Last 5 matches" refresh on
 their own: opening the picker fires an on-read, atomic-claimed, deferred batch
 crawl of all 32 HLTV profiles, gated to `COLOGNE_MATCH_WINDOWS` (only on days
 games are played), persisted to `TeamStatsCache`, and merged over the committed
@@ -112,7 +112,7 @@ and `roster` stay frozen (live crawl doesn't touch them).
       node --experimental-strip-types --no-warnings scripts/verify-team-stats.ts
       ```
 
-The live **Swiss standings/bracket** (PHA-902) auto-refresh the same way (hourly,
+The live **Swiss standings/bracket** (#902) auto-refresh the same way (hourly,
 match-window-gated) — warm with `GET /api/standings/refresh`. Both the team-stats
 and standings caches are DB tables: a new major's deploy needs **one**
 `prisma db push` (for `TeamStatsCache` + `SwissStandingsCache`); the committed
@@ -121,7 +121,7 @@ frozen snapshot is what renders until the first live crawl lands.
 ## 5. Go-live config sanity pass
 
 - [ ] The new event's registry `lockSchedule` has every dated stage; playoff per-game times go in
-      its `playoffSchedule` and fold in automatically (PHA-1007 shape; Cologne's are committed as
+      its `playoffSchedule` and fold in automatically (#1007 shape; Cologne's are committed as
       `COLOGNE_LOCK_SCHEDULE` / `COLOGNE_PLAYOFF_SCHEDULE` — don't edit those for a new Major, add
       sibling constants and wire them into the new `EventConfig`, per NEXT-MAJOR.md Phase 1b).
 - [ ] The new event's registry `matchWindows` covers every stage that should crawl live.
@@ -131,7 +131,7 @@ frozen snapshot is what renders until the first live crawl lands.
       stale manifest → re-run `scripts/build-logos.ts`); `public/logos/` is only the
       optional self-host SVG fallback.
 - [ ] Challenge-coin art — drop the four front faces
-      `public/coins/<event-slug>-{diamond,gold,silver,bronze}.png` (PHA-1278). The
+      `public/coins/<event-slug>-{diamond,gold,silver,bronze}.png` (#1278). The
       reverses `public/coins/_back-{tier}.png` are shared, leave them. Coins mint
       automatically once the Major archives — no DB, no per-team config.
 - [ ] `verify-team-stats`, `verify-team-stats-live`, `verify-lock-schedule`,
@@ -149,7 +149,7 @@ frozen snapshot is what renders until the first live crawl lands.
 | Stage I (Swiss) | 9028 | 105 | Jun 2–5 | 2026-06-02 10:30Z |
 | Stage II (Swiss) | 9029 | 106 | Jun 6–9 | 2026-06-06 10:30Z |
 | Stage III (Swiss) | hub 8301 (no dedicated sub-event) | 107 | Jun 11–15 | 2026-06-11 10:30Z |
-| Playoffs (QF/SF/GF) | n/a (bracket from layout + StageOutcome) | 108/109/110 | Jun 18–21 | QF Jun 18 13:45Z (committed, PHA-1007) |
+| Playoffs (QF/SF/GF) | n/a (bracket from layout + StageOutcome) | 108/109/110 | Jun 18–21 | QF Jun 18 13:45Z (committed, #1007) |
 
 The 32 pickid → HLTV id mapping lives in `src/lib/team-stats-sources.ts`
 (`TEAM_SOURCES`); `scripts/gather-team-stats.ts` just imports it.

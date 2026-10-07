@@ -1,5 +1,5 @@
 /**
- * Live Swiss W-L standings (pure, PHA-902).
+ * Live Swiss W-L standings (pure, #902).
  *
  * Where swiss-standings-core builds the viewer's clinch-bucket lineup from
  * Valve's answer key, THIS module shapes the real HLTV/BLAST-style standings:
@@ -108,7 +108,7 @@ const STATS_RE = /(\d+)\s+(\d+)\s+(\d+)\s+(-?\d+)\s+(\d+)\s*-\s*(\d+)/;
 const SEED_RE = /#(\d+)/;
 
 /**
- * Is (wins, losses, matches) a plausible Swiss record? (PHA-1044) STATS_RE binds
+ * Is (wins, losses, matches) a plausible Swiss record? (#1044) STATS_RE binds
  * the first `N N N ±N N-N` run on a row, but a stray map score in the cell (e.g.
  * "13-7") could be mis-read as wins=13 / losses=7 → a fake "advanced". A real
  * Swiss record satisfies: non-negative integers, neither side past its clinch
@@ -144,7 +144,7 @@ export function parseHltvSwissStandings(markdown: string): RawStandingRow[] {
     const losses = Number(stats[6]);
     // Bound check: a stray map score (e.g. "13-7") binding as the W-L record would
     // fake an "advanced" clinch. Drop any row whose numbers aren't a valid Swiss
-    // record rather than feed a fabricated standing downstream (PHA-1044).
+    // record rather than feed a fabricated standing downstream (#1044).
     if (!isValidSwissRecord(wins, losses, matches)) continue;
     rows.push({
       seed: line.match(SEED_RE) ? Number(line.match(SEED_RE)![1]) : null,
@@ -184,7 +184,7 @@ export function matchStandingsToLayout(
 }
 
 /**
- * Reduce matched standings rows to a pickid → partial W-L record map (PHA-951).
+ * Reduce matched standings rows to a pickid → partial W-L record map (#951).
  * Only rows mapped to a layout team AND with at least one game played are kept,
  * so an all-zero pre-match row never falsely rules a pick out. Feeds the early-red
  * predicate (isBucketImpossibleByRecord): a 0:3 pick whose team has already won a
@@ -223,12 +223,12 @@ export function summarizeStandings(rows: readonly StandingRow[]): StandingsSumma
   };
 }
 
-// --- Standings crawl retry/timeout policy (PHA-951 follow-up) ----------------
+// --- Standings crawl retry/timeout policy (#951 follow-up) ----------------
 //
 // The single HLTV event page renders in ~5s through crawl4ai when the service is
 // idle — but the standings ingest fires in the SAME deferred tick as the
 // team-stats refresh, which batches all 32 team profiles into ONE long crawl4ai
-// render (budgeted up to 240s; PHA-944). A lone standings request with a single
+// render (budgeted up to 240s; #944). A lone standings request with a single
 // 45s shot queues BEHIND that batch and its window expires every hour, so the
 // ingest falls back to the stale cache — exactly Brandon's "updated the first two
 // days then stopped" / "is the hourly update running correctly?" symptom (the

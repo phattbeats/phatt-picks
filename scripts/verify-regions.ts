@@ -1,5 +1,5 @@
 /**
- * Region verification (PHA-892) — offline, against the committed layout + the
+ * Region verification (#892) — offline, against the committed layout + the
  * pure region map the app renders from.
  *
  * Proves:
@@ -35,7 +35,7 @@ function check(label: string, ok: boolean, detail = "") {
   if (!ok) failures++;
 }
 
-console.log("\nPHA-892 region verification\n");
+console.log("\n#892 region verification\n");
 
 const real = layout.teams.filter((t) => t.pickid !== 0);
 

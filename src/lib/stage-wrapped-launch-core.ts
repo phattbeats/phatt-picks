@@ -1,5 +1,5 @@
 /**
- * Stage Wrapped — app-wide launch selector (PHA-1051), DB-free core.
+ * Stage Wrapped — app-wide launch selector (#1051), DB-free core.
  *
  * Split out from `stage-wrapped-launch.ts` (which pulls prisma) so the pure
  * "which stage do we wrap?" decision can be proven offline by the verify

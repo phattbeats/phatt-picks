@@ -1,10 +1,10 @@
 /**
- * Live team-dossier recent-results refresh (server-only, PHA-921).
+ * Live team-dossier recent-results refresh (server-only, #921).
  *
  * The team dossier (roster / world rank / last-5 matches) ships as a frozen
  * snapshot in team-stats-core, refreshed by hand at each stage boundary via
- * scripts/gather-team-stats.ts (PHA-897). This module AUTOMATES the recent-match
- * half of that refresh, the same way PHA-902 auto-refreshes the live Swiss
+ * scripts/gather-team-stats.ts (#897). This module AUTOMATES the recent-match
+ * half of that refresh, the same way #902 auto-refreshes the live Swiss
  * standings: an on-read, atomic-claimed, deferred crawl that persists a cache and
  * is gated to the committed match windows so it only fires on days games are
  * played. Roster + world rank stay frozen (they move slowly — bump by hand); only
@@ -15,7 +15,7 @@
  * each team's HLTV PROFILE — global across stages — so the cache is a single blob
  * per event and the gate is `isWithinAnyMatchWindow` (any stage playing), not the
  * per-section window. The 32 profiles are crawled in small sequential sub-batches
- * (PHA-1036, CRAWL_CHUNK_SIZE), retrying the teams HLTV challenges and
+ * (#1036, CRAWL_CHUNK_SIZE), retrying the teams HLTV challenges and
  * accumulating coverage across hourly cycles.
  *
  * Graceful by contract: a source outage / parse miss degrades to the last cache,
@@ -61,7 +61,7 @@ const TEAM_STATS_REFRESH_SOURCE = "hltv-team-stats";
 // team-stats-sources module (CRAWL_PASS_TIMEOUT_MS / MAX_TOTAL_CRAWL_MS /
 // MAX_CRAWL_PASSES) so the verify harness can prove the retry + partial-discard
 // behaviour offline. crawl4ai renders the 32 profiles in small SEQUENTIAL
-// sub-batches of CRAWL_CHUNK_SIZE (PHA-1036: a single 32-URL request let the
+// sub-batches of CRAWL_CHUNK_SIZE (#1036: a single 32-URL request let the
 // dispatcher render them all at once and froze the box); measured ~120s for the
 // full field. Runs deferred (off the render path) on the on-read path; the warm
 // route awaits it (a one-shot ops/deploy poke).
@@ -106,7 +106,7 @@ function resultMarkdown(r: Crawl4aiResult | undefined): string {
 /**
  * Crawl ONE sub-batch of profiles in a single crawl4ai request (renders + bypasses
  * the Cloudflare gate that 403s a direct fetch). Returns pickid → markdown, matched
- * back by the HLTV TEAM ID parsed out of each result url (PHA-1044). crawl4ai's
+ * back by the HLTV TEAM ID parsed out of each result url (#1044). crawl4ai's
  * `semaphore_count` concurrency renders the chunk in parallel, so it neither
  * preserves input order nor returns the exact submitted url (it can redirect-
  * normalise / rewrite it) — keying on the stable `/team/<id>/` segment binds each
@@ -165,7 +165,7 @@ async function crawlChunk(
 }
 
 /**
- * Crawl the whole set of team profiles in SMALL SEQUENTIAL sub-batches (PHA-1036).
+ * Crawl the whole set of team profiles in SMALL SEQUENTIAL sub-batches (#1036).
  * Handing crawl4ai all 32 URLs at once let its memory-adaptive dispatcher render
  * every page concurrently — on the uncapped container that lit all 12 threads and
  * froze the box (~460% CPU). Chunking by CRAWL_CHUNK_SIZE and awaiting each chunk
@@ -227,7 +227,7 @@ async function readPriorRecent(eventId: number): Promise<Record<number, ParsedMa
  *  1. RETRY — re-crawls only the teams still missing a results table, up to
  *     MAX_CRAWL_PASSES (bounded by a total wall-clock budget). A pass that throws
  *     keeps the teams earlier passes landed instead of discarding them, so a
- *     transient crawl4ai 5xx never blanks a good partial (see PHA-944 /
+ *     transient crawl4ai 5xx never blanks a good partial (see #944 /
  *     accumulateRecentAcrossPasses).
  *  2. ACCUMULATE — overlays this run's fresh results on top of the PRIOR cached
  *     results, so a team that was fetched live earlier keeps its live data even if
@@ -241,7 +241,7 @@ async function ingestTeamStats(eventId: number): Promise<number> {
     // Multi-pass crawl with per-pass retry + total budget. A later pass throwing
     // (transient crawl4ai 5xx/timeout) keeps the fresh from earlier passes rather
     // than discarding it — the persist block below then saves partial coverage
-    // and the next ~1h tick re-pulls the still-missing teams (PHA-944).
+    // and the next ~1h tick re-pulls the still-missing teams (#944).
     const fresh = await accumulateRecentAcrossPasses(all, crawlProfiles, parseRecentResults);
 
     const freshCount = Object.keys(fresh).length;
@@ -290,7 +290,7 @@ export async function refreshTeamStatsOnRead(
   eventId: number,
   nowMs: number = Date.now(),
 ): Promise<void> {
-  if (await isEventFrozenById(eventId, nowMs)) return; // PHA-949/954: frozen (effectively archived) Majors never re-crawl
+  if (await isEventFrozenById(eventId, nowMs)) return; // #949/954: frozen (effectively archived) Majors never re-crawl
   if (!isWithinAnyMatchWindow(nowMs, getEventConfig(eventId)?.matchWindows)) return; // off-day — serve cache, don't crawl
   if (!(await claimRefreshSlot())) return; // within floor or lost the race
   runDeferred(() => ingestTeamStats(eventId), "team-stats");

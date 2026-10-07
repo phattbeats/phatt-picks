@@ -1,6 +1,6 @@
 /**
  * analytics-core — pure helpers for the built-in, privacy-friendly pageview
- * counter (PHA-1277). No DB, no framework — just the sanitization + bucketing
+ * counter (#1277). No DB, no framework — just the sanitization + bucketing
  * rules so they can be unit-verified offline (scripts/verify-analytics.ts).
  *
  * Privacy by construction: we only ever derive a normalized internal path, a

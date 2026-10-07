@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 /**
  * Periodically re-renders the current route's server components so a live view
- * (e.g. the Swiss lineup, PHA-898) tracks fresh results without a manual reload.
+ * (e.g. the Swiss lineup, #898) tracks fresh results without a manual reload.
  * `router.refresh()` re-runs the RSC on the server — which re-triggers the
  * on-read outcomes driver (refreshOutcomesOnRead) — and reconciles the tree in
  * place, so it doesn't lose scroll position or client state.
@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation";
  * Pauses while the tab is hidden so a backgrounded PWA isn't polling all day,
  * and refreshes once immediately on becoming visible again.
  *
- * BOUNDED HEAP (PHA-1268): repeated `router.refresh()` in the Next App Router is
+ * BOUNDED HEAP (#1268): repeated `router.refresh()` in the Next App Router is
  * a known client-memory-growth pattern — each refresh hands the client router a
  * fresh RSC payload, and the accumulated router cache / detached React trees
  * climb monotonically over a long foreground session (e.g. camping `/picks` for

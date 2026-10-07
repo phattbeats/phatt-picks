@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Header notification bell (PHA-1211 follow-up; PHA-1237 per-item read state;
- * PHA-1238 PWA badge + tab title; PHA-1241 real-time SSE delivery).
+ * Header notification bell (#1211 follow-up; #1237 per-item read state;
+ * #1238 PWA badge + tab title; #1241 real-time SSE delivery).
  *
  * Connects to GET /api/notifications/stream for instant badge + feed updates.
  * Falls back to 45s polling when EventSource is unavailable or fails three
@@ -11,7 +11,7 @@
  * { action: "readAll" }; clicking a single item marks it via mousedown
  * (fires before navigation) POST { action: "read", entryId }.
  *
- * PHA-1238: the live unread count is also mirrored OUTSIDE the app so it's
+ * #1238: the live unread count is also mirrored OUTSIDE the app so it's
  * visible without opening it — `navigator.setAppBadge()` paints the count on
  * the installed PWA icon (high value mobile-first), and the browser tab title
  * gets an "(N) " prefix. Both are driven off this component's `unread` state,
@@ -153,7 +153,7 @@ export function NotificationBell() {
     setLoaded(true);
   }, []);
 
-  // PHA-1238 — paint the unread count on the installed PWA app icon.
+  // #1238 — paint the unread count on the installed PWA app icon.
   useEffect(() => {
     const nav = typeof navigator !== "undefined" ? (navigator as BadgeNavigator) : undefined;
     if (!nav?.setAppBadge) return;
@@ -161,9 +161,9 @@ export function NotificationBell() {
     else nav.clearAppBadge?.().catch(() => {});
   }, [unread]);
 
-  // PHA-1238 — prefix the browser tab title with "(N) " when unread.
+  // #1238 — prefix the browser tab title with "(N) " when unread.
   //
-  // PHA-1269 CRITICAL FIX: the previous version watched <title> with a
+  // #1269 CRITICAL FIX: the previous version watched <title> with a
   // MutationObserver and re-applied the prefix on every mutation. Next.js/React
   // also own <title> (route metadata), so the two fought: React reset the title
   // to the route's value, the observer instantly re-prepended "(N)", React reset
@@ -180,12 +180,12 @@ export function NotificationBell() {
     };
   }, [unread]);
 
-  // PHA-1241 — SSE connection, with polling fallback after 3 failed attempts.
-  // PHA-1267 — the stream is paused while the tab is hidden. A backgrounded tab
+  // #1241 — SSE connection, with polling fallback after 3 failed attempts.
+  // #1267 — the stream is paused while the tab is hidden. A backgrounded tab
   // or installed PWA otherwise holds an open SSE connection that the server
   // re-polls every 30s and recycles every 10 min — sustained client + server
   // churn for a view nobody is looking at, multiplied across every open tab.
-  // Urgent delivery is covered by web-push (PHA-1239); on returning to the tab
+  // Urgent delivery is covered by web-push (#1239); on returning to the tab
   // we reconnect immediately and the `init` event repaints the badge in full.
   useEffect(() => {
     if (typeof EventSource === "undefined") {
@@ -200,7 +200,7 @@ export function NotificationBell() {
     // Pending reconnect handle — MUST be cleared on cleanup, otherwise an
     // unmount mid-backoff lets the timer fire connectSSE() on a dead closure,
     // spawning an EventSource (and eventually a 45s poll loop) that nothing can
-    // ever close — a detached leak that survives the component. (PHA-1267)
+    // ever close — a detached leak that survives the component. (#1267)
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let retries = 0;
 
@@ -412,7 +412,7 @@ export function NotificationBell() {
         </div>
       )}
 
-      {/* In-app toast stack — new notifications that arrive via SSE (PHA-1241) */}
+      {/* In-app toast stack — new notifications that arrive via SSE (#1241) */}
       {toasts.length > 0 && (
         <div className="notiftoast-stack" aria-live="polite" aria-atomic="false">
           {toasts.map((t) => (

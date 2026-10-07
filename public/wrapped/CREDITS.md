@@ -1,6 +1,6 @@
 # Major Wrapped photos
 
-Documentary stills placed per slide in the Major Wrapped deck (PHA-1274). These
+Documentary stills placed per slide in the Major Wrapped deck (#1274). These
 are photographer stills from the **IEM Cologne Major 2026** official HLTV
 galleries, curated and wired in at Brandon's direction (2026-06-20, "license +
 wire these in"). Each carries an `IEM Cologne Major 2026 · HLTV` credit shown in
@@ -23,7 +23,7 @@ change (filenames are the stable handles in `COLOGNE_PHOTOS`).
 The earlier Wikimedia/CC venue stills (`cologne-cathedral.jpg`, `cologne-arena.jpg`,
 `cologne-player.jpg`) remain in the folder as rights-clean fallbacks.
 
-## Highlight clip (PHA-1274)
+## Highlight clip (#1274)
 - **magixx-1v4.mp4** — the magixx 1v4 on Mirage vs G2, IEM Cologne Major 2026 QF.
   ~32s, muted h264 480p (loops in the historic-play slide). Sourced from the
   Major broadcast highlight; same rights posture as the stills above — clear with

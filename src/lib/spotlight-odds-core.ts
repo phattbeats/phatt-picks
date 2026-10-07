@@ -1,5 +1,5 @@
 /**
- * Spotlight live market odds — pure core (PHA-1066, child of PHA-1043).
+ * Spotlight live market odds — pure core (#1066, child of #1043).
  *
  * The playoff Spotlight modal has a market slot that, until now, shows a "coming
  * soon" state. This module is the verifiable half of wiring the live line: it
@@ -8,17 +8,17 @@
  * `spotlight-odds.ts`), so the whole parse + name-match + label path is provable
  * offline by `scripts/verify-spotlight-odds.ts`.
  *
- * SOURCE (verified PHA-1043): gamma-api.polymarket.com/events?slug=<matchup-slug>
+ * SOURCE (verified #1043): gamma-api.polymarket.com/events?slug=<matchup-slug>
  * returns the event with its `markets[]`. A head-to-head match is one market
  * whose `outcomes` and `outcomePrices` are JSON-ENCODED STRING arrays, e.g.
  * outcomes `["FURIA","The MongolZ"]`, outcomePrices `["0.62","0.38"]`. The price
  * is the implied win probability (0..1). No auth, ~160ms.
  *
  * GATED BY DESIGN: {@link PLAYOFF_MARKET_SLUGS} starts empty until Valve seeds
- * the playoff bracket (PHA-993). A team has no opponent — and so no matchup slug
+ * the playoff bracket (#993). A team has no opponent — and so no matchup slug
  * to target — before then, so an empty registry means the refresh no-ops and the
  * modal keeps its honest "coming soon" state (zero live change). An editor fills
- * one entry per seeded matchup at clinch time (alongside PHA-1065 Spotlight
+ * one entry per seeded matchup at clinch time (alongside #1065 Spotlight
  * authoring), verifying the rendered line against the live response, and repoints
  * entries each round (see the registry below).
  */
@@ -59,7 +59,7 @@ export interface MatchupMarketTarget {
 
 /**
  * AUTHORED MATCHUP REGISTRY — keyed by layout pickid. Empty until Valve seeded
- * the IEM Cologne 2026 playoff bracket; filled at seeding (PHA-1066 / PHA-993,
+ * the IEM Cologne 2026 playoff bracket; filled at seeding (#1066 / #993,
  * 2026-06-16) with the four QF matchups. The two pickids in a match share the
  * slug; `teamName` matches that team's outcome string in the Polymarket moneyline
  * (verified live against gamma-api). `sportsMarketType: "moneyline"` selection in
@@ -67,7 +67,7 @@ export interface MatchupMarketTarget {
  *
  * Refill per round: when the QF resolves and SF pairings publish, repoint each
  * advancing team's pickid at its new `cs2-<a>-<b>-<date>` slug (alongside the
- * PHA-1065 Spotlight authoring pass). A team with no entry falls back to the
+ * #1065 Spotlight authoring pass). A team with no entry falls back to the
  * modal's "coming soon" state — never a fabricated line.
  */
 export const PLAYOFF_MARKET_SLUGS: Record<number, MatchupMarketTarget> = {
@@ -110,7 +110,7 @@ export interface GammaMarket {
    * round/kill props — and several non-moneyline ones ALSO use the two team
    * names as outcomes (e.g. "Set Handicap: A vs B", "map_handicap"). The MATCH
    * win % is the `"moneyline"` market specifically; we must select it by type,
-   * not by "first market that names the team" (verified live, PHA-1066 review).
+   * not by "first market that names the team" (verified live, #1066 review).
    */
   sportsMarketType?: string;
 }
@@ -193,7 +193,7 @@ function orientMarket(parsed: ParsedMarket, wanted: string): ParsedMatchupOdds |
  * OR `teamName` can't be matched — we never GUESS which outcome is "this team" (a
  * wrong orientation would show a team its opponent's odds).
  *
- * CRITICAL (PHA-1066 review, verified against live gamma events): a single H2H
+ * CRITICAL (#1066 review, verified against live gamma events): a single H2H
  * event carries MANY two-outcome markets, and several non-moneyline ones (set/map
  * handicaps, "Set 1 Winner", child moneylines) ALSO use the two TEAM NAMES as
  * outcomes. The MATCH win % is the `"moneyline"` market specifically. So:

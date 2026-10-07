@@ -1,12 +1,12 @@
 /**
- * Pick comparison — head-to-head, redesigned (PHA-900).
+ * Pick comparison — head-to-head, redesigned (#900).
  *
  * The hook: when a stage is revealed AND results have landed, the picks YOU
  * called right that your opponent whiffed ("THE STEAL") get top billing —
  * that's the good stuff. Below it, every stage is a logo grid: all of your
  * picks lined up against all of theirs, hit/miss ringed once a result exists.
  *
- * Reveal rule is unchanged (PHA-862 / PHA-898): a group's team choices stay
+ * Reveal rule is unchanged (#862 / #898): a group's team choices stay
  * hidden for EVERYONE until its stage locks (either Valve flips picks_allowed,
  * the published lock time passes, or a result lands). Scores are always public.
  * Section-qualified pick maps prevent a revealed stage from leaking a still-open
@@ -185,15 +185,15 @@ export default async function ComparePage({
 }: {
   searchParams: Promise<{ a?: string; b?: string }>;
 }) {
-  const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
+  const EVENT_ID = currentEventId(); // per-request active event (#1046)
   const event = getEventConfig(EVENT_ID);
   const params = await searchParams;
   const layout = getCommittedLayout();
   const teamMap = buildTeamMap(layout);
   const session = await getSession();
-  await refreshOutcomesOnRead(EVENT_ID); // live driver (PHA-866) — shared 30s claim
+  await refreshOutcomesOnRead(EVENT_ID); // live driver (#866) — shared 30s claim
 
-  // Live partial W-L per Swiss section (PHA-951): a 3:0/0:3 pick reads red in the
+  // Live partial W-L per Swiss section (#951): a 3:0/0:3 pick reads red in the
   // grid the moment the team's record rules its bucket out, before the answer key
   // resolves it. Reads the cached HLTV standings (no crawl); empty when cold.
   const matchTeams = layout.teams.map((t) => ({ pickid: t.pickid, name: t.name }));
@@ -206,13 +206,13 @@ export default async function ComparePage({
       }),
   );
 
-  // Per-request server clock for the published lock schedule (PHA-898): a stage
+  // Per-request server clock for the published lock schedule (#898): a stage
   // that has begun reveals its picks for comparison even before Valve flips
   // picks_allowed or a result lands. Dynamic RSC, so reading the time is intended.
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now();
 
-  // PHA-954: once the Major is effectively archived (its real Grand Final
+  // #954: once the Major is effectively archived (its real Grand Final
   // resolved), every stage is public history regardless of its per-stage lock —
   // the `eventArchived` reveal signal. No-op while the event is live (false), so
   // the per-stage lock gate alone decides reveal, exactly as before.
@@ -300,7 +300,7 @@ export default async function ComparePage({
     );
 
   // Section-qualified pick maps (sectionId → groupId → slotIndex → pickId).
-  // Must NOT be keyed by groupId alone (see PHA-862): a groupId-only map collides
+  // Must NOT be keyed by groupId alone (see #862): a groupId-only map collides
   // if Valve reuses a groupid across sections, leaking a still-open section's
   // secret pick. Reuse toPlayerPickMap, which scoring also uses.
   const aPicksMap = toPlayerPickMap(picksByPlayer.get(aId) ?? []);
@@ -339,7 +339,7 @@ export default async function ComparePage({
       const bGroup = bPicksMap[section.sectionid]?.[group.groupid] ?? {};
       const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
 
-      // Judge picks at BUCKET grain for Swiss (PHA-946): within a 3:0 / advance /
+      // Judge picks at BUCKET grain for Swiss (#946): within a 3:0 / advance /
       // 0:3 bucket the slots are interchangeable, so a team that landed in the
       // bucket counts no matter which slot row its winner occupies — same grain
       // scoring.ts uses. Playoffs collapse to one single-slot bucket per match
@@ -547,7 +547,7 @@ export default async function ComparePage({
                 const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
                 // Read-only on resolution applies to SWISS only. The playoff bracket
                 // resolves match-by-match while it's still the live event everyone is
-                // reacting to (PHA-1262) — gating those per-match would silently kill
+                // reacting to (#1262) — gating those per-match would silently kill
                 // reactions on each QF/SF as it finishes. Keep playoff picks reactable.
                 const groupClosed = isSwiss && Object.keys(groupOutcomes).length >= group.picks.length;
 
@@ -581,12 +581,12 @@ export default async function ComparePage({
                       <div style={{ padding: "var(--space-2) var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
                         {/* Swiss stages split into the 2 / 6 / 2 buckets (3:0 advance,
                             advancing, 0:3 out) — the real structure, not a flat 1-10.
-                            Reuses the same convention as the picks board (PHA-853). */}
+                            Reuses the same convention as the picks board (#853). */}
                         {(isSwiss
                           ? bucketSwissSlots(group.picks.length)
                           : [{ label: group.name.split(" | ").slice(-1)[0], slotIndexes: group.picks.map((p) => p.index) }]
                         ).map((bucket) => {
-                          // Swiss → judge the whole bucket as a set (PHA-946);
+                          // Swiss → judge the whole bucket as a set (#946);
                           // playoffs → each slot is its own match, resolved per row.
                           const swissRes = isSwiss ? resolveBucketWinners(bucket.slotIndexes, groupOutcomes) : null;
                           const aBucketPicked = isSwiss
@@ -614,7 +614,7 @@ export default async function ComparePage({
                                 const res = swissRes ?? resolveBucketWinners([slotIndex], groupOutcomes);
                                 const aScope = aBucketPicked ?? new Set([aPick].filter((x) => x && x !== 0));
                                 const bScope = bBucketPicked ?? new Set([bPick].filter((x) => x && x !== 0));
-                                // Early-red (PHA-951): a 3:0/0:3 pick whose team's
+                                // Early-red (#951): a 3:0/0:3 pick whose team's
                                 // partial record already rules its bucket out is a
                                 // miss now, before the answer key resolves it. Swiss
                                 // only — playoff matches resolve strictly per slot.

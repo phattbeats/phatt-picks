@@ -1,5 +1,5 @@
 /**
- * The Bleachers — semi-anonymous player interaction (PHA-1211, concept A).
+ * The Bleachers — semi-anonymous player interaction (#1211, concept A).
  *
  * One player drops a fixed reaction STAMP on another player's *revealed* pick.
  * The board sees the running tally; it does NOT see who dropped what — until the

@@ -12,7 +12,7 @@
  * `mergeLiveLayout` overlays exactly those two live facts — per-group `teams` and
  * `picks_allowed` — onto the fixture, matched by (sectionid, groupid). Everything
  * else stays the fixture's, so the slot structure and the outcomes answer-key are
- * untouched (those flow through the outcomes path, PHA-869). Top-level team defs
+ * untouched (those flow through the outcomes path, #869). Top-level team defs
  * are unioned so any team the live layout introduces still resolves a logo/name.
  *
  * Defensive by contract (rules #7/#8): a missing / empty / still-all-TBD live

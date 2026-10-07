@@ -1,5 +1,5 @@
 /**
- * verify-swiss-results - offline proof for the live HLTV W-L standings (PHA-902).
+ * verify-swiss-results - offline proof for the live HLTV W-L standings (#902).
  *
  * The pure core (swiss-results-core) parses the HLTV Swiss standings table out of
  * crawl4ai's page markdown, maps each row back to a committed layout team (for
@@ -130,7 +130,7 @@ check("empty markdown → [] (graceful, no throw)", parseHltvSwissStandings("").
 check("markdown with no Swiss table → []", parseHltvSwissStandings("# just a page\nno table here").length === 0);
 check("match on empty rows → [] (graceful)", matchStandingsToLayout([], stageTeams).length === 0);
 
-console.log("\nswiss-results - recordsByPickId: partial W-L map for early-red (PHA-951)");
+console.log("\nswiss-results - recordsByPickId: partial W-L map for early-red (#951)");
 
 const records = recordsByPickId(matched);
 check("every matched team with a game played has a record", records.size === 16);
@@ -148,7 +148,7 @@ check("a row with no game played (0-0) is omitted", (() => {
 })());
 check("unmatched rows (pickid null) are skipped", recordsByPickId([]).size === 0);
 
-console.log("\nswiss-results - W-L parse bounds (PHA-1044: a map score can't fake a clinch)");
+console.log("\nswiss-results - W-L parse bounds (#1044: a map score can't fake a clinch)");
 
 check("a real record is valid (2-0, 2 matches)", isValidSwissRecord(2, 0, 2));
 check("a full advance is valid (3-2, 5 matches)", isValidSwissRecord(3, 2, 5));
@@ -168,7 +168,7 @@ check("a 2-win Swiss format validates 2-0 under custom bounds", isValidSwissReco
   check("a row with an out-of-bounds W-L tail is dropped", rows.length === 1 && rows[0].name === "BetBoom");
 }
 
-console.log("\nswiss-results - crawl retry/timeout policy (PHA-951: survive team-stats contention)");
+console.log("\nswiss-results - crawl retry/timeout policy (#951: survive team-stats contention)");
 
 check(
   "pass 0 gets the full per-attempt timeout",

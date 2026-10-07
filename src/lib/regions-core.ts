@@ -1,5 +1,5 @@
 /**
- * Team regions (PHA-892) — pure data + helpers, keyed by Valve pickid so this
+ * Team regions (#892) — pure data + helpers, keyed by Valve pickid so this
  * is loadable by the standalone verify script (plain Node, no `@/` alias /
  * bundler). The app imports the same map; rendering lives in RegionBadge.
  *

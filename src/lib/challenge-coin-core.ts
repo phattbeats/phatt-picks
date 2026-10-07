@@ -1,5 +1,5 @@
 /**
- * Challenge coins (PHA-1278) — a Major-themed COLLECTIBLE track, separate from
+ * Challenge coins (#1278) — a Major-themed COLLECTIBLE track, separate from
  * the Viewer Pass coin (coin-core / .coin-sticker, which mirrors a player's
  * Valve coin). Brandon: "challenge coins based on the logo of each major" — one
  * coin per Major a player took part in, so they build a shelf over time.
@@ -61,7 +61,7 @@ export interface CoinInput {
   /** How many players took part. */
   fieldSize: number;
   /** When the Major concluded (archive instant, epoch ms) — when the coin was
-   *  minted. Drives the "coin earned" notification's sort/unread (PHA-1278). */
+   *  minted. Drives the "coin earned" notification's sort/unread (#1278). */
   earnedAtMs: number;
 }
 
@@ -106,7 +106,7 @@ export function coinTierForFinish(
 
 /**
  * Pre-rendered FRONT art (the Major's logo face) for a Major + tier. The renders
- * are generated assets dropped under /public/coins (PHA-1278), so re-skinning a
+ * are generated assets dropped under /public/coins (#1278), so re-skinning a
  * Major is a one-shot asset swap — no code change. Future Majors just need their
  * four PNGs at this path; a missing asset degrades to the <Image> alt, never a
  * crash.

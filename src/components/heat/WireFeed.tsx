@@ -1,10 +1,10 @@
 import { safeHttpUrl, timeAgo, type WireItem } from "@/lib/news-core";
 
 /**
- * Mockup-17 wire feed (PHA-857). Pure presentational server component: it takes
+ * Mockup-17 wire feed (#857). Pure presentational server component: it takes
  * already-resolved WireItems plus a server-stamped `now`, computes the
  * "time-ago" string server-side and renders static markup — no "use client", so
- * there is no Date.now() SSR/hydration mismatch (the trap noted in PHA-856).
+ * there is no Date.now() SSR/hydration mismatch (the trap noted in #856).
  *
  * `variant`:
  *   "full"    — /news, larger cards with image slot + summary.
@@ -68,7 +68,7 @@ function ImageSlot({
   size: { w: number | string; h: number };
 }) {
   // Sink-side scheme guard (defense-in-depth): even if a hostile URL reached the
-  // DB before the ingest-side guard existed, it is neutralized at render. (PHA-860)
+  // DB before the ingest-side guard existed, it is neutralized at render. (#860)
   const safe = safeHttpUrl(url);
   return (
     <div
@@ -118,7 +118,7 @@ function Wrapper({
   const baseStyle = { textDecoration: "none", color: "inherit", ...style };
   // Sink-side scheme guard (defense-in-depth): React renders a javascript: href
   // verbatim, so validate the scheme at the actual sink, not just at ingest. A
-  // hostile/unsupported scheme falls back to a non-link <div>. (PHA-860)
+  // hostile/unsupported scheme falls back to a non-link <div>. (#860)
   const safeHref = safeHttpUrl(href);
   return safeHref ? (
     <a href={safeHref} target="_blank" rel="noopener noreferrer" style={baseStyle}>

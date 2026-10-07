@@ -1,5 +1,5 @@
 /**
- * verify-m9-2-topbar-you - offline proof for PHA-851 (M9.2 top-bar chip).
+ * verify-m9-2-topbar-you - offline proof for #851 (M9.2 top-bar chip).
  *
  * Exercises the pure resolveTopbarYou/deriveInitials helpers across the four
  * paths the dashboard relies on: anonymous fallback, Steam session with an

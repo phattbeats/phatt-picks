@@ -26,10 +26,10 @@ interface Props {
   enabled: boolean;
   eventId: number;
   steamLinked: boolean;
-  /** Server-derived: every stored pick for this stage is already on Steam (PHA-1214). */
+  /** Server-derived: every stored pick for this stage is already on Steam (#1214). */
   initiallySynced?: boolean;
   /**
-   * Live per-stage dossier map (PHA-921), pickid → stats with `recent[]` pulled
+   * Live per-stage dossier map (#921), pickid → stats with `recent[]` pulled
    * live. Optional: undefined off-window / cold start, in which case the drawer
    * falls back to the committed frozen snapshot.
    */
@@ -37,7 +37,7 @@ interface Props {
   /** Snapshot date of the live dossier crawl (YYYY-MM-DD), for the drawer footer. */
   liveStatsAsOf?: string;
   /**
-   * Live playoff market lines (PHA-1066), pickid → Polymarket implied win %.
+   * Live playoff market lines (#1066), pickid → Polymarket implied win %.
    * Optional: empty/undefined until a matchup is authored + seeded, in which case
    * the Spotlight modal shows its "coming soon" odds state.
    */
@@ -48,7 +48,7 @@ const SAVED_FLASH_MS = 1200;
 const DND_MIME = "application/x-phatt-picks-team";
 
 // Slots and pool tiles are the same size — drag-and-drop targets are visually
-// identical to pool sources (PHA-877 iteration 3).
+// identical to pool sources (#877 iteration 3).
 const SLOT_LOGO = 60;
 const TILE_LOGO = 60;
 
@@ -71,7 +71,7 @@ export function PicksBoard({
   const [saveStates, setSaveStates] = useState<Record<string, SaveState>>({});
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
   const [unsavedSinceSync, setUnsavedSinceSync] = useState(false);
-  // Off-board team dossier (PHA-893): roster/standing/recent matches. Closed by
+  // Off-board team dossier (#893): roster/standing/recent matches. Closed by
   // default — opened by the [i] affordance on a pool tile, viewable regardless
   // of whether the stage is pickable or the team is already placed.
   const [statsTeam, setStatsTeam] = useState<TeamDef | null>(null);
@@ -203,7 +203,7 @@ export function PicksBoard({
         const slotTotal = group.picks.length;
 
         // Swiss stages → bucket the flat slots by predicted-outcome convention
-        // (PHA-853). Non-Swiss (playoffs) → single "all slots" bucket so a QF
+        // (#853). Non-Swiss (playoffs) → single "all slots" bucket so a QF
         // match's 1 slot still renders as one card with the group's match name.
         const buckets = isSwiss
           ? bucketSwissSlots(group.picks.length)
@@ -434,7 +434,7 @@ export function PicksBoard({
         />
       )}
 
-      {/* Playoffs (PHA-1043): the eight survivors get a Spotlight — narrative +
+      {/* Playoffs (#1043): the eight survivors get a Spotlight — narrative +
           event highlight + live market line — instead of the clinical dossier.
           Swiss stages keep the lean dossier. */}
       {statsTeam &&

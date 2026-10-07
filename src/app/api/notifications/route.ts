@@ -1,6 +1,6 @@
 /**
- * Universal in-app notifications (PHA-1211 follow-up; PHA-1237 per-item read
- * state; PHA-1236 inbox page support; PHA-1241 SSE delivery).
+ * Universal in-app notifications (#1211 follow-up; #1237 per-item read
+ * state; #1236 inbox page support; #1241 SSE delivery).
  *
  * GET  /api/notifications?limit=N  → { unread, total, generatedAtMs, items[] }
  *   for the signed-in player. One feed across kinds: reactions on their picks,
@@ -13,7 +13,7 @@
  *   → watermark-style bulk clear: sets notificationsSeenAt = now on the player.
  *
  * POST /api/notifications  { action: "read", entryId: string }
- *   → per-entry explicit read: upserts a NotificationRead row (PHA-1237).
+ *   → per-entry explicit read: upserts a NotificationRead row (#1237).
  *
  * Both POST variants are same-origin guarded (isSameOrigin).
  *

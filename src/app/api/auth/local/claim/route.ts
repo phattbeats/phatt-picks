@@ -1,9 +1,9 @@
 /**
  * POST /api/auth/local/claim — bring a guest (local) account's picks onto the
- * signed-in Steam account (PHA-1232).
+ * signed-in Steam account (#1232).
  *
  * The Steam callback never merges a pre-existing local player, so picks made as
- * a guest are stranded once the user signs in with Steam (PHA-1213 gap). This
+ * a guest are stranded once the user signs in with Steam (#1213 gap). This
  * route closes it via the existing cross-device login token: a Steam user
  * pastes their guest login link/token and we move that guest's picks over, then
  * retire the guest account so it no longer doubles up on the leaderboard.

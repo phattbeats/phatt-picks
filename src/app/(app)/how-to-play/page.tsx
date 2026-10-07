@@ -4,7 +4,7 @@ import Image from "next/image";
 export const metadata = { title: "How Pick'Em works · HOTLINE" };
 
 /**
- * The newcomer field manual (PHA-987). HOTLINE is being shared with friends and
+ * The newcomer field manual (#987). HOTLINE is being shared with friends and
  * coworkers who have never seen a Pick'Em and aren't CS2 / esports regulars. The
  * FAQ answers questions you already know to ask; this page answers the one you
  * don't: "what is this and what do I actually do?" Plain language, zero jargon

@@ -8,7 +8,7 @@
  *
  * Cascade is handled by Prisma: Pick + PushSubscription have onDelete:
  * Cascade against Player, so the leaderboard and notification surface both
- * recover automatically on next read. See PHA-854.
+ * recover automatically on next read. See #854.
  */
 
 import { NextResponse } from "next/server";

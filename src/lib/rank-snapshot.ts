@@ -2,7 +2,7 @@
  * Rank-snapshot persistence (server-only) — wraps the pure core with Prisma.
  *
  * Called from the outcomes ingest path after StageOutcome rows land, so a
- * snapshot is frozen at every stage resolution (PHA-858). Idempotent: re-running
+ * snapshot is frozen at every stage resolution (#858). Idempotent: re-running
  * recomputes the same cumulative standings and upserts in place, which also
  * self-heals snapshots if an outcome is corrected/backfilled later.
  *

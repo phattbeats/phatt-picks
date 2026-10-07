@@ -50,13 +50,13 @@ function proveItemidPrecision(): void {
     `JSON.parse→${naiveItemid}`,
   );
 
-  // PHA-847 regression: bigints in ARRAY position must also survive intact.
+  // #847 regression: bigints in ARRAY position must also survive intact.
   // Old regex `:\s*(\d{16,})` only matched object-value position, so array
   // elements after the first (preceded by `,`/`[`, not `:`) got corrupted.
   const arrRaw = `{"ids":[17293822569790899385,17293822569790964921]}`;
   const arr = parseSafeJson(arrRaw) as { ids: unknown[] };
   check(
-    "parseSafeJson preserves bigints inside arrays (PHA-847)",
+    "parseSafeJson preserves bigints inside arrays (#847)",
     arr.ids[0] === "17293822569790899385" && arr.ids[1] === "17293822569790964921",
     JSON.stringify(arr.ids),
   );
@@ -101,16 +101,16 @@ function provePredictionsSnapshot(): void {
   check("committed predictions snapshot has 0 picks", Array.isArray(picks) && picks.length === 0, `len=${picks.length}`);
 }
 
-// [4] PHA-853: drop predictions placeholders (Valve returns groupid+index
+// [4] #853: drop predictions placeholders (Valve returns groupid+index
 //     without sectionid/pickid for slots a stage has touched but not filled).
 function provePlaceholderDrop(): void {
-  console.log("\n[4] PLACEHOLDER DROP (PHA-853) — slots with missing sectionid/pickid are filtered, not upserted as NaN");
+  console.log("\n[4] PLACEHOLDER DROP (#853) — slots with missing sectionid/pickid are filtered, not upserted as NaN");
   const env = {
     result: {
       picks: [
         // Real pick — keeps.
         { sectionid: 105, groupid: 271, index: 0, pickid: 115, itemid: "17293822569791947961" },
-        // Valve placeholder for a touched-but-unfilled slot (Brandon's PHA-853 case).
+        // Valve placeholder for a touched-but-unfilled slot (Brandon's #853 case).
         { groupid: 271, index: 7 } as never,
         { groupid: 271, index: 8 } as never,
         { groupid: 271, index: 9 } as never,

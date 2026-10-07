@@ -1,6 +1,6 @@
 /**
- * verify-security — offline proof for PHA-1045 (security hardening from the
- * PHA-1015 audit). Exercises the pure core behind three route fixes:
+ * verify-security — offline proof for #1045 (security hardening from the
+ * #1015 audit). Exercises the pure core behind three route fixes:
  *
  *   1. CSRF origin guard   (logout POST + mutating routes)
  *   2. trusted-proxy client IP (per-IP account cap can't be spoofed via XFF)
@@ -59,7 +59,7 @@ check(
   isAllowedOrigin("https://evil.example", null, ALLOWED) === false,
 );
 check(
-  "absent origin AND referer allowed (iOS WebKit same-origin form POST — PHA-1225)",
+  "absent origin AND referer allowed (iOS WebKit same-origin form POST — #1225)",
   isAllowedOrigin(null, null, ALLOWED) === true,
 );
 check(
@@ -87,7 +87,7 @@ check(
   isAllowedOrigin(null, null, []) === true,
 );
 
-console.log("\nsecurity-core - forwarded host origin variants (PHA-1225)");
+console.log("\nsecurity-core - forwarded host origin variants (#1225)");
 check(
   "host → both https and http variants",
   JSON.stringify(hostOriginVariants("hotline.phatt.vip")) ===

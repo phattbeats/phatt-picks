@@ -1,5 +1,5 @@
 /**
- * Minimal stroke padlock (PHA-1016). Replaces the 🔒 emoji across lock
+ * Minimal stroke padlock (#1016). Replaces the 🔒 emoji across lock
  * surfaces — tab chips, locked-stage cards, reveal-gate notes — so the lock
  * treatment reads as part of the tactical UI rather than a phone keyboard.
  * Inherits `currentColor`; size in px.

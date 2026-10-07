@@ -1,5 +1,5 @@
 /**
- * verify-announcements — offline proof for the PHA-1211 broadcast announcements
+ * verify-announcements — offline proof for the #1211 broadcast announcements
  * (announcements-core).
  *
  *   1. activeAnnouncements only returns entries inside their publish→expiry
@@ -27,7 +27,7 @@ function check(name: string, cond: boolean) {
 
 // The teaser "compare-surprise" publishes 2026-06-18T03:00Z and now hands off to
 // "reactions-live" AT the playoff lock (first QF, 2026-06-18T13:45Z), which then
-// runs to 2026-06-22T00:00Z (PHA-1245 follow-up).
+// runs to 2026-06-22T00:00Z (#1245 follow-up).
 const PUB = Date.parse("2026-06-18T03:00:00Z");
 const LOCK = Date.parse("2026-06-18T13:45:00Z"); // bracket lock = reactions unlock
 const DURING = PUB + 6 * 3_600_000;              // 09:00Z — teaser phase (before lock)
@@ -35,7 +35,7 @@ const BEFORE = PUB - 6 * 3_600_000;
 const AFTER = Date.parse("2026-06-23T00:00:00Z");
 
 check("shipped list is non-empty", ANNOUNCEMENTS.length >= 1);
-// PHA-1327: ANNOUNCEMENTS is now a template — the "reactions live" instant is a
+// #1327: ANNOUNCEMENTS is now a template — the "reactions live" instant is a
 // placeholder resolved per-call (via reactionsLiveAt) against the active event's
 // registry config, not a module-load-bound constant. Assert well-formedness on
 // the RESOLVED view (activeAnnouncements at a moment every entry is live).
@@ -53,7 +53,7 @@ const latest = latestActiveAnnouncement(DURING);
 check("latestActive returns the live one", latest?.id === "compare-surprise");
 check("latestActive null before publish", latestActiveAnnouncement(BEFORE) === null);
 
-// ── Teaser → "reactions are live" flip at the playoff lock (PHA-1245) ──
+// ── Teaser → "reactions are live" flip at the playoff lock (#1245) ──
 check("before lock: only the teaser is active",
   activeAnnouncements(LOCK - 60_000).map((a) => a.id).join(",") === "compare-surprise");
 check("at/after lock: teaser is gone, 'reactions-live' is active",

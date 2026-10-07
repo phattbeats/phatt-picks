@@ -90,7 +90,7 @@ export async function fetchTournamentPredictions(
  * Read the live tournament layout — the section/group/team/pick structure and,
  * once a stage resolves, the official answer key carried in each pick slot's
  * `pickids` (empty pre-event; see cologne-layout.json). This is the preferred
- * outcome source (PHA-869): the oracle reads results straight from the same
+ * outcome source (#869): the oracle reads results straight from the same
  * layout players picked into, so the answer is slot-correct by construction.
  *
  * Event-global: needs only the app `key` + `event`, no per-user auth code
@@ -145,7 +145,7 @@ export interface SinglePickResult {
 }
 
 /**
- * Upload ONE pick (PHA-853 live finding: Valve rejects the batched/indexed shape
+ * Upload ONE pick (#853 live finding: Valve rejects the batched/indexed shape
  * with 400 "Required parameter 'sectionid' is missing"; only single-pick calls
  * work). Returns a SinglePickResult — never throws on a non-200, so the caller
  * can keep going and aggregate.
@@ -201,7 +201,7 @@ async function uploadSinglePick(
 }
 
 /**
- * Spacing between consecutive single-pick uploads. Live smoke (PHA-853) showed
+ * Spacing between consecutive single-pick uploads. Live smoke (#853) showed
  * Valve's tournament endpoint 429s when hammered: first request 200, then
  * 429s in tight succession, and a single 200 leaks through after ~600ms when
  * the token bucket refills. 1500ms is a conservative cap that keeps a full
@@ -218,7 +218,7 @@ const RETRY_DELAY_MS = 3500;
 
 /**
  * Statuses that are worth retrying within the same Lock In — Valve's tournament
- * endpoint returns these transiently under load (PHA-853 live: 429 first, then
+ * endpoint returns these transiently under load (#853 live: 429 first, then
  * a wave of bare-body 500s on a partial edit). All are server-side / rate
  * conditions, not a problem with our request, so a backoff-and-retry is the
  * right move rather than failing the pick outright.
@@ -232,7 +232,7 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 /**
  * Upload a batch of picks (a whole Swiss stage, or the whole playoff bracket)
- * as N sequential single-pick calls (PHA-853 — Valve only accepts the
+ * as N sequential single-pick calls (#853 — Valve only accepts the
  * unsuffixed single-pick shape; indexed batch returns 400). Throttled with a
  * {@link PICK_UPLOAD_DELAY_MS} pause between picks; a transient failure
  * ({@link RETRYABLE_STATUSES}) backs off {@link RETRY_DELAY_MS} and retries up

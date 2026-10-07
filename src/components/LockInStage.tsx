@@ -11,7 +11,7 @@ interface Props {
    * Server-derived on first render: true when every pick this section holds is
    * already on Steam (no `isLocal` rows). Lets the button render green on page
    * load — and stay green across reloads — until the player makes a change,
-   * without waiting for an in-session sync click (PHA-1214 follow-up).
+   * without waiting for an in-session sync click (#1214 follow-up).
    */
   initiallySynced?: boolean;
   onSynced: () => void;
@@ -26,7 +26,7 @@ interface WriteResult {
   degraded?: boolean;
   escalate?: boolean;
   status?: number;
-  error?: string; // PHA-853: Valve response body for non-200, surfaced into the pill
+  error?: string; // #853: Valve response body for non-200, surfaced into the pill
 }
 
 type Phase = "idle" | "syncing" | "result";
@@ -40,7 +40,7 @@ function describe(r: WriteResult | null, unsaved: boolean, initiallySynced: bool
   if (!r) {
     // No sync click this session (e.g. a fresh page load). Local edits always
     // win → yellow. Otherwise honor the server's "already on Steam" signal so
-    // the button stays green across reloads (PHA-1214 follow-up).
+    // the button stays green across reloads (#1214 follow-up).
     if (unsaved) return { pill: "Saved locally — not yet on Steam", pillTone: "warn" };
     if (initiallySynced) return { pill: "Synced to Steam", pillTone: "ok" };
     return { pill: "Saved locally", pillTone: "info" };
@@ -123,7 +123,7 @@ export function LockInStage({ sectionId, unsavedSinceSync, initiallySynced = fal
     info: "var(--text-mid)",
   };
   // Green once everything the player has picked is on Steam; yellow (the accent
-  // call-to-action) the moment there are local changes still to push. PHA-1214.
+  // call-to-action) the moment there are local changes still to push. #1214.
   const isSynced = state.pillTone === "ok";
   const label =
     phase === "syncing"

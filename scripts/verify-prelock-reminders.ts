@@ -1,5 +1,5 @@
 /**
- * verify-prelock-reminders — offline proof for PHA-929 (the pre-lock reminder
+ * verify-prelock-reminders — offline proof for #929 (the pre-lock reminder
  * job now schedules + reads one source of truth).
  *
  * The bug: runPreLockReminders read STAGE_LOCKS_JSON (empty by default) and was
@@ -41,7 +41,7 @@ function check(name: string, cond: boolean) {
 
 console.log("\nstageLocksFromSchedule — single source of truth");
 const locks = stageLocksFromSchedule();
-// PHA-1245: the three playoff rounds (108/109/110) share ONE bracket picker that
+// #1245: the three playoff rounds (108/109/110) share ONE bracket picker that
 // locks together at the first QF, so reminders collapse them into a single
 // "Playoffs" cutoff — four stages total, not six.
 check("derives 3 Swiss stages + ONE collapsed playoffs cutoff (4 total)",
@@ -106,7 +106,7 @@ const secondPass = dueReminders(at24 + 5 * MINUTE_MS, lock3).filter(
 check("first tick inside window dispatches the 24h reminder", firstPass.some((r) => r.label === "24h"));
 check("next tick inside the same window does NOT re-dispatch it", !secondPass.some((r) => r.label === "24h"));
 
-console.log("\nscheduler gate (PHA-996) — default ON, env opt-out only");
+console.log("\nscheduler gate (#996) — default ON, env opt-out only");
 // The regression this guards: a template Force-Update that drops EVERY ad-hoc
 // container var must leave the scheduler armed.
 check("both vars unset (the Force-Update state) ⇒ armed", prelockSchedulerEnabled(undefined, undefined));

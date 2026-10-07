@@ -1,6 +1,6 @@
 /**
  * smoke-major-wrapped — end-to-end smoke for the Hotline (Major) Wrapped go-live
- * (PHA-1274). Brandon: "smoke test first then wire it."
+ * (#1274). Brandon: "smoke test first then wire it."
  *
  * This drives the EXACT chain the Sunday routine will run, through the real
  * production builders (not hand-built bracket objects):

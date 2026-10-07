@@ -1,7 +1,7 @@
 /**
- * Playoffs Wrapped — POC deck builder (PHA-1274).
+ * Playoffs Wrapped — POC deck builder (#1274).
  *
- * Stage Wrapped (PHA-1051/1052/1054) hands the player a Spotify-Wrapped-style
+ * Stage Wrapped (#1051/1052/1054) hands the player a Spotify-Wrapped-style
  * recap when a *Swiss* stage resolves. The Playoffs are different in shape — not
  * sixteen-team Swiss math but a single-elim bracket that ends with one team
  * lifting the trophy — so they deserve their own recap: the climax of the whole
@@ -29,7 +29,7 @@ import { regionMetaForPickid } from "./regions-core";
 const AUTO_MS = 6000;
 
 /* ------------------------------------------------------------------------- *
- * The "dank HLTV photo" twist (PHA-1274).
+ * The "dank HLTV photo" twist (#1274).
  *
  * Brandon: "the twist for this wrapped is we include DANK photos from HLTV."
  * These are the real photographer stills from the IEM Cologne Major 2026 sets,
@@ -164,10 +164,10 @@ export interface PlayoffMoment {
   logoPickIds?: number[];
   /** The dank photo for this beat (cathedral / arena / a player moment). */
   photo?: WrappedPhoto;
-  /** A looping highlight clip for the beat (PHA-1274 — the magixx 1v4). When
+  /** A looping highlight clip for the beat (#1274 — the magixx 1v4). When
    *  set it takes the band; `photo` doubles as its poster/fallback. */
   video?: { src: string; poster?: string; alt?: string; credit?: string };
-  /** A cut-out player portrait for the beat (PHA-1274 — donk, woxic). */
+  /** A cut-out player portrait for the beat (#1274 — donk, woxic). */
   portrait?: { src: string; alt?: string };
 }
 
@@ -218,7 +218,7 @@ export const COLOGNE_PLAYOFF_MOMENTS: readonly PlayoffMoment[] = [
     photo: COLOGNE_PHOTOS.cinderella,
   },
   {
-    // PHA-1274 (Brandon): "reserve a spot for magixx 1v4 with a pic of his hand
+    // #1274 (Brandon): "reserve a spot for magixx 1v4 with a pic of his hand
     // on his head in disbelief." Spirit = pickid 81. Wired to a hand-to-face
     // disbelief still from the HLTV set (COLOGNE_PHOTOS.magixx); swap to the
     // exact magixx frame anytime — same filename, zero code change.
@@ -230,7 +230,7 @@ export const COLOGNE_PLAYOFF_MOMENTS: readonly PlayoffMoment[] = [
     body: "Last man alive in the Quarterfinal, the round already written off, magixx held one angle and emptied a single AK spray through four G2 players — then froze, hand on his head, not quite believing it himself. Graffiti-worthy. Valve made his face their profile picture. The Cathedral lost its mind.",
     logoPickIds: [81, 59],
     photo: COLOGNE_PHOTOS.magixx,
-    // The 30s clip loops in the slide (Brandon, PHA-1274). Muted h264 mp4 under
+    // The 30s clip loops in the slide (Brandon, #1274). Muted h264 mp4 under
     // /public/wrapped; the magixx still is its poster/fallback. Source +
     // licensing in public/wrapped/CREDITS.md.
     video: {
@@ -244,7 +244,7 @@ export const COLOGNE_PLAYOFF_MOMENTS: readonly PlayoffMoment[] = [
 
 /**
  * A one-slide tribute to a team that made the Cologne last eight. The "big
- * finish" deck (PHA-1274, Brandon: "every team should have at least one slide")
+ * finish" deck (#1274, Brandon: "every team should have at least one slide")
  * gives each of the eight its own card — the global spread of the field is half
  * the story. Copy is grounded in each team's real Cologne run (the Spotlight
  * narratives), so nothing here is invented.
@@ -443,7 +443,7 @@ export function buildPlayoffWrappedDeck(
           : "Champions of IEM Cologne 2026",
       body: `Eight teams entered the single-elim bracket. ${championName} ran the table${overRunnerUp} to be the last team standing in the Cathedral of Counter-Strike.`,
       teamLogos: logo(champId),
-      // The champion's marquee player as the hero (PHA-1274) — the playoff field
+      // The champion's marquee player as the hero (#1274) — the playoff field
       // all have a /wrapped/player-<pickid>.webp portrait; falls back to the
       // trophy still if absent.
       portrait: { src: `/wrapped/player-${champId}.webp`, alt: championName },
@@ -516,7 +516,7 @@ export function buildPlayoffWrappedDeck(
       headline: nameFor(t.pickId, assets),
       figureCaption: region ? region.label : undefined,
       body: t.blurb,
-      // The team's marquee player as the slide picture (PHA-1274) — cut-out
+      // The team's marquee player as the slide picture (#1274) — cut-out
       // HLTV portrait at /wrapped/player-<pickId>.webp; hides itself if absent.
       portrait: { src: `/wrapped/player-${t.pickId}.webp`, alt: nameFor(t.pickId, assets) },
       teamLogos: logo(t.pickId),
@@ -617,7 +617,7 @@ export function buildPlayoffWrappedDeck(
 
   // The challenge-coin CTA is the VERY LAST beat (Brandon: "make sure the
   // challenge coin is after everything else"). A Major mints a collectible coin
-  // (PHA-1278) the moment the Grand Final crowns a champion — so the recap signs
+  // (#1278) the moment the Grand Final crowns a champion — so the recap signs
   // off by sending them to their shelf; the one-tap CTA closes the deck en route.
   slides.push({
     id: "po-coin",

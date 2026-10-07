@@ -12,8 +12,8 @@ const INBOX_PAGE_SIZE = 30;
 const INBOX_HARD_CAP = 200;
 
 /**
- * Full-history notifications inbox (PHA-1236) with per-item read state
- * (PHA-1237). The header bell is the quick peek — this page is everything
+ * Full-history notifications inbox (#1236) with per-item read state
+ * (#1237). The header bell is the quick peek — this page is everything
  * that's still relevant, grouped by Today / This week / Earlier, with
  * page-size pagination via ?page=N and an All/Unread tab driven by the
  * per-entry NotificationRead table. Mark-all-read and click-to-mark-read

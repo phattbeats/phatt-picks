@@ -1,5 +1,5 @@
 /**
- * PHA-918 — Live leaderboard / Swiss-clinch bridge verification (offline).
+ * #918 — Live leaderboard / Swiss-clinch bridge verification (offline).
  *
  * Proves, by running the real engines against the committed layout fixture:
  *

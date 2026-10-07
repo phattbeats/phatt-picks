@@ -1,5 +1,5 @@
 /**
- * verify-swiss-bracket - offline proof for the live Swiss BRACKET (PHA-902).
+ * verify-swiss-bracket - offline proof for the live Swiss BRACKET (#902).
  *
  * swiss-bracket-core lifts HLTV's per-match data (the `data-match-details-popup
  * -json` blobs the event page embeds in each bracket cell) out of the rendered
@@ -173,7 +173,7 @@ check("summary counts settled teams (1 advanced, 1 eliminated)", (() => {
   return s.advanced === 1 && s.eliminated === 1;
 })());
 
-console.log("\nswiss-bracket - terminal records as the outcome-bridge fallback (PHA-1044)");
+console.log("\nswiss-bracket - terminal records as the outcome-bridge fallback (#1044)");
 
 // When HLTV reformats the W-L TABLE header (parseHltvSwissStandings → []) but the
 // BRACKET still parses, the leaderboard bridge derives each clinched team's exact
@@ -212,7 +212,7 @@ check("an all-placeholder terminal column yields no teams (stays hidden)", (() =
   return parseSwissBracket(ph).length === 0;
 })());
 
-// PHA-936 regression: HLTV stacks the two terminal boxes of a deciding column by
+// #936 regression: HLTV stacks the two terminal boxes of a deciding column by
 // emitting BOTH titles consecutively (3:1 then 3:2) and THEN both wrappers in the
 // same order — the yesterday-decided 3:1 box is filled, the not-yet-played 3:2
 // box is still all "?". Nearest-preceding-title wrongly put the 3:1 teams under

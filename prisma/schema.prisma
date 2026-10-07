@@ -21,8 +21,8 @@ model Player {
   synced        Boolean  @default(false) // true when picks confirmed synced from Valve
   inviteCode    String?  @unique
   loginToken    String?  @unique   // opaque token for cross-device login (local players only)
-  notificationsSeenAt DateTime?    // PHA-1211: last time this player opened the notifications panel; anything newer is "unread"
-  notifPrefs    String?           // PHA-1240: JSON NotifPrefs — per-type in-app + push toggles
+  notificationsSeenAt DateTime?    // #1211: last time this player opened the notifications panel; anything newer is "unread"
+  notifPrefs    String?           // #1240: JSON NotifPrefs — per-type in-app + push toggles
   invitedById   String?           // referral attribution: the player whose invite link onboarded this one
   createdFromIp String?           // captured at local-account creation for IP rate-limit enforcement
   createdAt     DateTime @default(now())
@@ -74,7 +74,7 @@ model StageOutcome {
   @@index([eventId])
 }
 
-// Frozen standings at each stage resolution (PHA-858). One row per
+// Frozen standings at each stage resolution (#858). One row per
 // (player, event, section): the player's CUMULATIVE rank + points over every
 // resolved outcome through that section, captured when the section resolved.
 // Drives the leaderboard rank-delta arrows (mockup-04) and the Stage Reveal
@@ -108,7 +108,7 @@ model LayoutCache {
   updatedAt DateTime @updatedAt
 }
 
-// Per-source state for outcome ingestion — persisted throttle (PHA-844).
+// Per-source state for outcome ingestion — persisted throttle (#844).
 // The in-process min-interval gate in liquipedia.ts resets every container
 // restart, so a restart-loop pre-event could still hammer the API. This row
 // records the wall-clock timestamp of the last successful (or attempted)
@@ -120,7 +120,7 @@ model SourceState {
   updatedAt    DateTime @updatedAt
 }
 
-// Wire / news headlines (PHA-857). Source-agnostic: rows arrive either from a
+// Wire / news headlines (#857). Source-agnostic: rows arrive either from a
 // committed curated seed (the Beta default) or, later, an automated pull (RSS /
 // HLTV) through the same ingestion path. `externalId` is the per-source dedup
 // key so re-running ingestion is idempotent. Empty table + empty seed renders
@@ -141,7 +141,7 @@ model NewsItem {
   @@index([publishedAt])
 }
 
-// Live HLTV/BLAST-style Swiss W-L standings (PHA-902). One JSON-blob row per
+// Live HLTV/BLAST-style Swiss W-L standings (#902). One JSON-blob row per
 // (event, section): the parsed standings table (each team's running win-loss
 // record, rounds for/against, status) cached from the external source (HLTV
 // event page via crawl4ai). Refreshed on an ~hourly floor by the on-read driver
@@ -162,7 +162,7 @@ model SwissStandingsCache {
   @@index([eventId])
 }
 
-// Live team-dossier recent results (PHA-921). One JSON-blob row per event: each
+// Live team-dossier recent results (#921). One JSON-blob row per event: each
 // team's last-5 matches parsed from its HLTV PROFILE via crawl4ai, cached so the
 // dossier's "Last 5 matches" updates per stage without a manual gather/commit.
 // The dossier is keyed by team profile (global across stages), not by section,
@@ -180,7 +180,7 @@ model TeamStatsCache {
   updatedAt DateTime @updatedAt
 }
 
-// Live playoff Spotlight market odds (PHA-1066). One JSON-blob row per event:
+// Live playoff Spotlight market odds (#1066). One JSON-blob row per event:
 // pickid → SpotlightMarketLine (Polymarket implied win %). Fetched on the same
 // ~hourly floor by the on-read driver (refreshSpotlightOddsOnRead) from the
 // public gamma-api — a direct fetch, no crawl, no auth. Gated to match windows
@@ -195,7 +195,7 @@ model SpotlightOddsCache {
   updatedAt DateTime @updatedAt
 }
 
-// The Bleachers — semi-anonymous reactions on another player's pick (PHA-1211).
+// The Bleachers — semi-anonymous reactions on another player's pick (#1211).
 // One row per (sender, pick): a sender drops exactly ONE fixed STAMP on a given
 // revealed pick, replaceable (the @@unique key makes the drop a toggle/swap, not
 // an additive spam vector). `targetPlayerId` is denormalized off the pick so the
@@ -221,7 +221,7 @@ model Reaction {
   // QF1 for everyone, slot 0), so without it a sender could react to only ONE
   // player's pick per (section, group, slot) — reacting to a second player at
   // the same coordinates collided on the narrower key and silently re-stamped
-  // the first target instead (PHA-1262: "could react on Miss_Shade but not
+  // the first target instead (#1262: "could react on Miss_Shade but not
   // Brandolorian/Ty-C").
   @@unique([senderId, eventId, sectionId, groupId, slotIndex, targetPlayerId])
   @@index([eventId, targetPlayerId])
@@ -239,7 +239,7 @@ model PushSubscription {
   @@index([playerId])
 }
 
-// Per-notification read state (PHA-1237). Universal-feed entries are DERIVED
+// Per-notification read state (#1237). Universal-feed entries are DERIVED
 // (no Notification table) so this is a per-player join keyed on the stable
 // entry id from notifications-core (e.g. "reaction:108:276:0", "stage:107",
 // "recap:107", "announce:compare-surprise"). The player's notificationsSeenAt
@@ -260,7 +260,7 @@ model NotificationRead {
   @@index([playerId, readAt])
 }
 
-// Built-in privacy-friendly pageview counter (PHA-1277). One row per view, fully
+// Built-in privacy-friendly pageview counter (#1277). One row per view, fully
 // anonymous: normalized internal path + coarse device + external referrer host
 // only. No player relation, no IP, no query strings — see analytics-core.ts for
 // the sanitization rules. Lets us measure which routes actually get traffic so

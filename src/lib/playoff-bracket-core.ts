@@ -1,7 +1,7 @@
 /**
- * Live playoffs bracket (pure, PHA-903).
+ * Live playoffs bracket (pure, #903).
  *
- * Companion to the Swiss bracket (PHA-902). Where the Swiss flow is a wide W:L
+ * Companion to the Swiss bracket (#902). Where the Swiss flow is a wide W:L
  * lattice, the playoffs are a single-elimination tree: Quarterfinals (4 matches)
  * → Semifinals (2) → Grand Final (1), winners advancing. Brandon wants the
  * locked playoffs view to look like the reference he shared — the QF/SF/GF tree
@@ -21,7 +21,7 @@
  * fills in live via the same on-read layout/outcome refresh the rest of /picks
  * uses. (Live per-series MAP scores — "2:1" inside a Bo3 — are the one field the
  * answer key can't give; `scoreByGroup` is the optional seam for an HLTV overlay
- * once the playoff event page exists and can be captured + verified, as PHA-902
+ * once the playoff event page exists and can be captured + verified, as #902
  * did for Swiss. Until then a decided match simply lights its winner, no
  * fabricated score.)
  *
@@ -103,7 +103,7 @@ export interface PlayoffMatch {
   userResult: PlayoffPickResult | null;
   /**
    * The game's committed start instant (UTC ISO) for the "Jun 18 · 12:30" chip,
-   * or null when no authoritative time is published yet (PHA-1007). Truthful by
+   * or null when no authoritative time is published yet (#1007). Truthful by
    * construction — a chip renders only for a game with a real, committed time.
    */
   scheduledAtIso: string | null;
@@ -113,7 +113,7 @@ export interface PlayoffMatch {
    * official answer key (which publishes well after a match actually ends). Lets
    * the bracket say "awaiting official result" instead of looking frozen during
    * that lag — the gap that made a concluded semifinal look like nothing had
-   * updated (PHA-1016). Needs `nowMs`; false when no clock is supplied.
+   * updated (#1016). Needs `nowMs`; false when no clock is supplied.
    */
   awaitingResult: boolean;
 }
@@ -155,7 +155,7 @@ export interface PlayoffInputs {
   /**
    * The active event's per-game playoff schedule (sectionId -> ISO start times,
    * bracket order), used to derive `awaitingResult`. Omit to fall back to the
-   * committed Cologne schedule (PHA-1327: callers thread their event's own
+   * committed Cologne schedule (#1327: callers thread their event's own
    * `playoffSchedule` from the registry; this stays a pure, injectable param).
    */
   playoffSchedule?: Readonly<Record<number, readonly string[]>>;
@@ -257,7 +257,7 @@ export function buildPlayoffBracket(inputs: PlayoffInputs): PlayoffBracket {
  * The set of teams seeded into the playoff field — every non-TBD team that
  * appears in the Quarterfinal section's match groups (the eight survivors).
  *
- * This is the eligibility universe for the WHOLE bracket (PHA-1204): a viewer's
+ * This is the eligibility universe for the WHOLE bracket (#1204): a viewer's
  * Semifinal / Grand Final pick is one of their own advanced teams, none of which
  * the layout has placed on the SF/GF group slots yet (those stay TBD until the
  * matches are actually played). So a pick for a downstream round targets a team
@@ -277,7 +277,7 @@ export function playoffFieldTeams(sections: readonly Section[]): Set<number> {
 }
 
 /* ------------------------------------------------------------------------- *
- * Interactive bracket predictor (PHA-1204)
+ * Interactive bracket predictor (#1204)
  *
  * Brandon: "Playoffs: it is ONE stage, you place the whole bracket at once."
  * The old picker stacked three separate boards (QF/SF/GF) and only let you pick

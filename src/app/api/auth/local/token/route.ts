@@ -16,7 +16,7 @@ import { isSameOrigin } from "@/lib/csrf";
 export async function POST(req: NextRequest) {
   // CSRF: rotating the token is a cookie-authed mutating simple POST (no JSON
   // body → no CORS preflight), so guard it cross-site like the other mutating
-  // routes (PHA-1045). A forged rotation would invalidate the victim's saved
+  // routes (#1045). A forged rotation would invalidate the victim's saved
   // login links.
   if (!isSameOrigin(req)) {
     return NextResponse.json({ error: "Bad origin" }, { status: 403 });

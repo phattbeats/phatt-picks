@@ -1,12 +1,12 @@
 /**
- * Team-stats source map + HLTV "Recent results" parser (pure, PHA-921).
+ * Team-stats source map + HLTV "Recent results" parser (pure, #921).
  *
  * The single source of truth for WHICH HLTV profile backs each team and HOW to
  * read its recent matches — shared by two callers that must agree byte-for-byte:
  *
  *   1. `scripts/gather-team-stats.ts` — the manual, committed-snapshot refresh
- *      (PHA-897): re-crawl every profile and rewrite team-stats-core in place.
- *   2. `src/lib/team-stats.ts` — the LIVE on-read refresh (PHA-921): the same
+ *      (#897): re-crawl every profile and rewrite team-stats-core in place.
+ *   2. `src/lib/team-stats.ts` — the LIVE on-read refresh (#921): the same
  *      crawl + parse, but persisted to a cache and merged over the frozen
  *      snapshot at request time, so the dossier updates per stage on its own.
  *
@@ -79,7 +79,7 @@ export function hltvProfileUrl(s: TeamSource): string {
 
 /**
  * Pull the HLTV team id out of a profile url — the stable `/team/<id>/<slug>`
- * segment (PHA-1044). The id survives the redirect-normalisation / trailing-slash
+ * segment (#1044). The id survives the redirect-normalisation / trailing-slash
  * / http↔https rewrites crawl4ai applies to a result url, so it's the safe key to
  * match a crawl result back to the team we asked for. Returns null when no id is
  * present (a url we then can't safely attribute — the caller drops it rather than
@@ -96,7 +96,7 @@ export function hltvPlayerUrl(playerId: number, slug: string): string {
   return `https://www.hltv.org/player/${playerId}/${slug}`;
 }
 
-/** A roster player lifted off the team profile's "Players of X" table (PHA-992). */
+/** A roster player lifted off the team profile's "Players of X" table (#992). */
 export interface ParsedRosterPlayer {
   nick: string; // in-game nickname, as the profile link's text
   hltvId: number; // HLTV player id
@@ -114,7 +114,7 @@ const PLAYER_ROW =
 
 /**
  * Parse the active-lineup players (name / id / slug / rating) from a team
- * profile's markdown (PHA-992). Scans only the "Players of …" section so news
+ * profile's markdown (#992). Scans only the "Players of …" section so news
  * tables elsewhere on the page can't leak in. `status` keeps STARTER rows by
  * default; pass `false` to take every listed player (so a committed starter who
  * HLTV currently lists as BENCHED — a late swap — is still found). Returns [] when
@@ -154,7 +154,7 @@ export function teamStatsCrawlTargets(): Array<{ pickid: number; url: string }> 
 
 // HLTV renders the profile's "Recent results" as a markdown table; each row is a
 // date cell, a team/score cell, and a [Match] link. Same patterns the gather
-// tool has used since PHA-897 — kept here so the live path and the manual tool
+// tool has used since #897 — kept here so the live path and the manual tool
 // can never drift in how they read a row.
 const ROW = /\|\s*(\d{2}\/\d{2}\/\d{4})\s*\|([\s\S]+?)\|\s*\[Match\]/g;
 const SCORE = /(\d+)\s*:\s*(\d+)/;
@@ -207,7 +207,7 @@ export const CRAWL_PASS_TIMEOUT_MS = 240_000;
 // task. `remaining` shrinks monotonically, so this is a ceiling, not a thrash.
 export const MAX_TOTAL_CRAWL_MS = 300_000;
 
-// ── Crawl blast-radius caps (PHA-1036) ─────────────────────────────────────────
+// ── Crawl blast-radius caps (#1036) ─────────────────────────────────────────
 // Handing crawl4ai all 32 URLs in one request lets ITS dispatcher render them all
 // at once — on an uncapped container that lights every core (~460% CPU spike,
 // froze the box). We instead split the field into small sub-batches sent as
@@ -232,14 +232,14 @@ export type CrawlProfilesFn = (
 
 /**
  * Run up to MAX_CRAWL_PASSES crawl passes, accumulating parsed recent results and
- * re-crawling only the still-missing teams (PHA-921 / PHA-944). Two robustness
+ * re-crawling only the still-missing teams (#921 / #944). Two robustness
  * properties, both because HLTV intermittently challenges the crawl:
  *
  *  1. PARTIAL-SAFE — a pass that THROWS (transient crawl4ai 5xx / timeout, the
  *     exact Cloudflare condition the retry exists for) does NOT discard the
  *     `fresh` accumulated by earlier passes: it breaks and returns what landed so
  *     far, so the caller still persists partial coverage. The next ~1h tick
- *     re-pulls the still-missing teams. (Before PHA-944 the throw unwound past the
+ *     re-pulls the still-missing teams. (Before #944 the throw unwound past the
  *     caller's persist, discarding a good earlier pass.)
  *  2. BOUNDED — a total wall-clock budget (MAX_TOTAL_CRAWL_MS) caps the whole
  *     multi-pass duration; once the budget is spent it persists what it has.
@@ -292,7 +292,7 @@ export async function accumulateRecentAcrossPasses(
         if (matches.length > 0) fresh[Number(pid)] = matches;
       } catch (e) {
         // A malformed single profile must not drop the rest of this pass or the
-        // accumulated earlier passes — skip just this team (PHA-944 hardening).
+        // accumulated earlier passes — skip just this team (#944 hardening).
         console.warn(
           `[team-stats] parse failed for pickid ${pid}; skipping that team:`,
           e instanceof Error ? e.message : e,
@@ -310,7 +310,7 @@ export async function accumulateRecentAcrossPasses(
 }
 
 /**
- * Merge live recent results over a team's frozen snapshot (PHA-921). The live
+ * Merge live recent results over a team's frozen snapshot (#921). The live
  * crawl only refreshes `recent[]` (and back-fills hltvUrl) — roster + world rank
  * stay frozen, since those move slowly and aren't on the profile's results table.
  * When the live crawl produced no matches for this team (parse miss / hadn't

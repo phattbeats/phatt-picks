@@ -1,5 +1,5 @@
 /**
- * verify-playoff-wrapped — offline proof for PHA-1274 (Playoffs Wrapped POC).
+ * verify-playoff-wrapped — offline proof for #1274 (Playoffs Wrapped POC).
  *
  * The Playoffs recap is the *finale* of the Pick'Em, so the builder must be
  * honest about a tournament still in flight (exactly where Cologne sits as this
@@ -148,7 +148,7 @@ check("rank slide shows upward move", mine.find((s) => s.id === "po-rank")?.figu
 check("personal thank-you does NOT prompt sign-in", !/sign in/i.test(mine.find((s) => s.id === "po-thanks")?.body ?? ""));
 check("personal deck closes on the coin CTA", mine[mine.length - 1].id === "po-coin");
 
-// ---- PHA-1274 "big finish": every team gets a slide + heartfelt closer + stinger. ----
+// ---- #1274 "big finish": every team gets a slide + heartfelt closer + stinger. ----
 check("all eight playoff teams are authored", COLOGNE_PLAYOFF_TEAMS.length === 8);
 check("every team gets its own slide", COLOGNE_PLAYOFF_TEAMS.every((t) => outIds.includes(`po-team-${t.pickId}`)));
 check("nations bridge precedes the team tributes", outIds.indexOf("po-nations") < outIds.indexOf(`po-team-${COLOGNE_PLAYOFF_TEAMS[0].pickId}`));
@@ -165,7 +165,7 @@ check("coin checkout slide present", outIds.includes("po-coin"));
 check("coin slide links to the shelf via CTA", (() => { const c = out.find((s) => s.id === "po-coin"); return c?.cta?.href === "/profile" && /coin/i.test(c?.cta?.label ?? ""); })());
 check("coin slide is the very last beat (after thanks + stinger)", outIds[outIds.length - 1] === "po-coin" && outIds.indexOf("po-coin") > outIds.indexOf("po-stinger"));
 
-// ---- PHA-1274 scope correction: this is the *Major* Wrapped, not just Playoffs. ----
+// ---- #1274 scope correction: this is the *Major* Wrapped, not just Playoffs. ----
 check("cover frames the whole Major (32 walked in)", /thirty-two walked in/i.test(out[0].headline));
 check("cover eyebrow reads MAJOR, not PLAYOFFS", /MAJOR/.test(out[0].eyebrow ?? "") && !/PLAYOFFS/.test(out[0].eyebrow ?? ""));
 check("magixx historic beat carries the looping clip + poster", (() => { const m = COLOGNE_PLAYOFF_MOMENTS.find((x) => x.id === "po-m-magixx-1v4"); return !!m?.video?.src && /\.mp4$/.test(m.video.src) && !!m.video.poster; })());
@@ -189,7 +189,7 @@ check("wrong title pick → no reward", missedChamp?.calledIt === undefined);
 check("wrong title pick headline reads 'had'", /had/i.test(missedChamp?.headline ?? ""));
 check("no reactions → no bleachers slide", !missed.some((s) => s.id === "po-bleachers"));
 
-// ---- PHA-1274 followup: historic moments + the "dank photo" twist. ----
+// ---- #1274 followup: historic moments + the "dank photo" twist. ----
 
 // Every authored moment ships a real, credited photo (no bare/uncredited stills).
 check("authored moments exist", COLOGNE_PLAYOFF_MOMENTS.length >= 2);

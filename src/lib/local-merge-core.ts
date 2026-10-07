@@ -1,9 +1,9 @@
 /**
- * Pure planning for the local → Steam pick claim (PHA-1232).
+ * Pure planning for the local → Steam pick claim (#1232).
  *
  * The Steam OpenID callback upserts purely by steamId and never looks at an
  * existing local (guest) player, so picks made as a guest are stranded the
- * moment the user signs in with Steam — the documented gap from PHA-1213.
+ * moment the user signs in with Steam — the documented gap from #1213.
  * This module is the brains of the fix: given a local account's login token,
  * a Steam user can pull that guest's picks onto their Steam account.
  *

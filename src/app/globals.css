@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Geist:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
-/* HEAT design system — see HEAT mockups (HOTLINE redesign, PHA-855). */
+/* HEAT design system — see HEAT mockups (HOTLINE redesign, #855). */
 :root {
   --void:#0a0805;
   --base:#14110c;
@@ -16,7 +16,7 @@
   --ink-hi:#f5ead4;
   --ink-mid:#a89b80;
   --ink-low:#9b8e72;
-  --dim:#5a4f3d;   /* was --ink-low; retired as text color (PHA-991, fails AA). Decorative/semantic-dim only. */
+  --dim:#5a4f3d;   /* was --ink-low; retired as text color (#991, fails AA). Decorative/semantic-dim only. */
 
   --heat:#f0a300;
   --heat-hot:#ff7a1a;
@@ -95,14 +95,14 @@ body {
   position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
 }
 .heat-bg::before, .heat-bg::after {
-  /* PHA-1269: the ambient glow used `filter: blur(140px)` on a 70vw×70vw fixed
+  /* #1269: the ambient glow used `filter: blur(140px)` on a 70vw×70vw fixed
      layer — a giant blurred compositor texture that real-GPU Chrome re-rasters
      whenever any animation runs, costing GPU memory + raster CPU that JS-heap
      profiling never sees. A radial-gradient is already smooth, so the soft glow
      comes from the gradient falloff alone, with no blur layer. */
   content: ''; position: absolute; border-radius: 50%;
 }
-/* PHA-1007 polish: calmer backdrop. Keep ONE soft ambient glow; retire the
+/* #1007 polish: calmer backdrop. Keep ONE soft ambient glow; retire the
    second drifting blob, the tactical grid, and the scanlines so the content
    reads clean instead of through a CS 1.6 HUD filter. */
 .heat-bg::before {
@@ -161,7 +161,7 @@ body {
 .eyebrow b { color: var(--heat); font-weight: 500; }
 
 /* "Results as of …" freshness stamp. Was 10px / --ink-low (#5a4f3d on the
-   near-black panels ≈ 2.3:1 — illegible, PHA-991). Bumped to --ink-mid
+   near-black panels ≈ 2.3:1 — illegible, #991). Bumped to --ink-mid
    (~6:1, clears WCAG AA) and a comfortable size. */
 .last-updated {
   font-family: var(--font-mono);
@@ -184,7 +184,7 @@ body {
 .live-tag::before {
   content: ''; width: 6px; height: 6px; border-radius: 50%;
   background: var(--ember);
-  /* PHA-1007 polish: presence, not alarm. The hard 1.4s on/off strobe read cheap
+  /* #1007 polish: presence, not alarm. The hard 1.4s on/off strobe read cheap
      ("the blinking light is trying too hard" — Brandon); now a static dot with a
      soft halo and a slow, gentle breathe. */
   box-shadow: 0 0 0 3px rgba(216,53,28,0.18), 0 0 8px var(--ember);
@@ -195,7 +195,7 @@ body {
 
 /* Corner brackets (decorative). Pair with two empty spans inside the
    element: <span class="br-tr"></span><span class="br-bl"></span>. */
-/* PHA-1007 polish: the amber corner brackets sat on every panel, tile and
+/* #1007 polish: the amber corner brackets sat on every panel, tile and
    banner — a lot of repeated decoration. Retired app-wide for a cleaner, more
    premium read; cards lean on their hairline border instead. The .br-tr/.br-bl
    spans stay inert in the markup. */
@@ -448,7 +448,7 @@ body {
   height: 64px;
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 50;
-  /* PHA-1269: dropped `backdrop-filter: blur(20px)` — a fixed full-width bar on
+  /* #1269: dropped `backdrop-filter: blur(20px)` — a fixed full-width bar on
      every app page forces the GPU to re-blur everything behind it on every
      animated frame. The bar is already 92% opaque, so a near-opaque solid fill
      reads the same with no live compositing cost. */
@@ -543,7 +543,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 }
 .bucket-label .count { color: var(--ink-mid); }
 
-/* Pick slot — same tile geometry as pool tiles (PHA-877) */
+/* Pick slot — same tile geometry as pool tiles (#877) */
 .pslot {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
   padding: 12px 8px 10px; min-height: 96px; width: 100%;
@@ -622,7 +622,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;
 }
 
-/* Region chip (PHA-892) — NA / EU / SA / ASIA / OCE, tinted per region */
+/* Region chip (#892) — NA / EU / SA / ASIA / OCE, tinted per region */
 .region-badge {
   display: inline-flex; align-items: center; justify-content: center;
   font-family: var(--font-mono);
@@ -674,7 +674,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .pickcard-icon { font-size: 11px; font-weight: 700; }
 .pickcard-icon.correct { color: var(--tac-green); }
 .pickcard-icon.wrong { color: var(--dim); }
-/* Consensus line (PHA-889) — how many players made this same pick.
+/* Consensus line (#889) — how many players made this same pick.
    Plain counts over "% of field" jargon; the lone call gets the heat. */
 .pickcard-share {
   font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em;
@@ -751,7 +751,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   .bucket-cols.swiss { grid-template-columns: repeat(3, 1fr); align-items: start; }
 }
 
-/* PHA-1004 — desktop: lay the three categories out mirror-symmetrically.
+/* #1004 — desktop: lay the three categories out mirror-symmetrically.
  * Equal-1fr thirds stranded 0:3 mid-row with a big right gutter on wide screens,
  * and justify-content can't pin it because auto-fit collapses the empty trailing
  * track. Switch to a flex row with space-between so 3:0 sits flush against the
@@ -777,7 +777,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   background: var(--surf-1); border: 1px solid var(--hair-2);
   padding: 22px 20px; display: flex; align-items: center; gap: 18px;
 }
-/* Gear cog → /settings, top-right of your own hero (PHA-1275). */
+/* Gear cog → /settings, top-right of your own hero (#1275). */
 .profile-gear {
   position: absolute; top: 12px; right: 12px;
   width: 34px; height: 34px; display: grid; place-items: center;
@@ -787,7 +787,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 }
 .profile-gear:hover { color: var(--heat); border-color: var(--hair-3); background: var(--surf-3); }
 
-/* Settings disclosures (PHA-1275) — fold the rarely-opened pages away so the
+/* Settings disclosures (#1275) — fold the rarely-opened pages away so the
    page opens calm. <details>/<summary>, no JS. */
 .settings-fold { padding: 0; }
 .settings-fold > summary {
@@ -810,7 +810,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   text-align: right; flex-shrink: 1; min-width: 0;
 }
 /* A settings fold rendered as a plain link out to another page (no disclosure
-   toggle) — same header row, no +/- marker (PHA-1283). */
+   toggle) — same header row, no +/- marker (#1283). */
 .settings-fold-summary-static {
   display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
   padding: 16px 18px;
@@ -823,7 +823,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   border-top: 1px solid var(--hair);
 }
 
-/* Collapsible per-stage cards on the player profile (PHA-1283) — the profile
+/* Collapsible per-stage cards on the player profile (#1283) — the profile
    opens condensed; each stage expands on tap. Same disclosure idiom as the
    settings folds, sized down for the stack of stages. */
 .stage-fold { padding: 0; background: var(--surf-1); }
@@ -889,7 +889,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .coin-tier-name.diamond { color: #7dd3fc; }
 .coin-desc { font-size: 13px; color: var(--ink-mid); }
 
-/* ── Challenge coins shelf (PHA-1278) — collectible Major-logo coins ──────
+/* ── Challenge coins shelf (#1278) — collectible Major-logo coins ──────
    Mounted in a tasteful red-velvet display case (Brandon): deep crimson with a
    soft top sheen + nap texture, a thin gold keyline, and inset depth so the
    coins read as seated in velvet. */
@@ -913,7 +913,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   color: #eccd92; background: rgba(0,0,0,0.3); border: 1px solid rgba(196,154,84,0.4);
   border-radius: 999px; padding: 1px 8px; line-height: 1.6;
 }
-/* Empty velvet recess (PHA-1283) — a sunken circular slot awaiting a coin, with
+/* Empty velvet recess (#1283) — a sunken circular slot awaiting a coin, with
    a faint dashed gold rim so the empty case still reads as a display case. */
 .coin-shelf .coin-collectible-disc.coin-slot-empty {
   border-radius: 50%;
@@ -954,13 +954,13 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .coin-collectible-trigger:focus-visible { outline: 2px solid var(--heat); outline-offset: 4px; border-radius: 50%; }
 .coin-collectible-trigger img { width: 100%; height: 100%; object-fit: contain; }
 
-/* Shimmer (PHA-1278) — "ooh shiny", dialed back: a slow sheen sweep + a faint
+/* Shimmer (#1278) — "ooh shiny", dialed back: a slow sheen sweep + a faint
    sparkle, clipped to the coin disc. Transform/opacity only (no blur/backdrop-
-   filter — PHA-1269), staggered per coin via --shimmer-delay, off when the user
+   filter — #1269), staggered per coin via --shimmer-delay, off when the user
    prefers reduced motion. */
 /* overflow:hidden + the round radius CLIP the sweep to the coin. Without it the
    sheen band parks at translateX(120%) for most of the cycle and sits as a stray
-   glossy bar just off the coin's right edge (PHA-1274: "what is this weird
+   glossy bar just off the coin's right edge (#1274: "what is this weird
    artifact?"). The clip keeps the glide on the disc and nowhere else. */
 .coin-shine { position: relative; display: block; width: 100%; height: 100%; border-radius: 50%; overflow: hidden; }
 .coin-shine img { width: 100%; height: 100%; object-fit: contain; }
@@ -1015,7 +1015,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   color: var(--ink-low); margin-top: 2px;
 }
 
-/* ── Coin inspector (PHA-1278) — drag-to-rotate 3D lightbox ─────────────── */
+/* ── Coin inspector (#1278) — drag-to-rotate 3D lightbox ─────────────── */
 .coin-inspect-backdrop {
   position: fixed; inset: 0; z-index: 200; display: grid; place-items: center;
   background: rgba(8,6,4,0.82); backdrop-filter: blur(2px); padding: 24px;
@@ -1160,7 +1160,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .dir-av { width: 34px; height: 34px; border-radius: var(--r-sm); border: 1px solid var(--hair-2); overflow: hidden; background: linear-gradient(135deg, var(--surf-3), var(--surf-2)); display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: 12px; color: var(--ink-mid); }
 .dir-sc { font-family: var(--font-mono); font-weight: 600; font-size: 16px; color: var(--ink-hi); }
 
-/* Pick consensus (PHA-889) — field-wide "X% picked this team" split. */
+/* Pick consensus (#889) — field-wide "X% picked this team" split. */
 .consensus { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
 .consensus-head { display: flex; align-items: baseline; justify-content: space-between; }
 .consensus-lbl {
@@ -1202,7 +1202,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   *, *::before, *::after { animation: none !important; }
 }
 
-/* ── Team dossier (PHA-893): stats & standings, off-board by default ─────── */
+/* ── Team dossier (#893): stats & standings, off-board by default ─────── */
 /* Pool tile gets a wrapper so the [i] affordance can be a sibling of the tile
    button — that keeps it live when the tile is `used` (pointer-events:none) or
    the stage is locked (button disabled). */
@@ -1228,7 +1228,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   color: var(--heat); border-color: var(--heat);
   background: rgba(240,163,0,0.1); outline: none;
 }
-/* Playoffs (PHA-1043): the dossier badge becomes a lit spotlight star. */
+/* Playoffs (#1043): the dossier badge becomes a lit spotlight star. */
 .ptile-info.ptile-spotlight {
   font-style: normal; font-size: 12px;
   /* Wears the team's accent (set inline) so the badge matches the modal it
@@ -1242,7 +1242,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   box-shadow: 0 0 8px color-mix(in srgb, var(--sa) 35%, transparent);
 }
 
-/* Bracket spotlight button (PHA-1204): the lone star read as decoration —
+/* Bracket spotlight button (#1204): the lone star read as decoration —
    Brandon wanted an obvious "click me". So it's a labelled, filled, accented
    pill (★ SCOUT) with a resting glow + lift on hover. Wears the team's accent
    (set inline), falling back to house orange. */
@@ -1254,7 +1254,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   font-family: var(--font-mono); font-weight: 700; font-size: 9px;
   letter-spacing: 0.1em; text-transform: uppercase; line-height: 1;
   color: var(--sa);
-  /* v3 Cathedral (PHA-1065): cleaner outline pill — accent as a hairline, not a
+  /* v3 Cathedral (#1065): cleaner outline pill — accent as a hairline, not a
      fill, so it reads as restrained "light through glass". */
   background: transparent;
   border: 1px solid color-mix(in srgb, var(--sa) 50%, var(--hair-2));
@@ -1283,7 +1283,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 }
 
 /* ---------------------------------------------------------------------------
-   v3 "Cathedral" (PHA-1065). Cologne is the Cathedral of Counter-Strike, so the
+   v3 "Cathedral" (#1065). Cologne is the Cathedral of Counter-Strike, so the
    Playoffs page wears that as architectural restraint, not literal stained
    glass: a thin pointed-arch vault over the hero, a centered axis, and the
    champion crowned at an altar. One hairline arch; accent used like light.
@@ -1321,7 +1321,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 
 /* The altar: the champion, crowned under a pointed arch (the reverent apex). */
 .cath-altar { text-align: center; margin-top: 16px; }
-/* PHA-1007: floating arch outline retired (read goofy). Champion card is a clean
+/* #1007: floating arch outline retired (read goofy). Champion card is a clean
    centered column with a big team logo front and center. */
 .cath-altar-card {
   display: flex; flex-direction: column; align-items: center;
@@ -1337,7 +1337,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .tsd-backdrop {
   position: fixed; inset: 0; z-index: 200;
   display: flex; align-items: flex-end; justify-content: center;
-  /* PHA-1269: dropped the full-viewport `backdrop-filter: blur(4px)`. This
+  /* #1269: dropped the full-viewport `backdrop-filter: blur(4px)`. This
      backdrop is shared by the Stage Wrapped deck (`.sw-backdrop`), which
      AUTO-OPENS right after login; with motion on, the deck's continuous
      animations + auto-advance force the GPU to re-rasterize a full-screen blur
@@ -1353,17 +1353,17 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   max-height: 86vh; overflow-y: auto;
   background: var(--surf-2);
   border: 1px solid var(--hair-3);
-  /* As a bottom sheet the panel now reaches the viewport edge (PHA-897 portal
+  /* As a bottom sheet the panel now reaches the viewport edge (#897 portal
      lifts it over the botnav), so pad the foot past the home indicator. */
   padding: 22px 20px calc(18px + env(safe-area-inset-bottom));
-  /* PHA-897 follow-up: the panel can still scroll on short viewports, but the
+  /* #897 follow-up: the panel can still scroll on short viewports, but the
      visible scrollbar gutter looked grubby on desktop (Brandon). Hide the
      chrome cross-browser — scrolling still works via wheel/touch. */
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* old Edge */
 }
 .tsd-panel::-webkit-scrollbar { width: 0; height: 0; display: none; } /* WebKit/Blink */
-/* PHA-992 follow-up: with the scrollbar chrome hidden and the roster now five
+/* #992 follow-up: with the scrollbar chrome hidden and the roster now five
    rows tall, "Last 5 matches" can clip below the fold with no hint it exists.
    While more content sits below the visible edge (.tsd-more-below toggled by
    the drawer), fade the bottom of the panel so the clipped row reads as
@@ -1472,7 +1472,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 }
 
 /* ──────────────────────────────────────────────────────────────────
-   Stage Wrapped (PHA-1052) — click-through recap deck. Reuses the
+   Stage Wrapped (#1052) — click-through recap deck. Reuses the
    .tsd-backdrop/.tsd-panel bottom-sheet + .tsd-close from TeamStatsDrawer;
    adds the slide stage, progress dots, nav controls and entrance anim.
    ────────────────────────────────────────────────────────────────── */
@@ -1483,7 +1483,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
      owns the middle and the controls pin to the foot. */
   min-height: 60vh;
   min-height: 60dvh;
-  /* PHA-1276: cap to the *visible* viewport. `dvh` tracks Android Chrome's
+  /* #1276: cap to the *visible* viewport. `dvh` tracks Android Chrome's
      dynamic URL/nav bars, so the whole deck — close button, progress dots, the
      slide, and the footer controls — always lands on-screen instead of being
      pushed past the top edge as a bottom sheet (the "didn't fit my screen"
@@ -1513,7 +1513,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
    duration (--sw-fill-ms) for that Wrapped/Stories tick. */
 .sw-dots {
   display: flex; gap: 6px; justify-content: center;
-  /* PHA-1276: top padding clears the absolutely-positioned corner controls
+  /* #1276: top padding clears the absolutely-positioned corner controls
      (close button top-right, sound/mood top-left) so the dot row never sits
      under them on a narrow phone. */
   padding: 18px 26px 2px; margin-bottom: 6px;
@@ -1536,7 +1536,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 /* Slide stage — flexes to fill, centers the card */
 .sw-stage {
   flex: 1; min-height: 0; display: flex;
-  /* PHA-1276: a tall slide (hero photo + big figure + body) scrolls *within*
+  /* #1276: a tall slide (hero photo + big figure + body) scrolls *within*
      the stage instead of clipping past the fixed-height panel on a short phone.
      `margin: auto` on the slide centres it while it fits, yet still lets you
      scroll to the very top when it doesn't — plain flex centering would pin the
@@ -1545,7 +1545,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   padding: 26px 8px;
 }
 .sw-slide { width: 100%; text-align: center; margin: auto; }
-/* Documentary hero photo (PHA-1274) — a wide cinematic band at the top of the
+/* Documentary hero photo (#1274) — a wide cinematic band at the top of the
    slide. A bottom gradient fades the image into the deck so the headline keeps
    its contrast, and a hairline + heat glow frame it as a "broadcast still".
    The image is cropped to the band via object-fit; the focal point is set
@@ -1613,7 +1613,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   margin: 13px auto 0; max-width: 32ch;
   font-size: 14px; line-height: 1.55; color: var(--ink-mid); text-wrap: pretty;
 }
-/* PHA-1274: a slide CTA button (e.g. "See your coin" → /profile). Mirrors the
+/* #1274: a slide CTA button (e.g. "See your coin" → /profile). Mirrors the
    primary nav button; navigating closes the deck. */
 .sw-cta {
   position: relative; display: inline-flex; align-items: center; gap: 7px;
@@ -1625,7 +1625,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   box-shadow: 0 4px 18px var(--heat-glow);
 }
 
-/* PHA-1276: shave the tallest elements on small/short phones so a typical slide
+/* #1276: shave the tallest elements on small/short phones so a typical slide
    fits the viewport without needing to scroll the stage. The scroll fallback
    above still catches the rare extra-tall slide. */
 @media (max-width: 559px) {
@@ -1674,7 +1674,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 
 /* Kinetic entrance — blur + scale + lift that settles, staggered per element,
    re-fired each slide via the React remount key. The Wrapped "snap into focus". */
-/* PHA-1269: animate only transform + opacity (compositor-only, cheap). The
+/* #1269: animate only transform + opacity (compositor-only, cheap). The
    former `filter: blur()` ramp re-rasterized on the GPU and re-fired on every
    auto-advance of the deck — needless raster cost on the takeover that opens at
    login. The snap-into-focus reads the same from the translate/scale alone. */
@@ -1717,7 +1717,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 }
 
 /* ---------------------------------------------------------------------------
-   "Qualified for Playoffs" strip (PHA-1043). Anticipation row on the Playoffs
+   "Qualified for Playoffs" strip (#1043). Anticipation row on the Playoffs
    tab before Valve seeds: clinched + authored teams, each opening its Spotlight.
    Broadcast style, soft tiles, the team accent as a sparing budget. */
 .qstrip { display: flex; flex-direction: column; gap: 10px; }
@@ -1747,11 +1747,11 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .qstrip-star { color: var(--sa); font-size: 13px; line-height: 1; }
 
 /* ---------------------------------------------------------------------------
-   Spotlight (PHA-1043) playoff-grade team modal. Reuses the .tsd-panel
+   Spotlight (#1043) playoff-grade team modal. Reuses the .tsd-panel
    bottom-sheet shell; adds a cinematic hero, the before/after narrative, a
    tap-to-play event highlight, and a live market line above the dossier "tape".
    --------------------------------------------------------------------------- */
-/* v3 "Broadcast" direction (PHA-1007): each spotlight wears the team's color,
+/* v3 "Broadcast" direction (#1007): each spotlight wears the team's color,
    but as a BUDGET, not ambient chrome. The accent lands only on signal elements
    (the win %, the play control, the live tick, a thin rule under the nameplate);
    labels stay warm-neutral ink, corners are soft, brackets are retired, and
@@ -1775,7 +1775,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .spot-panel .tsd-close:hover { color: var(--sa); border-color: var(--sa); }
 .spot-panel .tsd-link:hover { border-color: var(--sa); }
 
-/* Roster rows carry a player head-shot (PHA-1043), Spotlight-only column. */
+/* Roster rows carry a player head-shot (#1043), Spotlight-only column. */
 .spot-panel .tsd-player {
   grid-template-columns: auto 1fr auto auto; border-radius: 10px;
 }
@@ -1964,7 +1964,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   .spot-clip::after { animation: none; display: none; }
 }
 
-/* ── THE BLEACHERS — semi-anonymous pick reactions (PHA-1211) ───────────────
+/* ── THE BLEACHERS — semi-anonymous pick reactions (#1211) ───────────────
    Sits under a revealed pick on a player's profile. Wordless by design (Brandon):
    just the anonymous stamp tally + the drop affordance. Senders stay masked
    until the stage resolves (enforced server-side). Reads as a quiet sub-row
@@ -2037,7 +2037,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .bleach-opt:disabled { opacity: 0.5; cursor: default; }
 .bleach-opt-lbl { white-space: nowrap; }
 
-/* Player-profile playoff picks as full-width blocks (PHA-1211) — a pick header
+/* Player-profile playoff picks as full-width blocks (#1211) — a pick header
    row with the Bleachers strip beneath, replacing the tight pickcards grid on
    the revealed playoff sections only. */
 .pickbleach-list { display: flex; flex-direction: column; gap: 10px; }
@@ -2055,7 +2055,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* ── NOTIFICATION BELL — Bleachers notifications (PHA-1211 follow-up) ────────
+/* ── NOTIFICATION BELL — Bleachers notifications (#1211 follow-up) ────────
    Header bell + unread badge + dropdown listing reactions on your picks. */
 .topnav-you, .apphead-you { display: flex; align-items: center; gap: 10px; }
 .notifbell { position: relative; }
@@ -2139,7 +2139,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   background: var(--ember);
 }
 
-/* ── BROADCAST POPUP — one-time announcement (PHA-1211) ─────────────────────── */
+/* ── BROADCAST POPUP — one-time announcement (#1211) ─────────────────────── */
 .notifbell-icon.announcement { border-color: var(--hair-3); }
 .announce-pop {
   position: fixed; z-index: 80;
@@ -2166,7 +2166,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .announce-pop-x { flex: 0 0 auto; background: transparent; border: 0; color: var(--ink-low); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 2px; }
 .announce-pop-x:hover { color: var(--ink-hi); }
 
-/* ── NOTIFICATION BELL — "See all" link in dropdown head (PHA-1236) ──────── */
+/* ── NOTIFICATION BELL — "See all" link in dropdown head (#1236) ──────── */
 .notifbell-head {
   display: flex; align-items: center; justify-content: space-between;
   gap: 8px;
@@ -2181,7 +2181,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 }
 .notifbell-seeall:hover { color: var(--heat-hot); background: var(--surf-2); }
 
-/* ── NOTIFICATIONS INBOX (PHA-1236) ────────────────────────────────────────── */
+/* ── NOTIFICATIONS INBOX (#1236) ────────────────────────────────────────── */
 .inbox-wrap { display: flex; flex-direction: column; gap: 18px; margin-top: 4px; }
 .inbox-meta {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
@@ -2313,7 +2313,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .inbox-markall:hover:not(:disabled) { color: var(--heat); border-color: var(--heat); }
 .inbox-markall:disabled { opacity: 0.4; cursor: default; }
 
-/* ── Notification preferences (PHA-1240) ───────────────────────────────────── */
+/* ── Notification preferences (#1240) ───────────────────────────────────── */
 .notif-prefs { display: flex; flex-direction: column; gap: 0; }
 .notif-pref-row {
   display: flex;
@@ -2355,7 +2355,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 .notif-chip.on:hover:not(:disabled) { border-color: var(--heat); }
 .notif-chip:disabled { opacity: 0.35; cursor: default; }
 
-/* ── NOTIFICATION TOASTS — SSE new-arrival stack (PHA-1241) ────────────────── */
+/* ── NOTIFICATION TOASTS — SSE new-arrival stack (#1241) ────────────────── */
 .notiftoast-stack {
   position: fixed;
   bottom: 20px;

@@ -1,7 +1,7 @@
 /**
- * Live playoffs bracket (PHA-903) — the single-elim QF → SF → GF tree.
+ * Live playoffs bracket (#903) — the single-elim QF → SF → GF tree.
  *
- * Companion to the Swiss bracket board (PHA-902). Brandon's reference is a real
+ * Companion to the Swiss bracket board (#902). Brandon's reference is a real
  * tournament-site playoff tree: Quarterfinals feeding Semifinals feeding the
  * Grand Final, connector lines and all, team logos + scores, winners advancing —
  * and `???` everywhere until the bracket seeds. This renders exactly that from
@@ -35,7 +35,7 @@ import {
 
 // Fixed bracket geometry (px). The gap doubles each round so the SF sits centered
 // against its QF pair and the GF against its SF pair (see playoff-bracket-core).
-// Two scales (PHA-1016): the compact tree for narrow screens, and a roughly 2×
+// Two scales (#1016): the compact tree for narrow screens, and a roughly 2×
 // desktop tree where the logos get room to breathe — this is the cathedral
 // design, it carries the page. CSS media query picks which one renders.
 interface BracketGeo {
@@ -95,7 +95,7 @@ export function LivePlayoffBracket({
   const champ = bracket.championPickid != null ? teamMap.get(bracket.championPickid) : undefined;
 
   // Matches that have started but whose official Valve result hasn't landed yet
-  // (PHA-1016). Name the round(s) so a concluded-but-unpublished game reads as
+  // (#1016). Name the round(s) so a concluded-but-unpublished game reads as
   // "awaiting the official result" instead of looking identical to an undecided
   // one — the gap that made a finished semifinal look like nothing had updated.
   const awaitingRoundLabels = rounds
@@ -131,7 +131,7 @@ export function LivePlayoffBracket({
         )}
       </p>
 
-      {/* Awaiting-official-result notice (PHA-1016). Subtle, heat-tinted line that
+      {/* Awaiting-official-result notice (#1016). Subtle, heat-tinted line that
           names the round(s) whose game has started but whose Valve answer key
           hasn't published yet — so the bracket says something is happening
           during the publishing lag instead of looking frozen. */}
@@ -333,7 +333,7 @@ function MatchCell({
 }) {
   // A decided match gets its winner's branch tinted; a match that has started but
   // hasn't resolved yet gets a faint heat border so the eye finds the in-flight
-  // game (PHA-1016); an open/seeded one is neutral.
+  // game (#1016); an open/seeded one is neutral.
   const accent = match.decided
     ? "var(--hair-3)"
     : match.awaitingResult

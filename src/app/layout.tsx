@@ -26,7 +26,7 @@ export const viewport: Viewport = {
 };
 
 /**
- * Stale-build self-heal (PHA-1269). If a device is serving an old cached HTML
+ * Stale-build self-heal (#1269). If a device is serving an old cached HTML
  * that references hashed JS/CSS chunks which no longer exist on the current
  * deploy, those chunk requests 404 — webpack throws a `ChunkLoadError` and the
  * app fails to hydrate, i.e. a white screen ("he loads the cached version").
@@ -59,10 +59,10 @@ const CHUNK_RECOVERY = `(function(){
 })();`;
 
 /**
- * Built-in privacy-friendly pageview tracker (PHA-1277). Tiny inline script — no
+ * Built-in privacy-friendly pageview tracker (#1277). Tiny inline script — no
  * external file, no third-party CDN, no extra request — so it adds ~0 weight and
  * never blocks paint (it only fires sendBeacon after load / on navigation). This
- * app is GPU/perf sensitive (PHA-1267/1268/1269), so there is deliberately no
+ * app is GPU/perf sensitive (#1267/1268/1269), so there is deliberately no
  * blur, animation, or polling here.
  *
  * - Honors Do-Not-Track (sends nothing).

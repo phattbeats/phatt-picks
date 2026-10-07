@@ -1,5 +1,5 @@
 /**
- * verify-stale-watchdog — offline proof for the PHA-1273 stale-outcome watchdog.
+ * verify-stale-watchdog — offline proof for the #1273 stale-outcome watchdog.
  *
  * The live tick already re-pokes the Valve oracle every cycle, so a transiently
  * stuck playoff match self-heals on the next tick. What was missing was NOTICING
@@ -50,7 +50,7 @@ const QF_SCHEDULE = {
   ],
 } as const;
 
-console.log("\nstale-watchdog — the real QF1/QF2 stuck scenario (PHA-1273)");
+console.log("\nstale-watchdog — the real QF1/QF2 stuck scenario (#1273)");
 
 // Grace cleared on both Jun-18 games, neither Jun-19 game started yet. Healthy:
 // the two early games resolved, so nothing is overdue.

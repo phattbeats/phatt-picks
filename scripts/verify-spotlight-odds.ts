@@ -1,5 +1,5 @@
 /**
- * verify-spotlight-odds - offline proof for PHA-1066 (live Spotlight market odds).
+ * verify-spotlight-odds - offline proof for #1066 (live Spotlight market odds).
  *
  * The live line is fetched from Polymarket's gamma-api, but every decision that
  * could show a WRONG number is pure and proven here, with no network:
@@ -39,7 +39,7 @@ function check(name: string, cond: boolean) {
 }
 const near = (a: number, b: number) => Math.abs(a - b) < 1e-6;
 
-console.log("\nspotlight-odds - authored registry well-formed (PHA-1066/993)");
+console.log("\nspotlight-odds - authored registry well-formed (#1066/993)");
 {
   const entries = Object.entries(PLAYOFF_MARKET_SLUGS);
   check(

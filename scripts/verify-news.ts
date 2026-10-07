@@ -1,5 +1,5 @@
 /**
- * verify-news - offline proof for PHA-857 (HEAT wire / news feed).
+ * verify-news - offline proof for #857 (HEAT wire / news feed).
  *
  * Exercises the pure news-core: seed normalization (drops blank/invalid),
  * pinned-first + newest-first sort, DB-over-seed merge dedup, and the
@@ -42,7 +42,7 @@ check(
   mergeWire([], []).length === 0,
 );
 
-console.log("\nnews-core - URL scheme guard (PHA-860 stored-XSS hardening)");
+console.log("\nnews-core - URL scheme guard (#860 stored-XSS hardening)");
 check("https passes", safeHttpUrl("https://hltv.org/x") === "https://hltv.org/x");
 check("http passes", safeHttpUrl("http://a.b/c") === "http://a.b/c");
 check("same-origin relative passes", safeHttpUrl("/news/x.jpg") === "/news/x.jpg");
@@ -136,7 +136,7 @@ check("days", timeAgo(NOW - 2 * 86_400_000, NOW) === "2d ago");
 check("weeks", timeAgo(NOW - 14 * 86_400_000, NOW) === "2w ago");
 
 // ---------------------------------------------------------------------------
-// PHA-859 — HLTV RSS parse (hltv-core). Fixture mirrors the live HLTV feed shape
+// #859 — HLTV RSS parse (hltv-core). Fixture mirrors the live HLTV feed shape
 // (title/description/link/guid/pubDate/media:content) confirmed before building.
 // ---------------------------------------------------------------------------
 

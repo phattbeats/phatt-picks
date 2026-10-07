@@ -1,6 +1,6 @@
 /**
  * verify-playoff-pick-tree - offline proof for the interactive bracket predictor
- * (PHA-1204: "it is ONE stage, you place the whole bracket at once").
+ * (#1204: "it is ONE stage, you place the whole bracket at once").
  *
  * buildPlayoffPickTree turns the committed QF/SF/GF sections into a feed tree —
  * each later match is fed by the two below it — and resolveBracketPicks walks
@@ -109,7 +109,7 @@ console.log("\npick-tree - playoffFieldTeams = the eight QF survivors");
 const field = playoffFieldTeams(seeded);
 check("field has 8 teams", field.size === 8, `got ${field.size}`);
 check("field = T0..T7", T.every((t) => field.has(t)));
-// The committed fixture now seeds the QF (PHA-1007), so "empty field pre-seeding"
+// The committed fixture now seeds the QF (#1007), so "empty field pre-seeding"
 // is verified against an explicitly unseeded clone; the committed field is the 8.
 const tbd = clone(playoffSections);
 for (const s of tbd) for (const g of s.groups) g.teams = g.teams.map(() => ({ pickid: 0 }));

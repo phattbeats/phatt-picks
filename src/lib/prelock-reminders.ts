@@ -1,5 +1,5 @@
 /**
- * prelock-reminders — the pre-lock reminder JOB (PHA-929).
+ * prelock-reminders — the pre-lock reminder JOB (#929).
  *
  * Composes the pure decision logic (notify-core: dueReminders /
  * buildPreLockPayload / isReminderRecipient / reminderFireKey) with the DB +
@@ -8,7 +8,7 @@
  * be imported by BOTH the in-process scheduler (src/instrumentation.ts) and the
  * scripts/send-prelock-reminders.ts CLI — one code path, no drift.
  *
- * SOURCE OF TRUTH (PHA-929 fix): stage cutoffs come from COLOGNE_LOCK_SCHEDULE
+ * SOURCE OF TRUTH (#929 fix): stage cutoffs come from COLOGNE_LOCK_SCHEDULE
  * via stageLocksFromSchedule — the SAME committed schedule that drives the
  * countdown clock and the pick lock-gate, so a reminder can never fire for a
  * different instant than the UI counts down to. The job used to read a separate
@@ -51,13 +51,13 @@ function loadOverrideLocks(): Record<number, StageLock> | null {
 
 /**
  * The (event, stage-locks) pairs this tick should reminder on — REGISTRY-DRIVEN
- * (PHA-950). By default we iterate every event that is effectively LIVE right
+ * (#950). By default we iterate every event that is effectively LIVE right
  * now (`liveEvents`) and read each one's OWN committed `lockSchedule` /
  * `sectionNames` from the registry, so the next Major's reminders fire on its
  * schedule the moment it goes live — nobody re-points this job. Today that is
  * exactly `[Cologne]` with `COLOGNE_LOCK_SCHEDULE`, identical to before.
  *
- * Two operator escape hatches, preserved from PHA-929:
+ * Two operator escape hatches, preserved from #929:
  *   • `STAGE_LOCKS_JSON` — out-of-band cutoffs (e.g. a playoff section published
  *     before it's committed); applies to the pinned/current event as a single
  *     target.
@@ -102,7 +102,7 @@ const fired = new Set<string>();
  * locks, send any reminder whose fire time has arrived (and hasn't been sent
  * this lifetime) to opted-in players who haven't locked that stage yet. Iterates
  * the registry's live events, so it follows the Major across the calendar with
- * no re-pointing (PHA-950). Best-effort — every send is wrapped by notify.ts and
+ * no re-pointing (#950). Best-effort — every send is wrapped by notify.ts and
  * a missing VAPID config degrades to a no-op. `now` is injectable.
  */
 export async function runPreLockReminders(now: number = Date.now()): Promise<void> {
@@ -128,7 +128,7 @@ export async function runPreLockReminders(now: number = Date.now()): Promise<voi
       if (due.length === 0) continue;
 
       // Opted-in players = those with at least one push subscription AND
-      // stage push not disabled in their notification prefs (PHA-1240).
+      // stage push not disabled in their notification prefs (#1240).
       const subbed = await prisma.pushSubscription.findMany({
         select: { playerId: true },
         distinct: ["playerId"],

@@ -1,5 +1,5 @@
 /**
- * verify-lock-schedule - offline proof for PHA-856 (countdown clock data source).
+ * verify-lock-schedule - offline proof for #856 (countdown clock data source).
  *
  * The countdown must NEVER fabricate a clock: it shows only when a real,
  * published lock instant exists for the section. This exercises
@@ -49,12 +49,12 @@ function check(name: string, cond: boolean) {
   }
 }
 
-console.log("\nlock-schedule - committed Cologne schedule (PHA-865)");
+console.log("\nlock-schedule - committed Cologne schedule (#865)");
 
 // Swiss stages are lit with their day-1 first-match instant (12:30 CEST =
 // 10:30 UTC). Playoff sections are now lit too: ALL playoff sections (QF/SF/GF)
 // share the SAME bracket-wide lock = earliest game across all rounds = QF1 —
-// PHA-1007/PHA-1262. The whole bracket is one Pick'Em window that closes at
+// #1007/#1262. The whole bracket is one Pick'Em window that closes at
 // QF1; using per-section times left SF/GF picks unrevealed after QF1 locked.
 const COMMITTED_LIT: Readonly<Record<number, string>> = {
   105: "2026-06-02T10:30:00Z",
@@ -116,7 +116,7 @@ check("empty string -> null", lockTimeForSection(1, bad) === null);
 check("non-date string -> null", lockTimeForSection(2, bad) === null);
 check("garbage string -> null", lockTimeForSection(3, bad) === null);
 
-console.log("\nlock-schedule - isLockTimePassed gates on a published instant (PHA-898)");
+console.log("\nlock-schedule - isLockTimePassed gates on a published instant (#898)");
 
 const lockMs = Date.parse("2026-06-02T10:30:00Z");
 check(
@@ -144,7 +144,7 @@ check(
   isLockTimePassed(108, Date.parse("2026-06-18T14:00:00Z")) === true,
 );
 
-console.log("\nlock-schedule - match windows gate the live refresh to play days (PHA-902)");
+console.log("\nlock-schedule - match windows gate the live refresh to play days (#902)");
 
 const D = (iso: string) => Date.parse(iso);
 // Stage I window: Jun 2–5.
@@ -164,7 +164,7 @@ check("every committed window has valid start<=end ISO", Object.values(COLOGNE_M
 ));
 check("Stage III window committed (Jun 11–14)", COLOGNE_MATCH_WINDOWS[107] !== undefined);
 
-console.log("\nlock-schedule - bracket reveals 24h before lock (PHA-943)");
+console.log("\nlock-schedule - bracket reveals 24h before lock (#943)");
 
 // Stage II locks Jun 6 10:30Z → reveal Jun 5 10:30Z.
 const s2Lock = D("2026-06-06T10:30:00Z");
@@ -178,7 +178,7 @@ check("after lock -> still revealed (bracket stays up)", isBracketRevealed(106, 
 check("Quarterfinals not revealed before its Jun 17 13:45Z reveal", isBracketRevealed(108, Date.parse("2026-06-17T12:00:00Z")) === false);
 check("Quarterfinals revealed once its 24h window opens", isBracketRevealed(108, Date.parse("2026-06-17T14:00:00Z")) === true);
 
-console.log("\nlock-schedule - refresh window opens at reveal, closes at competition end (PHA-943)");
+console.log("\nlock-schedule - refresh window opens at reveal, closes at competition end (#943)");
 
 // Stage II: reveal Jun 5 10:30Z, window end Jun 9 23:59:59Z.
 check("Jun 5 09:00 (before reveal) -> closed", isWithinRefreshWindow(106, D("2026-06-05T09:00:00Z")) === false);
@@ -196,7 +196,7 @@ check("section with no lock time -> falls back to match-window gate (open inside
 check("section with no lock and no window -> fail open",
   isWithinRefreshWindow(999, D("2026-06-01T00:00:00Z"), {}, {}) === true);
 
-console.log("\nlock-schedule - per-game playoff schedule (PHA-1007): committed from the published bracket");
+console.log("\nlock-schedule - per-game playoff schedule (#1007): committed from the published bracket");
 
 // Committed from Liquipedia / ESL Pro Tour (IEM Cologne 2026 playoffs Jun 18–21,
 // CEST→UTC). Each game time echoes back and the playoff lock derives from the
@@ -205,7 +205,7 @@ check("playoff schedule committed for QF/SF/GF (3 rounds)", Object.keys(COLOGNE_
 check("QF1 game time = Jun 18 13:45Z", playoffGameTime(108, 0) === "2026-06-18T13:45:00Z");
 check("QF4 game time = Jun 19 17:00Z", playoffGameTime(108, 3) === "2026-06-19T17:00:00Z");
 check("108 lock derives from earliest QF (Jun 18 13:45Z)", lockTimeForSection(108) === "2026-06-18T13:45:00Z");
-check("109/110 SF+GF lock = bracket-wide QF1 lock (PHA-1262)", lockTimeForSection(109) === "2026-06-18T13:45:00Z" && lockTimeForSection(110) === "2026-06-18T13:45:00Z");
+check("109/110 SF+GF lock = bracket-wide QF1 lock (#1262)", lockTimeForSection(109) === "2026-06-18T13:45:00Z" && lockTimeForSection(110) === "2026-06-18T13:45:00Z");
 
 // Inject a populated schedule (independent of the committed data): each game
 // echoes its instant, the lock derives from the EARLIEST game even out of order,

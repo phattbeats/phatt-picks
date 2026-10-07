@@ -5,7 +5,7 @@
  * and the function always returns true. Set both TURNSTILE_SECRET_KEY and
  * NEXT_PUBLIC_TURNSTILE_SITE_KEY to enable enforcement in production.
  *
- * PHA-1045: this is deliberately fail-OPEN even in production — a missing key
+ * #1045: this is deliberately fail-OPEN even in production — a missing key
  * must never break local signup, unlike NEXTAUTH_SECRET (which throws). The
  * tradeoff is loud-logged at boot by instrumentation.ts rather than enforced
  * here, so env drift is caught without taking signups down.

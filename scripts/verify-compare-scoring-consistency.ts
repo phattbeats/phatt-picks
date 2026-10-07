@@ -1,8 +1,8 @@
 /**
- * verify-compare-scoring-consistency — future-proof guard for PHA-946.
+ * verify-compare-scoring-consistency — future-proof guard for #946.
  *
- * PHA-946 bug: the compare page judged a Swiss pick by its EXACT slot, while
- * scoring.ts judges Swiss buckets as interchangeable SETS (PHA-918). A correct
+ * #946 bug: the compare page judged a Swiss pick by its EXACT slot, while
+ * scoring.ts judges Swiss buckets as interchangeable SETS (#918). A correct
  * pick sitting in a different slot than its winner row read as a miss — the
  * compare grid disagreed with the score.
  *
@@ -130,7 +130,7 @@ function assertConsistent(label: string, sec: Section, picks: PlayerPickMap[stri
 const wrap = (sectionid: number, slots: SlotMap): PlayerPickMap[string] => ({ [sectionid]: { 1: slots } });
 const wrapO = (sectionid: number, slots: SlotMap): OutcomeMap => ({ [sectionid]: { 1: slots } });
 
-// ── 1. 10-slot Swiss, the exact PHA-946 trap: picks shuffled vs winner slots ──
+// ── 1. 10-slot Swiss, the exact #946 trap: picks shuffled vs winner slots ──
 // Buckets: 3:0 = [0,1], 3:1/3:2 = [2..7], 0:3 = [8,9]. Player tags advancers in
 // DIFFERENT slots than where their winner rows land. All should still be hits.
 {
@@ -153,7 +153,7 @@ const wrapO = (sectionid: number, slots: SlotMap): OutcomeMap => ({ [sectionid]:
   // hits: 801 (in 3:0 set) + MIBR (in advance set) = 2; 999 is not a winner.
   assertConsistent("Stage II MIBR-wrong-slot + a miss", S, picks, outcomes, 2);
   check(
-    "PHA-946 property: MIBR picked slot6, won slot2 → HIT not miss",
+    "#946 property: MIBR picked slot6, won slot2 → HIT not miss",
     bucketPickState(MIBR, resolveBucketWinners([2, 3, 4, 5, 6, 7], { 2: MIBR, 3: 902, 4: 903, 5: 904, 6: 905, 7: 906 })) === "hit",
   );
 }

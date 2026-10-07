@@ -1,5 +1,5 @@
 /**
- * verify-m8-3-local-auth - offline proof for PHA-839 (local-auth dedup).
+ * verify-m8-3-local-auth - offline proof for #839 (local-auth dedup).
  *
  * Exercises the PURE core: the action decision (none|local|steam ->
  * create|reuse-local|preserve-steam) and the displayName sanitizer. No
@@ -29,7 +29,7 @@ function check(name: string, cond: boolean) {
   }
 }
 
-console.log("\nlocal-auth-core - action decision (PHA-839 dedup rules)");
+console.log("\nlocal-auth-core - action decision (#839 dedup rules)");
 const noneAction = decideLocalAuthAction({ kind: "none" });
 check("no session -> create", noneAction.kind === "create");
 

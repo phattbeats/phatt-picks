@@ -1,6 +1,6 @@
 /**
- * Pure security helpers shared by mutating API routes (PHA-1045, from the
- * PHA-1015 audit). Deliberately free of next/prisma so the verify harness can
+ * Pure security helpers shared by mutating API routes (#1045, from the
+ * #1015 audit). Deliberately free of next/prisma so the verify harness can
  * exercise the CSRF origin check, the trusted-proxy client-IP derivation, and
  * the fixed-window cooldown with no server. Each fix the audit named maps to
  * one function here:
@@ -37,7 +37,7 @@ export function parseAllowedOrigins(
  * Both scheme variants of a trusted Host header, e.g. "hotline.phatt.vip" →
  * ["https://hotline.phatt.vip", "http://hotline.phatt.vip"].
  *
- * WHY (PHA-1225): the app runs behind a TLS-terminating proxy (swag/nginx) and
+ * WHY (#1225): the app runs behind a TLS-terminating proxy (swag/nginx) and
  * is reached over https, but NEXTAUTH_URL is http://hotline.phatt.vip and the
  * request reaches the container over plain http — so both `req.nextUrl.origin`
  * and BASE_URL are http-scheme. A real browser on the https site sends
@@ -70,7 +70,7 @@ function originOf(url: string | null): string | null {
  * Origin (we fall back to the Referer's origin) OR — on iOS WebKit (Safari,
  * Brave, every iOS browser) — sends NEITHER header on a top-level same-origin
  * form-POST navigation. That headerless case is exactly what "profile › Sign
- * out" is, and PHA-1225 caught it failing closed with {"error":"Bad origin"}.
+ * out" is, and #1225 caught it failing closed with {"error":"Bad origin"}.
  *
  * So we fail OPEN only when BOTH Origin and Referer are entirely absent. This is
  * safe because every route behind this guard is authed by a SameSite=Lax session

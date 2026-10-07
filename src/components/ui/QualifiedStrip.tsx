@@ -15,7 +15,7 @@ interface Props {
 }
 
 /**
- * "Qualified for Playoffs" strip (PHA-1043, Brandon: make the field feel named
+ * "Qualified for Playoffs" strip (#1043, Brandon: make the field feel named
  * before Valve seeds). The playoff picker tiles are empty until seeding, so this
  * anticipation row surfaces every team that has clinched AND been authored a
  * Spotlight: a tap opens the full Spotlight. It is driven by the authored

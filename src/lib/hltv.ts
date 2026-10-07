@@ -1,14 +1,14 @@
 /**
- * HLTV RSS client (server-only) — automated wire source (PHA-859, PHA-863).
+ * HLTV RSS client (server-only) — automated wire source (#859, #863).
  *
  * Modeled on liquipedia.ts: a descriptive User-Agent naming the app + a contact,
  * gzip requested, and graceful degrade. HLTV has no official API and is
  * Cloudflare-gated for HTML scraping, but its own RSS endpoint returns
- * `application/rss+xml` 200 without challenge (confirmed on PHA-859 before
+ * `application/rss+xml` 200 without challenge (confirmed on #859 before
  * building), so we read the feed and never scrape.
  *
  * The refresh cadence is owned by the persisted floor in `claimRefreshSlot`
- * (PHA-863): a single atomic compare-and-set on SourceState (source = "hltv")
+ * (#863): a single atomic compare-and-set on SourceState (source = "hltv")
  * that the orchestration layer (lib/news) calls ONCE to gate the whole refresh —
  * seed upsert + network pull — under one stamp. This replaces the old
  * read-then-stamp pair (checkPersistedThrottle + stampPersistedThrottle), which
@@ -60,7 +60,7 @@ export class HltvFetchError extends Error {
 }
 
 /**
- * Atomically claim the HLTV refresh slot against the 5-minute floor (PHA-863).
+ * Atomically claim the HLTV refresh slot against the 5-minute floor (#863).
  * Replaces the old check-then-stamp pair, which let concurrent first-requests
  * both pass the floor (thundering herd) and serialized nothing across processes.
  * The shared primitive owns the compare-and-set; this binds it to the wire's
@@ -73,7 +73,7 @@ export function claimRefreshSlot(): Promise<boolean> {
 /**
  * Unconditionally stamp the refresh slot to now, ignoring the floor. Used by the
  * owner-forced ingest path (`/api/news/ingest`) so a manual refresh both runs
- * the pull AND makes the read path back off for the next interval. (PHA-863.)
+ * the pull AND makes the read path back off for the next interval. (#863.)
  */
 export function stampRefreshSlot(): Promise<void> {
   return stampSourceRefreshSlot(SOURCE);
@@ -85,7 +85,7 @@ export function stampRefreshSlot(): Promise<void> {
  * seed). Mapping itself never throws — a malformed body parses to [].
  *
  * The refresh floor is NOT applied here — callers gate the whole refresh once
- * via `claimRefreshSlot` (PHA-863) so the slot is never double-claimed.
+ * via `claimRefreshSlot` (#863) so the slot is never double-claimed.
  */
 export async function fetchHltvWire(): Promise<WireItem[]> {
   let res: Response;

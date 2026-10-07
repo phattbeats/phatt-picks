@@ -1,6 +1,6 @@
 /**
  * verify-playoff-bracket - offline proof for the single-elim playoffs bracket
- * (PHA-903).
+ * (#903).
  *
  * playoff-bracket-core builds the QF → SF → GF tree from the committed playoff
  * sections (108/109/110 in cologne-layout.json) enriched with the viewer's picks
@@ -70,7 +70,7 @@ check("found all three playoff sections in the committed layout", playoffSection
   `got ${playoffSections.length}`);
 
 console.log("\nplayoff-bracket - honest EMPTY state (pre-seeding, the `???` tree)");
-// The committed fixture now seeds the QF (PHA-1007), so the pre-seeding empty
+// The committed fixture now seeds the QF (#1007), so the pre-seeding empty
 // state is verified against an explicitly unseeded clone.
 const unseeded = clone(playoffSections);
 for (const s of unseeded) for (const g of s.groups) g.teams = g.teams.map(() => ({ pickid: 0 }));
@@ -184,7 +184,7 @@ check("no playoff sections → empty bracket, no throw", (() => {
   return b.rounds.length === 0 && b.totalMatches === 0 && b.championPickid === null;
 })());
 
-console.log("\nplayoff-bracket - awaitingResult (started, seeded, still undecided) — PHA-1016");
+console.log("\nplayoff-bracket - awaitingResult (started, seeded, still undecided) — #1016");
 // QF Match 1 (section 108, game 0) is committed for 2026-06-18T13:45:00Z.
 const QF1_START_MS = Date.parse("2026-06-18T13:45:00Z");
 const awaitingSections = clone(playoffSections);

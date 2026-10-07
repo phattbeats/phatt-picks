@@ -1,5 +1,5 @@
 /**
- * verify-team-accent - offline proof for PHA-1043 follow-up (Brandon: "each
+ * verify-team-accent - offline proof for #1043 follow-up (Brandon: "each
  * spotlight needs its accent color to be the team's color").
  *
  * The spotlight modal keys every accent off the team's color; a team missing

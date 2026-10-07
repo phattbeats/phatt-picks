@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 
 /**
- * StageLogo (PHA-1054) — a stylized "STAGE I / II / III" lockup in the HEAT
+ * StageLogo (#1054) — a stylized "STAGE I / II / III" lockup in the HEAT
  * brand language: the Big Shoulders display face, the animated gold `--foil`
  * gradient on the numeral, and the tactical corner-bracket frame (`.brk`) +
  * heat glow used across the app's panels and wordmark. Pure/presentational

@@ -46,7 +46,7 @@ export default async function PicksPage({
 }: {
   searchParams: Promise<{ section?: string }>;
 }) {
-  // Per-request active event (PHA-1046) — force-dynamic, follows the clock across Majors.
+  // Per-request active event (#1046) — force-dynamic, follows the clock across Majors.
   const EVENT_ID = currentEventId();
   const event = getEventConfig(EVENT_ID);
   const params = await searchParams;
@@ -58,7 +58,7 @@ export default async function PicksPage({
     await mirrorPlayerPredictionsThrottled(session.playerId, EVENT_ID);
   }
 
-  // Live driver (PHA-866/898): keep the answer key fresh so a locked stage's
+  // Live driver (#866/898): keep the answer key fresh so a locked stage's
   // lineup tracks results as teams clinch. Atomic 30s claim, deferred ingest.
   await refreshOutcomesOnRead(EVENT_ID);
 
@@ -68,13 +68,13 @@ export default async function PicksPage({
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now();
 
-  // Live team-dossier refresh (PHA-921): keep each team's "Last 5 matches" fresh
+  // Live team-dossier refresh (#921): keep each team's "Last 5 matches" fresh
   // per stage. Atomic ~1h claim, deferred batch crawl, gated to match windows —
   // off-days no-op. The merged read below feeds the [i] dossier; off-window /
   // cold start falls back to the committed frozen snapshot (never empty).
   await refreshTeamStatsOnRead(EVENT_ID, nowMs);
 
-  // Live playoff Spotlight odds refresh (PHA-1066): same on-read, ~1h-claimed,
+  // Live playoff Spotlight odds refresh (#1066): same on-read, ~1h-claimed,
   // deferred pattern as the dossier, but the source is Polymarket's gamma-api.
   // Gated to an authored matchup registry (empty until Valve seeds the bracket),
   // so this is a no-op until a real playoff matchup exists to target.
@@ -82,12 +82,12 @@ export default async function PicksPage({
 
   // Signed in via Steam but no auth code yet: picks save in HOTLINE, but we
   // can't push them to the official in-game CS2 Pick'Em until they connect a
-  // Game Authentication Code. Surface that gap up front with a link (PHA-891).
+  // Game Authentication Code. Surface that gap up front with a link (#891).
   const needsSteamLink = session?.steamId
     ? !(await hasAuthCode(session.playerId))
     : false;
 
-  // Scheduled hard lock (PHA-886/898): once a stage's first match starts, its
+  // Scheduled hard lock (#886/898): once a stage's first match starts, its
   // pick window is closed — even though the committed layout still says
   // picks_allowed and an outcome row hasn't landed yet. The published schedule
   // is the truthful signal; the gate surfaces `locked-time-passed` (friendlier
@@ -103,7 +103,7 @@ export default async function PicksPage({
     layout.sections.map((s, i) => [s.sectionid, orderedPickability[i]]),
   );
 
-  // PHA-1050: clicking "Picks" with no ?section lands on the event's CURRENT
+  // #1050: clicking "Picks" with no ?section lands on the event's CURRENT
   // stage — the one open for picks, else the latest stage underway — instead of
   // always Stage I. Same "current stage" rule the dashboard hero uses, so the
   // nav and the briefing always agree on what "now" is. An explicit ?section
@@ -121,7 +121,7 @@ export default async function PicksPage({
     sectionPickability.get(activeSectionId) ??
     ({ pickable: false, reason: "unknown-section" } as StagePickability);
 
-  // PHA-1016: the playoffs are ONE pick'em stage — quarters, semis and the
+  // #1016: the playoffs are ONE pick'em stage — quarters, semis and the
   // Grand Final all open and lock together when Valve seeds the bracket. The
   // UI matches that truth: a single "Playoffs" tab covering all three layout
   // sections, with the round pickers stacked above the full bracket.
@@ -141,7 +141,7 @@ export default async function PicksPage({
     return p?.reason === "locked-time-passed" || p?.reason === "locked-by-valve" || p?.pickable;
   });
 
-  // Per-game playoff schedule (PHA-1007): each round's games with their committed
+  // Per-game playoff schedule (#1007): each round's games with their committed
   // date/time, fed to the schedule strip. Dark until COLOGNE_PLAYOFF_SCHEDULE is
   // filled (the strip renders nothing while every iso is null).
   const playoffScheduleRounds = PLAYOFF_ROUNDS.map((def) => {
@@ -154,7 +154,7 @@ export default async function PicksPage({
   });
 
   const myPicks: Record<number, Record<number, number>> = {};
-  // PHA-1214: true when every non-empty pick this stage holds is already on
+  // #1214: true when every non-empty pick this stage holds is already on
   // Steam (isLocal === false) — drives the Lock In button green on page load
   // and keeps it green across reloads until the player changes a pick.
   let mySectionSynced = false;
@@ -170,12 +170,12 @@ export default async function PicksPage({
     mySectionSynced = placed.length > 0 && placed.every((p) => !p.isLocal);
   }
 
-  // Live Swiss lineup (PHA-898): once a Swiss stage locks we show the standings
+  // Live Swiss lineup (#898): once a Swiss stage locks we show the standings
   // in place of the picker. Build it from the resolved answer key + the viewer's
   // picks. Only fetch when we'd actually render it (locked Swiss section).
   const isSwiss = isSwissSection(activeSectionId);
   const showLineup = !!section && !activePickability.pickable && isSwiss;
-  // PHA-943: the live Swiss bracket goes live 24h before the stage's lock (= its
+  // #943: the live Swiss bracket goes live 24h before the stage's lock (= its
   // first match) — so the opening matchups are visible the day before, while
   // picks are STILL open — and stays up after lock. Before that reveal instant we
   // don't render it (and the crawl is gated off). Playoff sections have no lock
@@ -189,13 +189,13 @@ export default async function PicksPage({
   // Whether this Swiss stage is OVER (every slot resolved), not merely locked /
   // underway — drives the "stage complete" copy + the Stage Wrapped entry below.
   let stageComplete = false;
-  // Live HLTV/BLAST-style W-L standings (PHA-902): the running win-loss table the
+  // Live HLTV/BLAST-style W-L standings (#902): the running win-loss table the
   // Valve answer key can't provide. Hourly on-read refresh, graceful-empty.
   let liveStandings: Awaited<ReturnType<typeof getSwissStandings>> = null;
   let liveBracket: Awaited<ReturnType<typeof getSwissBracket>> = null;
 
   // The bracket (the fan of matchups) AND the W-L standings table both go live
-  // from the reveal instant on — pre- and post-lock (Brandon, PHA-943: "and the
+  // from the reveal instant on — pre- and post-lock (Brandon, #943: "and the
   // standings as well for stage II and III"). Both come from the same HLTV crawl,
   // whose refresh window opens at the same instant, so they appear together the
   // moment HLTV publishes the field.
@@ -233,7 +233,7 @@ export default async function PicksPage({
     );
   }
 
-  // Live playoffs bracket (PHA-903): the single-elim QF → SF → GF tree. Unlike
+  // Live playoffs bracket (#903): the single-elim QF → SF → GF tree. Unlike
   // the Swiss bracket (an HLTV crawl), the playoff TREE is fully described by our
   // layout — it just fills in live as Stage 3 resolves: seeded teams arrive on
   // the layout team slots, winners arrive as StageOutcome rows. We always render
@@ -241,12 +241,12 @@ export default async function PicksPage({
   // is open, matching Brandon's reference. Built only when viewing a playoff tab.
   let playoffBracket: ReturnType<typeof buildPlayoffBracket> | null = null;
   let playoffResolvedAtIso: string | null = null;
-  // PHA-1204: the predictor model (QF→SF→GF feed tree) + the viewer's saved
+  // #1204: the predictor model (QF→SF→GF feed tree) + the viewer's saved
   // winner per match, keyed by groupId (slot 0). Feeds the single interactive
   // bracket that replaces the stacked round-pickers.
   let playoffPickModel: ReturnType<typeof buildPlayoffPickTree> | null = null;
   const playoffInitialPicks: Record<number, number> = {};
-  // PHA-1214: every saved bracket pick already on Steam → Lock In stays green.
+  // #1214: every saved bracket pick already on Steam → Lock In stays green.
   let playoffSynced = false;
   if (playoffActive) {
     // Viewer's call per match (one pick slot per match group, slot 0).
@@ -280,7 +280,7 @@ export default async function PicksPage({
     playoffBracket = buildPlayoffBracket({ sections: playoffSections, userPickByGroup, winnerByGroup, nowMs, playoffSchedule: event?.playoffSchedule });
   }
 
-  // Live dossier map for the picker's [i] affordance (PHA-921). Only read when
+  // Live dossier map for the picker's [i] affordance (#921). Only read when
   // the picker is actually shown; the merged map overrides each team's recent[]
   // with live results while keeping roster/rank frozen, and is null off-window /
   // cold (the drawer then uses the committed snapshot).
@@ -289,7 +289,7 @@ export default async function PicksPage({
       ? await getLiveTeamStats(EVENT_ID)
       : null;
 
-  // Live market lines for the playoff Spotlight (PHA-1066). Playoff-only — the
+  // Live market lines for the playoff Spotlight (#1066). Playoff-only — the
   // Spotlight modal is the only place that renders a market bar. Empty {} until a
   // matchup is authored, in which case the modal shows its "coming soon" state.
   const spotlightMarket = playoffActive ? await getSpotlightMarket(EVENT_ID, nowMs) : undefined;
@@ -307,7 +307,7 @@ export default async function PicksPage({
 
   return (
     <>
-      {/* Stage header. Playoffs wear the v3 "Cathedral" treatment (PHA-1065):
+      {/* Stage header. Playoffs wear the v3 "Cathedral" treatment (#1065):
           Cologne is the Cathedral of Counter-Strike, so the climax stage gets a
           centered hero crowned by a thin pointed-arch vault. Swiss stages keep
           the standard left-aligned eyebrow + wordmark. */}
@@ -359,7 +359,7 @@ export default async function PicksPage({
         }}
       >
         {(() => {
-          // Tab model (PHA-1016): one chip per Swiss stage, then a single
+          // Tab model (#1016): one chip per Swiss stage, then a single
           // PLAYOFFS chip — quarters/semis/finals open and lock together as
           // one pick'em stage, so they tab as one.
           const lockTitleFor = (pick: StagePickability) =>
@@ -462,13 +462,13 @@ export default async function PicksPage({
       {!section ? (
         <p style={{ color: "var(--ink-mid)" }}>Section not found.</p>
       ) : playoffActive ? (
-        // Consolidated Playoffs view (PHA-1016): one stage, one tab. When
+        // Consolidated Playoffs view (#1016): one stage, one tab. When
         // Valve seeds + opens the bracket the three round pickers stack here
         // (they all lock together); until then an honest status strip. The
         // full QF → SF → GF tree renders beneath either way.
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           {anyPlayoffPickable && playoffPickModel ? (
-            // PHA-1204: picks OPEN — interactive QF→SF→GF bracket. Crown a
+            // #1204: picks OPEN — interactive QF→SF→GF bracket. Crown a
             // winner and they advance into the round they feed.
             <PlayoffBracketPicker
               model={playoffPickModel}
@@ -484,7 +484,7 @@ export default async function PicksPage({
               spotlightMarket={spotlightMarket}
             />
           ) : playoffSeeded ? (
-            // PHA-1263: bracket seeded + picks locked. Show the viewer's OWN
+            // #1263: bracket seeded + picks locked. Show the viewer's OWN
             // crowned bracket read-only (the interactive picker, enabled=false)
             // so their predicted QF→SF→GF run and "Your champion" stay on screen.
             // LivePlayoffBracket alone HID the crown ("cant see your crowned"):
@@ -519,7 +519,7 @@ export default async function PicksPage({
             </>
           ) : (
             <>
-              {/* PHA-1043: before Valve seeds, the picker is empty, so a
+              {/* #1043: before Valve seeds, the picker is empty, so a
                   "Qualified for Playoffs" strip surfaces clinched + authored
                   teams' Spotlights to build anticipation as the field is named.
                   The read-only bracket below shows the tree filling in live. */}
@@ -539,12 +539,12 @@ export default async function PicksPage({
               )}
             </>
           )}
-          {/* Per-game schedule (PHA-1007) — BELOW the bracket + lock-in button:
+          {/* Per-game schedule (#1007) — BELOW the bracket + lock-in button:
               the bracket is the focus, the schedule is reference underneath. */}
           <PlayoffScheduleStrip rounds={playoffScheduleRounds} />
           {/* Stop refreshing once the champion is decided — nothing changes.
               A SEALED bracket (not pickable) is a results-only view, so let the
-              poller periodically reclaim the heap (PHA-1268); while it's still
+              poller periodically reclaim the heap (#1268); while it's still
               pickable a hard reload could drop an unsaved bracket edit. */}
           {!playoffBracket?.championPickid && (
             <AutoRefresh intervalMs={60_000} reclaimSafe={!anyPlayoffPickable} />
@@ -563,7 +563,7 @@ export default async function PicksPage({
             liveTeamStats={liveTeamStats?.byPickid}
             liveStatsAsOf={liveTeamStats?.asOf}
           />
-          {/* PHA-943: 24h before this stage locks, the live Swiss bracket AND the
+          {/* #943: 24h before this stage locks, the live Swiss bracket AND the
               W-L standings table appear beneath the picker so you can study the
               opening matchups + field before you lock. Render once HLTV has
               published them; an honest placeholder stands in while they're live
@@ -602,7 +602,7 @@ export default async function PicksPage({
       ) : swissStandings ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <LockedStageCard pickability={activePickability} compact complete={stageComplete} />
-          {/* Stage Wrapped entry (PHA-1054) — once the stage is OVER, the recap
+          {/* Stage Wrapped entry (#1054) — once the stage is OVER, the recap
               is the headline action here, right where the player lands. Opens the
               full personal deck on the stage reveal. */}
           {stageComplete && stageWrappedHasContent(activeSectionId) && (
@@ -648,7 +648,7 @@ export default async function PicksPage({
             </Link>
           )}
           {/* Your locked picks, in the SAME bucket-slot UI you picked them in
-              (PHA-902, replacing PHA-898's YOUR BUILD / THE FIELD). Each call
+              (#902, replacing #898's YOUR BUILD / THE FIELD). Each call
               turns green/red as the answer key confirms it. Only when you picked. */}
           {Object.values(myPicks).some((g) => Object.values(g).some((p) => p > 0)) && (
             <LockedPicksBoard
@@ -661,7 +661,7 @@ export default async function PicksPage({
             />
           )}
           {/* Live HLTV/BLAST-style Swiss BRACKET (the fan) for the whole field,
-              under the build (PHA-902), then the neutral W-L table below. Neither
+              under the build (#902), then the neutral W-L table below. Neither
               highlights the viewer's picks — that's the build's job. Both hidden
               until the first hourly crawl lands. */}
           {liveBracket && (
@@ -684,7 +684,7 @@ export default async function PicksPage({
           )}
           {/* Poll while the stage is live; stop once all slots are resolved.
               This is the locked, results-only lineup (no picker), so the poller
-              can safely reclaim the heap on a long live session (PHA-1268). */}
+              can safely reclaim the heap on a long live session (#1268). */}
           {!stageComplete && <AutoRefresh intervalMs={60_000} reclaimSafe />}
         </div>
       ) : (
@@ -799,7 +799,7 @@ function LockedStageCard({
   pickability: StagePickability;
   /** Tighter card used as a banner above the live lineup. */
   compact?: boolean;
-  /** The stage is fully resolved (over), not merely locked/underway (PHA-1054). */
+  /** The stage is fully resolved (over), not merely locked/underway (#1054). */
   complete?: boolean;
 }) {
   const heading =
@@ -827,7 +827,7 @@ function LockedStageCard({
               ? "Valve closed the pick window for this stage. Results will appear here as matches complete."
               : "This stage isn't available.";
 
-  // PHA-1016: the lock state is a status strip, not a billboard — left-aligned
+  // #1016: the lock state is a status strip, not a billboard — left-aligned
   // mono tag + one line of plain copy, small stroke padlock instead of the
   // emoji shout. Same information, lower volume.
   const tag =

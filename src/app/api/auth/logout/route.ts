@@ -1,7 +1,7 @@
 /**
  * POST /api/auth/logout — clear the session cookie and return to /login.
  *
- * PHA-1045 (CSRF, from the PHA-1015 audit): this was a GET, so a cross-site
+ * #1045 (CSRF, from the #1015 audit): this was a GET, so a cross-site
  * `<img src=".../api/auth/logout">` silently logged out any visiting user —
  * SameSite=Lax does NOT block top-level GET navigations. It's now POST-only
  * with a same-origin guard, so only a request from our own pages can end a

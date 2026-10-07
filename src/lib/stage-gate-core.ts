@@ -61,7 +61,7 @@ function isSectionSeeded(section: Layout["sections"][number]): boolean {
 
 export interface StageGateOpts {
   /**
-   * The section's published lock instant has passed (PHA-898). The caller
+   * The section's published lock instant has passed (#898). The caller
    * computes this from the lock schedule vs. the current time
    * (`isLockTimePassed`) and passes it in, keeping this module pure. When true
    * the stage is locked regardless of the (stale, all-open) committed
@@ -73,7 +73,7 @@ export interface StageGateOpts {
 
 /**
  * Which section is the event's CURRENT stage — the one a player should land on
- * "now" (PHA-1007 dashboard hero, PHA-1050 picks-nav default)?
+ * "now" (#1007 dashboard hero, #1050 picks-nav default)?
  *
  * Priority:
  *   1. The first stage whose pick window is OPEN — real urgency, real countdown.

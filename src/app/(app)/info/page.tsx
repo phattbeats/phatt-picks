@@ -3,7 +3,7 @@ import Link from "next/link";
 export const metadata = { title: "Info · HOTLINE" };
 
 /**
- * INFO (PHA-1283) — help & guides get their own home. The links used to be
+ * INFO (#1283) — help & guides get their own home. The links used to be
  * folded into Settings, where most people never opened them; pulled out to a
  * first-class page so "how does this work?" has somewhere obvious to land. On
  * desktop it's a top-nav tab; on mobile it's reached from your profile and the

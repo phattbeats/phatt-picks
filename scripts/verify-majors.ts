@@ -1,5 +1,5 @@
 /**
- * verify-majors — offline proof for PHA-949 (multi-major workstream B).
+ * verify-majors — offline proof for #949 (multi-major workstream B).
  *
  * Two things to prove without a database:
  *

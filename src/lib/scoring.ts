@@ -7,7 +7,7 @@
  * - Each playoff match is one pick worth that group's points_per_pick.
  * - Perfect tournament = 135 pts (60 Swiss + 75 Playoffs) — for verification only.
  *
- * BUCKET-AWARE SWISS (PHA-918): a Swiss stage's slots are grouped into buckets
+ * BUCKET-AWARE SWISS (#918): a Swiss stage's slots are grouped into buckets
  * (3:0 / advance / 0:3) and the slots WITHIN a bucket are interchangeable — if
  * you tag BetBoom and B8 as your two 3:0 teams it doesn't matter which slot each
  * sits in. So Swiss scoring compares the player's picks against the resolved

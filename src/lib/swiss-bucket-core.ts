@@ -5,7 +5,7 @@
  * all worth the same `points_per_pick`. Their UI visually buckets those slots
  * by predicted outcome (3:0 advance / 3:1 / 3:2 advance / 0:3 eliminated). The
  * bucket labels and slot-to-bucket map aren't in the layout JSON — they're
- * convention. PHA-853 matches the UI to that convention.
+ * convention. #853 matches the UI to that convention.
  *
  * Scoring is unaffected — every Swiss slot is still worth the stage's
  * `points_per_pick` regardless of which bucket the UI renders it in.
@@ -29,7 +29,7 @@ export type BucketsForSlotCount = (slotCount: number) => SwissBucket[];
 /**
  * Bucket a Swiss stage's flat pick slots by predicted outcome. The 10-slot
  * layout below matches the Cologne 2026 Stage I screenshot Brandon attached on
- * PHA-853 (2 / 6 / 2 split: 3:0 advance, 3:1 / 3:2 advance, 0:3 eliminated).
+ * #853 (2 / 6 / 2 split: 3:0 advance, 3:1 / 3:2 advance, 0:3 eliminated).
  *
  * Returning the same single-card fallback for any non-10 count means a future
  * format change (e.g. an 8-team final stage) renders as one flat card instead
@@ -68,12 +68,12 @@ export interface BucketWinners {
 }
 
 /**
- * Collapse a Swiss bucket's resolved slots into a winner SET (PHA-946).
+ * Collapse a Swiss bucket's resolved slots into a winner SET (#946).
  *
  * Within a Swiss bucket the slots are interchangeable — a team that lands in
  * the 3:1/3:2 bucket counts regardless of which of the six slots its winner row
  * occupies. Scoring already judges Swiss buckets as set intersections
- * (scoring.ts, PHA-918); the compare page must use the same grain or a correct
+ * (scoring.ts, #918); the compare page must use the same grain or a correct
  * pick sitting in a different slot than its winner row reads as a miss.
  *
  * `0` is the API's "unresolved/placeholder" sentinel and is never a winner.
@@ -100,7 +100,7 @@ export function resolveBucketWinners(
  * A pick is a HIT if its team is among the bucket's resolved winners. It is a
  * MISS once the bucket is fully resolved (every slot decided) and the team isn't
  * a winner — OR early, when `impossible` is set: the team's partial record has
- * already ruled this bucket out (PHA-951; e.g. a 0:3 pick whose team won a game).
+ * already ruled this bucket out (#951; e.g. a 0:3 pick whose team won a game).
  * Until one of those holds, a not-yet-winning pick is still PENDING, never
  * prematurely struck through.
  */

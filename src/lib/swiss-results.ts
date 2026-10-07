@@ -1,20 +1,20 @@
 /**
- * Live Swiss W-L standings ingestion (server-only, PHA-902).
+ * Live Swiss W-L standings ingestion (server-only, #902).
  *
  * The HLTV/BLAST-style standings table (every team's running win-loss record +
  * advance/eliminated status) is NOT in Valve's Pick'Em answer key — that only
  * carries the final clinch bucket as teams lock in. So we read it from the one
  * source that publishes a live Swiss table for this event: the HLTV event page.
  * HLTV gates HTML scraping behind Cloudflare (a direct server fetch 403s — the
- * RSS feed PHA-859 uses is the only un-gated endpoint), so we go through the
+ * RSS feed #859 uses is the only un-gated endpoint), so we go through the
  * shared crawl4ai service, which renders the page and returns clean markdown.
  * crawl4ai sits on the same `phattvip` Docker network as this container, so
  * `http://crawl4ai:11235` is reachable in production exactly as in the workspace
  * (override with CRAWL4AI_URL).
  *
  * Cadence is owned by a persisted ~hourly floor (claimStandingsRefreshSlot),
- * the same atomic SourceState compare-and-set the wire (PHA-863) and outcomes
- * (PHA-866) drivers use. `getSwissStandings` is the read path: it fires a
+ * the same atomic SourceState compare-and-set the wire (#863) and outcomes
+ * (#866) drivers use. `getSwissStandings` is the read path: it fires a
  * best-effort, deferred self-refresh (off the render path) and returns the last
  * cached blob mapped to the current layout. Graceful by contract: a source
  * outage / parse miss degrades to the last cache (or empty) and NEVER throws
@@ -46,13 +46,13 @@ import {
 } from "./swiss-bracket-core";
 import { isWithinRefreshWindow } from "./lock-schedule-core";
 // Which HLTV event page carries the live Swiss table for each pick'em section
-// is now per-event config in the registry (PHA-948). For the active event
+// is now per-event config in the registry (#948). For the active event
 // (Cologne) these are exactly the section ids/urls this module declared before.
 import { getEventConfig, type SectionSource } from "./events-core";
 
 /**
  * The Swiss standings sources for a SPECIFIC event, resolved per-call from the
- * registry (PHA-1046). The old module-level `SECTION_SOURCES` const pinned the
+ * registry (#1046). The old module-level `SECTION_SOURCES` const pinned the
  * active event at process load, so once Cologne archives and the next Major goes
  * live the crawl would keep fetching the stale event's pages until a redeploy.
  * Threading the eventId through means every section lookup follows whichever
@@ -68,7 +68,7 @@ import { isEventFrozenById } from "./event-freeze";
 // crawl4ai on the phattvip network. Same hostname resolves in the workspace and
 // in the deployed container; CRAWL4AI_URL overrides for other topologies.
 const CRAWL4AI_URL = (process.env.CRAWL4AI_URL ?? "http://crawl4ai:11235").replace(/\/+$/, "");
-// Same token the team-stats crawl sends (PHA-1044). Both crawls hit the same
+// Same token the team-stats crawl sends (#1044). Both crawls hit the same
 // crawl4ai instance, so they must present the same auth — otherwise, the day the
 // service starts requiring the token, the user-visible standings crawl 401s while
 // team-stats keeps working and the W-L table silently freezes.
@@ -83,7 +83,7 @@ const STANDINGS_REFRESH_SOURCE = "hltv-standings";
 // (STANDINGS_CRAWL_PASS_TIMEOUT_MS / _MAX_CRAWL_PASSES / _MAX_TOTAL_CRAWL_MS),
 // consumed via planStandingsCrawlPass below. A lone 45s shot used to lose the
 // crawl4ai queue race to the team-stats batch and freeze the table for an hour
-// (PHA-951); the bounded retry lands a later pass once the service drains.
+// (#951); the bounded retry lands a later pass once the service drains.
 
 /** Pause helper for the inter-pass backoff (the crawl runs deferred, off the render path). */
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
@@ -147,7 +147,7 @@ async function crawlPageOnce(
     body: JSON.stringify({
       urls: [url],
       // domcontentloaded + a tight page_timeout stop the ~50s networkidle hang
-      // that never settles behind Cloudflare and burns a core (PHA-1036). The
+      // that never settles behind Cloudflare and burns a core (#1036). The
       // Swiss bracket's match scores ride in server-rendered popup-json attrs, so
       // they're present at DOM-ready — no need to wait for network to idle.
       crawler_config: {
@@ -173,7 +173,7 @@ async function crawlPageOnce(
 }
 
 /**
- * Crawl with a bounded retry over a total wall-clock budget (PHA-951). The
+ * Crawl with a bounded retry over a total wall-clock budget (#951). The
  * standings ingest co-fires with the team-stats refresh, whose 32-profile batch
  * can hold crawl4ai for over a minute; a single attempt loses that queue race and
  * times out, freezing the W-L table for the whole hour. Retrying — with a brief
@@ -252,7 +252,7 @@ async function ingestStandings(eventId: number, sectionId: number): Promise<numb
  * so a cold first paint that shows nothing fills in within a minute. Never
  * throws. No cron needed — and the ingest route is owner-gated anyway.
  *
- * Gated to the stage's refresh window (PHA-902/PHA-943): the window OPENS 24h
+ * Gated to the stage's refresh window (#902/#943): the window OPENS 24h
  * before the stage's lock — so the opening matchups land before picks even close
  * (Brandon: "the bracket should go live 24 hours before the start of the stage,
  * or whenever the first round of matches are announced") — and CLOSES at the end
@@ -265,7 +265,7 @@ export async function refreshStandingsOnRead(
   sectionId: number,
   nowMs: number = Date.now(),
 ): Promise<void> {
-  if (await isEventFrozenById(eventId, nowMs)) return; // PHA-949/954: frozen (effectively archived) Majors never re-crawl
+  if (await isEventFrozenById(eventId, nowMs)) return; // #949/954: frozen (effectively archived) Majors never re-crawl
   if (!hasStandingsSource(eventId, sectionId)) return; // nothing to refresh
   const evt = getEventConfig(eventId);
   if (!isWithinRefreshWindow(sectionId, nowMs, evt?.lockSchedule, evt?.matchWindows)) return; // outside the reveal→end window — serve cache
@@ -293,7 +293,7 @@ export interface WarmResult {
 }
 
 /**
- * Synchronously warm a section's standings cache (PHA-902 deploy-reliability).
+ * Synchronously warm a section's standings cache (#902 deploy-reliability).
  *
  * The on-read driver (refreshStandingsOnRead) defers its crawl past the response
  * via `after()`, which means a freshly-deployed container with an empty cache
@@ -326,7 +326,7 @@ export async function warmStandings(
 }
 
 /**
- * Force a synchronous crawl + ingest, bypassing the ~1h floor (PHA-1109).
+ * Force a synchronous crawl + ingest, bypassing the ~1h floor (#1109).
  *
  * The on-read driver stamps the shared floor at claim time, then DEFERS its crawl
  * via after() — which doesn't fire reliably in the standalone server. So during a
@@ -388,7 +388,7 @@ export async function getSwissStandings(
 }
 
 /**
- * Reduce a section's live standings to a pickid → partial W-L record map (PHA-951)
+ * Reduce a section's live standings to a pickid → partial W-L record map (#951)
  * for the early-red logic (isBucketImpossibleByRecord). Reads the SAME cached blob
  * as getSwissStandings — no extra crawl — and returns an empty map when the cache
  * is cold / unmapped. Only teams that have played at least one game appear.

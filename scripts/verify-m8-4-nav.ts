@@ -1,5 +1,5 @@
 /**
- * verify-m8-4-nav - PHA-840 proof: leaderboard rows are tappable, /players/[id]
+ * verify-m8-4-nav - #840 proof: leaderboard rows are tappable, /players/[id]
  * exists, /profile has a graceful sign-in fallback (no redirect), and the
  * home header surfaces a "You" label.
  *

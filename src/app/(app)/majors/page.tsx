@@ -1,5 +1,5 @@
 /**
- * "Your Majors" — the headline of multi-major workstream B (PHA-949):
+ * "Your Majors" — the headline of multi-major workstream B (#949):
  * "historic scores, so you can look back at your picks throughout every Major."
  *
  * Every Major the signed-in player has played (a distinct eventId in their Pick
@@ -165,7 +165,7 @@ export default async function MajorsPage() {
 
   const history = buildMajorsHistory(rows);
 
-  // Challenge coins (PHA-1278) the signed-in player has earned, indexed by event
+  // Challenge coins (#1278) the signed-in player has earned, indexed by event
   // so each concluded Major's row can show its inspectable, drag-to-rotate coin.
   const coins = await getPlayerChallengeCoins(session.playerId);
   const coinByEvent = new Map<number, ChallengeCoin>(coins.map((c) => [c.eventId, c]));
@@ -246,7 +246,7 @@ export default async function MajorsPage() {
                   letterSpacing: "0.08em",
                   color: "var(--ink-mid)",
                 }}>
-                  {/* PHA-1046: when the layout fixture isn't loadable the score is
+                  {/* #1046: when the layout fixture isn't loadable the score is
                       not a genuine 0 — say so explicitly rather than imply a result. */}
                   {!row.scored
                     ? "Score unavailable"

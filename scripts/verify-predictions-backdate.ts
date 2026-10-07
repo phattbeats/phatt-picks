@@ -1,5 +1,5 @@
 /**
- * verify-predictions-backdate - locks in the mid-major Steam backdate (PHA-987).
+ * verify-predictions-backdate - locks in the mid-major Steam backdate (#987).
  *
  * The product promise: a Steam user who joins AFTER a stage has already locked,
  * and connects their auth code, gets their OFFICIAL Valve picks pulled in — even

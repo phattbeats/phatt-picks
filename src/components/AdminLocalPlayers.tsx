@@ -18,7 +18,7 @@ type LoadState =
 /**
  * Owner-only admin section embedded in /settings. Lists every local-only Player
  * (isLocal && !steamId), with pick count and last-activity, plus a confirm
- * delete button per row. See PHA-854 for the cleanup motivation.
+ * delete button per row. See #854 for the cleanup motivation.
  *
  * Rendered unconditionally; the API gates by OWNER_STEAM_ID and returns 403
  * for non-owners — at which point the component shows nothing.

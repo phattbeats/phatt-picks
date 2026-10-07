@@ -1,5 +1,5 @@
 /**
- * Multi-major workstream B (PHA-949) — pure logic for the "look back at your
+ * Multi-major workstream B (#949) — pure logic for the "look back at your
  * picks every Major" history view and the archived-event freeze.
  *
  * Two concerns live here, both pure so the verify harness can import them
@@ -17,7 +17,7 @@
  *    SPECIFICALLY, not on `!== "live"`, so a mis-edited registry can never
  *    accidentally freeze a `live`/`upcoming` Major (it fails open — that
  *    Major keeps updating); they only fire once an event is truly `archived`
- *    (Cologne, since PHA-1318).
+ *    (Cologne, since #1318).
  *
  * 2. HISTORY AGGREGATION. `computeFinish` turns a scored, sorted field into a
  *    1-based placement, and `buildMajorsHistory` orders a player's played
@@ -35,7 +35,7 @@ export function isEventArchived(status: EventStatus): boolean {
   return status === "archived";
 }
 
-// NOTE (PHA-954): the by-id convenience that used to live here keyed on the
+// NOTE (#954): the by-id convenience that used to live here keyed on the
 // registry's RAW baseline `status` field, so the freeze only fired once a human
 // flipped Cologne→archived — re-introducing the manual switch workstream C
 // removed. The by-id resolvers now live in `event-freeze.ts`, which feeds these
@@ -89,7 +89,7 @@ export interface MajorHistoryRow {
   start: string;
   /**
    * Whether this Major's layout fixture was loadable, so `score`/`finish` are a
-   * REAL result and not the 0/null fallback (PHA-1046). Today only Cologne's
+   * REAL result and not the 0/null fallback (#1046). Today only Cologne's
    * layout is loadable; once a 2nd Major archives and per-event fixtures
    * land, an unloadable layout degrades to an honest "score unavailable" row
    * instead of a misleading genuine 0.

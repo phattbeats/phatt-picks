@@ -1,7 +1,7 @@
 /**
- * Stage Wrapped — content + deck builder (PHA-1054).
+ * Stage Wrapped — content + deck builder (#1054).
  *
- * The PHA-1052 shell consumes a `WrappedSlide[]` and knows nothing about how
+ * The #1052 shell consumes a `WrappedSlide[]` and knows nothing about how
  * the slides are sourced. This module is that source for the resolved Swiss
  * stages: the authored "craziest moments" for each stage (real IEM Cologne 2026
  * data — see `docs/STAGE-WRAPPED-HISTORY.md`) plus a pure builder that folds

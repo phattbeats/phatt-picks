@@ -5,7 +5,7 @@
  * isLocal can theoretically lag (e.g. mid-link race), and the steamId is the
  * authoritative marker that the player has actually paired Steam. The owner
  * cleans these up after testing or after friends sign in as guests before
- * linking Steam. See PHA-854.
+ * linking Steam. See #854.
  */
 
 import { NextResponse } from "next/server";

@@ -1,5 +1,5 @@
 /**
- * Challenge coins (PHA-1278) — server-side assembly of a player's coin shelf.
+ * Challenge coins (#1278) — server-side assembly of a player's coin shelf.
  *
  * Mirrors the /majors history maths exactly (scorePlayer + the leaderboard's
  * score-desc / name tiebreak) so a Major's coin tier agrees with its leaderboard
@@ -63,7 +63,7 @@ export async function getPlayerChallengeCoins(
     // Coins mint the moment the Grand Final crowns a champion — short-circuit
     // the live/unfinished event before any field scoring (zero added DB work
     // while in flight). The GF-resolved instant doubles as the mint time
-    // (earnedAtMs); no 48h archive-grace wait (PHA-1274).
+    // (earnedAtMs); no 48h archive-grace wait (#1274).
     const archivedAtMs = await coinMintAtMs(eventId, nowMs);
     if (archivedAtMs === null) continue;
 

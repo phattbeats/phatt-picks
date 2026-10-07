@@ -1,8 +1,8 @@
 /**
  * verify-live-results-bridge - offline proof for the live-results bridge that
- * the PHA-1109 scheduler drives (refreshLiveResultsTick → bridgeSwissOutcomes).
+ * the #1109 scheduler drives (refreshLiveResultsTick → bridgeSwissOutcomes).
  *
- * PHA-1109: a 0-3 elimination (B8) showed no green checkmark and awarded no
+ * #1109: a 0-3 elimination (B8) showed no green checkmark and awarded no
  * points because the HLTV standings crawl + StageOutcome bridge were deferred via
  * after() (which doesn't fire reliably in the standalone server), so the answer
  * key froze. The in-process scheduler now drives the crawl+bridge on a fixed
@@ -55,7 +55,7 @@ const matched = matchStandingsToLayout(raw, teams);
 const byName = (n: string) => matched.find((r) => new RegExp(`^${n}$`, "i").test(r.name));
 const pid = (n: string) => byName(n)?.pickid;
 
-console.log("\nlive-results-bridge - parse the captured Stage III table (PHA-1109)");
+console.log("\nlive-results-bridge - parse the captured Stage III table (#1109)");
 check("parsed all 16 Swiss seeds", raw.length === 16, `got ${raw.length}`);
 check("B8 row parsed as a terminal 0-3", byName("B8")?.wins === 0 && byName("B8")?.losses === 3, JSON.stringify(byName("B8")));
 check("B8 mapped to a layout pickid", typeof pid("B8") === "number", String(pid("B8")));
@@ -79,7 +79,7 @@ const buckets = bucketSwissSlots(stage3.groups[0].picks.length);
 const slots = (label: string) => buckets.find((b) => b.label.includes(label))!.slotIndexes;
 
 console.log("\nlive-results-bridge - deriveClinchedSlots writes terminal clinches into the right buckets");
-check("B8 (0-3) IS written — the PHA-1109 fix", slotOf(pid("B8")) !== undefined, `slot=${slotOf(pid("B8"))}`);
+check("B8 (0-3) IS written — the #1109 fix", slotOf(pid("B8")) !== undefined, `slot=${slotOf(pid("B8"))}`);
 check("B8 lands in a 0:3 ELIMINATED slot", slots("0:3").includes(slotOf(pid("B8"))!), `slot=${slotOf(pid("B8"))} not in ${slots("0:3")}`);
 check("FURIA (3-0) lands in a 3:0 ADVANCED slot", slots("3:0").includes(slotOf(pid("FURIA"))!), `slot=${slotOf(pid("FURIA"))}`);
 check("Spirit (3-0) lands in a 3:0 ADVANCED slot", slots("3:0").includes(slotOf(pid("Spirit"))!), `slot=${slotOf(pid("Spirit"))}`);
@@ -100,7 +100,7 @@ const again = deriveClinchedSlots(stage3, standings, existing, bucketSwissSlots)
 console.log("\nlive-results-bridge - re-running against the written answer key is idempotent");
 check("no duplicate writes for already-clinched teams", again.length === 0, `re-wrote ${again.length}`);
 
-// ── PHA-1109 follow-up: resolve from the BRACKET's match cells when the table is
+// ── #1109 follow-up: resolve from the BRACKET's match cells when the table is
 // stale/absent. The live freeze persisted even after the scheduler shipped: the
 // in-container crawl's cached W-L *table* lagged behind B8's 0:3 clinch (it still
 // read 0-2 from before the floor wedged), and the bridge's table-OR-bracket
@@ -171,7 +171,7 @@ check(
   `slot=${b8Slot}`,
 );
 
-// Self-heal (PHA-1109): a slot resolved off a stale/partial crawl can hold the
+// Self-heal (#1109): a slot resolved off a stale/partial crawl can hold the
 // WRONG winner; the never-rewrite rule would freeze that error and block the team
 // that actually clinched. findContradictedSlots flags such slots so the bridge can
 // evict + re-derive the correct winner.

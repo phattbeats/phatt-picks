@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The Bleachers strip (PHA-1211, concept A) — renders under a single revealed
+ * The Bleachers strip (#1211, concept A) — renders under a single revealed
  * pick on a player's profile. Shows the anonymous running tally of reaction
  * stamps and, for a signed-in viewer who isn't the profile owner, a drop row to
  * add/swap their own stamp. Senders stay masked until the stage resolves (the

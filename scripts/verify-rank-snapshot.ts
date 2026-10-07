@@ -1,5 +1,5 @@
 /**
- * Offline verify for the PHA-858 rank-snapshot core (no prisma, no fixture).
+ * Offline verify for the #858 rank-snapshot core (no prisma, no fixture).
  * Mirrors the M4 verify pattern: build a tiny layout + picks + outcomes, then
  * assert cumulative ranking, snapshot rows, section selectors, and delta dir.
  *

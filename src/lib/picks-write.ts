@@ -82,7 +82,7 @@ async function loadWriteAuth(
 
 /**
  * Attempt the upload for an already-resolved batch and reconcile the result
- * back into the Pick table. PHA-853: Valve only accepts single-pick calls
+ * back into the Pick table. #853: Valve only accepts single-pick calls
  * (the indexed batch shape returns 400), so we issue N sequential uploads and
  * reconcile each pick independently. A partial failure (some 200, some 4xx)
  * keeps the successes synced and surfaces the first failure's status/body in
@@ -272,9 +272,9 @@ async function resolveAndUpload(
 
   // Read current Steam picks — skip any that are already correctly set so we
   // only send changed picks. This avoids conflicts where re-uploading an
-  // already-locked pick interferes with subsequent uploads (PHA-875 root cause).
+  // already-locked pick interferes with subsequent uploads (#875 root cause).
   //
-  // PHA-928: key by group+slot across ALL groups in the batch. The playoff
+  // #928: key by group+slot across ALL groups in the batch. The playoff
   // bracket is multi-group (each group has a single slot at index 0), so the
   // old slot-only key collapsed all picks onto one entry and dropped the rest —
   // a favorite advancing QF→SF→GF would never reach Valve past the QF.
@@ -297,8 +297,8 @@ async function resolveAndUpload(
 
   // Only upload picks that differ from what's currently on Steam (same team at
   // the same group+slot). Re-sending an unchanged pick can conflict with partial
-  // sticker-lock state left by previous failed uploads (PHA-875). Keying by
-  // group+slot keeps each playoff group distinct (PHA-928).
+  // sticker-lock state left by previous failed uploads (#875). Keying by
+  // group+slot keeps each playoff group distinct (#928).
   const { toUpload, alreadySynced } = partitionBySteamState(resolved, steamState);
   const skipped = alreadySynced.length;
   if (skipped > 0) {

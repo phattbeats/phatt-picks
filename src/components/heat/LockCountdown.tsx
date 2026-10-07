@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 /**
- * Live "until picks lock" countdown (PHA-856, mockup-02).
+ * Live "until picks lock" countdown (#856, mockup-02).
  *
  * Renders a mono HH:MM:SS clock + caption that ticks every second and turns
  * ember in the final 15 minutes. Renders NOTHING when:

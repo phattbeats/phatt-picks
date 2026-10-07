@@ -1,11 +1,11 @@
 /**
- * Wire / news feed core (pure, PHA-857).
+ * Wire / news feed core (pure, #857).
  *
  * The mockup-17 wire is a populated headline feed (source · time-ago meta,
  * headline, image slot). News was cut from the Beta floor, so the design rule
- * mirrors the lock-schedule (PHA-856): never fabricate a headline. The wire is
+ * mirrors the lock-schedule (#856): never fabricate a headline. The wire is
  * driven by a real source — a committed *curated* seed for the Beta, plus an
- * automated HLTV RSS pull (PHA-859) through the same ingestion path. When
+ * automated HLTV RSS pull (#859) through the same ingestion path. When
  * both the DB and the seed are empty the page degrades to the honest
  * "No signal yet" state instead of inventing content.
  *
@@ -77,7 +77,7 @@ const DEFAULT_SOURCE = "phatt";
  * sourced from attacker-influenceable RSS (HLTV `<link>` / `<media:content url>`),
  * and React renders a `javascript:` href verbatim, so an unvalidated sourceUrl is
  * a stored-XSS sink. This is the shared guard applied at ingest, at seed
- * normalization, AND at the render sink (PHA-860 review, defense-in-depth).
+ * normalization, AND at the render sink (#860 review, defense-in-depth).
  */
 export function safeHttpUrl(raw: string | null | undefined): string | null {
   if (typeof raw !== "string") return null;
@@ -140,7 +140,7 @@ export function sortWire(items: readonly WireItem[]): WireItem[] {
  * automated HLTV pulls) bypass `normalizeSeed`, and rows ingested before this
  * guard existed may carry a hostile `javascript:`/`data:` URL — so the read
  * path is the chokepoint that guarantees nothing unsafe reaches the renderer,
- * with no DB migration required. (PHA-860 review.)
+ * with no DB migration required. (#860 review.)
  */
 function sanitizeWireUrls(it: WireItem): WireItem {
   const sourceUrl = safeHttpUrl(it.sourceUrl);

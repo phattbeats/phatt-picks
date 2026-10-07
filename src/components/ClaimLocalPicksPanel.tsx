@@ -6,7 +6,7 @@ import { useState } from "react";
  * Steam-account-only: bring over picks made on a guest (local) account before
  * the user signed in with Steam. They paste the guest's login link (or raw
  * token) and we POST to /api/auth/local/claim, which moves those picks onto the
- * Steam account and retires the guest. See PHA-1232.
+ * Steam account and retires the guest. See #1232.
  */
 type Status =
   | { kind: "idle" }

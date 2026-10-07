@@ -1,5 +1,5 @@
 /**
- * verify-event-lifecycle - offline proof for PHA-950 (self-sustaining lifecycle).
+ * verify-event-lifecycle - offline proof for #950 (self-sustaining lifecycle).
  *
  * Proves the clock-driven derivation so no human flips the registry's `status`:
  *   • a Major staged `upcoming` is upcoming before its go-live instant and flips
@@ -136,7 +136,7 @@ check("among two archived, current picks the most-recently-concluded",
     ms("2027-01-01T00:00:00Z"),
   )?.eventId === 27);
 
-// — anticipation window (PHA-1048): a far-future upcoming Major must NOT hijack
+// — anticipation window (#1048): a far-future upcoming Major must NOT hijack
 //   the site the instant the prior one archives; the last Major stays the face
 //   until the next is within ANTICIPATION_LEAD_MS of go-live. nextMajor's go-live
 //   is 2026-08-25 (start Sep 1, firstLock-lead earlier), so its window opens ~Jul 11.
@@ -154,7 +154,7 @@ check("one ms before the window opens → still the archived Major",
 check("brand-new site (only a far-future upcoming, nothing archived) still shows it — no blank page",
   selectCurrentEvent([nextMajor], ms("2026-07-01T00:00:00Z"))?.eventId === 27);
 
-// — PHA-1046: upcoming countdown ranks by GENUINE start, not lead-adjusted
+// — #1046: upcoming countdown ranks by GENUINE start, not lead-adjusted
 //   go-live. A genuinely-sooner Major (sooner dates.start) must win even when a
 //   later one's match-day lock schedule pulls ITS go-live earlier via the 7d
 //   staging lead. sooner = eventId 30 (starts Aug 10, no lock published yet);
@@ -192,7 +192,7 @@ check("liveEvents(Jun6) is exactly [Cologne]", liveEvents(JUN6).length === 1 && 
 check("currentEvent(Jun6) is Cologne and effectively live", currentEvent(JUN6).eventId === 26 && currentEvent(JUN6).status === "live");
 check("currentEventId(Jun6) === 26", currentEventId(JUN6) === 26);
 check("resolveActiveEvent(Jun6) === 26 (clock-derived, same as before)", resolveActiveEvent(JUN6).eventId === 26);
-// PHA-1046: pages/routes now resolve the event PER REQUEST via currentEventId(),
+// #1046: pages/routes now resolve the event PER REQUEST via currentEventId(),
 // not a module-load-bound ACTIVE_EVENT_ID — so a between-Majors transition is
 // followed without a redeploy. currentEventId(now) is the value they read.
 check("currentEventId(Jun6) is 26 (the value pages read, per-request)", currentEventId(JUN6) === 26);

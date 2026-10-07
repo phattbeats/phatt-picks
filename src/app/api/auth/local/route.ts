@@ -1,7 +1,7 @@
 /**
  * Local-player session creation.
  *
- * Pre-PHA-839 this endpoint unconditionally created a Player row on every GET,
+ * Pre-#839 this endpoint unconditionally created a Player row on every GET,
  * so a refresh or a stray click after Steam sign-in produced a duplicate
  * leaderboard entry and silently overwrote the Steam session cookie. We now:
  *
@@ -12,7 +12,7 @@
  *          • Otherwise → redirect to /login/local for the name prompt.
  *   POST — handles the name-prompt form. Same session checks; on the create
  *          path, sanitize the submitted name and mint a Player row.
- *          Spam guards (PHA-881):
+ *          Spam guards (#881):
  *            1. CAPTCHA — Cloudflare Turnstile token verified server-side.
  *               Skipped when TURNSTILE_SECRET_KEY is unset (local dev).
  *            2. IP limit — no more than 5 local accounts per client IP.
@@ -40,7 +40,7 @@ import {
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 const IP_ACCOUNT_LIMIT = 5;
 
-// PHA-1045: how many reverse proxies sit in front of us — see trustedProxyHops()
+// #1045: how many reverse proxies sit in front of us — see trustedProxyHops()
 // in security-core. The right-most X-Forwarded-For entries are the only ones
 // added by infrastructure we control; the left-most is client-settable.
 const TRUSTED_PROXY_HOPS = trustedProxyHops();

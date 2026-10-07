@@ -1,10 +1,10 @@
 /**
  * buildPlayerFeed — the single server-side assembler for a player's universal
- * notification feed (PHA-1236 review extraction).
+ * notification feed (#1236 review extraction).
  *
  * This used to be copy-pasted into THREE places (GET /api/notifications, the SSE
  * stream via a route→route import, and the /notifications inbox page). The copies
- * drifted: the inbox page never got the PHA-1245 playoff-lock collapse, so it
+ * drifted: the inbox page never got the #1245 playoff-lock collapse, so it
  * would have surfaced one "locks soon" entry per playoff round (QF/SF/GF) while
  * the bell showed a single "Playoffs" entry. Hoisting the one true implementation
  * here keeps the bell, the stream, and the inbox byte-for-byte identical.
@@ -108,7 +108,7 @@ export async function buildPlayerFeed(
   rawEntries.push(...reactionEntries(reactionRows, label));
 
   // Playoffs are ONE bracket Pick'Em (QF/SF/GF lock together at the first QF), so
-  // they get a SINGLE "Playoffs locks soon" entry, not one per round (PHA-1245) —
+  // they get a SINGLE "Playoffs locks soon" entry, not one per round (#1245) —
   // mirrors the push reminder collapse in stageLocksFromSchedule.
   const playoffIds = playoffSectionIds(event.playoffSchedule);
   let earliestPlayoff: { sectionId: number; lockAtMs: number } | null = null;
@@ -160,7 +160,7 @@ export async function buildPlayerFeed(
     if (e) rawEntries.push(e);
   }
 
-  // Challenge coins earned (PHA-1278) — one entry per concluded Major the player
+  // Challenge coins earned (#1278) — one entry per concluded Major the player
   // took part in. getPlayerChallengeCoins is cross-event and short-circuits the
   // live event, so this is empty (and cheap) until a Major archives.
   const coins = await getPlayerChallengeCoins(playerId, nowMs);

@@ -1,5 +1,5 @@
 /**
- * verify-challenge-coin — offline proof for PHA-1278 (challenge coins).
+ * verify-challenge-coin — offline proof for #1278 (challenge coins).
  *
  * The collectible Major-logo coin track. This pins the PURE earn + tier logic
  * (challenge-coin-core) so the rules Brandon confirmed can't silently drift:

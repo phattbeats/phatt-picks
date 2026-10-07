@@ -1,5 +1,5 @@
 /**
- * verify-source-state-claim — PHA-922 health-pass regression guard.
+ * verify-source-state-claim — #922 health-pass regression guard.
  *
  * The SourceState refresh-slot claim is done with a raw `INSERT OR IGNORE`.
  * `SourceState.id` (@default(cuid())) and `updatedAt` (@updatedAt) are NOT NULL

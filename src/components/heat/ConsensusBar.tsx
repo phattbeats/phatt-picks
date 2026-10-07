@@ -1,5 +1,5 @@
 /**
- * ConsensusBar (PHA-889) — field-wide pick distribution for one slot.
+ * ConsensusBar (#889) — field-wide pick distribution for one slot.
  *
  * Renders "X% of players picked this team" as a stacked set of labeled bars,
  * most-popular first. Highlights the viewer's own pick and marks the winning

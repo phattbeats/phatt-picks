@@ -12,12 +12,12 @@ import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { currentEventId } from "@/lib/events-core";
 
 export default async function LeaderboardPage() {
-  // Per-request active event (PHA-1046) — follows the clock across Majors, no redeploy.
+  // Per-request active event (#1046) — follows the clock across Majors, no redeploy.
   const EVENT_ID = currentEventId();
   const layout = getCommittedLayout();
   const session = await getSession();
 
-  // Live driver (PHA-866): atomic 30s claim → deferred background ingest, so the
+  // Live driver (#866): atomic 30s claim → deferred background ingest, so the
   // board never sits frozen mid-event. No cron, no added latency (the slow ingest
   // runs past the response via `after`).
   await refreshOutcomesOnRead(EVENT_ID);

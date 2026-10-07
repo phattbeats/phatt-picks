@@ -1,5 +1,5 @@
 /**
- * recap-pushes — fan-out push when a stage recap becomes available (PHA-1239).
+ * recap-pushes — fan-out push when a stage recap becomes available (#1239).
  *
  * Runs on every scheduler tick (instrumentation.ts). An in-process `fired` Set
  * ensures we send at most once per recap section per process lifetime (same

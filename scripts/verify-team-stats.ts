@@ -1,5 +1,5 @@
 /**
- * verify-team-stats — offline proof for PHA-893 team stats & standings.
+ * verify-team-stats — offline proof for #893 team stats & standings.
  *
  * The dossier (roster / world standing / last 3 matches) is a frozen HLTV
  * snapshot keyed by Valve pickid, not a live feed. This script asserts the

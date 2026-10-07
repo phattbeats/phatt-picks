@@ -7,25 +7,25 @@ you change, in roughly the order events happen in time.
 If you do nothing else, do **Phase 1** (layout + schedule) — that's what makes the
 app *work* for the new event. The rest sharpens it.
 
-> **The registry (PHA-948).** `src/lib/events-core.ts` is the committed index of
+> **The registry (#948).** `src/lib/events-core.ts` is the committed index of
 > events: `EVENTS[eventId] → { slug, name, status, dates, lockSchedule,
 > matchWindows, sectionSources, sectionNames, fixtures, teamMaps }`, plus
 > `resolveActiveEvent(now)` / `getEventConfig(id)` / `currentEventId(now)`. Every page
 > and API route resolves `currentEventId(now)` **per request** instead of a hardcoded
-> `26`, so the active event is decided in **one place** (PHA-1046 removed the
+> `26`, so the active event is decided in **one place** (#1046 removed the
 > module-load-bound `ACTIVE_EVENT_ID` and `SECTION_SOURCES` — never cache the active
 > id at module scope). With the self-sustaining lifecycle
-> (PHA-950) you no longer flip `status` by hand on go-live day: stage the new
+> (#950) you no longer flip `status` by hand on go-live day: stage the new
 > entry as `status: "upcoming"` with real `dates` + `lockSchedule` and it goes
 > live on its staging lead while the old one archives at its `dates.end`.
 > **Seed the next Major as early as you like** —
 > the off-season *anticipation window* (`ANTICIPATION_LEAD_MS` ≈ 45 days,
-> PHA-1048) keeps the just-archived Major as the face of the site until the new
+> #1048) keeps the just-archived Major as the face of the site until the new
 > one is near go-live, so a registry entry staged 5 months out doesn't blank the
 > site with an empty countdown the instant the prior Major ends; the hand-over to
 > the countdown happens on its own ~6 weeks before the new event. `EventConfig` now
 > also carries `playoffSchedule` (sectionId → per-game ISO times, mirrors
-> `COLOGNE_PLAYOFF_SCHEDULE`'s shape). **The cutover is DONE (PHA-1327).** Every call
+> `COLOGNE_PLAYOFF_SCHEDULE`'s shape). **The cutover is DONE (#1327).** Every call
 > site that used to lean on `lock-schedule-core.ts`'s Cologne-shaped default
 > parameters now resolves the active event via `currentEventId()`/`currentEvent()`/
 > `getEventConfig()` and threads that event's own `lockSchedule` / `matchWindows` /
@@ -84,7 +84,7 @@ list and a sample predictions blob — refresh them from the same capture.
 
 ### 1b. Lock schedule + match windows — `src/lib/lock-schedule-core.ts`
 
-> **PHA-1327: the cutover is done — call sites read the registry, not this file's
+> **#1327: the cutover is done — call sites read the registry, not this file's
 > defaults.** Every page/route/lib now resolves the active event (`currentEvent()` /
 > `getEventConfig()`) and passes **that event's own** `lockSchedule` / `matchWindows` /
 > `playoffSchedule` into `lock-schedule-core`'s functions. So re-pointing at a new Major
@@ -108,7 +108,7 @@ Three committed constants (today, Cologne's):
   105: "2026-06-02T10:30:00Z", // Stage I — Jun 2, 12:30 CEST first match
   ```
 - **`COLOGNE_PLAYOFF_SCHEDULE`**: `sectionId → [game-start ISO instants]` for the playoff
-  sections (108/109/110), committed from the published bracket (PHA-1007). `derivePlayoffLocks`
+  sections (108/109/110), committed from the published bracket (#1007). `derivePlayoffLocks`
   folds the earliest game of each into `COLOGNE_LOCK_SCHEDULE`, so the whole bracket locks at the
   first quarterfinal. Leave it **empty** and the playoffs stay dark (bracket runs off the layout,
   not the clock); fill it and the schedule + countdown + reminders light up everywhere at once.
@@ -116,7 +116,7 @@ Three committed constants (today, Cologne's):
   how the rest of the app knows QF/SF/GF are one bracket — so just filling it is enough; you do
   not maintain a separate playoff-id list for the reminders.
 
-  > **Playoffs are ONE Pick'Em stage — ONE reminder (PHA-1245).** The QF/SF/GF rounds share a
+  > **Playoffs are ONE Pick'Em stage — ONE reminder (#1245).** The QF/SF/GF rounds share a
   > single bracket picker that all locks together at the first quarterfinal, so the pre-lock
   > reminder job (`stageLocksFromSchedule`) **collapses every playoff section into a single
   > "Playoffs" cutoff** keyed at the earliest playoff game. A player gets one "Playoffs picks
@@ -129,7 +129,7 @@ Three committed constants (today, Cologne's):
   *played*. Together with the lock schedule this drives the crawl window
   (`isWithinRefreshWindow`): it **opens 24h before the stage's lock** and **closes at the
   window `end`**. So the live bracket + standings go live the day before a stage starts
-  (PHA-943: "the bracket should go live 24 hours before the start of the stage"), and stop
+  (#943: "the bracket should go live 24 hours before the start of the stage"), and stop
   crawling once it's decided. **Fails open** for undated sections (revealed → keep
   refreshing), so an unset window just means "no auto-close", not "broken".
 
@@ -154,9 +154,9 @@ and reveals/scores against the Valve answer key. **This is the minimum viable re
 ## Phase 2 — the live boards (HLTV scrape)
 
 ### 2a. Section → HLTV event URL — `src/lib/events-core.ts` (registry)
-After PHA-948, the per-section HLTV URLs live in the event registry (`events-core.ts →
+After #948, the per-section HLTV URLs live in the event registry (`events-core.ts →
 EventConfig.sectionSources`), not in `swiss-results.ts` — there is no `SECTION_SOURCES`
-constant anymore (removed in PHA-1046). `swiss-results.ts` resolves them per request via
+constant anymore (removed in #1046). `swiss-results.ts` resolves them per request via
 its `sectionSourcesFor(eventId)` helper (`getEventConfig(eventId).sectionSources`). Add
 each Swiss section's URL to the registry entry for the new event:
 ```ts
@@ -195,8 +195,8 @@ so they can only be filled after Phase 1's layout lands.
 |---|---|---|
 | **Logos** | `src/fixtures/cologne-logos.json` | `pickid → { name, image }`. **Generated** — run `node scripts/build-logos.ts`, which resolves Steam CDN images. The manifest goes **stale when the upstream feed rotates**; if logos 404 site-wide, re-run it. |
 | **Regions** | `src/lib/regions-core.ts` | `TEAM_REGIONS`: `pickid → "EU"\|"NA"\|"SA"\|"ASIA"\|"OCE"` (CIS folds into EU). Drives the region chips. |
-| **Team stats** | `src/lib/team-stats-core.ts` **+ `team-stats-sources.ts`** | `TEAM_STATS` (in `-core`): `pickid → { roster, world rank, recent W-L, hltvUrl }`, a **frozen HLTV snapshot** with a `TEAM_STATS_AS_OF` date — the fallback + roster/rank base. **As of PHA-921 the `recent[]` (Last-5) auto-refreshes live** during a stage via `team-stats.ts` + the **`TEAM_SOURCES`** map in `team-stats-sources.ts` (`pickid → HLTV profile URL`), so per major you update **both** files. Roster/rank still re-gathered by hand (`scripts/gather-team-stats.ts`, `TEAM_STATS_AS_OF` bump). Powers the dossier drawer. See `PRE-MAJOR-CHECKLIST.md` §3. |
-| **Challenge-coin art** | `public/coins/<event-slug>-{diamond,gold,silver,bronze}.png` | The four front faces for the Major's collectible coin (PHA-1278), keyed by the event **slug** (`coinArtSrc(slug, tier)` in `challenge-coin-core.ts`). The reverses `public/coins/_back-{tier}.png` are **shared** across Majors — don't duplicate them. Coins are pure-derived (no DB, no per-team map); the only per-major input is these four images. Without them the shelf falls back to a monogram. |
+| **Team stats** | `src/lib/team-stats-core.ts` **+ `team-stats-sources.ts`** | `TEAM_STATS` (in `-core`): `pickid → { roster, world rank, recent W-L, hltvUrl }`, a **frozen HLTV snapshot** with a `TEAM_STATS_AS_OF` date — the fallback + roster/rank base. **As of #921 the `recent[]` (Last-5) auto-refreshes live** during a stage via `team-stats.ts` + the **`TEAM_SOURCES`** map in `team-stats-sources.ts` (`pickid → HLTV profile URL`), so per major you update **both** files. Roster/rank still re-gathered by hand (`scripts/gather-team-stats.ts`, `TEAM_STATS_AS_OF` bump). Powers the dossier drawer. See `PRE-MAJOR-CHECKLIST.md` §3. |
+| **Challenge-coin art** | `public/coins/<event-slug>-{diamond,gold,silver,bronze}.png` | The four front faces for the Major's collectible coin (#1278), keyed by the event **slug** (`coinArtSrc(slug, tier)` in `challenge-coin-core.ts`). The reverses `public/coins/_back-{tier}.png` are **shared** across Majors — don't duplicate them. Coins are pure-derived (no DB, no per-team map); the only per-major input is these four images. Without them the shelf falls back to a monogram. |
 
 Run their verifiers: `verify-regions.ts`, `verify-team-stats.ts`, `verify-m6-logos.ts`.
 
@@ -210,11 +210,11 @@ Once live, each stage start is a small recurring routine:
    answer key resolves (the on-read outcome driver + Valve oracle handle this; watch a
    `/leaderboard` load to confirm `StageOutcome` rows appear). **Playoffs resolve headlessly**
    now — `refreshLiveResultsTick` drives `ingestOutcomes` (the Valve answer key) on every tick,
-   so QF/SF/GF turn green without an owner trigger (PHA-1273). **If a winner never turns green
+   so QF/SF/GF turn green without an owner trigger (#1273). **If a winner never turns green
    while QF1/QF2 lag QF3/QF4** ("temporally backwards"), it's the **seed-swap / off-roster
    rejection class**, not the clock — the playoff bracket is dynamically seeded so the committed
    fixture roster can drift from Valve's live bracket. Trust the live field; do **not** patch the
-   fixture seeds. Full mechanism + the PHA-1109 (Swiss) / PHA-1273 (playoff) history in
+   fixture seeds. Full mechanism + the #1109 (Swiss) / #1273 (playoff) history in
    `docs/GOTCHAS.md` → "Playoff (and off-roster Swiss) winners never turn green".
 2. **Add the stage's HLTV URL** to `sectionSources` in the event registry entry (`events-core.ts`) if not already mapped.
 3. **Warm the caches** after any deploy during the stage — `GET /api/standings/refresh`
@@ -228,19 +228,19 @@ Once live, each stage start is a small recurring routine:
 ## The "did I get them all?" checklist
 
 ```
-[ ] events-core.ts EVENTS      → new registry entry, status:"upcoming"  (PHA-948)
-                                  (no hand flip — the lifecycle lights it live, PHA-950)
+[ ] events-core.ts EVENTS      → new registry entry, status:"upcoming"  (#948)
+                                  (no hand flip — the lifecycle lights it live, #950)
 [ ] cologne-layout.json        → new event's sections + pickids        (Phase 1a)
 [ ] cologne-items/predictions  → refreshed from same capture           (Phase 1a)
 [ ] registry lockSchedule      → each Swiss stage's first-match instant, on the new
                                   EventConfig entry, NOT edited into COLOGNE_LOCK_SCHEDULE
-                                  (Phase 1b, PHA-1327)
+                                  (Phase 1b, #1327)
 [ ] registry playoffSchedule   → per-game playoff times (derives locks), on the new
-                                  EventConfig entry                      (Phase 1b, PHA-1327)
+                                  EventConfig entry                      (Phase 1b, #1327)
 [ ] registry matchWindows      → each stage's played date-span, on the new
-                                  EventConfig entry                      (Phase 1b, PHA-1327)
+                                  EventConfig entry                      (Phase 1b, #1327)
 [ ] sectionSources (events-core.ts registry) → HLTV event URL per Swiss stage (Phase 2a)
-[ ] verify-events.ts GREEN     → reveal config consistent (lock∩window⊇source) (PHA-943)
+[ ] verify-events.ts GREEN     → reveal config consistent (lock∩window⊇source) (#943)
 [ ] cologne-logos.json         → re-run build-logos.ts                  (Phase 3)
 [ ] TEAM_REGIONS               → pickid → region                        (Phase 3)
 [ ] TEAM_STATS + AS_OF         → frozen HLTV snapshot                   (Phase 3)

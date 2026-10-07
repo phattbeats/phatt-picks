@@ -1,5 +1,5 @@
 /**
- * SSE stream for real-time notification delivery (PHA-1241).
+ * SSE stream for real-time notification delivery (#1241).
  *
  * GET /api/notifications/stream — persistent text/event-stream connection per
  * signed-in player. Replaces the 45s client-side poll in NotificationBell with
@@ -14,7 +14,7 @@
  * unread count or the set of item ids + their isNew flags — generatedAtMs is
  * excluded from the fingerprint so a no-op tick doesn't spam the wire.
  *
- * CPU SAFETY (PHA-1244). A previous version's poll loop exited ONLY on
+ * CPU SAFETY (#1244). A previous version's poll loop exited ONLY on
  * req.signal.aborted, and its sole controller.enqueue() lived inside the same
  * try/catch that swallowed "transient DB errors" — so a write to an already-
  * disconnected client was silently ignored and the loop polled the DB forever.

@@ -1,5 +1,5 @@
 /**
- * verify-event-freeze — offline proof for PHA-954 (reconcile B↔C: the freeze
+ * verify-event-freeze — offline proof for #954 (reconcile B↔C: the freeze
  * keys on EFFECTIVE status, fired by the real Grand Final).
  *
  * event-freeze.ts itself is an I/O module (it counts StageOutcome rows), so the
@@ -81,7 +81,7 @@ check("today: live drivers RUN", shouldRunLiveDriver(effToday) === true);
 check("today: reveal NOT forced (per-stage gate alone decides)", isRevealForced(effToday) === false);
 
 // ── the real Grand Final fires archive — but only AFTER the 48h grace ───────
-// Brandon's safety net (PHA-954): the trophy lifts, the site stays warm 48h
+// Brandon's safety net (#954): the trophy lifts, the site stays warm 48h
 // (news updates, pickems browsable, a re-ingest can settle), THEN it freezes.
 const gfResolvedAt = ms("2026-06-21T20:00:00Z"); // a plausible Cologne GF instant
 check("GRAND_FINAL_ARCHIVE_GRACE_MS is 48h", GRAND_FINAL_ARCHIVE_GRACE_MS === 48 * 60 * 60_000);

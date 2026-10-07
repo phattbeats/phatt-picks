@@ -1,9 +1,9 @@
 /**
  * Event lifecycle — derive an event's *effective* status from the clock so the
- * site runs itself across Majors (PHA-950, multi-major workstream C).
+ * site runs itself across Majors (#950, multi-major workstream C).
  *
  * THE PROBLEM THIS SOLVES
- * Workstream A (PHA-948) gave every Major a registry entry with a hand-set
+ * Workstream A (#948) gave every Major a registry entry with a hand-set
  * `status: "upcoming" | "live" | "archived"`. That makes a human flip a switch:
  * someone has to remember to mark Cologne `archived` the morning after the Grand
  * Final and the next Major `live` the week its picks open. This module removes
@@ -76,7 +76,7 @@ export const DEFAULT_GO_LIVE_LEAD_MS = 7 * 24 * 60 * 60_000;
 /**
  * How long a Major lingers as `live` AFTER its Grand Final resolves before it
  * archives into read-only "old Major" history — the post-final grace window
- * (PHA-954, Brandon's safety net). The instant the trophy lifts is NOT the
+ * (#954, Brandon's safety net). The instant the trophy lifts is NOT the
  * instant the site should go cold: for these 48 hours the news/standings drivers
  * keep updating, a late-corrected or re-ingested outcome can settle, and players
  * can still browse their pickems while the result is fresh. Only once the grace
@@ -87,7 +87,7 @@ export const GRAND_FINAL_ARCHIVE_GRACE_MS = 48 * 60 * 60_000;
 
 /**
  * How close to its go-live an `upcoming` Major must be before it becomes the
- * event the SITE SHOWS — the off-season anticipation window (PHA-1048). It does
+ * event the SITE SHOWS — the off-season anticipation window (#1048). It does
  * NOT change when an event goes live (that's `goLiveMs`); it only governs which
  * event `selectCurrentEvent` surfaces while none is live. The motivation: the
  * next Major is pre-seeded in the registry the moment its dates are known —
@@ -243,10 +243,10 @@ export function selectLiveEvents(
  * The single event the picker / pages should show — robust across the gaps that
  * a self-sustaining, multi-Major site has. Preference order:
  *   1. an effectively-live event (the soonest go-live among them, if several);
- *   2. else the soonest-STARTING upcoming event (by `dates.start`, PHA-1046)
+ *   2. else the soonest-STARTING upcoming event (by `dates.start`, #1046)
  *      that is WITHIN its anticipation window (`ANTICIPATION_LEAD_MS` of go-live)
  *      — so we count down to the Major that genuinely plays next once it's near,
- *      but a Major seeded months out doesn't yet hijack the site (PHA-1048);
+ *      but a Major seeded months out doesn't yet hijack the site (#1048);
  *   3. else the most-recently-concluded ARCHIVED event (so the off-season keeps
  *      showing the last Major — its results stay the face of the site — rather
  *      than a half-built future event or a blank page);
@@ -277,7 +277,7 @@ export function selectCurrentEvent(
     .sort((a, b) => a.goLive - b.goLive || a.e.eventId - b.e.eventId);
   if (live.length) return live[0].e;
 
-  // Upcoming events. PHA-1046: rank by GENUINE `dates.start`, NOT lead-adjusted
+  // Upcoming events. #1046: rank by GENUINE `dates.start`, NOT lead-adjusted
   // go-live. `goLiveMs` is `min(start, firstLock − lead)`, so go-live is pulled up
   // to the staging lead (7d) ahead of an event's start; ranking on go-live lets a
   // LATER-starting Major outrank a genuinely-sooner one when its match-day lock
@@ -288,7 +288,7 @@ export function selectCurrentEvent(
   // starts sort last so a misconfig never hijacks the countdown; go-live then
   // eventId break ties.
   //
-  // PHA-1048: split on the anticipation window so a Major seeded months out (the
+  // #1048: split on the anticipation window so a Major seeded months out (the
   // day its dates were known) does not preempt a just-finished one — it becomes
   // the face only once within ANTICIPATION_LEAD_MS of its go-live.
   const startKey = (t: { start: number }) =>

@@ -1,5 +1,5 @@
 /**
- * Next.js instrumentation hook (PHA-929) — the in-process pre-lock reminder
+ * Next.js instrumentation hook (#929) — the in-process pre-lock reminder
  * scheduler.
  *
  * WHY in-process: the reminder job needs prisma + web-push against the live DB.
@@ -8,10 +8,10 @@
  * can't run the TypeScript job, and the Dockerfile CMD only runs
  * `prisma db push && node server.js`. Next compiles instrumentation + its imports
  * into server.js, so registering a timer here is the one place the job reliably
- * runs in prod with zero extra infrastructure. This closes PHA-929: opt-in
+ * runs in prod with zero extra infrastructure. This closes #929: opt-in
  * worked, but nothing ever scheduled the send.
  *
- * GATING (PHA-996, was opt-in under PHA-929): ON by default. The opt-in env
+ * GATING (#996, was opt-in under #929): ON by default. The opt-in env
  * lived only on the live container, so an Unraid-template Force-Update silently
  * dropped it and reminders died with no code change to catch it. The committed
  * lock schedule + reminderFireKey dedup already make an armed scheduler safe,
@@ -28,7 +28,7 @@ export async function register(): Promise<void> {
   // prisma + web-push only run in the Node.js server runtime (not edge/browser).
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
-  // PHA-982 — session-secret sanity at boot. A missing or placeholder
+  // #982 — session-secret sanity at boot. A missing or placeholder
   // NEXTAUTH_SECRET silently invalidates EVERY existing phatt_session cookie
   // (the real mechanism behind "the container reset logged everyone out"): the
   // cookie verifies against the secret, so a new/blank secret = a mass logout.
@@ -48,7 +48,7 @@ export async function register(): Promise<void> {
     }
   }
 
-  // PHA-1045 — captcha fail-open guard. verifyTurnstile() returns true when
+  // #1045 — captcha fail-open guard. verifyTurnstile() returns true when
   // TURNSTILE_SECRET_KEY is unset (a deliberate local-dev skip), so in
   // production a missing key means signup CAPTCHA is silently DISABLED. Given
   // this app's Force-Update env-drift history, shout it at boot the same way the
@@ -65,7 +65,7 @@ export async function register(): Promise<void> {
     console.log("[captcha] TURNSTILE_SECRET_KEY present — signup CAPTCHA enforced.");
   }
 
-  // PHA-1109 — live results driver. The on-read standings crawl + StageOutcome
+  // #1109 — live results driver. The on-read standings crawl + StageOutcome
   // bridge defer their work via after(), which does not fire reliably in the
   // standalone server, so during a live stage the leaderboard / locked-picks can
   // freeze (a 0-3 elimination stayed un-green and unscored for ~19h because the

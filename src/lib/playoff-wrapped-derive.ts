@@ -1,5 +1,5 @@
 /**
- * Playoffs Wrapped — storyline auto-derivation (PHA-1274).
+ * Playoffs Wrapped — storyline auto-derivation (#1274).
  *
  * Brandon: "it needs to check if it's wrapped, start finding the storylines,
  * and go from there." This module is that brain. Given the resolved playoff

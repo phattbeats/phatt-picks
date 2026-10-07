@@ -5,14 +5,14 @@
  * Deliberately cache-light: this is a live, server-rendered app, so we never want
  * to serve stale picks/scores. We cache nothing.
  *
- * BYPASS DYNAMIC REQUESTS (PHA-1269). Earlier this handler called
+ * BYPASS DYNAMIC REQUESTS (#1269). Earlier this handler called
  * `respondWith(fetch(req))` for EVERY GET. That is strictly worse than not
  * interposing: it does no caching, yet routes all traffic through the SW thread,
  * and — critically — it piped the long-lived notifications SSE stream
  * (`/api/notifications/stream`, an EventSource the header bell holds open) through
  * the worker. A streaming `respondWith` keeps the service worker alive holding the
  * response's buffers in the SW's OWN heap, which the page-level heap reclaim
- * (AutoRefresh, PHA-1268) can never reach — so over a multi-hour live session,
+ * (AutoRefresh, #1268) can never reach — so over a multi-hour live session,
  * across the server's periodic stream recycles, that memory accrues unbounded and
  * starves low-RAM machines (real-user report: "freezes the whole browser"). The fix: do NOT
  * call respondWith for streams / API / RSC / static — let the browser fetch them
@@ -37,7 +37,7 @@ self.addEventListener("activate", (event) => {
       await Promise.all(keys.map((k) => caches.delete(k)));
       await self.clients.claim();
 
-      // BROADCAST RECOVERY (PHA-1269). A fresh worker means a new deploy. Bounce
+      // BROADCAST RECOVERY (#1269). A fresh worker means a new deploy. Bounce
       // every open client to the current build so anyone stuck on an old cached
       // version is pulled onto the fix — this is the one mechanism that reaches an
       // installed PWA / SW-controlled tab even when its HTML is cached, because the
@@ -75,7 +75,7 @@ self.addEventListener("activate", (event) => {
 // An empty fetch listener still counts as a fetch handler for installability,
 // while letting the browser do all networking natively.
 //
-// WHITE-SCREEN FIX (PHA-1269): the previous version intercepted document
+// WHITE-SCREEN FIX (#1269): the previous version intercepted document
 // navigations and, on any fetch hiccup, returned `Response.error()`. In an
 // installed PWA (standalone, no address bar) or on a flaky mobile connection,
 // that turns a single transient navigation failure into a hard blank page with

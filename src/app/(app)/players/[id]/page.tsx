@@ -65,15 +65,15 @@ export default async function PlayerProfilePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
+  const EVENT_ID = currentEventId(); // per-request active event (#1046)
   const event = getEventConfig(EVENT_ID);
   const { id } = await params;
   const layout = getCommittedLayout();
   const teamMap = buildTeamMap(layout);
   const session = await getSession();
-  await refreshOutcomesOnRead(EVENT_ID); // live driver (PHA-866) — shared 30s claim
+  await refreshOutcomesOnRead(EVENT_ID); // live driver (#866) — shared 30s claim
 
-  // Published lock schedule (PHA-898): reveal a started stage's picks even before
+  // Published lock schedule (#898): reveal a started stage's picks even before
   // Valve flips picks_allowed or a result lands. Dynamic RSC — time read intended.
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now();
@@ -83,7 +83,7 @@ export default async function PlayerProfilePage({
 
   const isSelf = session?.playerId === player.id;
 
-  // PHA-954: a finished (effectively archived) Major is public history — reveal
+  // #954: a finished (effectively archived) Major is public history — reveal
   // every stage regardless of its per-stage lock. No-op while live (false).
   const eventArchived = await isRevealForcedById(EVENT_ID, nowMs);
 
@@ -110,7 +110,7 @@ export default async function PlayerProfilePage({
     pickMap[p.sectionId][p.groupId][p.slotIndex] = p.pickId;
   }
 
-  // The Bleachers (PHA-1211): every reaction landed on THIS player's picks, one
+  // The Bleachers (#1211): every reaction landed on THIS player's picks, one
   // query, indexed by pick. Senders ride along for the viewer's own "mine" flag
   // and the resolve-time unmask, but tallyReactions only ever emits public counts
   // for everyone else. A signed-in viewer who isn't the owner can drop a stamp.
@@ -135,7 +135,7 @@ export default async function PlayerProfilePage({
   const score = scorePlayer(layout, pickMap, outcomeMap).total;
   const coinTier = visibleCoinTier(player);
 
-  // Challenge coins (PHA-1278) — the collectible track: one struck Major coin
+  // Challenge coins (#1278) — the collectible track: one struck Major coin
   // per event this player took part in, minted when the Major concludes. Empty
   // while the live event is still in flight (adds no DB work until it archives).
   const challengeCoins = await getPlayerChallengeCoins(player.id, nowMs);
@@ -146,8 +146,8 @@ export default async function PlayerProfilePage({
     where: { eventId: EVENT_ID },
     select: { playerId: true, sectionId: true, groupId: true, slotIndex: true, pickId: true },
   });
-  // Field-wide pick distribution (PHA-889), measured per Swiss bucket so all
-  // 0:3 calls for a team count together regardless of slot (PHA-900 follow-up).
+  // Field-wide pick distribution (#889), measured per Swiss bucket so all
+  // 0:3 calls for a team count together regardless of slot (#900 follow-up).
   // Only surfaced on revealed (post-lock) groups below, so it never leaks live
   // picks or invites herding.
   const consensus = buildBucketConsensus(allPicks);
@@ -170,7 +170,7 @@ export default async function PlayerProfilePage({
   const leaderScore = standings[0]?.score ?? 0;
   const fieldSize = standings.length;
 
-  // Live partial W-L per Swiss section (PHA-951) so a 3:0/0:3 pick strikes red as
+  // Live partial W-L per Swiss section (#951) so a 3:0/0:3 pick strikes red as
   // soon as the team's record rules its bucket out — for THIS player too, not just
   // your own /picks view. Reads the cached HLTV standings (no crawl); empty when
   // cold. Keyed by section so each stage is judged against its own records.
@@ -186,9 +186,9 @@ export default async function PlayerProfilePage({
 
   // Accuracy — correct picks over resolved picks (only counts decided slots).
   // Swiss buckets are interchangeable: a pick is correct if its team landed
-  // ANYWHERE in the bucket, not at its exact slot (PHA-946/918). Per-slot
+  // ANYWHERE in the bucket, not at its exact slot (#946/918). Per-slot
   // comparison here under-counts correct Swiss picks and disagrees with the
-  // set-based scorer that drives Points/Rank. Playoffs stay per-slot. (PHA-1015)
+  // set-based scorer that drives Points/Rank. Playoffs stay per-slot. (#1015)
   let resolved = 0;
   let correct = 0;
   for (const section of layout.sections) {
@@ -236,7 +236,7 @@ export default async function PlayerProfilePage({
         <span className="eyebrow-mono">{isSelf ? "YOUR PROFILE" : "PLAYER PROFILE"}</span>
       </div>
 
-      {/* Hero (mockup 06). Self gets a gear cog → /settings (PHA-1275): the
+      {/* Hero (mockup 06). Self gets a gear cog → /settings (#1275): the
           profile is the clean stat card, the gear is the one door to settings. */}
       <section className="profile-hero brk" style={{
         position: "relative",
@@ -316,10 +316,10 @@ export default async function PlayerProfilePage({
         </div>
       )}
 
-      {/* Challenge coins (PHA-1278) — collectible Major-logo shelf */}
+      {/* Challenge coins (#1278) — collectible Major-logo shelf */}
       <ChallengeCoinShelf coins={challengeCoins} isSelf={isSelf} />
 
-      {/* Your Majors (PHA-1283) — moved off Settings onto your own profile, where
+      {/* Your Majors (#1283) — moved off Settings onto your own profile, where
           the rest of your record already lives. Self only. */}
       {isSelf && (
         <Link
@@ -368,11 +368,11 @@ export default async function PlayerProfilePage({
       )}
 
       {/* Per-stage picks (reveal-gated against non-self viewers). Each stage is a
-          collapsed card by default (PHA-1283) so the profile opens condensed, not
+          collapsed card by default (#1283) so the profile opens condensed, not
           as a wall of boards — tap a stage to expand it. Swiss stages render in
           the SAME locked-picks UI as /picks — the 3:0 / advance / 0:3 buckets,
           each call green when confirmed right, red when wrong OR no longer
-          winnable (PHA-902). Playoffs keep the per-match cards. */}
+          winnable (#902). Playoffs keep the per-match cards. */}
       <div className="eyebrow-mono" style={{ display: "block", marginTop: 2 }}>STAGES</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {layout.sections.map((section) => {
@@ -484,7 +484,7 @@ export default async function PlayerProfilePage({
                     ) : (
                       <div style={{ padding: 14 }}>
                         {/* Revealed playoff picks render as full-width blocks so the
-                            Bleachers strip (PHA-1211) sits beneath each pick. */}
+                            Bleachers strip (#1211) sits beneath each pick. */}
                         <div className="pickbleach-list">
                           {group.picks.map((slot) => {
                             const pick = groupPicks[slot.index];
@@ -495,7 +495,7 @@ export default async function PlayerProfilePage({
                             const typeLabel = bucketLabelFor(section.sectionid, group, slot.index);
                             // Consensus % stays gated on the LOCK (not isSelf): showing the
                             // field split while a stage is still open invites herd-following
-                            // even on your own profile (PHA-889). Your pick still shows; only
+                            // even on your own profile (#889). Your pick still shows; only
                             // the % waits for lock — same discipline as the reveal gate.
                             const share = pick && lockRevealed
                               ? bucketShareFor(consensus, section.sectionid, group.groupid, slot.index, pick)
@@ -538,7 +538,7 @@ export default async function PlayerProfilePage({
                                 </div>
                                 {/* Playoffs stay reactable match-by-match: the bracket is
                                     the live event, so a resolved QF/SF must NOT silently
-                                    lock reactions (PHA-1262). Swiss read-only-on-resolve
+                                    lock reactions (#1262). Swiss read-only-on-resolve
                                     is handled in the Swiss branch above. */}
                                 {lockRevealed && pick != null && (
                                   <BleachersStrip

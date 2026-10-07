@@ -1,5 +1,5 @@
 /**
- * Rank-snapshot logic (PHA-858) — pure.
+ * Rank-snapshot logic (#858) — pure.
  *
  * A RankSnapshot freezes the cumulative standings at a stage resolution so we
  * can answer two things the live tables can't:

@@ -1,10 +1,10 @@
 /**
- * verify-events - offline proof for PHA-948 (event registry + active event).
+ * verify-events - offline proof for #948 (event registry + active event).
  *
  * The registry is the backbone of multi-major support. This proves:
  *   • exactly one event is `live`, and resolveActiveEvent() returns it;
  *   • currentEventId() equals that event's id (the value the ~15 pages/routes
- *     resolve PER REQUEST since PHA-1046 — no module-load-bound ACTIVE_EVENT_ID);
+ *     resolve PER REQUEST since #1046 — no module-load-bound ACTIVE_EVENT_ID);
  *   • getEventConfig() round-trips by id and is null for an unregistered id;
  *   • the active event's identity matches the committed layout fixture
  *     (eventId === result.event, name === result.name) — the registry can't
@@ -64,7 +64,7 @@ check("exactly one live event in the registry", liveEntries.length === 1);
 const active = resolveActiveEvent();
 check("resolveActiveEvent() returns the live event", active.status === "live");
 check("active event id is 26 (Cologne — current behavior)", active.eventId === 26);
-check("currentEventId() === active.eventId (per-request, PHA-1046)", currentEventId() === active.eventId);
+check("currentEventId() === active.eventId (per-request, #1046)", currentEventId() === active.eventId);
 check("currentEventId() === 26 (the value pages resolve per request)", currentEventId() === 26);
 
 // — getEventConfig round-trips and is honest about misses —
@@ -95,7 +95,7 @@ check("fixtures.layout names the committed fixture", active.fixtures.layout === 
 check("fixtures.logos names the committed manifest", active.fixtures.logos === "cologne-logos");
 check("teamMaps record the owning modules", !!active.teamMaps.regions && !!active.teamMaps.stats && !!active.teamMaps.sources);
 
-// — PHA-1055: the next Major (PGL Singapore 2026) is pre-seeded as `upcoming`,
+// — #1055: the next Major (PGL Singapore 2026) is pre-seeded as `upcoming`,
 //   fully gated (no section-keyed config yet) so it has zero impact on live
 //   Cologne and both CI guards pass on an empty config. —
 const singapore = getEventConfig(27);
@@ -121,7 +121,7 @@ check("seeding Singapore did not disturb the single live event (Cologne)",
   Object.values(EVENTS).filter((e) => e.status === "live").length === 1 &&
   resolveActiveEvent().eventId === 26);
 
-// — PHA-1048: the off-season HANDOFF on the REAL registry. Singapore is seeded
+// — #1048: the off-season HANDOFF on the REAL registry. Singapore is seeded
 //   ~5 months before it opens with EMPTY section-keyed config. Without the
 //   anticipation window (event-lifecycle-core), it would become the site's
 //   identity the instant Cologne archives (its dates.end ceiling, Jun 26) and
@@ -139,7 +139,7 @@ check("hand-off: once inside Singapore's anticipation window it becomes current,
   currentEvent(Date.parse("2026-11-01T00:00:00Z")).eventId === 27);
 
 // — config-sanity invariant: at most one BASELINE-live event. (resolveActiveEvent
-//   is clock-derived since PHA-950 and no longer throws on multiples — it picks
+//   is clock-derived since #950 and no longer throws on multiples — it picks
 //   the soonest go-live — but two hand-set `live` baselines is still a config
 //   smell: which one is the canonical current Major is then ambiguous.) —
 check(
@@ -147,7 +147,7 @@ check(
   Object.values(EVENTS).filter((e) => e.status === "live").length === 1,
 );
 
-// — future-major guard (PHA-943): every registered event's reveal config is
+// — future-major guard (#943): every registered event's reveal config is
 //   internally consistent, so the next Major's half-filled config fails loudly
 //   here, not silently at runtime. Run over ALL events (an `upcoming` entry
 //   being prepped is validated before it ever goes live). —
@@ -190,7 +190,7 @@ check(
     lockSchedule: { 200: "not-a-date" },
   }).some((p) => p.includes("not a valid ISO")),
 );
-// — invariant E (PHA-1046): the event's own span must parse, or the clock-derived
+// — invariant E (#1046): the event's own span must parse, or the clock-derived
 //   lifecycle can't place it (unparseable start → goLiveMs +Infinity → never live). —
 check(
   "guard flags an unparseable dates.start (would never go live)",
@@ -221,11 +221,11 @@ check(
   }).some((p) => p.includes("dates.")),
 );
 
-// — future-major guard (PHA-946): the registry's structural Swiss-ness
+// — future-major guard (#946): the registry's structural Swiss-ness
 //   (sectionNames "Stage N") must agree with isSwissSection's hardcoded id set,
 //   for EVERY registered event. A new Major that registers a Swiss stage with an
 //   unrecognized id would silently revert compare/scoring/picks to per-slot
-//   matching (the PHA-946 bug). This fails the build instead. —
+//   matching (the #946 bug). This fails the build instead. —
 for (const e of Object.values(EVENTS)) {
   const problems = validateSwissClassification(e);
   if (problems.length > 0) for (const p of problems) console.error(`    · ${p}`);
@@ -235,7 +235,7 @@ check("active event Swiss classification is consistent", validateSwissClassifica
 
 // — anti-rigging: the guard fires on each direction of misconfiguration. —
 check(
-  "guard flags a Swiss-named stage with an unrecognized id (PHA-946 regression)",
+  "guard flags a Swiss-named stage with an unrecognized id (#946 regression)",
   validateSwissClassification({
     ...active,
     sectionNames: { ...active.sectionNames, 211: "Stage IV" },

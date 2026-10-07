@@ -1,5 +1,5 @@
 /**
- * Stage Reveal (mockup-08, PHA-858) — a standalone post-stage screen.
+ * Stage Reveal (mockup-08, #858) — a standalone post-stage screen.
  *
  * Once a stage resolves we freeze a RankSnapshot (see rank-snapshot.ts); this
  * page reads it back and pairs it with the resolved outcomes to tell a player
@@ -65,13 +65,13 @@ export default async function StageRevealPage({
   params: Promise<{ section: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
+  const EVENT_ID = currentEventId(); // per-request active event (#1046)
   const { section: sectionParam } = await params;
   const sectionId = Number(sectionParam);
   if (!Number.isInteger(sectionId)) notFound();
 
   // ?wrapped=1 — arrived from the recap notification; force-open the cinematic
-  // deck once even if this device already dismissed the auto-popup (PHA-1245).
+  // deck once even if this device already dismissed the auto-popup (#1245).
   const sp = await searchParams;
   const wantsWrapped = sp.wrapped === "1";
 
@@ -80,7 +80,7 @@ export default async function StageRevealPage({
   const sectionDef = layout.sections.find((s) => s.sectionid === sectionId);
   if (!sectionDef) notFound();
 
-  // Visual assets for the Stage Wrapped deck (PHA-1054): team-logo cascade from
+  // Visual assets for the Stage Wrapped deck (#1054): team-logo cascade from
   // the same teamMap + manifest the reveal grid uses, plus the major + game
   // brand marks served from /public/watch.
   const wrappedAssets = {
@@ -93,7 +93,7 @@ export default async function StageRevealPage({
   };
 
   const session = await getSession();
-  // Live driver (PHA-866): the issue names Stage Reveal explicitly — keep it fresh
+  // Live driver (#866): the issue names Stage Reveal explicitly — keep it fresh
   // for a direct first-viewer (deep link / push). Atomic claim shared with the
   // other surfaces, so this is a no-op within the 30s window.
   await refreshOutcomesOnRead(EVENT_ID);
@@ -105,7 +105,7 @@ export default async function StageRevealPage({
   // be all one stage reveal"). When the requested section is any playoff round,
   // the reveal spans every playoff section: one "Playoffs" heading, the whole
   // bracket of picks, and a single score/rank-move across the run. Mirrors how
-  // the picks page + home hero already consolidate 108/109/110 (PHA-1007/1204).
+  // the picks page + home hero already consolidate 108/109/110 (#1007/1204).
   const playoff = isPlayoffSection(sectionId);
   const groupSections = playoff
     ? PLAYOFF_ROUNDS.map((r) => layout.sections.find((s) => s.sectionid === r.sectionId)).filter(
@@ -118,7 +118,7 @@ export default async function StageRevealPage({
   // The playoff reveal's recap IS the Major Wrapped deck (one bracket → one
   // cinematic), opened through the app-wide launcher's replay bus rather than a
   // per-round wrap. The per-round wrap ("Grand Final — nothing to wrap yet") is
-  // what the old /reveal/110?wrapped=1 deep link wrongly surfaced (PHA-1274).
+  // what the old /reveal/110?wrapped=1 deep link wrongly surfaced (#1274).
   const majorKey = majorWrappedStageKey(EVENT_ID);
 
   const [outcomes, allPicks] = await Promise.all([
@@ -129,7 +129,7 @@ export default async function StageRevealPage({
     }),
   ]);
 
-  // Field-wide pick distribution per slot (PHA-889). The reveal page only ever
+  // Field-wide pick distribution per slot (#889). The reveal page only ever
   // renders picks for a RESOLVED section, so showing the split here is post-lock
   // by construction — no herd-following while picks are open.
   const slotConsensus = buildConsensus(allPicks);
@@ -215,7 +215,7 @@ export default async function StageRevealPage({
     const leader = leaderId ? await prisma.player.findUnique({ where: { id: leaderId } }) : null;
     return (
       <>
-        {/* Recap (PHA-1054/1274). For a playoff round the recap is the Major
+        {/* Recap (#1054/1274). For a playoff round the recap is the Major
             Wrapped deck (the app-wide launcher already mounts it); ?wrapped=1
             just replays it. For a Swiss stage it's that stage's own deck,
             auto-opened once. Reached only on a resolved stage. */}
@@ -287,13 +287,13 @@ export default async function StageRevealPage({
   const rankBefore = beforeMap.get(subject.id) ?? null;
   const delta = rankAfter != null ? rankDelta(rankAfter, rankBefore) : null;
 
-  // Stage Wrapped "best call" (PHA-1054): among the viewer's CORRECT picks this
+  // Stage Wrapped "best call" (#1054): among the viewer's CORRECT picks this
   // stage, the one the fewest of the field also nailed (their boldest right
   // read). Reuses the same bucket-correctness + slot-consensus the reveal grid
   // below already renders, so the recap agrees with the per-pick breakdown.
   let bestCall: StageWrappedBestCall | null = null;
   // The viewer's CORRECT calls as "<pickId>:<bucket>" — feeds the Stage Wrapped
-  // "YOU CALLED IT" reward when a pick matched a narrative moment (PHA-1054).
+  // "YOU CALLED IT" reward when a pick matched a narrative moment (#1054).
   const viewerClaims = new Set<string>();
   for (const sec of groupSections) {
     for (const group of sec.groups) {
@@ -331,9 +331,9 @@ export default async function StageRevealPage({
 
   return (
     <>
-      {/* Recap (PHA-1054 / PHA-1051 / PHA-1274) — explicit-open only. The Swiss
+      {/* Recap (#1054 / #1051 / #1274) — explicit-open only. The Swiss
           stage's own deck opens on the ?wrapped=1 deep link / "Replay" button;
-          it never auto-pops (PHA-1269 froze low-end mobile on login). A playoff
+          it never auto-pops (#1269 froze low-end mobile on login). A playoff
           round instead replays the Major Wrapped deck the app-wide launcher
           already mounts — one bracket, one cinematic. */}
       {playoff ? (
@@ -386,11 +386,11 @@ export default async function StageRevealPage({
       </div>
       {groupSections.map((sec) => {
         // Swiss buckets are interchangeable: a pick is correct if its team
-        // landed ANYWHERE in the bucket, not at its exact slot (PHA-946/918).
+        // landed ANYWHERE in the bucket, not at its exact slot (#946/918).
         // The clinch resolver fills winner rows in layout order, not pick
         // order, so per-slot comparison strikes correct picks as misses and
         // contradicts the set-based scorer in the header. Playoffs stay
-        // per-slot. (PHA-1015)
+        // per-slot. (#1015)
         const round = playoff ? playoffRoundForSection(sec.sectionid) : null;
         const cards = sec.groups.flatMap((group) => {
           const gOut = outcomeMap[sec.sectionid]?.[group.groupid] ?? {};
@@ -466,18 +466,18 @@ export default async function StageRevealPage({
       </div>
 
       <style>{`
-        /* v3 "Arcade → Broadcast" (PHA-1007): rounded surfaces with a single
+        /* v3 "Arcade → Broadcast" (#1007): rounded surfaces with a single
            top keyline instead of four corner brackets, hairline-divided stat
            band, neutral warm-white hairlines. */
         .reveal-moment {
           display: grid; grid-template-columns: repeat(3, 1fr);
           background: linear-gradient(180deg, var(--surf-2) 0%, var(--surf-1) 100%);
           border: 1px solid rgba(245,234,212,0.08); border-radius: 14px; overflow: hidden;
-          /* light sheen (PHA-1117): a faint specular line catches the top edge */
+          /* light sheen (#1117): a faint specular line catches the top edge */
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
         }
         .reveal-moment > div + div { border-left: 1px solid rgba(245,234,212,0.08); }
-        /* logos are the focus (PHA-1117): wider cards, fewer columns, so each
+        /* logos are the focus (#1117): wider cards, fewer columns, so each
            crest dominates its tile rather than floating in negative space. */
         .reveal-picks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
         @media (min-width: 720px) { .reveal-picks { grid-template-columns: repeat(3, 1fr); } }
@@ -487,11 +487,11 @@ export default async function StageRevealPage({
           border: 1px solid rgba(245,234,212,0.08); border-radius: 14px;
           background: linear-gradient(180deg, var(--surf-2) 0%, var(--surf-1) 100%);
           position: relative; overflow: hidden;
-          /* light sheen (PHA-1117) */
+          /* light sheen (#1117) */
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
           transition: transform 180ms var(--ease), box-shadow 180ms var(--ease), border-color 180ms var(--ease);
         }
-        /* cool minimal thing (PHA-1117): the card you're reading lifts a hair on
+        /* cool minimal thing (#1117): the card you're reading lifts a hair on
            hover and the sheen warms — tactile, no perpetual motion. */
         @media (hover: hover) {
           .pickcard:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 10px 24px -16px rgba(0,0,0,0.7); border-color: rgba(245,234,212,0.16); }
@@ -522,7 +522,7 @@ const heroTitle = {
   margin: "8px 0 0",
 };
 
-// v3 "Arcade → Broadcast" surface (PHA-1007): rounded, gradient, neutral
+// v3 "Arcade → Broadcast" surface (#1007): rounded, gradient, neutral
 // hairline — no corner brackets. Shared by the reveal's secondary panels.
 const v3Card = {
   position: "relative" as const,
@@ -530,7 +530,7 @@ const v3Card = {
   border: "1px solid rgba(245,234,212,0.08)",
   borderRadius: 14,
   padding: "18px 22px",
-  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)", // light sheen (PHA-1117)
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)", // light sheen (#1117)
 };
 
 const v3CardLabel = {
@@ -565,7 +565,7 @@ const tagStyle = {
 };
 
 // Round band header (QUARTERFINALS / SEMIFINALS / GRAND FINAL) that splits the
-// consolidated playoff reveal's pick grid into its three rounds (PHA-1274).
+// consolidated playoff reveal's pick grid into its three rounds (#1274).
 const roundHeader = {
   fontFamily: "var(--font-mono)",
   fontSize: 12,
@@ -577,7 +577,7 @@ const roundHeader = {
 };
 
 function RevealEyebrow({ text }: { text: string }) {
-  // v3 broadcast direction (PHA-1007): mono overline loses the literal [ ].
+  // v3 broadcast direction (#1007): mono overline loses the literal [ ].
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       <span className="eyebrow-mono" style={{ fontSize: 10.5, letterSpacing: "0.2em" }}>{text}</span>
@@ -697,7 +697,7 @@ function ConsensusPanel({
           position: relative; overflow: hidden; padding: 18px 22px;
           background: linear-gradient(180deg, var(--surf-2) 0%, var(--surf-1) 100%);
           border: 1px solid rgba(245,234,212,0.08); border-radius: 14px;
-          /* light sheen (PHA-1117): faint specular top edge */
+          /* light sheen (#1117): faint specular top edge */
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
         }
         .insight-card::before {
@@ -705,7 +705,7 @@ function ConsensusPanel({
         }
         .insight-consensus::before { background: linear-gradient(90deg, var(--heat) 0%, rgba(240,163,0,0.25) 42%, transparent 78%); }
         .insight-bold::before { background: linear-gradient(90deg, var(--ember, #d8351c) 0%, rgba(216,53,28,0.22) 42%, transparent 78%); }
-        /* cool minimal thing (PHA-1117): a single light sweep glides across the
+        /* cool minimal thing (#1117): a single light sweep glides across the
            headline cards once on load — a broadcast lower-third wipe — then rests
            off-screen. The global prefers-reduced-motion kill switch parks it. */
         .insight-card::after {

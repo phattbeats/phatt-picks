@@ -1,5 +1,5 @@
 /**
- * Live Swiss bracket (pure, PHA-902).
+ * Live Swiss bracket (pure, #902).
  *
  * Brandon wants the locked Swiss stage to look like a real tournament-site
  * bracket (cs.money / HLTV / BLAST): round columns (0:0 → 1:0 / 0:1 → 2:0 / 1:1
@@ -43,7 +43,7 @@ function normalizeTeamName(raw: string): string {
 
 /**
  * A column's standing, by the RECORD it represents — the same 3:0 / 0:3 buckets
- * the rest of the app uses (PHA-898's "3:0 ADVANCED" / "0:3 ELIMINATED", the W-L
+ * the rest of the app uses (#898's "3:0 ADVANCED" / "0:3 ELIMINATED", the W-L
  * table's status):
  *   advancing  — a 3-win record (3:0 / 3:1 / 3:2): these teams are THROUGH
  *   eliminated — a 3-loss record (0:3 / 1:3 / 2:3): these teams are OUT
@@ -245,7 +245,7 @@ export function parseSwissBracket(
   // 2. Settled teams in terminal columns (advanced / eliminated). Each wrapper
   // owns the team titles from its start up to the next wrapper marker.
   //
-  // PHA-936: a wrapper's label is NOT simply the nearest preceding title. HLTV
+  // #936: a wrapper's label is NOT simply the nearest preceding title. HLTV
   // stacks the two terminal boxes of a deciding column (e.g. 3:1 over 3:2, or
   // 1:3 over 2:3) by emitting BOTH titles consecutively and THEN both team
   // wrappers, in the same order. Nearest-preceding-title collapses both wrappers
@@ -323,12 +323,12 @@ export function matchBracketToLayout(
 
 /**
  * Derive per-team clinched W-L records from the bracket's TERMINAL columns
- * (PHA-1044). Each terminal round's label IS the record of every settled team
+ * (#1044). Each terminal round's label IS the record of every settled team
  * listed in it: "3:0" → 3-0, "3:1" → 3-1, "0:3" → 0-3, etc. This is the fallback
  * source for outcome bridging when HLTV reformats the W-L *table* header (so
  * `parseHltvSwissStandings` yields nothing) but the *bracket* still parses — the
  * leaderboard then keeps resolving Swiss clinches off the bracket instead of
- * silently freezing (the PHA-918/951 "scoring stalled for two days" symptom).
+ * silently freezing (the #918/951 "scoring stalled for two days" symptom).
  *
  * Only terminal (advancing/eliminated) rounds carry settled teams; contention
  * columns are skipped. Only sides matched to a layout pickid are returned (an
@@ -355,7 +355,7 @@ export function bracketTerminalRecords(
 
 /**
  * Tally each team's Swiss series W-L straight from the bracket's MATCH cells
- * (PHA-1109). Every played match carries both sides and the decided winner, all
+ * (#1109). Every played match carries both sides and the decided winner, all
  * read from HLTV's server-rendered popup-json — so this resolves records even
  * when the JS standings *table* never renders into the crawl (parseHltvSwissStandings
  * yields 0 rows) AND the terminal-column lists don't parse (bracketTerminalRecords

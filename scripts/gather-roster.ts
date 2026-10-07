@@ -1,5 +1,5 @@
 /**
- * gather-roster — refresh each team's roster rating + HLTV profile link (PHA-992).
+ * gather-roster — refresh each team's roster rating + HLTV profile link (#992).
  *
  * The team dossier's roster used to be bare screennames; it now carries each
  * player's role, HLTV rating, and a link to their own HLTV profile. Two of those

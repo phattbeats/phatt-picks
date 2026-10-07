@@ -1,6 +1,6 @@
 /**
  * POST /api/reactions — drop a Bleachers stamp on another player's pick
- * (PHA-1211, concept A). One stamp per sender per pick: the upsert on the
+ * (#1211, concept A). One stamp per sender per pick: the upsert on the
  * (sender, pick) unique key makes a repeat drop a SWAP, not an additive spam
  * vector. The sender is recorded but stays masked in the UI until the stage
  * resolves (see bleachers-core bleachersUnmasked).
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
 
   // Read-only-on-resolve is a SWISS rule. The playoff bracket resolves
   // match-by-match while it's still the live event everyone reacts to
-  // (PHA-1262), so the resolved gate must not fire on QF/SF/GF picks — only on
+  // (#1262), so the resolved gate must not fire on QF/SF/GF picks — only on
   // a fully-resolved Swiss group.
   const layout = getCommittedLayout();
   const section = layout.sections.find((s) => s.sectionid === sId);
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
   // The key includes targetPlayerId because playoff groups are shared across all
   // players (group 274 = QF1 for everyone, slot 0); without it a repeat drop on a
   // DIFFERENT player at the same (section, group, slot) collided and silently
-  // re-stamped the first target instead of landing on the new pick (PHA-1262).
+  // re-stamped the first target instead of landing on the new pick (#1262).
   await prisma.reaction.upsert({
     where: {
       senderId_eventId_sectionId_groupId_slotIndex_targetPlayerId: {

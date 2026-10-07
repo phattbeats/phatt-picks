@@ -30,7 +30,7 @@ import { isWriteFrozenById } from "@/lib/event-freeze";
 import { isPlayoffSection, PLAYOFF_ROUNDS, playoffFieldTeams } from "@/lib/playoff-bracket-core";
 
 export async function GET(req: NextRequest) {
-  const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
+  const EVENT_ID = currentEventId(); // per-request active event (#1046)
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
+  const EVENT_ID = currentEventId(); // per-request active event (#1046)
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
   const evtId = Number(eventId);
   const secId = Number(sectionId);
 
-  // PHA-949/954: an effectively-archived Major is frozen, read-only history —
+  // #949/954: an effectively-archived Major is frozen, read-only history —
   // refuse every write up front, independent of the per-stage lock gate (its
   // lock schedule may not even be in scope once another Major is live). Keyed on
   // EFFECTIVE status (clock + real Grand-Final-resolved signal), so the freeze
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `unknown section ${secId}` }, { status: 400 });
   }
 
-  // PHA-1204: the playoffs are ONE stage — you fill the whole QF→SF→GF bracket at
+  // #1204: the playoffs are ONE stage — you fill the whole QF→SF→GF bracket at
   // once. So a Semifinal / Grand Final write must be allowed the moment the
   // bracket OPENS (the QF round seeds), not gated on its own round, whose teams
   // are still TBD and whose picks_allowed flag Valve may flip independently. Gate
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
 
   // The committed fixture is frozen all-open, so `picks_allowed` never flips for
   // it. Once a stage's published lock instant passes it has begun — reject the
-  // write so a crafted POST can't slip a pick past the (now Locked) UI (PHA-898).
+  // write so a crafted POST can't slip a pick past the (now Locked) UI (#898).
   // Same lockedByTime signal the reveal gate uses, so writable and revealed stay
   // exact inverses (no edit-but-can't-compare dead zone).
   const lockedByTime = isLockTimePassed(lockSectionId, Date.now(), getEventConfig(evtId)?.lockSchedule);
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "stage_locked" }, { status: 409 });
   }
 
-  // Eligibility universe for a downstream playoff pick (PHA-1204): your SF/GF
+  // Eligibility universe for a downstream playoff pick (#1204): your SF/GF
   // call is one of the eight survivors you advanced, none of which the layout has
   // placed on the SF/GF group slots yet. So validate such a pick against the
   // whole playoff field (the QF-seeded teams), not its own — still-TBD — group.

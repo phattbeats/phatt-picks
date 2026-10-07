@@ -1,5 +1,5 @@
 /**
- * Live Swiss bracket board (PHA-902) — the real tournament-site bracket.
+ * Live Swiss bracket board (#902) — the real tournament-site bracket.
  *
  * The canonical cs.money/HLTV Swiss fan: each progression step is a column,
  * winners climb (green ADVANCING boxes at the top), losers drop (red ELIMINATED

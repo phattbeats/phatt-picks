@@ -1,5 +1,5 @@
 /**
- * Live Swiss standings warm/refresh + outcome-resolve trigger (PHA-902, PHA-937).
+ * Live Swiss standings warm/refresh + outcome-resolve trigger (#902, #937).
  *
  * Populates the SwissStandingsCache for the live sections by crawling HLTV
  * SYNCHRONOUSLY (via warmStandings), so the bracket + table are guaranteed to
@@ -15,7 +15,7 @@
  * in visitor loading a page at the right moment. Wiring the bridge in here makes
  * this single unauth URL a COMPLETE headless driver — an uptime monitor (or a
  * curl from anywhere) keeps standings fresh AND points climbing through a stage's
- * final matches, independent of traffic (PHA-937: "racking up the points, clean
+ * final matches, independent of traffic (#937: "racking up the points, clean
  * transition"). The bridge self-gates on the published lock time, so it's a no-op
  * for any stage that hasn't started; off-window stages don't even crawl.
  *
@@ -45,7 +45,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * Read-only dump of the resolved Swiss answer key + each slot's bucket and team
- * name (PHA-1109 diagnostic). The resolved outcomes are already public on the
+ * name (#1109 diagnostic). The resolved outcomes are already public on the
  * leaderboard / reveal, so this exposes nothing new — it just makes "which team
  * is the bridge crediting in which bucket" inspectable from a single headless
  * poke, which is exactly the question a frozen / mis-resolved clinch raises.
@@ -80,7 +80,7 @@ async function dumpAnswerKey(eventId: number) {
 }
 
 async function warmAll() {
-  const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
+  const EVENT_ID = currentEventId(); // per-request active event (#1046)
   const results = [];
   for (const section of standingsSectionIds(EVENT_ID)) {
     results.push(await warmStandings(EVENT_ID, section));

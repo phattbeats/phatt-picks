@@ -1,14 +1,14 @@
 /**
- * verify-reveal-gate - offline proof for PHA-862 (reveal gate keyed by
+ * verify-reveal-gate - offline proof for #862 (reveal gate keyed by
  * section+group, not groupId alone).
  *
  * The pick-reveal gate in the players + compare pages builds a
  * `groupHasOutcome` Set of resolved groups and reveals a group's picks when it
- * is present. PHA-862: that Set must be keyed by `${sectionId}:${groupId}`, not
+ * is present. #862: that Set must be keyed by `${sectionId}:${groupId}`, not
  * groupId alone. Keying on groupId alone leaks secrecy if Valve ever reuses a
  * groupid across sections — resolving one section's group would prematurely
  * reveal another section's still-open picks (the exact leak reveal-core /
- * PHA-845 exist to prevent). Cologne groupids (271–280) are globally unique so
+ * #845 exist to prevent). Cologne groupids (271–280) are globally unique so
  * this is not live today; the gate is defensive.
  *
  * This proves the composite key isolates sections by replaying the page gate
@@ -59,7 +59,7 @@ const revealedA = arePicksRevealed(
 check("section A (locked, resolved) -> revealed", revealedA === true);
 
 // Section B (open, no resolved row of its own) must stay hidden even though it
-// shares the groupid with section A. THIS is the leak PHA-862 closes.
+// shares the groupid with section A. THIS is the leak #862 closes.
 const hasOutcomeB = groupHasOutcome.has(
   groupOutcomeKey(sectionB.sectionid, sectionB.group.groupid),
 );
@@ -116,7 +116,7 @@ check(
   sectionPickMap[2][REUSED_GROUPID][0] === 2002,
 );
 
-console.log("\nreveal-gate - schedule lock reveals a started stage (PHA-898)");
+console.log("\nreveal-gate - schedule lock reveals a started stage (#898)");
 
 // The Compare/players pages showed "Picks hidden until this stage locks" for a
 // stage that had BEGUN (Brandon's report): the committed fixture is all-open

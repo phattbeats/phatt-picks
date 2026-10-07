@@ -62,7 +62,7 @@ These cost real hours. Add to this file whenever a bug burns you.
 ### Sign-out (and other POSTs) 403 on iOS WebKit — the CSRF origin guard
 - **Cause:** the CSRF same-origin guard (`isSameOrigin` in `src/lib/csrf.ts`) checks `Origin`/`Referer`.
   iOS Safari/Brave send **neither** on a same-origin form POST, so a strict guard 403s real users
-  (PHA-1225). Second trap: SWAG terminates TLS, so the inbound `x-forwarded-host` is **https** while
+  (#1225). Second trap: SWAG terminates TLS, so the inbound `x-forwarded-host` is **https** while
   the internal `NEXTAUTH_URL` may be **http** — comparing against the wrong scheme also 403s.
 - **Rule:** the guard **fails open** when both `Origin` and `Referer` are absent (no header = can't be a
   cross-site form), and it accepts the forwarded-host origin via `hostOriginVariants()` (both schemes),
@@ -106,7 +106,7 @@ The Cologne live window surfaced a cluster of "the app froze my phone / I had to
 computer" reports. They were **four different causes** wearing the same costume — and the most
 important lesson is that a whole-browser freeze is almost never the JS heap.
 
-### "Freezes the WHOLE browser / had to restart" = GPU compositor, not JS heap (PHA-1269)
+### "Freezes the WHOLE browser / had to restart" = GPU compositor, not JS heap (#1269)
 - **Cause:** full-viewport `backdrop-filter: blur()` (the Stage Wrapped backdrop that auto-opened on
   login, plus ambient `blur(140px)` and a `blur(20px)` bottom-nav). The GPU re-blurs the entire
   screen every animated frame → the whole browser stutters/freezes, not just the tab. It is
@@ -118,7 +118,7 @@ important lesson is that a whole-browser freeze is almost never the JS heap.
   GPU/rendering tools, and emulate `prefers-reduced-motion: no-preference`
   (`Emulation.setEmulatedMedia`) to reproduce. Avoid full-viewport `backdrop-filter` entirely.
 
-### A stale cached build white-screens or freezes on old CSS — the service worker is the fix (PHA-1269)
+### A stale cached build white-screens or freezes on old CSS — the service worker is the fix (#1269)
 - **Cause:** an installed PWA / cached client held onto a stale build (old CSS, or a `ChunkLoadError`
   when a hashed chunk 404s after a deploy). The user is stuck on broken old assets.
 - **Rule:** `public/sw.js` is the recovery vector. On activate it `skipWaiting()`s, **purges all
@@ -128,25 +128,25 @@ important lesson is that a whole-browser freeze is almost never the JS heap.
   worker itself can always update. Keep the SW **cache-light** — it must not cache app content and
   must not interpose on SSE / API / streaming requests (or it holds the stream buffer).
 
-### Eager `<Link>` prefetch storm froze the Android home page (PHA-1269)
+### Eager `<Link>` prefetch storm froze the Android home page (#1269)
 - **Cause:** too many in-viewport `next/link` prefetches firing at once on first paint.
 - **Rule:** disable prefetch on dense link lists (`prefetch={false}`) on the heavy landing surfaces.
 
-### `router.refresh()` grows retained client memory on live views (PHA-1268)
+### `router.refresh()` grows retained client memory on live views (#1268)
 - **Cause:** the AutoRefresh poll on live-results views calls `router.refresh()`; retained heap
   creeps up (~43% over 200 refreshes) even though the DOM stays flat.
 - **Rule:** bound it — on results-only views, do a hard-reload reclaim (`reclaimSafe`) periodically,
-  and **pause the refresh / SSE while the tab is hidden** (PHA-1267). Stop AutoRefresh entirely
-  once the Major is over (PHA-1261).
+  and **pause the refresh / SSE while the tab is hidden** (#1267). Stop AutoRefresh entirely
+  once the Major is over (#1261).
 
-### Immortal SSE poll-loops pin server CPU (PHA-1244)
+### Immortal SSE poll-loops pin server CPU (#1244)
 - **Cause:** the notification SSE stream's poll loop only exited on `req.signal.aborted`; an enqueue
   throw to a gone peer was swallowed as a "DB hiccup", so each dropped connection left a loop running
   forever (5 DB queries / 8s, accumulating over hours = "MASSIVE cpu after update").
 - **Rule:** an SSE handler needs a hard exit: a `cancel` flag, a `safeEnqueue` that **breaks** on
   throw (peer gone), and a lifetime cap (10 min). Never swallow an enqueue failure as transient.
 
-### A bottom-sheet sized in `vh` sits partly off-screen on mobile (PHA-1276)
+### A bottom-sheet sized in `vh` sits partly off-screen on mobile (#1276)
 - **Cause:** `vh` counts the area *behind* a mobile browser's dynamic URL/nav bars, so a fixed-height
   bottom-sheet (the recap deck) pushed its top controls off-screen and clipped tall slides on Android
   Chrome.
@@ -203,7 +203,7 @@ important lesson is that a whole-browser freeze is almost never the JS heap.
   branch off `origin/main`, not local `main`.)
 
 ### Commit authorship
-- **Rule:** commits are authored as **@phattbeats only — no co-authors**, no Claude/Paperclip
+- **Rule:** commits are authored as **@phattbeats only — no co-authors**, no agent/Paperclip
   trailers. This overrides the default harness co-author trailer.
 
 ---
@@ -237,7 +237,7 @@ important lesson is that a whole-browser freeze is almost never the JS heap.
   consensus at **bucket grain** (slots in a bucket are interchangeable), denominator =
   distinct players. Hide the line when the field is < 2.
 
-### A reaction silently overwrites someone else's — the shared-group unique key (PHA-1262)
+### A reaction silently overwrites someone else's — the shared-group unique key (#1262)
 - **Cause:** the `Reaction` `@@unique` omitted `targetPlayerId`. Playoff bracket groups are shared
   across all players (everyone picks into the same QF/SF/GF slots), so reacting to a *second* player
   at the same `(eventId,sectionId,groupId,slotIndex)` collided with and silently re-stamped the
@@ -256,7 +256,7 @@ important lesson is that a whole-browser freeze is almost never the JS heap.
 ### Playoff (and off-roster Swiss) winners never turn green — the seed-swap / off-roster rejection class
 This is the single most-repeated outcome bug in this repo: a match clearly finished, the
 source clearly has the winner, but the bracket/leaderboard never scores it. It bit Swiss as
-**PHA-1109** and the playoffs as **PHA-1273** (Cologne QF1/QF2 sat unresolved while QF3/QF4
+**#1109** and the playoffs as **#1273** (Cologne QF1/QF2 sat unresolved while QF3/QF4
 resolved — "temporally backwards", which is the tell that it's the validator, not the clock).
 
 **How outcome resolution actually works.** A `StageOutcome` row is written only after
@@ -270,9 +270,9 @@ sources, and they are **not** validated the same way:
 
 **Why the strict per-group check is wrong for live sources.** The committed per-group roster
 in the fixture is only a **pre-seed guess**. Two ways it legitimately drifts from reality:
-- *Swiss (PHA-1109):* the pick'em group carries 8 teams but the live Swiss runs 16, so a real
+- *Swiss (#1109):* the pick'em group carries 8 teams but the live Swiss runs 16, so a real
   clinch by an "off-roster" team (B8 0:3 / Spirit 3:0) was rejected "not eligible for group".
-- *Playoffs (PHA-1273):* the bracket is **dynamically seeded**. Cologne's fixture seeded
+- *Playoffs (#1273):* the bracket is **dynamically seeded**. Cologne's fixture seeded
   groups 274/275 as Aurora–BetBoom / 9z–FURIA, but Valve's real bracket had them **swapped**
   (274 = 9z–FURIA → FURIA 85, 275 = Aurora–BetBoom → Aurora 134). The picks UI overlays
   Valve's live teams (`mergeLiveLayout` by `sectionid:groupid`), so players picked into
@@ -286,7 +286,7 @@ in the fixture is only a **pre-seed guess**. Two ways it legitimately drifts fro
 `/api/standings/refresh` warm (`bridgeSwissOutcomes`). **Playoff** outcomes come **only** from
 the Valve answer key (`ingestOutcomes` → `GetTournamentLayout`), which historically ran only on
 the owner's manual `POST /api/outcomes/ingest` or an unreliable `after()`-deferred read path —
-so nothing headless poked it after the owner's last run. **PHA-1273** wired `ingestOutcomes`
+so nothing headless poked it after the owner's last run. **#1273** wired `ingestOutcomes`
 into `refreshLiveResultsTick` (`src/lib/outcomes.ts`), the same traffic-independent in-process
 tick that resolves Swiss clinches. It's idempotent and self-gating (only locked groups with a
 single resolved pickid; already-resolved slots filtered before persist), so QF/SF/GF now turn

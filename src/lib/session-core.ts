@@ -1,9 +1,9 @@
 /**
- * Session-core (PHA-982) — the pure, runtime-agnostic half of session handling.
+ * Session-core (#982) — the pure, runtime-agnostic half of session handling.
  *
  * WHY this module exists: three places mint or read the `phatt_session` JWT
  * (the Steam callback, the local-auth route, and the splash middleware) and
- * before PHA-982 each inlined its OWN ttl, cookie flags, and sign call. That
+ * before #982 each inlined its OWN ttl, cookie flags, and sign call. That
  * drift is exactly what bit Brandon: the Steam cookie was minted at 7d and
  * never refreshed, while the local cookie was 30d and re-stamped on activity —
  * so Steam users (the ones who eat a 2FA prompt on every re-login) were forced

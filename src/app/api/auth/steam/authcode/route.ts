@@ -21,7 +21,7 @@ import { currentEventId } from "@/lib/events-core";
 const AUTH_CODE_RE = /^[A-Z0-9]{4}-[A-Z0-9]{5}-[A-Z0-9]{4}$/;
 
 export async function POST(req: NextRequest) {
-  const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
+  const EVENT_ID = currentEventId(); // per-request active event (#1046)
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     data: { authCode: encryptAuthCode(authCode) },
   });
 
-  // PHA-853: as soon as the auth code is stored, pull any existing/partial
+  // #853: as soon as the auth code is stored, pull any existing/partial
   // Valve picks into the local Pick table so the user's next /picks visit
   // shows what's already on their Steam account (no manual sync click).
   // Mirror failures don't fail the save — the encrypted code is already

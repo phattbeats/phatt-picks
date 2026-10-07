@@ -1,5 +1,5 @@
 /**
- * Locked picks board (PHA-902) — the picker UI, frozen, with your calls.
+ * Locked picks board (#902) — the picker UI, frozen, with your calls.
  *
  * Brandon: once a Swiss stage locks, drop the "YOUR BUILD / THE FIELD" lineup and
  * instead keep the SAME UI where you made your picks — the 3:0 / advance / 0:3
@@ -55,7 +55,7 @@ export function LockedPicksBoard({
   myPicks: Record<number, Record<number, number>>;
   /** pickId -> answer-key status, from the live standings. */
   teamStatus: Map<number, SwissTeamStatus>;
-  /** pickId -> partial live W-L record (PHA-951) — strikes a 3:0/0:3 pick red
+  /** pickId -> partial live W-L record (#951) — strikes a 3:0/0:3 pick red
    *  early once the team's record makes its bucket impossible. Optional: omit
    *  (or pass an empty map) and the board falls back to terminal-only confirms. */
   recordByTeam?: Map<number, TeamRecord>;
@@ -69,7 +69,7 @@ export function LockedPicksBoard({
     tallyFor: (groupId: number, slotIndex: number) => TallyLine[];
   };
   /** Drop the panel chrome + title row — for when an outer wrapper (e.g. the
-   *  collapsible stage card on the profile, PHA-1283) already supplies them. */
+   *  collapsible stage card on the profile, #1283) already supplies them. */
   bare?: boolean;
 }) {
   const board = (

@@ -1,5 +1,5 @@
 /**
- * verify-layout-merge — offline proof for the live-layout overlay (PHA-896).
+ * verify-layout-merge — offline proof for the live-layout overlay (#896).
  *
  * The picks UI read the committed fixture and never merged live team data, so
  * Stage III showed 8 of 16 teams and the playoff bracket stayed all-TBD (locked

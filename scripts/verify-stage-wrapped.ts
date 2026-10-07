@@ -1,6 +1,6 @@
 /**
  * verify-stage-wrapped — offline proof for the Stage Wrapped deck core
- * (PHA-1052). The popup shell delegates all "which slide am I on" logic to the
+ * (#1052). The popup shell delegates all "which slide am I on" logic to the
  * pure reducer in stage-wrapped-core, so this exercises:
  *   - clampIndex never escapes [0, count-1] and handles empty decks
  *   - deckReducer next/prev clamp at the ends (no wrap / no overshoot)
@@ -120,7 +120,7 @@ check("deck includes a standings slide", slides.some((s) => s.kind === "standing
 check("auto-advanced slides all resolve at/above the floor", slides.filter((s) => s.autoAdvanceMs).every((s) => resolveAutoAdvanceMs(s) !== null && resolveAutoAdvanceMs(s)! >= MIN_AUTO_ADVANCE_MS));
 check("closing slide waits for the user (no auto-advance)", slides[slides.length - 1].autoAdvanceMs == null);
 
-console.log("\nstage-wrapped - soundtrack registry (PHA-1274)");
+console.log("\nstage-wrapped - soundtrack registry (#1274)");
 check("more than one track to choose from", WRAPPED_TRACKS.length >= 2);
 check("every track has a src + credit + mood", WRAPPED_TRACKS.every((t) => !!t.src && !!t.credit && !!t.mood));
 check("every track is attributed (CC-BY / Kevin MacLeod)", WRAPPED_TRACKS.every((t) => /CC-BY/i.test(t.credit) && /MacLeod/i.test(t.credit)));

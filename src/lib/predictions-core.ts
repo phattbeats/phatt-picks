@@ -22,7 +22,7 @@ function assertDigitString(v: unknown, field: string): string {
 /**
  * One prediction as returned by GetTournamentPredictions.
  *
- * PHA-875 finding: Valve's live API uses `pick` (not `pickid`) and omits
+ * #875 finding: Valve's live API uses `pick` (not `pickid`) and omits
  * `sectionid` entirely. We accept both field names so old fixtures/tests keep
  * working, and callers supply a groupid→sectionid map to fill in the missing
  * sectionid from context.
@@ -74,7 +74,7 @@ function toItemIdString(itemid: RawPrediction["itemid"]): string | null {
 /**
  * Normalize a predictions envelope into a flat, validated Prediction[].
  *
- * PHA-875: Valve's GetTournamentPredictions uses `pick` (not `pickid`) and
+ * #875: Valve's GetTournamentPredictions uses `pick` (not `pickid`) and
  * omits `sectionid`. Pass `sectionByGroup` (groupid → sectionid) so the parser
  * can reconstruct the sectionId from the groupId in the response.
  *

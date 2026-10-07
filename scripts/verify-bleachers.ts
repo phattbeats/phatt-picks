@@ -1,5 +1,5 @@
 /**
- * verify-bleachers — offline proof for PHA-1211 (The Bleachers, concept A).
+ * verify-bleachers — offline proof for #1211 (The Bleachers, concept A).
  *
  * The tally + reveal rules must be honest read-side arithmetic:
  *   1. Counts group by stampId across all senders; the public number never

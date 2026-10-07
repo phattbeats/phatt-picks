@@ -9,7 +9,7 @@
  *   1. itemids carried as exact digit strings read→write (rule #2): the live
  *      items fixture maps teamid→itemid losslessly, and the upload body emits
  *      that string verbatim — where a JSON.parse would silently corrupt it.
- *   2. single-pick upload body (PHA-853): each call carries unsuffixed
+ *   2. single-pick upload body (#853): each call carries unsuffixed
  *      sectionid/groupid/index/pickid/itemid — the indexed batch shape Valve
  *      rejects with "Required parameter 'sectionid' is missing". A whole
  *      Swiss stage is N sequential single-pick calls, not one indexed call.
@@ -76,9 +76,9 @@ function proveItemidCarry(): void {
   check("JSON.parse WOULD corrupt it (why rule #2 exists)", String(naive) !== "17293822569790899385", `JSON.parse→${naive}`);
 }
 
-// [2] single-pick upload body (PHA-853 — Valve rejects the indexed batch).
+// [2] single-pick upload body (#853 — Valve rejects the indexed batch).
 function proveSinglePickShape(): void {
-  console.log("\n[2] SINGLE-PICK BODY (PHA-853) — unsuffixed params per upload");
+  console.log("\n[2] SINGLE-PICK BODY (#853) — unsuffixed params per upload");
   // A representative pick from Stage I (section 105, group 271, slot 0).
   const pick: LocalPick = {
     sectionId: 105,
@@ -120,7 +120,7 @@ function provePlayoffOrder(): void {
   check("sections emitted QF→SF→GF", JSON.stringify(seq) ===
     JSON.stringify(["108/274", "108/275", "108/276", "108/277", "109/278", "109/279", "110/280"]), seq.join(" "));
 
-  // PHA-853: each ordered pick becomes its own single-pick body — first is a
+  // #853: each ordered pick becomes its own single-pick body — first is a
   // QF, last is the GF, so the per-pick upload loop submits in bracket order.
   const first = buildUploadBody(AUTH, ordered[0]);
   const last = buildUploadBody(AUTH, ordered[ordered.length - 1]);
@@ -132,7 +132,7 @@ function provePlayoffOrder(): void {
 // [4] graceful degrade vs escalate (rules #7/#8).
 function proveFailureClassification(): void {
   console.log("\n[4] FAILURE HANDLING — documented = degrade (#7); unexpected = escalate (#8)");
-  // 5xx joined the degradable set in PHA-853: Valve emits bare-body 500s under
+  // 5xx joined the degradable set in #853: Valve emits bare-body 500s under
   // write load, indistinguishable from rate-limiting — keep the local pick.
   for (const s of [403, 404, 410, 412, 429, 500, 502, 503, 504]) {
     check(`status ${s} → degrade (keep local)`, classifyWriteFailure(s) === "degrade");
@@ -178,14 +178,14 @@ function proveResolveGuards(): void {
   check("stored itemId used as fallback when map misses", fallback.itemId === "17293822569790899385");
 }
 
-// [6] skip-unchanged is keyed group+slot, NOT slot alone (PHA-928).
+// [6] skip-unchanged is keyed group+slot, NOT slot alone (#928).
 //
 // The playoff bracket is multi-group and every group has a single slot at
 // index 0. A slot-only key collapses all seven picks onto one entry, so a
 // favorite advancing QF→SF→GF (same team across groups) matches the QF's
 // slot-0 state and never gets uploaded to SF/GF — while the UI says synced.
 function proveMultiGroupSkipUnchanged(): void {
-  console.log("\n[6] SKIP-UNCHANGED KEY (PHA-928) — group+slot, not slot alone (multi-group playoff)");
+  console.log("\n[6] SKIP-UNCHANGED KEY (#928) — group+slot, not slot alone (multi-group playoff)");
 
   const fav = teamIds[0]; // the advancing favorite
   const qfOther = teamIds[1];
@@ -227,7 +227,7 @@ function proveMultiGroupSkipUnchanged(): void {
   // THE BUG: with a slot-only key, every pick collapses to slot 0 == favorite,
   // so the favorite at SF1/GF "matches" and is dropped. Prove the fix uploads
   // exactly the two genuinely-changed groups (SF1 278, GF 280).
-  check("SF1 (favorite advanced, group 278) IS uploaded — the PHA-928 drop",
+  check("SF1 (favorite advanced, group 278) IS uploaded — the #928 drop",
     toUpload.some((p) => p.groupId === 278 && p.pickId === fav));
   check("GF (favorite advanced, group 280) IS uploaded",
     toUpload.some((p) => p.groupId === 280 && p.pickId === fav));
@@ -241,7 +241,7 @@ function proveMultiGroupSkipUnchanged(): void {
   // to rows[0].groupId (the QF1 group), then key by slot alone. That leaves
   // {slot0 → favorite}, so the favorite at SF1/GF "matches" slot 0 and is wrongly
   // dropped from the upload while the UI reports it synced. This is exactly the
-  // PHA-928 corruption; the fix above must NOT exhibit it.
+  // #928 corruption; the fix above must NOT exhibit it.
   const oldTargetGroupId = rows[0].groupId; // 274
   const oldSlotOnly = new Map<number, number>();
   for (const r of rawSteam) {
@@ -271,14 +271,14 @@ function proveMultiGroupSkipUnchanged(): void {
     swiss.alreadySynced[0].slotIndex === 0);
 }
 
-// [7] empty-shell body normalization (PHA-1005).
+// [7] empty-shell body normalization (#1005).
 //
 // Valve's UploadTournamentPredictions occasionally returns HTTP 500 with body
 // "{\n\n}" — an empty-shell JSON object. picks-write.ts normalises these to
 // "HTTP ${status}" so they don't surface as "({ })" in the status pill.
 // This section proves the regex that drives that normalisation.
 function proveEmptyShellBodyNorm(): void {
-  console.log("\n[7] EMPTY-SHELL BODY NORM (PHA-1005) — Valve bare-body 5xx must not leak as '({ })' in pill");
+  console.log("\n[7] EMPTY-SHELL BODY NORM (#1005) — Valve bare-body 5xx must not leak as '({ })' in pill");
 
   // Mirror the exact check from picks-write.ts uploadAndReconcile.
   const isEmptyShell = (raw: string) => !raw || /^\{[\s]*\}$/.test(raw);

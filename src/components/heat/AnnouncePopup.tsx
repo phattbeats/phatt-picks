@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 /**
- * One-time broadcast popup (PHA-1211 follow-up). When there's an active
+ * One-time broadcast popup (#1211 follow-up). When there's an active
  * announcement (see announcements-core), this shows it once as a little
  * dismissable popup so everyone actually sees it — the same message also lives
  * in the notification bell. "Seen" persists in localStorage keyed by the

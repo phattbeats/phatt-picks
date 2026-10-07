@@ -107,7 +107,7 @@ export function orderPicks(picks: UploadPick[]): UploadPick[] {
 }
 
 /**
- * Skip-unchanged key for a pick's current Steam state (PHA-928).
+ * Skip-unchanged key for a pick's current Steam state (#928).
  *
  * MUST include groupId, not just slotIndex. The playoff bracket is multi-group
  * (QF 274–277, SF 278–279, GF 280) and every group has a single slot at index 0,
@@ -132,7 +132,7 @@ export interface RawSteamPick {
 
 /**
  * Build the skip-unchanged map from the live Steam predictions, keyed by
- * group+slot across ALL groups in the response (PHA-928). The previous code
+ * group+slot across ALL groups in the response (#928). The previous code
  * filtered to a single target groupId because sectionid is unavailable, but for
  * a multi-group playoff batch that dropped every group but the first. Keying by
  * group+slot makes the section irrelevant — the group disambiguates.
@@ -158,9 +158,9 @@ export function buildSteamStateMap(rawPicks: RawSteamPick[]): Map<string, number
 
 /**
  * Partition resolved picks into those that must be uploaded vs those already
- * correctly set on Steam (skip-unchanged, PHA-875). A pick is "already synced"
+ * correctly set on Steam (skip-unchanged, #875). A pick is "already synced"
  * only when the SAME group+slot already holds the SAME team — so a favorite
- * advancing across bracket groups is correctly uploaded to each group (PHA-928).
+ * advancing across bracket groups is correctly uploaded to each group (#928).
  */
 export function partitionBySteamState(
   resolved: UploadPick[],
@@ -179,9 +179,9 @@ export function partitionBySteamState(
 }
 
 /**
- * Build the form body for a SINGLE pick upload (PHA-853 live finding).
+ * Build the form body for a SINGLE pick upload (#853 live finding).
  *
- * PHA-826 §0.3 had two unconfirmed shapes: an indexed batch (`sectionid1…
+ * #826 §0.3 had two unconfirmed shapes: an indexed batch (`sectionid1…
  * sectionidN…`) and an unsuffixed single-pick call. The live Valve smoke
  * proved this endpoint only accepts the **unsuffixed single-pick** shape —
  * batching with indexed params returns 400 "Required parameter 'sectionid'
@@ -255,7 +255,7 @@ export type FailureDisposition = "degrade" | "escalate";
  *   412 bracket conflict · 429 rate-limited (back off) ·
  *   500/502/503/504 transient Valve server errors (back off, retry, keep local).
  *
- * PHA-853 live finding: Valve's tournament endpoint emits bare-body 500s under
+ * #853 live finding: Valve's tournament endpoint emits bare-body 500s under
  * write load — indistinguishable in practice from the 429 rate-limit wave. A
  * 5xx is Valve's server hiccuping, not our request being wrong, so it degrades
  * (keep the local pick, the in-call retry already had a go) rather than

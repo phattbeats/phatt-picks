@@ -155,7 +155,7 @@ function proveNormalization(): void {
   check("accepted row tagged source=liquipedia", outcomes[0]?.source === "liquipedia");
   check("CC-BY-SA attribution constant present", /CC-BY-SA/.test(LIQUIPEDIA_ATTRIBUTION), LIQUIPEDIA_ATTRIBUTION);
 
-  // PHA-1109: the HLTV bridge resolves Swiss clinches from the LIVE field, which can
+  // #1109: the HLTV bridge resolves Swiss clinches from the LIVE field, which can
   // be larger than a section's committed per-group roster (Cologne Stage III group
   // 273 carries 8 teams; the live Swiss runs 16). A real clinch by a team in the
   // global roster but not the per-group list (B8 0:3, Spirit 3:0) must score for an
@@ -166,11 +166,11 @@ function proveNormalization(): void {
   const offRoster = layout.teams.find((t) => t.pickid !== 0 && !inGroup.has(t.pickid))!.pickid;
   const bridgeRaw = [{ sectionId: 107, groupId: g3.groupid, slotIndex: 9, winnerPickId: offRoster }];
   check(
-    "off-roster live clinch is ACCEPTED for source=hltv (PHA-1109)",
+    "off-roster live clinch is ACCEPTED for source=hltv (#1109)",
     normalizeOutcomes(layout, bridgeRaw, "hltv").outcomes.length === 1,
     `accepted ${normalizeOutcomes(layout, bridgeRaw, "hltv").outcomes.length}`,
   );
-  // PHA-1273: the Valve oracle reads the winner straight from the LIVE layout group,
+  // #1273: the Valve oracle reads the winner straight from the LIVE layout group,
   // and the playoff bracket is dynamically seeded, so the committed per-group roster
   // can drift from Valve's actual bracket (Cologne QF1/QF2 groups 274/275 were seed-
   // SWAPPED — Valve's real winners 85/134 were rejected "not eligible" against the
@@ -178,7 +178,7 @@ function proveNormalization(): void {
   // exactly like the HLTV bridge: a real global team is accepted even off the
   // committed per-group list.
   check(
-    "off-roster live winner is now ACCEPTED for source=valve (PHA-1273 playoff seed drift)",
+    "off-roster live winner is now ACCEPTED for source=valve (#1273 playoff seed drift)",
     normalizeOutcomes(layout, bridgeRaw, "valve").outcomes.length === 1,
     `accepted ${normalizeOutcomes(layout, bridgeRaw, "valve").outcomes.length}`,
   );
@@ -187,7 +187,7 @@ function proveNormalization(): void {
   // FURIA (85) winning. 85 is a real event team, just not in the committed 274 list.
   const qf1Swap = [{ sectionId: 108, groupId: 274, slotIndex: 0, winnerPickId: 85 }];
   check(
-    "Cologne QF1 seed-swap winner (274←FURIA 85) resolves under valve (PHA-1273)",
+    "Cologne QF1 seed-swap winner (274←FURIA 85) resolves under valve (#1273)",
     normalizeOutcomes(layout, qf1Swap, "valve").outcomes.length === 1,
     `accepted ${normalizeOutcomes(layout, qf1Swap, "valve").outcomes.length}`,
   );

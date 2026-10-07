@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Per-type notification preference toggles (PHA-1240).
+ * Per-type notification preference toggles (#1240).
  *
  * Lets the player choose which notification types appear in the feed (in-app)
  * and whether stage lock reminders also go out as push notifications (push).

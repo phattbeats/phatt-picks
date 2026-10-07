@@ -8,7 +8,7 @@
  * "Lock" maps to three signals, any of which closes the editing window:
  *   - the layout's `picks_allowed` flag flips off (Valve closes the window), or
  *   - a resolved outcome exists (you can't have a result for an editable stage), or
- *   - the published lock instant has passed — the stage has begun (PHA-898).
+ *   - the published lock instant has passed — the stage has begun (#898).
  * The third matters because our committed fixture is frozen all-open and an
  * outcome row lands ~1h+ after the first match, so without it a stage that has
  * STARTED would stay "open" to the reveal gate: picks neither editable (the
@@ -20,7 +20,7 @@
  * Morgan inverses of each other on the same inputs, so adding `lockedByTime` to
  * one without the others can never open a leak or a dead zone.
  *
- * ARCHIVED MAJORS (PHA-949). A fourth signal, `eventArchived`, closes the
+ * ARCHIVED MAJORS (#949). A fourth signal, `eventArchived`, closes the
  * window for a finished Major: once an event's Grand Final resolves it becomes
  * read-only history, so every stage is locked, revealed, and not writable
  * regardless of the per-stage lock gate. It's an optional trailing param
@@ -39,8 +39,8 @@ export interface LockableGroup {
 /**
  * Is this group's stage locked (picks editable window closed)?
  * `hasResolvedOutcome` = at least one slot in the group already has a result.
- * `lockedByTime` = the section's published lock instant has passed (PHA-898).
- * `eventArchived` = the whole Major is finished history (PHA-949).
+ * `lockedByTime` = the section's published lock instant has passed (#898).
+ * `eventArchived` = the whole Major is finished history (#949).
  */
 export function isStageLocked(
   group: LockableGroup,
@@ -76,7 +76,7 @@ export function arePicksRevealed(
  * groupId alone leaks secrecy if Valve ever reuses a groupid across sections:
  * resolving one section's group would prematurely reveal another section's
  * still-open picks. Cologne groupids (271–280) are globally unique so this is
- * not live today, but the gate is defensive by design (see PHA-845/PHA-862).
+ * not live today, but the gate is defensive by design (see #845/#862).
  */
 export function groupOutcomeKey(sectionId: number, groupId: number): string {
   return `${sectionId}:${groupId}`;

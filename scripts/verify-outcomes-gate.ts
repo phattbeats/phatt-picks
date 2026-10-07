@@ -1,5 +1,5 @@
 /**
- * verify-outcomes-gate - offline proof for PHA-844 (Liquipedia rate-limit fix).
+ * verify-outcomes-gate - offline proof for #844 (Liquipedia rate-limit fix).
  *
  * Pure-core check: pickLockedUnresolvedSlots() against the COMMITTED
  * cologne-layout fixture (all picks_allowed:true pre-event) must yield zero

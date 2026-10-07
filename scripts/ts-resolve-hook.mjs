@@ -1,4 +1,4 @@
-// PHA-925 — Node ESM resolver hook for the offline verify-*.ts harness.
+// #925 — Node ESM resolver hook for the offline verify-*.ts harness.
 //
 // The app uses `moduleResolution: "bundler"`, so source files import sibling
 // modules WITHOUT a file extension (e.g. `import { x } from "./swiss-bucket-core"`).

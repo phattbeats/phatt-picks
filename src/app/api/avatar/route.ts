@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  // PHA-1045: cap the body BEFORE buffering/parsing it. A declared
+  // #1045: cap the body BEFORE buffering/parsing it. A declared
   // Content-Length over the ceiling is rejected without reading the attacker's
   // payload into memory at all.
   const declaredLen = Number(req.headers.get("content-length"));
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   if (typeof dataUrl !== "string") {
     return NextResponse.json({ error: "Expected a JPEG/PNG/WebP image data URL" }, { status: 400 });
   }
-  // PHA-1045: length BEFORE the regex — never run the pattern over an oversized
+  // #1045: length BEFORE the regex — never run the pattern over an oversized
   // string (a chunked request without Content-Length still lands here).
   if (dataUrl.length > MAX_LEN) {
     return NextResponse.json({ error: "Image too large — resize first" }, { status: 413 });

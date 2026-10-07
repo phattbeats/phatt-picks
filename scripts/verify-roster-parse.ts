@@ -1,5 +1,5 @@
 /**
- * verify-roster-parse — offline proof for the PHA-992 roster parser.
+ * verify-roster-parse — offline proof for the #992 roster parser.
  *
  * gather-roster refreshes each player's HLTV rating + profile link from the team
  * profile's "Players of {team}" table. This asserts the shared parser reads that

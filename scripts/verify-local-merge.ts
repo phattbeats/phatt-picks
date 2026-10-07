@@ -1,6 +1,6 @@
 /**
  * verify-local-merge — offline proof for the local → Steam pick claim
- * (PHA-1232). Exercises the pure planning in src/lib/local-merge-core.ts:
+ * (#1232). Exercises the pure planning in src/lib/local-merge-core.ts:
  *
  *   1. token extraction   (raw token vs pasted login URL)
  *   2. slot keying        (the Pick unique tuple sans player)

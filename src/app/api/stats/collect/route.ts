@@ -16,7 +16,7 @@ import {
 } from "@/lib/analytics-core";
 
 /**
- * Built-in analytics collector (PHA-1277). Receives the inline tracker's beacon
+ * Built-in analytics collector (#1277). Receives the inline tracker's beacon
  * and records ONE anonymous row — a pageview, or a named in-app event. Privacy
  * by construction:
  *   - no PII stored: no IP, no user id, no query strings, no cookies;

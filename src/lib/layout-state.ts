@@ -1,5 +1,5 @@
 /**
- * Live-layout persistence + overlay (server-only) — PHA-896.
+ * Live-layout persistence + overlay (server-only) — #896.
  *
  * The picks UI read `getCommittedLayout()` everywhere and never merged live team
  * data, so Stage III showed only its 8 pre-known teams (the 8 Stage-II advancers
@@ -75,13 +75,13 @@ export async function getEffectiveLayout(eventId: number): Promise<Layout> {
 }
 
 // Dedicated refresh slot — gates how often a live-layout fetch is *attempted*
-// across the whole cluster, independent of the outcomes refresh (PHA-866) so a
+// across the whole cluster, independent of the outcomes refresh (#866) so a
 // fully-resolved event that has stopped polling outcomes still tracks late
 // playoff seeding. 30s floor matches the outcomes cadence.
 const LAYOUT_REFRESH_SOURCE = "layout-refresh";
 const LAYOUT_REFRESH_MIN_INTERVAL_MS = 30_000;
 
-/** Claim the 30s live-layout refresh slot (shared compare-and-set, PHA-866). */
+/** Claim the 30s live-layout refresh slot (shared compare-and-set, #866). */
 const claimLayoutRefreshSlot = (): Promise<boolean> =>
   claimRefreshSlot(LAYOUT_REFRESH_SOURCE, LAYOUT_REFRESH_MIN_INTERVAL_MS);
 
@@ -95,7 +95,7 @@ const claimLayoutRefreshSlot = (): Promise<boolean> =>
  * Never throws.
  */
 export async function refreshLayoutOnRead(eventId: number): Promise<void> {
-  if (await isEventFrozenById(eventId)) return; // PHA-949/954: frozen (effectively archived) Majors never re-crawl
+  if (await isEventFrozenById(eventId)) return; // #949/954: frozen (effectively archived) Majors never re-crawl
   if (!(await claimLayoutRefreshSlot())) return; // within floor or lost the race — no-op
   runDeferred(async () => {
     const envelope = await fetchTournamentLayout(eventId);

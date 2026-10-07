@@ -1,5 +1,5 @@
 /**
- * verify-stage-gate - offline proof for the stage-pickability gate (PHA-895).
+ * verify-stage-gate - offline proof for the stage-pickability gate (#895).
  *
  * Valve opens every Swiss stage's Pick'Em window at once, so the gate is driven
  * by `picks_allowed` + whether the stage is seeded (has real, non-TBD teams) —
@@ -68,7 +68,7 @@ check(
 
 console.log("\nstage-gate - playoff bracket stays locked while teams are TBD");
 
-// The committed fixture now seeds the Quarterfinals (PHA-1007 — Valve won't seed
+// The committed fixture now seeds the Quarterfinals (#1007 — Valve won't seed
 // this event's bracket, so the matchups are committed directly). The
 // "all TBD → teams-not-set" behavior is verified against an explicitly unseeded
 // clone so the gate logic stays covered regardless of the fixture's seed state.
@@ -147,7 +147,7 @@ check(
   stage2ValveLocked.pickable === false && stage2ValveLocked.reason === "locked-by-valve",
 );
 
-console.log("\nstage-gate - schedule lock (PHA-898): a stage that has begun is locked");
+console.log("\nstage-gate - schedule lock (#898): a stage that has begun is locked");
 
 // Stage I is seeded + all-open in the fixture, so it's pickable by default;
 // once its published lock time has passed the caller flags lockedByTime and the
@@ -183,7 +183,7 @@ check(
   unknown.pickable === false && unknown.reason === "unknown-section",
 );
 
-console.log("\nstage-gate - current-stage selection: dashboard hero + picks-nav default (PHA-1007 / PHA-1050)");
+console.log("\nstage-gate - current-stage selection: dashboard hero + picks-nav default (#1007 / #1050)");
 
 // Statuses below mirror layout.sections order: I, II, III, QF, SF, GF.
 const open = { pickable: true, reason: "open" } as const;

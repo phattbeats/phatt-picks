@@ -1,11 +1,11 @@
 /**
- * Live Swiss lineup / standings (pure, PHA-898).
+ * Live Swiss lineup / standings (pure, #898).
  *
  * Once Stage I begins, players want what every other site shows: the Swiss
  * lineup with each team's standing, so they can track how the teams THEY picked
  * are doing. We build that from the only live result source we already trust —
  * Valve's answer key (the resolved StageOutcome rows, refreshed on read by
- * PHA-866). As teams clinch, Valve fills each pick slot's correct team; mapping
+ * #866). As teams clinch, Valve fills each pick slot's correct team; mapping
  * those resolved slots back through the Swiss bucket convention (swiss-bucket-
  * core) tells us which teams have gone 3-0, which advanced, and which crashed
  * 0-3. Teams not yet in any resolved slot are still in contention.
@@ -74,7 +74,7 @@ function statusForBucketLabel(label: string): Exclude<SwissTeamStatus, "live"> {
 export type PickConfirm = "right" | "wrong" | "pending";
 
 /**
- * Confirm a single pick (PHA-902): the viewer slotted a team into a predicted
+ * Confirm a single pick (#902): the viewer slotted a team into a predicted
  * bucket (`predictedLabel`, e.g. "3:0 ADVANCED"); resolve it against the answer
  * key.
  *
@@ -84,9 +84,9 @@ export type PickConfirm = "right" | "wrong" | "pending";
  * - The team is still in play → normally `pending`, BUT `wrong` if EITHER:
  *     · the predicted bucket is already FULL of other teams
  *       (`predictedBucketFullOfOthers`) — once both 3:0 (or both 0:3) slots are
- *       taken by others, my 3:0/0:3 pick is impossible (Brandon, PHA-902); OR
+ *       taken by others, my 3:0/0:3 pick is impossible (Brandon, #902); OR
  *     · the team's own partial record already rules the bucket out
- *       (`impossibleByOwnRecord`, PHA-951) — a 3:0 pick whose team has lost a
+ *       (`impossibleByOwnRecord`, #951) — a 3:0 pick whose team has lost a
  *       game, or a 0:3 pick whose team has won one, can never come true. See
  *       isBucketImpossibleByRecord for that decision.
  */
@@ -110,7 +110,7 @@ export interface TeamRecord {
 
 /**
  * Is the bucket the viewer predicted already mathematically IMPOSSIBLE for a team
- * given its PARTIAL running record (PHA-951)? Unlike confirmPick's terminal check,
+ * given its PARTIAL running record (#951)? Unlike confirmPick's terminal check,
  * this fires on the FIRST contradicting game — before the team is fully resolved:
  *
  *   - 3:0 pick  → dead the moment the team loses a single game (losses >= 1): it
@@ -120,7 +120,7 @@ export interface TeamRecord {
  *   - advance   → dead once the team is eliminated (losses >= eliminateAt) without
  *                 reaching the advance threshold.
  *
- * Brandon (PHA-951): "Tyloo was my 0-3, they won a game today — that should lock
+ * Brandon (#951): "Tyloo was my 0-3, they won a game today — that should lock
  * red." A record that doesn't yet rule the bucket out (incl. all-zero pre-match,
  * or no record at all) returns false. Bucketed via the same statusForBucketLabel
  * convention as the rest of this module, so the 3:1/3:2 card and the single-bucket
@@ -143,7 +143,7 @@ export function isBucketImpossibleByRecord(
 }
 
 /**
- * Is the bucket the viewer predicted already filled by OTHER teams (PHA-902)?
+ * Is the bucket the viewer predicted already filled by OTHER teams (#902)?
  * A predicted bucket holds `capacity` teams (e.g. the 3:0 and 0:3 buckets hold 2
  * each). Once that many teams OTHER than `myPickId` have clinched that bucket,
  * the viewer's pick for it is impossible — even if their team is still alive. The
@@ -191,12 +191,12 @@ export function buildSwissStandings(
   }
   // The committed per-group roster can be a PARTIAL pick'em field that is smaller
   // than the live tournament (e.g. Cologne Stage III: the layout group carries 8
-  // teams, but the live HLTV Swiss runs 16). PHA-1109 fixed the WRITE side — those
+  // teams, but the live HLTV Swiss runs 16). #1109 fixed the WRITE side — those
   // off-roster teams get persisted StageOutcome rows validated against the global
   // roster — but a team resolved into a slot whose pickid is NOT in any group's
   // committed roster would still be dropped here, so its clinch status never
   // reached the locked-picks board and the viewer's pick for it stayed neutral
-  // forever even though the stage was over (PHA-1207). Fold every resolved winner
+  // forever even though the stage was over (#1207). Fold every resolved winner
   // into the team set so its status flows through — the answer key is
   // authoritative for who actually competed, and a winner genuinely did.
   for (const group of section.groups) {
@@ -237,7 +237,7 @@ export function buildSwissStandings(
       const slotIndex = Number(slotStr);
       userPickedTeams.add(pickId);
       const bucketLabel = bucketLabelByGroupSlot.get(`${group.groupid}:${slotIndex}`) ?? "PICK";
-      // Bucket-aware (PHA-918): a Swiss bucket's slots are interchangeable, so a
+      // Bucket-aware (#918): a Swiss bucket's slots are interchangeable, so a
       // pick is a HIT when the team clinched the SAME bucket the viewer slotted it
       // into — compared by clinched status, not slot-for-slot (the answer key
       // resolves teams into bucket slots in standings order, not the viewer's). A

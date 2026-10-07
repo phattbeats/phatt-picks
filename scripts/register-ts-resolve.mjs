@@ -1,4 +1,4 @@
-// PHA-925 — registers the extensionless-import resolver hook (ts-resolve-hook.mjs)
+// #925 — registers the extensionless-import resolver hook (ts-resolve-hook.mjs)
 // for the offline verify-*.ts harness. Pass to node via `--import`:
 //
 //   node --experimental-strip-types --import ./scripts/register-ts-resolve.mjs \

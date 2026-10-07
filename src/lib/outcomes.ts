@@ -57,7 +57,7 @@ export interface IngestSummary {
 }
 
 /**
- * Probe the Valve oracle for resolved results (PHA-869 — Brandon-approved source).
+ * Probe the Valve oracle for resolved results (#869 — Brandon-approved source).
  *
  * Valve's GetTournamentLayout carries the official answer key in each pick slot's
  * `pickids` once a stage resolves (empty pre-event). This is the preferred,
@@ -82,7 +82,7 @@ async function tryValveOracle(eventId: number): Promise<RawResolvedSlot[] | null
     const envelope = await fetchTournamentLayout(eventId);
     const live = envelope?.result;
     if (!live?.sections) return null;
-    // Free overlay refresh (PHA-896): this same payload carries the live seeded
+    // Free overlay refresh (#896): this same payload carries the live seeded
     // teams + picks_allowed the picks UI overlays. Cache it while we have it so
     // an outcomes tick also advances the layout state. Non-fatal.
     await cacheLiveLayout(eventId, envelope).catch(() => {});
@@ -131,7 +131,7 @@ export async function ingestOutcomes(eventId: number): Promise<IngestSummary> {
     // LIVE layout (GetTournamentLayout): our committed fixture is permanently
     // `picks_allowed:true`, so gating on it (the old behavior) meant the oracle
     // was NEVER reached and outcomes/scoring stayed frozen at 0 all event —
-    // PHA-886. resolveOutcomesFromLayout self-gates on the live `picks_allowed`,
+    // #886. resolveOutcomesFromLayout self-gates on the live `picks_allowed`,
     // so this is a no-op while a stage is open and resolves only genuinely-locked
     // slots. Rate-limited upstream by refreshOutcomesOnRead's 30s cluster claim.
     const valve = await tryValveOracle(eventId);
@@ -140,9 +140,9 @@ export async function ingestOutcomes(eventId: number): Promise<IngestSummary> {
       source = "valve";
     } else {
       // Liquipedia fallback stays gated on locked-unresolved slots so it never
-      // hammers the source pre-event (PHA-844). Against the all-open committed
+      // hammers the source pre-event (#844). Against the all-open committed
       // fixture this is always [] — and Liquipedia can't resolve this event's
-      // Swiss buckets anyway (PHA-869) — so it stays dormant; Valve is the live
+      // Swiss buckets anyway (#869) — so it stays dormant; Valve is the live
       // source of truth. We short-circuit here only when Valve had nothing AND
       // no committed-locked slot exists to justify a fallback request.
       const lockedUnresolved = pickLockedUnresolvedSlots(layout, resolvedKey);
@@ -196,7 +196,7 @@ export async function ingestOutcomes(eventId: number): Promise<IngestSummary> {
   await persistOutcomes(eventId, outcomes);
 
   // Freeze cumulative standings at this resolution for delta arrows + Stage
-  // Reveal (PHA-858), but only when new outcomes actually landed. Graceful by
+  // Reveal (#858), but only when new outcomes actually landed. Graceful by
   // contract (rules #7/#8): a snapshot failure must never break the ingest
   // response — the leaderboard still scores live, arrows simply degrade.
   if (outcomes.length > 0) {
@@ -218,23 +218,23 @@ export async function ingestOutcomes(eventId: number): Promise<IngestSummary> {
   };
 }
 
-// Dedicated refresh slot for the on-read driver (PHA-866), kept separate from the
+// Dedicated refresh slot for the on-read driver (#866), kept separate from the
 // "liquipedia" parse throttle so this gates how often a refresh is *attempted*
 // across the whole cluster — not just the API call deep inside ingestOutcomes.
 const OUTCOMES_REFRESH_SOURCE = "outcomes-refresh";
 const OUTCOMES_REFRESH_MIN_INTERVAL_MS = 30_000;
 
-/** Claim the 30s outcomes refresh slot (shared compare-and-set, PHA-863/866). */
+/** Claim the 30s outcomes refresh slot (shared compare-and-set, #863/866). */
 const claimOutcomesRefreshSlot = (): Promise<boolean> =>
   claimRefreshSlot(OUTCOMES_REFRESH_SOURCE, OUTCOMES_REFRESH_MIN_INTERVAL_MS);
 
 /**
- * On-read self-refresh of outcomes (PHA-866). The live read surfaces call this so
+ * On-read self-refresh of outcomes (#866). The live read surfaces call this so
  * the leaderboard / rank snapshots / Stage Reveal track official results as
  * matches finish, with NO external cron — the ingest route is owner/session-gated
- * (PHA-861), so a headless scheduler can't drive it anyway.
+ * (#861), so a headless scheduler can't drive it anyway.
  *
- * Mirrors the news wire's read-path refresh (PHA-863, refreshWireOnRead): one
+ * Mirrors the news wire's read-path refresh (#863, refreshWireOnRead): one
  * ATOMIC `claimOutcomesRefreshSlot` gates the whole refresh against the 30s floor
  * — lose the claim → no-op (warm window or a concurrent render already holds it),
  * win it → DEFER the slow ingest past the response via `after` so it never adds to
@@ -243,29 +243,29 @@ const claimOutcomesRefreshSlot = (): Promise<boolean> =>
  * back off regardless of when the deferred ingest finishes. Never throws.
  *
  * ingestOutcomes is idempotent, event-gated (zero source calls pre-event / when
- * fully resolved — PHA-844), cache-hard, and bounded by the Liquipedia fetch
+ * fully resolved — #844), cache-hard, and bounded by the Liquipedia fetch
  * timeout; rank snapshots + Stage Reveal refresh transitively inside it.
  */
 export async function refreshOutcomesOnRead(eventId: number): Promise<void> {
-  if (await isEventFrozenById(eventId)) return; // PHA-949/954: frozen (effectively archived) Majors never re-crawl
+  if (await isEventFrozenById(eventId)) return; // #949/954: frozen (effectively archived) Majors never re-crawl
   if (!(await claimOutcomesRefreshSlot())) return; // within floor or lost the race — no-op
   runDeferred(async () => {
     // Valve / Liquipedia answer key (a no-op for the set-valued Swiss buckets it
     // can't resolve), THEN the HLTV bridge that DOES resolve those buckets from
-    // the live standings already crawled for the picks-page bracket (PHA-918).
+    // the live standings already crawled for the picks-page bracket (#918).
     await ingestOutcomes(eventId);
     await bridgeSwissOutcomes(eventId);
   }, "outcomes");
 }
 
 /**
- * Bridge live HLTV Swiss standings → StageOutcome (PHA-918).
+ * Bridge live HLTV Swiss standings → StageOutcome (#918).
  *
  * Why this exists: scoring reads StageOutcome, but Valve's GetTournamentLayout
  * returns set-valued pickids for each Swiss slot, which the oracle leaves
  * "ambiguous" — so a Swiss stage never resolves there and the leaderboard sits at
  * zero even after teams clinch. The picks-page bracket already shows live results
- * because it reads the HLTV standings cache (PHA-902); the leaderboard did not.
+ * because it reads the HLTV standings cache (#902); the leaderboard did not.
  * This closes that gap: it reads the SAME warm cache, derives each team's clinched
  * pick bucket from its terminal W-L record, and writes the resolved slots so the
  * leaderboard, player pages, compare, reveal, and rank snapshots all score off
@@ -288,7 +288,7 @@ export async function bridgeSwissOutcomes(
   for (const section of layout.sections) {
     if (!isSwissSection(section.sectionid)) continue;
     // Results can only exist once the pick window has closed. Schedule-driven
-    // lock (PHA-898), independent of the fixture's picks_allowed flag.
+    // lock (#898), independent of the fixture's picks_allowed flag.
     if (!isLockTimePassed(section.sectionid, nowMs, getEventConfig(eventId)?.lockSchedule)) continue;
 
     // Gather terminal-record candidates from EVERY reliable source in the SAME
@@ -297,9 +297,9 @@ export async function bridgeSwissOutcomes(
     //   1. the W-L standings TABLE — richest, but JS-rendered, so it doesn't
     //      always land in the crawl markdown (rows = 0);
     //   2. the bracket's MATCH cells — server-rendered popup-json, present even
-    //      when the table isn't, tallied into series records (PHA-1109);
-    //   3. the bracket's TERMINAL columns — the original PHA-1044 fallback.
-    // Merging (not table-OR-bracket) is what fixes the PHA-1109 freeze: a 0:3
+    //      when the table isn't, tallied into series records (#1109);
+    //   3. the bracket's TERMINAL columns — the original #1044 fallback.
+    // Merging (not table-OR-bracket) is what fixes the #1109 freeze: a 0:3
     // elimination resolves the moment ANY source shows it, instead of going
     // unscored because the table was absent and the terminal columns parsed
     // nothing. Swiss records grow monotonically, so "most games played" is the
@@ -343,7 +343,7 @@ export async function bridgeSwissOutcomes(
       select: { groupId: true, slotIndex: true, winnerPickId: true },
     });
 
-    // Self-heal (PHA-1109): a slot resolved off a stale/partial crawl can hold the
+    // Self-heal (#1109): a slot resolved off a stale/partial crawl can hold the
     // WRONG winner, and the never-rewrite rule would freeze that error forever —
     // blocking the team that actually clinched the bucket (B8's 0:3, Spirit's 3:0)
     // from ever scoring. Evict any slot whose stored winner the CURRENT live record
@@ -381,7 +381,7 @@ export async function bridgeSwissOutcomes(
   }
 
   // Freeze cumulative standings whenever new outcomes landed (delta arrows + Stage
-  // Reveal, PHA-858). Non-fatal: a snapshot miss never breaks the bridge.
+  // Reveal, #858). Non-fatal: a snapshot miss never breaks the bridge.
   if (written > 0) {
     try {
       await writeRankSnapshots(eventId);
@@ -397,18 +397,18 @@ export interface LiveResultsTick {
   ingested: number;
   resolved: number;
   /** Playoff matches that are past their resolve deadline but still un-green —
-   *  the stale-outcome watchdog count (PHA-1273). 0 in the healthy case. */
+   *  the stale-outcome watchdog count (#1273). 0 in the healthy case. */
   stale: number;
 }
 
 /**
- * Synchronous live-results driver for the in-process scheduler (PHA-1109).
+ * Synchronous live-results driver for the in-process scheduler (#1109).
  *
  * The on-read drivers (refreshStandingsOnRead / refreshOutcomesOnRead) DEFER
  * their HLTV crawl + bridge past the response via `after()` — which does not
  * fire reliably in the Next standalone production server. The symptom: during a
  * live stage the standings cache (and the StageOutcome answer key the
- * leaderboard scores off) can freeze for hours with nothing to notice. PHA-1109:
+ * leaderboard scores off) can freeze for hours with nothing to notice. #1109:
  * a 0-3 elimination (B8) stayed un-green and unscored for ~19h because the crawl
  * never ran — every page load STAMPED the ~1h refresh floor at claim time, then
  * deferred a crawl that never executed, perpetually wedging the floor while no
@@ -447,7 +447,7 @@ export async function refreshLiveResultsTick(
 
   let resolved = 0;
 
-  // Valve oracle (PHA-1273). The Swiss bridge below only resolves the Swiss
+  // Valve oracle (#1273). The Swiss bridge below only resolves the Swiss
   // sections (standingsSectionIds / isSwissSection) — PLAYOFF outcomes come
   // exclusively from the Valve answer key in GetTournamentLayout (ingestOutcomes),
   // which otherwise only ran on the owner's manual ingest or the unreliable
@@ -471,7 +471,7 @@ export async function refreshLiveResultsTick(
     console.error("[live-tick] outcome bridge failed (non-fatal):", e instanceof Error ? e.message : e);
   }
 
-  // Stale-outcome watchdog (PHA-1273). The oracle above re-pokes every tick, so a
+  // Stale-outcome watchdog (#1273). The oracle above re-pokes every tick, so a
   // transiently-stuck playoff match self-heals on the next cycle — but a match that
   // stays unresolved long past when it should have finished (QF1/QF2: ~2 days behind
   // a normalizer bug) would otherwise be masked forever by that blind retry. After

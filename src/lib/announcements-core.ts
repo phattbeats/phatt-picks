@@ -1,9 +1,9 @@
 /**
- * Broadcast announcements (PHA-1211 follow-up) — a curated, everyone-sees-it
+ * Broadcast announcements (#1211 follow-up) — a curated, everyone-sees-it
  * message that rides the universal notification feed AND surfaces once as a
  * little popup. Authored in-code (like the curated NewsItem seed), so there's no
  * table and no fan-out: every signed-in player derives the same active set from
- * the clock. "Unread" is the per-item read state (PHA-1237), so an announcement
+ * the clock. "Unread" is the per-item read state (#1237), so an announcement
  * stays in the feed until the player opens the bell, marks it individually, or
  * marks all read. No backfill — an announcement only shows between its publish
  * and expiry instants.
@@ -28,15 +28,15 @@ export interface Announcement {
 }
 
 /**
- * The Bleachers reactions (PHA-1211) unlock the instant the playoff matches go
+ * The Bleachers reactions (#1211) unlock the instant the playoff matches go
  * live — i.e. the bracket lock (first quarterfinal). So this one broadcast flips
  * from a teaser to a "they're live" ping AT that instant rather than being a
- * single static message (PHA-1245 follow-up): the teaser window ends exactly
+ * single static message (#1245 follow-up): the teaser window ends exactly
  * where the live window begins, so at lock the teaser drops and a fresh
  * "Reactions are live" announcement appears (a new unread item + popup + push,
  * since it's a distinct id). Derived from the ACTIVE event's committed schedule
- * (PHA-1327: resolved per call via `currentEvent`, never cached at module load —
- * same class of bug PHA-1046 fixed elsewhere) so it stays truthful across a
+ * (#1327: resolved per call via `currentEvent`, never cached at module load —
+ * same class of bug #1046 fixed elsewhere) so it stays truthful across a
  * Major cutover; falls back to the committed Cologne first QF as a last resort.
  */
 function reactionsLiveAt(nowMs: number): string {

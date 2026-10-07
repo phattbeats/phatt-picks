@@ -1,9 +1,9 @@
 /**
  * Wire ingestion trigger — POST upserts the curated seed + automated HLTV pull
- * (PHA-857 seam, PHA-859 source).
+ * (#857 seam, #859 source).
  *
  * Owner-gated manual trigger (consistent with /api/players/local), same shape as
- * /api/outcomes/ingest. There is NO headless caller of this route: PHA-859 made
+ * /api/outcomes/ingest. There is NO headless caller of this route: #859 made
  * automated HLTV ingestion self-refreshing on read (getNews fires a fire-and-
  * forget background pull once the source floor elapses), so freshness needs no
  * cron and no caller posts here. This route stays only for an explicit owner-

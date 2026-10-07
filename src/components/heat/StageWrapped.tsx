@@ -18,7 +18,7 @@ import { TeamLogo } from "@/components/ui/TeamLogo";
 import { StageLogo } from "@/components/heat/StageLogo";
 
 /**
- * Stage Wrapped (PHA-1052) — the reusable popup + click-through slide deck shell.
+ * Stage Wrapped (#1052) — the reusable popup + click-through slide deck shell.
  *
  * This file is the *shell only*. It reuses the body-portal bottom-sheet pattern
  * and corner accents from `SpotlightModal`/`TeamStatsDrawer`, and the
@@ -40,9 +40,9 @@ import { StageLogo } from "@/components/heat/StageLogo";
 const REPLAY_EVENT = "stage-wrapped:replay";
 
 /**
- * Ironclad guard (PHA-1274): the Wrapped deck is the only thing that auto-opens
+ * Ironclad guard (#1274): the Wrapped deck is the only thing that auto-opens
  * app-wide, so a render fault inside it must NEVER take down the page (a white
- * screen would block the whole app — exactly the class of failure PHA-1269
+ * screen would block the whole app — exactly the class of failure #1269
  * fought). If the deck throws, we render nothing and the rest of the app is
  * untouched.
  */
@@ -150,13 +150,13 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
 
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Optional epic soundtrack (PHA-1054). Off by default — the deck auto-opens
+  // Optional epic soundtrack (#1054). Off by default — the deck auto-opens
   // without a user gesture, and browsers block autoplay-with-sound there, so we
   // never blare uninvited. One tap on the sound toggle starts the (looping)
   // royalty-free theme; closing the deck stops it.
   const audioRef = useRef<HTMLAudioElement>(null);
   const [soundOn, setSoundOn] = useState(false);
-  // Which backing track is selected (PHA-1274 — multiple moods, see WRAPPED_TRACKS).
+  // Which backing track is selected (#1274 — multiple moods, see WRAPPED_TRACKS).
   const [trackIndex, setTrackIndex] = useState(0);
   const track = WRAPPED_TRACKS[trackIndex] ?? WRAPPED_TRACKS[0];
   const toggleSound = useCallback(() => {
@@ -313,7 +313,7 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
         <span className="br-bl" />
 
         {/* Royalty-free soundtrack — Kevin MacLeod (CC-BY 3.0). Multiple moods
-            (PHA-1274): the sound button plays/mutes; the mood button cycles
+            (#1274): the sound button plays/mutes; the mood button cycles
             epic → bittersweet → somber. `key` remounts the element on track
             change so the new src is picked up cleanly. */}
         <audio key={track.id} ref={audioRef} src={track.src} loop preload="none" aria-hidden="true" />
@@ -479,7 +479,7 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
 /* ------------------------------------------------------------------ */
 
 /**
- * The documentary photo band (PHA-1274 "dank HLTV photo" twist). If the image
+ * The documentary photo band (#1274 "dank HLTV photo" twist). If the image
  * fails to load it hides itself rather than leaving a broken-image icon — this
  * is what lets us *reserve a spot* for a still that isn't licensed/dropped in
  * yet (e.g. the magixx 1v4 reaction): author the beat now, drop the file into
@@ -504,7 +504,7 @@ function PhotoFigure({ photo }: { photo: NonNullable<WrappedSlide["photo"]> }) {
 }
 
 /**
- * A transparent player portrait (PHA-1274) — the team's marquee, used as the
+ * A transparent player portrait (#1274) — the team's marquee, used as the
  * picture for the team slides + player moments. HLTV bodyshots are cut-out
  * WebPs, so they sit as a centered hero over the slide's dark backdrop (no band
  * frame) with a heat glow behind. Hides itself if the image fails to load.
@@ -521,7 +521,7 @@ function PlayerPortrait({ portrait }: { portrait: NonNullable<WrappedSlide["port
 }
 
 /**
- * A looping highlight clip in the band (PHA-1274 — the magixx 1v4). Muted +
+ * A looping highlight clip in the band (#1274 — the magixx 1v4). Muted +
  * autoplay + loop + playsInline so it plays unprompted on mobile; only mounts
  * for the active slide (the deck renders one SlideCard at a time, keyed by id),
  * so no off-screen clip ever loads. The `muted` *property* is forced via ref —
@@ -573,7 +573,7 @@ function SlideCard({ slide }: { slide: WrappedSlide }) {
   return (
     <div className={`sw-slide sw-kind-${slide.kind} sw-enter`}>
       {/* Band: a looping clip (magixx 1v4) → else a player portrait (the team's
-          marquee, PHA-1274) → else the documentary still. */}
+          marquee, #1274) → else the documentary still. */}
       {slide.video ? (
         <VideoFigure video={slide.video} />
       ) : slide.portrait ? (
@@ -607,7 +607,7 @@ function SlideCard({ slide }: { slide: WrappedSlide }) {
           <StageLogo numeral={badge.numeral} label={badge.label} sub={badge.sub} />
         </div>
       ) : (
-        false /* eyebrow pill removed (PHA-1274, Brandon: superfluous card "title") */ && null
+        false /* eyebrow pill removed (#1274, Brandon: superfluous card "title") */ && null
       )}
       {/* Team logos — matchups / clinchers. One logo centred; two flank a "vs". */}
       {logos.length > 0 && (
@@ -768,16 +768,16 @@ interface AnnounceProps {
    * Force the deck open once on mount, bypassing the once-per-stage seen-flag.
    * Set when the viewer arrived via the recap notification deep-link
    * (`/reveal/<id>?wrapped=1`) so the cinematic recap re-opens even on a device
-   * that already dismissed the auto-popup (PHA-1245 follow-up).
+   * that already dismissed the auto-popup (#1245 follow-up).
    */
   forceOpen?: boolean;
   /**
-   * Opt-in app-wide auto-open (PHA-1274 — the Major Wrapped finale). OFF by
-   * default so stage recaps stay explicit-intent only (PHA-1269). When true the
+   * Opt-in app-wide auto-open (#1274 — the Major Wrapped finale). OFF by
+   * default so stage recaps stay explicit-intent only (#1269). When true the
    * deck pops once per viewer, but IRONCLAD against the prior mobile-freeze:
    * the open is deferred to idle (never blocks first paint / site access), the
    * seen-flag is stamped before opening (a reload never re-pops), and the deck
-   * itself carries no GPU blur (PHA-1269) and fits mobile (PHA-1276). A render
+   * itself carries no GPU blur (#1269) and fits mobile (#1276). A render
    * fault is swallowed by the boundary below, so it can never block the app.
    */
   autoOpen?: boolean;
@@ -804,7 +804,7 @@ export function StageWrappedAnnounce({
   const deck = slides ?? buildPlaceholderSlides(title);
   const seenKey = wrappedSeenKey(eventId, sectionId);
 
-  // App-wide auto-open is OFF for stage recaps (PHA-1269): popping the full-screen
+  // App-wide auto-open is OFF for stage recaps (#1269): popping the full-screen
   // animated takeover unprompted on login froze low-end Android. It returns ONLY
   // as an explicit opt-in for the Major Wrapped finale (`autoOpen`), and even
   // then it is deferred + once-per-viewer + boundary-guarded (see below), and
@@ -843,7 +843,7 @@ export function StageWrappedAnnounce({
     return () => cancel(id);
   }, [autoOpen, resolved, loading, seenKey]);
 
-  // Deep-link force-open (PHA-1245 follow-up): the recap notification lands here
+  // Deep-link force-open (#1245 follow-up): the recap notification lands here
   // with ?wrapped=1, so open the deck once even if this device already saw it.
   // Still stamp the seen-flag (harmless now that auto-open is gone) so any other
   // mount of this same stage stays consistent.

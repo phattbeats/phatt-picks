@@ -1,7 +1,7 @@
 /**
  * gather-team-stats — refresh the team dossier's recent results from HLTV.
  *
- * PHA-897 (Brandon): "the matches should update for each stage… build that in
+ * #897 (Brandon): "the matches should update for each stage… build that in
  * for future majors as well. We need a pre-major checklist to get certain dates
  * and teams." This is the repeatable half of that: a one-command refresh of the
  * frozen snapshot in `src/lib/team-stats-core.ts`. Run it at each stage boundary
@@ -46,7 +46,7 @@ const CORE_PATH = resolve(HERE, "../src/lib/team-stats-core.ts");
 // The source map + recent-results parser are shared with the LIVE on-read refresh
 // (src/lib/team-stats.ts) via team-stats-sources, so the manual snapshot and the
 // automated cache can never drift in WHICH profile they read or HOW they parse it
-// (PHA-921). This script is the by-hand path; the runtime is the automated one.
+// (#921). This script is the by-hand path; the runtime is the automated one.
 type Match = ParsedMatch;
 
 async function crawl(url: string): Promise<string> {
@@ -72,7 +72,7 @@ function parseRecent(md: string): Match[] {
 
 /** Pull existing worldRank + roster (kept as-is) out of the committed core. The
  * roster is a structured, hand-curated block (name/position/rating/hltvUrl —
- * PHA-992) that this results-only refresh must preserve verbatim, so it's
+ * #992) that this results-only refresh must preserve verbatim, so it's
  * captured as the whole `[ … ]` block (multi-line) and re-emitted unchanged. */
 function readExisting(src: string): Record<number, { name: string; rank: string; roster: string }> {
   const re =
@@ -99,7 +99,7 @@ function emit(
   asOf: string,
 ): string {
   const header = `/**
- * Team statistics & standings (PHA-893) — pure data + helpers, keyed by Valve
+ * Team statistics & standings (#893) — pure data + helpers, keyed by Valve
  * pickid so the standalone verify script (plain Node, no \`@/\` alias) and the
  * client drawer both load the same map. Rendering lives in TeamStatsDrawer.
  *
@@ -107,7 +107,7 @@ function emit(
  * ROSTER (active five), and the FIVE most recent official matches. Sourced from
  * HLTV (hltv.org) on the date below; this is a frozen snapshot, not a live feed.
  * Re-run \`scripts/gather-team-stats.ts\` to refresh recent results + hltvUrl at
- * each stage boundary (PHA-897; see docs/PRE-MAJOR-CHECKLIST.md). Teams with no
+ * each stage boundary (#897; see docs/PRE-MAJOR-CHECKLIST.md). Teams with no
  * entry (TBD slots, late swaps) resolve to null and the drawer degrades.
  */
 
@@ -123,7 +123,7 @@ export interface RecentMatch {
 }
 
 /**
- * One active-lineup player (PHA-992). A bare screenname means nothing to a
+ * One active-lineup player (#992). A bare screenname means nothing to a
  * newcomer, so each player carries their on-server role, HLTV rating, and a link
  * to their own HLTV profile. \`position\` is the player's primary real-world role
  * (IGL / AWP / Rifler — hand-curated, since HLTV publishes no structured role).
@@ -158,7 +158,7 @@ export const TEAM_STATS: Record<number, TeamStats> = {`;
     if (!ex) throw new Error(`pickid ${pid} missing from existing core`);
     lines.push(`  ${pid}: { // ${ex.name}`);
     lines.push(`    worldRank: ${ex.rank},`);
-    lines.push(`    roster: ${ex.roster},`); // structured block, preserved verbatim (PHA-992)
+    lines.push(`    roster: ${ex.roster},`); // structured block, preserved verbatim (#992)
     lines.push(`    recent: [`);
     for (const m of recent) {
       const opp = m.opponent.replace(/\\/g, "\\\\").replace(/"/g, '\\"');

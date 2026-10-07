@@ -1,5 +1,5 @@
 /**
- * verify-picks-guard - offline proof for PHA-845 (POST /api/picks guards).
+ * verify-picks-guard - offline proof for #845 (POST /api/picks guards).
  *
  * Pure-core check on the two helpers POST /api/picks gates on:
  *   - isStageWritable: open / locked / open-but-resolved

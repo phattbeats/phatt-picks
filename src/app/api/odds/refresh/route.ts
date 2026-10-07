@@ -1,5 +1,5 @@
 /**
- * Live Spotlight odds warm/refresh trigger (PHA-1066).
+ * Live Spotlight odds warm/refresh trigger (#1066).
  *
  * Populates SpotlightOddsCache by fetching the authored playoff matchups from
  * Polymarket's gamma-api SYNCHRONOUSLY (via warmSpotlightOdds), so the Spotlight
@@ -27,7 +27,7 @@ import { currentEventId } from "@/lib/events-core";
 export const dynamic = "force-dynamic";
 
 async function warm() {
-  const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
+  const EVENT_ID = currentEventId(); // per-request active event (#1046)
   const result = await warmSpotlightOdds(EVENT_ID);
   return NextResponse.json({ ok: true, eventId: EVENT_ID, ...result });
 }

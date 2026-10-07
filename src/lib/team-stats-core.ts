@@ -1,5 +1,5 @@
 /**
- * Team statistics & standings (PHA-893) — pure data + helpers, keyed by Valve
+ * Team statistics & standings (#893) — pure data + helpers, keyed by Valve
  * pickid so the standalone verify script (plain Node, no `@/` alias) and the
  * client drawer both load the same map. Rendering lives in TeamStatsDrawer.
  *
@@ -7,7 +7,7 @@
  * ROSTER (active five), and the FIVE most recent official matches. Sourced from
  * HLTV (hltv.org) on the date below; this is a frozen snapshot, not a live feed.
  * Re-run `scripts/gather-team-stats.ts` to refresh recent results + hltvUrl at
- * each stage boundary (PHA-897; see docs/PRE-MAJOR-CHECKLIST.md). Teams with no
+ * each stage boundary (#897; see docs/PRE-MAJOR-CHECKLIST.md). Teams with no
  * entry (TBD slots, late swaps) resolve to null and the drawer degrades.
  */
 
@@ -23,7 +23,7 @@ export interface RecentMatch {
 }
 
 /**
- * One active-lineup player (PHA-992). A bare screenname means nothing to a
+ * One active-lineup player (#992). A bare screenname means nothing to a
  * newcomer, so each player carries their on-server role, HLTV rating, and a link
  * to their own HLTV profile. `position` is the player's primary real-world role
  * (IGL / AWP / Rifler — hand-curated, since HLTV publishes no structured role).
@@ -35,7 +35,7 @@ export interface RosterPlayer {
   position: string; // primary role: "IGL" | "AWP" | "Rifler"
   rating: number | null; // HLTV rating on the current team, null if unrated
   hltvUrl: string; // personal HLTV player profile
-  // Optional head-shot (PHA-1043). The Spotlight roster shows a player's face
+  // Optional head-shot (#1043). The Spotlight roster shows a player's face
   // next to their nick; the Swiss dossier ignores it. Source is HLTV's
   // `playerbodyshot` CDN (a signed, square-cropped w=100 URL lifted from the
   // team page), so it must be stored verbatim. Absent -> a monogram fallback.

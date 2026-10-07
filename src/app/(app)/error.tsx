@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Route-segment error boundary for the main app pages (PHA-860 review).
+ * Route-segment error boundary for the main app pages (#860 review).
  *
  * The pages render scores/picks/ranks directly from Prisma in the RSC body with
  * no per-query try/catch (the data libs designed to degrade — getWireItems,

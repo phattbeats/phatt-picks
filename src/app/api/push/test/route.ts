@@ -4,7 +4,7 @@
  * Session-gated; always 200 with a structured outcome (sent/failed/pruned),
  * except a 429 when the per-player cooldown is hit.
  *
- * PHA-1045 (from the PHA-1015 audit): this had no rate limit, so a signed-in
+ * #1045 (from the #1015 audit): this had no rate limit, so a signed-in
  * user could hammer it as a self-targeted push amplifier. A short per-player
  * cooldown caps the send rate; the store is module-level (single standalone
  * Node server = one shared view).

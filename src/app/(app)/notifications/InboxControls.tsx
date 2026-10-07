@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Inbox controls (PHA-1237): All/Unread tabs and Mark-all-read, plus
+ * Inbox controls (#1237): All/Unread tabs and Mark-all-read, plus
  * per-row click-to-mark-read via event delegation on the inbox page.
  *
  * The page is server-rendered; this client component owns the small set of

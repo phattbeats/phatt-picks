@@ -64,7 +64,7 @@ function Breakdown({ title, data }: { title: string; data: Row[] }) {
 }
 
 /**
- * Owner-only analytics dashboard (PHA-1277). Reads the app's own PageView table —
+ * Owner-only analytics dashboard (#1277). Reads the app's own PageView table —
  * no third-party tool, no separate container. Pageviews + cookieless visitors,
  * device/browser/OS/country, in-app events, sessions, and product metrics from
  * existing tables.

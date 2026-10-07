@@ -1,6 +1,6 @@
 /**
  * GET/PATCH /api/notifications/prefs — read and update per-type notification
- * preferences (PHA-1240). Stored as JSON in Player.notifPrefs; missing keys fall
+ * preferences (#1240). Stored as JSON in Player.notifPrefs; missing keys fall
  * back to DEFAULT_NOTIF_PREFS so a new player gets sensible defaults without
  * requiring a write.
  */

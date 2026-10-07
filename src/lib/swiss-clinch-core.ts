@@ -1,12 +1,12 @@
 /**
- * Swiss clinch → pick-bucket resolver (pure, PHA-918).
+ * Swiss clinch → pick-bucket resolver (pure, #918).
  *
  * The leaderboard scores against StageOutcome (the resolved answer key). Valve's
  * GetTournamentLayout returns SET-valued pickids per Swiss slot (every team that
  * could fill the bucket), which the oracle leaves "ambiguous" (outcomes-core) —
  * so a Swiss stage never resolves there and the board sits at zero even after
  * teams clinch. The live HLTV standings (already crawled hourly for the picks-
- * page bracket, PHA-902) DO carry each team's terminal W-L record, which is
+ * page bracket, #902) DO carry each team's terminal W-L record, which is
  * exactly the bucket it clinched. This module is the pure seam that turns those
  * records into StageOutcome rows.
  *
@@ -77,7 +77,7 @@ export function pickBucketForLabel(label: string): SwissPickBucket {
 
 /**
  * Does a team's CURRENT record contradict a resolved slot of pick bucket `bucket`
- * (PHA-1109 self-heal)? A StageOutcome slot is normally terminal-and-immutable,
+ * (#1109 self-heal)? A StageOutcome slot is normally terminal-and-immutable,
  * but the bridge can persist a WRONG winner when it resolves off a stale/partial
  * crawl (the cache froze mid-stage with a team still reading 0:2, then it lost its
  * third and the frozen row never caught up). Records are monotonic and a terminal
@@ -115,7 +115,7 @@ export function recordContradictsBucket(
 
 /**
  * Find resolved slots whose stored winner the current live records CONTRADICT
- * (PHA-1109 self-heal). Returns the StageOutcome rows the bridge should EVICT so
+ * (#1109 self-heal). Returns the StageOutcome rows the bridge should EVICT so
  * the correct clinched team can take the freed slot. Conservative by construction:
  * a slot is only flagged when we have a record for its stored team that provably
  * rules out the slot's bucket (`recordContradictsBucket`). A stored team absent

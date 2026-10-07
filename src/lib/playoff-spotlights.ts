@@ -1,5 +1,5 @@
 /**
- * Playoff Spotlights (PHA-1043), the eight teams that survive Swiss are no
+ * Playoff Spotlights (#1043), the eight teams that survive Swiss are no
  * longer a row of stats. They're a narrative: who they were before Cologne and
  * what they became across Stage 1 → 3. The Spotlight replaces the clinical [i]
  * dossier on the *playoffs* picks page with a story, an event highlight, and a
@@ -45,7 +45,7 @@ export interface SpotlightHighlight {
    * Optional end offset in seconds (YouTube). Paired with `start`, this trims a
    * full ESL match-highlights reel down to a single 30-60s run WITHOUT
    * re-hosting anything, the iframe just stops at `end`. This is how we get a
-   * "30s-1m clip" out of a licensed source for free (Brandon, PHA-1043).
+   * "30s-1m clip" out of a licensed source for free (Brandon, #1043).
    */
   end?: number;
   /** Poster/thumbnail shown before tap (keeps the modal light on mobile). */
@@ -129,7 +129,7 @@ const SPOTLIGHTS: Record<number, TeamSpotlight> = {
       caption: "Spirit close 9z to advance 3-0, Stage 3 (ESL highlights)",
     },
   },
-  // Aurora, pickid 134. THIRD REAL ENTRY (PHA-1065, authored 2026-06-14 the day
+  // Aurora, pickid 134. THIRD REAL ENTRY (#1065, authored 2026-06-14 the day
   // they clinched). Advanced 3-1 from the Stage 3 Swiss (beat Monte, G2, 9z; one
   // loss to Spirit), sealed by woxic's 1v4 on Dust2 in the decider, verified via
   // HLTV (event 8301, news 44902) + the ESL highlight feed. Storyline-first per
@@ -152,7 +152,7 @@ const SPOTLIGHTS: Record<number, TeamSpotlight> = {
       caption: "Aurora close 9z to advance 3-1, Stage 3 (ESL highlights)",
     },
   },
-  // Vitality, pickid 89. FOURTH REAL ENTRY (PHA-1065, authored 2026-06-14). The
+  // Vitality, pickid 89. FOURTH REAL ENTRY (#1065, authored 2026-06-14). The
   // world #1 advanced 3-1 from Stage 3 (beat FUT, MOUZ, BetBoom; an upset loss to
   // 9z along the way), clinched on a clean 2-0 over BetBoom with ZywOo at 1.66,
   // verified via HLTV (event 8301, news 44903) + the ESL feed.
@@ -174,7 +174,7 @@ const SPOTLIGHTS: Record<number, TeamSpotlight> = {
       caption: "Vitality close BetBoom to advance 3-1, Stage 3 (ESL highlights)",
     },
   },
-  // Falcons, pickid 139. FIFTH REAL ENTRY (PHA-1065, authored 2026-06-14).
+  // Falcons, pickid 139. FIFTH REAL ENTRY (#1065, authored 2026-06-14).
   // Advanced 3-1 from Stage 3 (beat G2, Monte, NAVI; one loss to BetBoom), the
   // NAVI win on the final Swiss day the clinch, verified via HLTV (event 8301,
   // news 44910/44911) + the ESL feed. Storyline-first: the superteam chasing the
@@ -197,7 +197,7 @@ const SPOTLIGHTS: Record<number, TeamSpotlight> = {
       caption: "Falcons close NAVI to advance 3-1, Stage 3 (ESL highlights)",
     },
   },
-  // 9z, pickid 112. SIXTH REAL ENTRY (PHA-1198 wave 2, authored 2026-06-15 on
+  // 9z, pickid 112. SIXTH REAL ENTRY (#1198 wave 2, authored 2026-06-15 on
   // clinch). Advanced 3-2 from Stage 3 (beat PARIVISION, Vitality, The MongolZ;
   // losses to Spirit and Aurora), the MongolZ win a win or go home decider that
   // dgt closed with an ace on Overpass. Verified via HLTV (event 8301, clinch
@@ -223,7 +223,7 @@ const SPOTLIGHTS: Record<number, TeamSpotlight> = {
       caption: "9z close The MongolZ to advance 3-2, Stage 3 (ESL highlights)",
     },
   },
-  // BetBoom, pickid 137. SEVENTH REAL ENTRY (PHA-1198 wave 2, authored
+  // BetBoom, pickid 137. SEVENTH REAL ENTRY (#1198 wave 2, authored
   // 2026-06-15 on clinch). Advanced 3-2 from Stage 3 (beat The MongolZ, Falcons,
   // FUT; losses to FURIA and Vitality), the FUT sweep a 2-2 elimination decider.
   // Verified via HLTV (event 8301, clinch match 2394994) + the ESL feed.
@@ -250,7 +250,7 @@ const SPOTLIGHTS: Record<number, TeamSpotlight> = {
       caption: "BetBoom sweep FUT to advance 3-2, Stage 3 (ESL highlights)",
     },
   },
-  // G2, pickid 59. EIGHTH REAL ENTRY (PHA-1198 wave 2, authored 2026-06-15 on
+  // G2, pickid 59. EIGHTH REAL ENTRY (#1198 wave 2, authored 2026-06-15 on
   // clinch). Advanced 3-2 from Stage 3 (beat FUT, Legacy, NAVI; losses to
   // Falcons and Aurora), the NAVI win a 2-2 decider that went the full distance
   // (overtime on Inferno, then Mirage). Verified via HLTV (event 8301, clinch
@@ -287,7 +287,7 @@ export function spotlightForPickid(pickid: number): TeamSpotlight | null {
 }
 
 /**
- * Pickids of every team with an authored spotlight, in insertion order (PHA-1043
+ * Pickids of every team with an authored spotlight, in insertion order (#1043
  * follow-up). The playoffs page drives its "Qualified for Playoffs" anticipation
  * strip off this before Valve seeds the bracket: as the pipeline authors each
  * newly-clinched team, that team appears in the strip automatically. Once the
@@ -298,7 +298,7 @@ export function authoredSpotlightPickids(): number[] {
 }
 
 /**
- * Per-team accent color (PHA-1043 follow-up, Brandon: each spotlight wears the
+ * Per-team accent color (#1043 follow-up, Brandon: each spotlight wears the
  * team's own color, not the house orange). Keyed by logo slug so it resolves for
  * every playoff team whether or not a narrative is authored yet. Each hue keeps
  * the team's recognizable color but is tuned to clear WCAG AA (>= 4.5:1) as text

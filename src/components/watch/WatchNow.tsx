@@ -1,7 +1,7 @@
 import Image from "next/image";
 
 /**
- * PHA-942 — "Watch Now" band for the dashboard. Nudges players toward the
+ * #942 — "Watch Now" band for the dashboard. Nudges players toward the
  * official IEM Cologne Major 2026 broadcasts (ESL's own channels). YouTube
  * leads, with Twitch and Kick alongside it. Channels verified live 2026-06-05
  * (ESLCS on all three).

@@ -1,5 +1,5 @@
 /**
- * Live team-dossier warm/refresh trigger (PHA-921).
+ * Live team-dossier warm/refresh trigger (#921).
  *
  * Populates the TeamStatsCache by batch-crawling the field's HLTV profiles
  * SYNCHRONOUSLY (via warmTeamStats), so the dossier's "Last 5 matches" is
@@ -28,7 +28,7 @@ import { currentEventId } from "@/lib/events-core";
 export const dynamic = "force-dynamic";
 
 async function warm() {
-  const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
+  const EVENT_ID = currentEventId(); // per-request active event (#1046)
   const result = await warmTeamStats(EVENT_ID);
   return NextResponse.json({ ok: true, eventId: EVENT_ID, ...result });
 }

@@ -32,7 +32,7 @@ const PARSE_MIN_INTERVAL_MS = 30_000;
 
 // Hard ceiling on a single parse fetch. Without it a stalled/black-holed
 // connection (accepted SYN, no bytes) hangs for minutes; the on-read driver
-// (PHA-866) defers this past the response, but an unbounded hang still leaks a
+// (#866) defers this past the response, but an unbounded hang still leaks a
 // connection and delays the next refresh. The throttle guarantees ≤1 call/30s, so
 // a 10s cap is comfortably safe. Aborts as a TimeoutError → graceful source outage.
 const PARSE_FETCH_TIMEOUT_MS = 10_000;
@@ -71,7 +71,7 @@ function throttleParse(): Promise<void> {
 }
 
 /**
- * Persisted throttle (PHA-844). Reads the last-call timestamp from SourceState;
+ * Persisted throttle (#844). Reads the last-call timestamp from SourceState;
  * if the interval hasn't elapsed, throws LiquipediaThrottledError instead of
  * calling the API. Callers should treat this as "skip this tick, try later".
  */

@@ -23,7 +23,7 @@ export function AvatarUpload({
 }) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl);
   const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false); // PHA-1213: green "Saved" flash after a change
+  const [saved, setSaved] = useState(false); // #1213: green "Saved" flash after a change
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();

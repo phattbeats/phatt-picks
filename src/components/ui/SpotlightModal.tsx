@@ -12,7 +12,7 @@ import {
   youtubeEmbedUrl,
   youtubePoster,
 } from "@/lib/playoff-spotlights";
-// SpotlightMarketLine is canonical in spotlight-odds-core (PHA-1066) — the live
+// SpotlightMarketLine is canonical in spotlight-odds-core (#1066) — the live
 // fetch builds it there; the modal just renders it. Re-exported so existing
 // importers of `@/components/ui/SpotlightModal` keep resolving the type.
 import type { SpotlightMarketLine } from "@/lib/spotlight-odds-core";
@@ -21,15 +21,15 @@ export type { SpotlightMarketLine };
 interface Props {
   team: TeamDef;
   onClose: () => void;
-  /** Live per-stage dossier (PHA-921); preferred over the frozen snapshot. */
+  /** Live per-stage dossier (#921); preferred over the frozen snapshot. */
   liveStats?: TeamStats;
   liveAsOf?: string;
-  /** Live market line for this team's matchup (PHA-1066); omitted until a matchup/odds exist. */
+  /** Live market line for this team's matchup (#1066); omitted until a matchup/odds exist. */
   market?: SpotlightMarketLine;
 }
 
 /**
- * Spotlight (PHA-1043), the playoff-grade replacement for the [i] dossier. Once
+ * Spotlight (#1043), the playoff-grade replacement for the [i] dossier. Once
  * the field narrows to eight, a team is a narrative, not a stat line: who they
  * were before Cologne, what this run made them, an event highlight, and a live
  * market line, with the roster/last-5 "tape" kept one scroll below for the
@@ -52,7 +52,7 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
   const stats = liveStats ?? statsForPickid(team.pickid);
   const asOf = (liveStats && liveAsOf) || TEAM_STATS_AS_OF;
 
-  // Each spotlight wears the team's own color (PHA-1043 follow-up). The whole
+  // Each spotlight wears the team's own color (#1043 follow-up). The whole
   // panel keys off `--team-accent`; unset → the .spot CSS falls back to --heat.
   const accent = teamAccent(team);
   const accentStyle = accent

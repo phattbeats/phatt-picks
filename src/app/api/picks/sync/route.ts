@@ -14,7 +14,7 @@ import { mirrorPlayerPredictions } from "@/lib/predictions-sync";
 import { currentEventId } from "@/lib/events-core";
 
 export async function POST() {
-  const EVENT_ID = currentEventId(); // per-request active event (PHA-1046)
+  const EVENT_ID = currentEventId(); // per-request active event (#1046)
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 

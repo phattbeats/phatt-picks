@@ -1,6 +1,6 @@
 /**
  * verify-stage-wrapped-content — offline proof for the Stage Wrapped content +
- * deck builder (PHA-1054). The shell (PHA-1052) is proven separately; this pins
+ * deck builder (#1054). The shell (#1052) is proven separately; this pins
  * the *content* invariants the popup leans on:
  *   - NO-OP: an unauthored section (e.g. Playoffs 108, or any stage the caller
  *     hasn't authored) yields an EMPTY deck → the launcher never opens. This is
@@ -97,7 +97,7 @@ check("Stage II has a FUCK YOUR PICK'EMS slide", s2.some((s) => s.id === "s2-fyp
 check("Stage II has the donk/Spirit dominance moment", s2.some((s) => s.id === "s2-dominance-spirit-donk" && /10 rounds/.test(s.figure ?? "")));
 check("Stage II has the Astralis drought moment", s2.some((s) => s.id === "s2-drought-astralis"));
 
-/* ---- Authored Stage III, personal (PHA-1120) ---- */
+/* ---- Authored Stage III, personal (#1120) ---- */
 const s3 = buildStageWrappedDeck(107, "Stage III", PERSONAL);
 check("Stage III deck is non-empty", s3.length > 0);
 check("Stage III opens on the intro slide", s3[0]?.kind === "intro");
@@ -168,7 +168,7 @@ check("Stage I intro badge sub is WRAPPED", s1Intro?.stageBadge?.sub === "WRAPPE
 check("Stage II intro badge numeral is II", s2Intro?.stageBadge?.numeral === "II");
 check("outro also carries a STAGE badge", !!s1Outro?.stageBadge?.numeral);
 
-/* ---- "YOU CALLED IT" personal reward (PHA-1054) ---- */
+/* ---- "YOU CALLED IT" personal reward (#1054) ---- */
 // Brandon's example: picked FUT (145) to go 3:0 in Stage II → reward on the FUT slide.
 const s2Called = buildStageWrappedDeck(106, "Stage II", { ...PERSONAL, claims: ["145:3:0"] }, ASSETS);
 const futSlide = s2Called.find((s) => s.id === "s2-fut-3-0");

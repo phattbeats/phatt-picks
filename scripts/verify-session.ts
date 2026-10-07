@@ -1,5 +1,5 @@
 /**
- * verify-session — offline proof for PHA-982 (sliding sessions + secret guard).
+ * verify-session — offline proof for #982 (sliding sessions + secret guard).
  *
  * Brandon: "every time the container resets I have to log in again, especially
  * Steam." Two root mechanics, both proven here against the PURE policy core:
@@ -36,7 +36,7 @@ function check(name: string, cond: boolean) {
   }
 }
 
-console.log("\nsession-core - sliding refresh (PHA-982)");
+console.log("\nsession-core - sliding refresh (#982)");
 
 const NOW = 1_800_000_000; // fixed clock (seconds) — deterministic
 const TTL = SESSION_TTL_SECONDS;
@@ -73,7 +73,7 @@ check(
   shouldRefreshSession({}, NOW) === true,
 );
 
-console.log("\nsession-core - secret guard (PHA-982)");
+console.log("\nsession-core - secret guard (#982)");
 
 check("undefined secret is placeholder", isPlaceholderSecret(undefined) === true);
 check("empty secret is placeholder", isPlaceholderSecret("") === true);
@@ -96,7 +96,7 @@ check(
   isPlaceholderSecret("1Dt2RxAbCdEfGhIjKlMnOpQrStUvWxYz0123456789Jho=") === false,
 );
 
-console.log("\nsession-core - cookie options (PHA-982)");
+console.log("\nsession-core - cookie options (#982)");
 
 const prod = sessionCookieOptions(true);
 const dev = sessionCookieOptions(false);
@@ -107,7 +107,7 @@ check("cookie sameSite is lax", prod.sameSite === "lax");
 check("cookie maxAge is 30d", prod.maxAge === 60 * 60 * 24 * 30);
 check("cookie path is root", prod.path === "/");
 
-console.log("\nsession-core - sign/verify round-trip (PHA-982)");
+console.log("\nsession-core - sign/verify round-trip (#982)");
 
 const SECRET = "test-secret-high-entropy-value-x";
 // Steam claims survive the round trip…

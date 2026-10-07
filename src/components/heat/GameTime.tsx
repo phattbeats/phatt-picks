@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 /**
- * A single game's scheduled date + time chip (PHA-1007).
+ * A single game's scheduled date + time chip (#1007).
  *
  * Brandon: "stages ship with each game having its date and time attached." This
  * renders the committed start instant for one playoff game — e.g. "Jun 18 · 13:30"
@@ -45,7 +45,7 @@ export function GameTime({
         display: "flex",
         justifyContent: align === "center" ? "center" : "flex-start",
         gap: 6,
-        /* PHA-1007: bumped from a tiny 9.5px to a legible 12.5px (Brandon: the
+        /* #1007: bumped from a tiny 9.5px to a legible 12.5px (Brandon: the
            small robotic times were hard to read). Mono kept for tabular dates. */
         fontFamily: "var(--font-mono)",
         fontSize: 12.5,

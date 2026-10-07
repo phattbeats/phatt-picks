@@ -1,7 +1,7 @@
 /**
- * HLTV / CS2 RSS parsing (pure, PHA-859).
+ * HLTV / CS2 RSS parsing (pure, #859).
  *
- * The automated wire source greenlit on PHA-857. This module turns a raw RSS
+ * The automated wire source greenlit on #857. This module turns a raw RSS
  * document (HLTV's own `https://www.hltv.org/rss/news`, confirmed returning
  * `application/rss+xml` 200) into the same `WireItem[]` the curated seed
  * produces, so it flows through the existing `ingestNews` upsert and the rest of

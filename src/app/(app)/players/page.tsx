@@ -11,11 +11,11 @@ import { currentEventId } from "@/lib/events-core";
 export const metadata = { title: "Directory · HOTLINE" };
 
 export default async function DirectoryPage() {
-  // Per-request active event (PHA-1046) — follows the clock across Majors, no redeploy.
+  // Per-request active event (#1046) — follows the clock across Majors, no redeploy.
   const EVENT_ID = currentEventId();
   const layout = getCommittedLayout();
   const session = await getSession();
-  await refreshOutcomesOnRead(EVENT_ID); // live driver (PHA-866) — shared 30s claim
+  await refreshOutcomesOnRead(EVENT_ID); // live driver (#866) — shared 30s claim
 
   const [players, allPicks, outcomes] = await Promise.all([
     prisma.player.findMany(),

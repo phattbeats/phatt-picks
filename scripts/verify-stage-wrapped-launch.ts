@@ -1,6 +1,6 @@
 /**
  * verify-stage-wrapped-launch — offline proof for the app-wide Stage Wrapped
- * auto-launch selector (PHA-1051). The full resolver (`stage-wrapped-launch.ts`)
+ * auto-launch selector (#1051). The full resolver (`stage-wrapped-launch.ts`)
  * pulls prisma; this pins the pure decision it leans on:
  *
  *   - latestWrappedSectionId picks the LAST (layout-order) section that is BOTH

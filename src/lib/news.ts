@@ -1,5 +1,5 @@
 /**
- * Wire / news data access (server-only, PHA-857).
+ * Wire / news data access (server-only, #857).
  *
  * `getWireItems` is the read path for /news + the dashboard Wire panel. It
  * merges any ingested NewsItem rows with the committed curated seed and returns
@@ -7,12 +7,12 @@
  * missing (deploy hasn't run `prisma db push`) or the DB is unreachable, it
  * degrades to the seed alone, which itself may be empty → honest empty state.
  * It also fires a best-effort self-refresh that is gated by ONE atomic floor
- * claim and defers the slow HLTV network pull off the render path (PHA-863), so
+ * claim and defers the slow HLTV network pull off the render path (#863), so
  * a render never blocks on the network and concurrent renders don't stampede.
  *
  * `ingestNews` is the owner-triggered write path (`/api/news/ingest`). It
  * upserts the committed curated seed (idempotent by externalId) and then
- * attempts the automated HLTV RSS pull (PHA-859), upserting whatever it resolves
+ * attempts the automated HLTV RSS pull (#859), upserting whatever it resolves
  * through the SAME path. Both sources resolve to the same `WireItem[]`, so the
  * rest of the app stays source-agnostic. It bypasses the floor (force) and the
  * automated pull is best-effort: a source outage degrades to "seed only" and is
@@ -38,7 +38,7 @@ import { runDeferred } from "./source-refresh";
  * so a headless scheduler can't drive it anyway). The refresh is gated by a
  * single atomic floor claim and the slow HLTV network pull is deferred off the
  * render path, so a render never blocks on the network and concurrent renders
- * don't stampede the DB. (PHA-859 / PHA-863.)
+ * don't stampede the DB. (#859 / #863.)
  */
 export async function getWireItems(limit = 30): Promise<WireItem[]> {
   await refreshWireOnRead().catch(() => {}); // belt-and-suspenders; already never throws
@@ -71,7 +71,7 @@ export type AutomatedPullSummary = {
   source: "hltv";
   /** ok = pulled & upserted; empty = feed had no usable items; error = network /
    *  non-200 (e.g. Cloudflare gate). The refresh floor is gated upstream by
-   *  claimRefreshSlot (PHA-863), so an attempted pull is never "throttled" here. */
+   *  claimRefreshSlot (#863), so an attempted pull is never "throttled" here. */
   status: "ok" | "empty" | "error";
   fetched: number;
   upserted: number;
@@ -112,7 +112,7 @@ async function upsertWireItems(items: readonly WireItem[]): Promise<number> {
  * source outage resolve to a reported status, never a throw — the curated seed
  * is the floor the wire always has. The refresh floor is decided by the caller
  * (claimRefreshSlot) before we get here, so there is no `throttled` path: this
- * always attempts the pull. (PHA-863.)
+ * always attempts the pull. (#863.)
  */
 async function ingestAutomated(): Promise<AutomatedPullSummary> {
   try {
@@ -133,7 +133,7 @@ async function ingestAutomated(): Promise<AutomatedPullSummary> {
 }
 
 /**
- * Best-effort self-refresh fired from the read path (PHA-863). One atomic claim
+ * Best-effort self-refresh fired from the read path (#863). One atomic claim
  * gates the whole refresh against the 5-min floor: lose the claim → no-op (warm
  * window or a concurrent render already holds it). Win it → upsert the curated
  * seed inline (fast, local — keeps a cold window non-empty) and DEFER the slow
@@ -152,7 +152,7 @@ async function refreshWireOnRead(): Promise<void> {
  * attempt the automated HLTV pull, and stamp the floor so the read path backs
  * off afterward. Bypasses the floor on purpose — this is the owner-triggered
  * entry point (`/api/news/ingest`). Idempotent by externalId; the automated pull
- * degrades gracefully (see ingestAutomated). (PHA-859 / PHA-863.)
+ * degrades gracefully (see ingestAutomated). (#859 / #863.)
  */
 export async function ingestNews(): Promise<IngestNewsSummary> {
   const seedUpserted = await upsertWireItems(seedWireItems());

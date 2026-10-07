@@ -11,7 +11,7 @@ interface Props {
   team: TeamDef;
   onClose: () => void;
   /**
-   * Live dossier for this team (PHA-921), with `recent[]` pulled live for the
+   * Live dossier for this team (#921), with `recent[]` pulled live for the
    * current stage. Preferred over the frozen snapshot when present; undefined
    * off-window / cold start, in which case the frozen snapshot is shown.
    */
@@ -21,22 +21,22 @@ interface Props {
 }
 
 /**
- * Team dossier (PHA-893) — roster, world standing, and the five most recent
+ * Team dossier (#893) — roster, world standing, and the five most recent
  * matches. Deliberately off-board: nothing here renders on the pickems stage by
  * default; it surfaces only when a scout taps the [i] on a team. Pure-data
  * backed (team-stats-core), so it degrades to "no stats yet" for TBD slots.
  *
- * PHA-897: rendered through a body portal. PicksBoard lives inside `main.shell`,
+ * #897: rendered through a body portal. PicksBoard lives inside `main.shell`,
  * which is a `z-index: 3` stacking context — so an in-tree backdrop's `z-index`
  * is trapped below it and the root-level `.botnav` (z-index 50) painted over the
  * bottom of the panel on mobile, clipping the last match + footer. Portaling to
  * <body> lifts the modal out of that context so the backdrop covers everything.
  *
- * PHA-897 follow-up (Brandon): scrollbar chrome hidden in CSS for a cleaner
+ * #897 follow-up (Brandon): scrollbar chrome hidden in CSS for a cleaner
  * desktop look, recent matches expanded 3 → 5, and a link out to the team's
  * HLTV profile (the dossier's data source) added beneath the match list.
  *
- * PHA-921: the "Last 5 matches" now refresh per stage on their own. The picks
+ * #921: the "Last 5 matches" now refresh per stage on their own. The picks
  * page reads a live cache server-side and passes `liveStats` (recent[] pulled
  * live, roster/rank kept frozen) — preferred here over the committed snapshot,
  * which remains the fallback off-window / before the first crawl lands.
@@ -55,9 +55,9 @@ export function TeamStatsDrawer({ team, onClose, liveStats, liveAsOf }: Props) {
   const stats = liveStats ?? statsForPickid(team.pickid);
   const asOf = (liveStats && liveAsOf) || TEAM_STATS_AS_OF;
 
-  // PHA-992 follow-up (Brandon: "where does the recent games section go now?"):
+  // #992 follow-up (Brandon: "where does the recent games section go now?"):
   // the per-player roster rows made the dossier ~140px taller, and the panel's
-  // scrollbar chrome is hidden (PHA-897) — so on short viewports "Last 5 matches"
+  // scrollbar chrome is hidden (#897) — so on short viewports "Last 5 matches"
   // slipped below the fold with no cue it exists. Track whether more content sits
   // below the visible edge and show a fade cue (.tsd-more-below::after) while it does.
   const panelRef = useRef<HTMLDivElement>(null);

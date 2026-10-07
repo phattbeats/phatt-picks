@@ -1,5 +1,5 @@
 /**
- * Hotline (Major) Wrapped — app-wide auto-launch resolver (PHA-1274).
+ * Hotline (Major) Wrapped — app-wide auto-launch resolver (#1274).
  *
  * Computes, server-side, the single-elim finale recap deck for the active
  * event. The client launcher (`StageWrappedGate`, mounted app-wide in the
@@ -10,7 +10,7 @@
  * after a single playoff-scoped `stageOutcome` query when the GF hasn't
  * resolved yet.
  *
- * (The earlier per-stage auto-launcher, PHA-1051, was retired by PHA-1274 which
+ * (The earlier per-stage auto-launcher, #1051, was retired by #1274 which
  * collapsed the reveal into one finale deck; its section-picker still lives in
  * `stage-wrapped-launch-core.ts` for the recap push/feed.)
  */
@@ -84,7 +84,7 @@ async function resolveWrappedFacts(eventId: number): Promise<{
 }
 
 /**
- * The Hotline (Major) Wrapped auto-deck (PHA-1274). Once the finale has wrapped,
+ * The Hotline (Major) Wrapped auto-deck (#1274). Once the finale has wrapped,
  * it derives the storylines, folds in the curated historic-moment photos, and
  * builds the deck.
  *
@@ -124,7 +124,7 @@ export async function prepareMajorWrappedAutoDeck(
  * app-wide in the layout) registers under this key, so any surface can replay
  * the recap with `replayStageWrapped(majorWrappedStageKey(eventId))` instead of
  * deep-linking to a per-section reveal (which only carries that stage's own,
- * often-empty, wrap). PHA-1274.
+ * often-empty, wrap). #1274.
  */
 export function majorWrappedStageKey(eventId: number): string {
   return `${eventId}:major-wrapped`;
@@ -141,7 +141,7 @@ export interface MajorChampion {
  * WHO won the Major — the crowned champion, or null until the Grand Final
  * resolves. Reuses the same bracket pipeline the Wrapped deck does
  * (`resolveWrappedFacts`) so the home send-off names the exact team the recap
- * crowns. Drives the dashboard's "Major complete" hero (PHA-1274).
+ * crowns. Drives the dashboard's "Major complete" hero (#1274).
  */
 export async function majorChampion(eventId: number): Promise<MajorChampion | null> {
   const resolved = await resolveWrappedFacts(eventId);

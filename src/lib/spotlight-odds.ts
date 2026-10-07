@@ -1,5 +1,5 @@
 /**
- * Spotlight live market odds — cached fetch (server-only, PHA-1066).
+ * Spotlight live market odds — cached fetch (server-only, #1066).
  *
  * Mirrors the on-read, atomic-claimed, deferred-refresh pattern of
  * `team-stats.ts` / `swiss-results.ts`, but the source is Polymarket's public
@@ -10,7 +10,7 @@
  * throttle + persistence shell.
  *
  * GATED: {@link PLAYOFF_MARKET_SLUGS} starts empty until Valve seeds the bracket
- * (PHA-993). Empty registry ⇒ every entry point no-ops, the cache stays empty,
+ * (#993). Empty registry ⇒ every entry point no-ops, the cache stays empty,
  * and {@link getSpotlightMarket} returns {} so the modal keeps its "coming soon"
  * state. Zero live change until an editor fills a matchup.
  *
@@ -180,7 +180,7 @@ async function ingestSpotlightOdds(eventId: number, nowMs: number): Promise<numb
  * match-window map doesn't even cover playoff days — a window gate would keep the
  * line dark exactly when people want it. The ~1h claim + per-event frozen check
  * are the throttle; four tiny gamma fetches/hour during the live event is
- * negligible (PHA-1066, found at go-live).
+ * negligible (#1066, found at go-live).
  */
 export async function refreshSpotlightOddsOnRead(
   eventId: number,

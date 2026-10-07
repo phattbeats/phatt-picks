@@ -4,7 +4,7 @@
  * from any route/page that needs to make decisions about whether a visit to
  * /api/auth/local should mint a new Player or reuse the existing session.
  *
- * The split exists because PHA-839 added two real rules to that endpoint:
+ * The split exists because #839 added two real rules to that endpoint:
  *   1. A visit must not silently overwrite a Steam session with a local one.
  *   2. A visit must not mint a duplicate local Player on every refresh.
  * Both decisions are pure functions of the existing session — keeping them

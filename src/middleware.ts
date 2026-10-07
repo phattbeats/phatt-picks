@@ -8,14 +8,14 @@ import {
 } from "@/lib/session-core";
 
 /**
- * Splash gate (PHA-882) + sliding session refresh (PHA-982).
+ * Splash gate (#882) + sliding session refresh (#982).
  *
  * The splash at `/login` is what every visitor sees UNLESS they already have a
  * signed-in session (Steam or local) — i.e. a `phatt_session` cookie. No
  * session → you're sent to the splash to click ENTER and sign in. There is no
  * "browse as guest" path: a session is the only thing that opens the app.
  *
- * PHA-982 — this gate used to trust the mere PRESENCE of the cookie. That left
+ * #982 — this gate used to trust the mere PRESENCE of the cookie. That left
  * two papercuts: (1) a cookie whose signature no longer verifies (e.g. the
  * signing secret rotated on a container recreate) sailed past the gate, then
  * every page's getSession() returned null — a confusing "logged in but logged
@@ -44,7 +44,7 @@ const SESSION_COOKIE = "phatt_session";
 const SPLASH_PATH = "/login";
 
 /**
- * Never let an HTML document be cached (PHA-1269). Static pages like the `/login`
+ * Never let an HTML document be cached (#1269). Static pages like the `/login`
  * splash are prerendered and otherwise ship `Cache-Control: s-maxage=31536000`
  * (one YEAR). After a deploy the proxy/browser keeps serving that year-old HTML —
  * which references the OLD hashed JS/CSS chunks. The user then runs a stale build

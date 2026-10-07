@@ -1,5 +1,5 @@
 /**
- * verify-m9-4-swiss-bucket — offline proof for PHA-853 Swiss bucket layout.
+ * verify-m9-4-swiss-bucket — offline proof for #853 Swiss bucket layout.
  *
  * The slot-to-bucket map isn't in the Valve API; it's UI convention that has
  * to stay aligned with what Brandon sees on Valve's pickem page. This script
@@ -80,7 +80,7 @@ check("section 110 (GF) is NOT Swiss", !isSwissSection(110));
 check("section 0 is NOT Swiss", !isSwissSection(0));
 check("section 999 is NOT Swiss", !isSwissSection(999));
 
-// --- Bucket-grain comparison (PHA-946) ---------------------------------------
+// --- Bucket-grain comparison (#946) ---------------------------------------
 // The compare page must judge Swiss picks as SETS per bucket, not slot-for-slot.
 // Regression: Ty picked MIBR in a DIFFERENT slot of the 3:1/3:2 bucket than the
 // slot MIBR's winner row landed in. Slot-for-slot read it as a miss; bucket-grain
@@ -102,7 +102,7 @@ check(
   advanceWinners.fullyResolved === false,
 );
 check(
-  "MIBR picked in slot 6 still reads HIT against the bucket set (the PHA-946 bug)",
+  "MIBR picked in slot 6 still reads HIT against the bucket set (the #946 bug)",
   bucketPickState(MIBR, advanceWinners) === "hit",
 );
 check(
@@ -130,7 +130,7 @@ check("single-slot wrong pick → miss", bucketPickState(BIG, soloWinners) === "
 const soloUnresolved = resolveBucketWinners([0], {});
 check("single-slot unresolved pick → pending", bucketPickState(MIBR, soloUnresolved) === "pending");
 
-// Early-red override (PHA-951): a pick whose team's record already rules its
+// Early-red override (#951): a pick whose team's record already rules its
 // bucket out reads MISS even while the bucket is unresolved — but a confirmed
 // winner still wins, and an empty slot stays empty.
 const unresolved = resolveBucketWinners(advanceBucket.slotIndexes, {});

@@ -1,5 +1,5 @@
 /**
- * Pure resolver for the top-bar "You" chip (PHA-851).
+ * Pure resolver for the top-bar "You" chip (#851).
  *
  * The home-page header used to render a literal "◎" glyph + the string "You"
  * regardless of session — Steam-authed users never saw their persona name or

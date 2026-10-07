@@ -38,7 +38,7 @@ export async function mirrorPlayerPredictions(
   playerId: string,
   eventId: number,
 ): Promise<MirrorResult> {
-  // PHA-949/954: a frozen (effectively archived) Major never push/mirrors Steam
+  // #949/954: a frozen (effectively archived) Major never push/mirrors Steam
   // predictions for a finished event. Keyed on effective status (clock + real
   // GF), no human flip. No-op for the live event.
   if (await isEventFrozenById(eventId)) return { ok: false, mirrored: 0, skipped: "event-archived" };
@@ -56,7 +56,7 @@ export async function mirrorPlayerPredictions(
   try {
     const envelope = await fetchTournamentPredictions(eventId, player.steamId, authCode);
     // Build groupid→sectionid map so parsePredictions can infer sectionId
-    // when Valve's response omits the sectionid field (PHA-875).
+    // when Valve's response omits the sectionid field (#875).
     const layoutSectionByGroup = buildSectionByGroup(getCommittedLayout());
     const sectionByGroup = new Map<number, number>(
       [...layoutSectionByGroup.entries()].map(([gid, s]) => [gid, s.sectionid]),
