@@ -1,1 +1,349 @@
-/* HOTLINE Singapore — picks screens. */
+/* HOTLINE Singapore — Pick'Em board (prototype 02-picks.html, HANDOFF §3/§5b).
+   Everything here is prefixed `sgp-` so it can't collide with the shared
+   primitives in sg.css or the legacy board rules in globals.css. */
+
+.sgp-page { display: grid; gap: 22px; min-width: 0; }
+@media (min-width: 1024px) { .sgp-page { gap: 28px; } }
+/* Room for the fixed action bar so the last pool row never hides under it. */
+.sgp-page.with-bar { padding-bottom: 72px; }
+@media (min-width: 1024px) { .sgp-page.with-bar { padding-bottom: 64px; } }
+.sgp-stack { display: grid; gap: 18px; min-width: 0; }
+
+/* ── Stage header: photo banner + countdown / result ───────────────────── */
+.sgp-head {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px; align-items: end; min-height: 220px; padding: 24px 22px;
+  border: 1px solid var(--hair); border-radius: var(--r-md); overflow: hidden;
+  background: var(--surf-1);
+}
+.sgp-head > img { object-fit: cover; object-position: 60% 30%; filter: saturate(.55) brightness(.5); }
+.sgp-head::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, rgba(7,7,8,.92), rgba(7,7,8,.4) 70%), linear-gradient(0deg, rgba(7,7,8,.8), transparent 60%);
+}
+.sgp-head > :not(img) { position: relative; z-index: 1; min-width: 0; }
+.sgp-head-title { display: grid; gap: 10px; }
+.sgp-head-title .eyebrow { font-size: 10px; letter-spacing: .2em; }
+.sgp-head-title h1 { font-size: clamp(48px, 8vw, 96px); margin: 0; }
+.sgp-lockbox { display: grid; gap: 4px; justify-items: end; text-align: right; }
+.sgp-lockbox .k { font-family: var(--font-mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-mid); }
+.sgp-lockbox .v { font-family: var(--font-mono); font-size: clamp(26px, 4vw, 40px); line-height: 1; letter-spacing: -.03em; color: var(--ink-hi); font-variant-numeric: tabular-nums; }
+.sgp-lockbox .v small { font-size: .5em; color: var(--ink-mid); margin-left: 2px; letter-spacing: 0; }
+.sgp-lockbox .v.sm { font-size: 20px; letter-spacing: 0; text-transform: uppercase; }
+.sgp-lockbox .v.cd { color: var(--heat); }
+.sgp-lockbox .v.ok { color: var(--tac-green); }
+@media (max-width: 640px) {
+  .sgp-head { grid-template-columns: 1fr; min-height: 200px; padding: 20px 18px; }
+  .sgp-lockbox { justify-items: start; text-align: left; }
+}
+
+/* ── Stage tabs: four equal cells, 2px amber underline on the active one ── */
+.sgp-tabs {
+  display: grid; grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr)); gap: 1px;
+  background: var(--hair); border: 1px solid var(--hair); border-radius: var(--r-md); overflow: hidden;
+}
+.sgp-tab {
+  position: relative; display: grid; gap: 4px; align-content: center;
+  min-height: 56px; padding: 12px 14px; background: var(--surf-1);
+  color: var(--ink-mid); text-decoration: none; min-width: 0;
+  transition: background 160ms var(--ease);
+}
+.sgp-tab:hover { background: var(--surf-2); color: var(--ink-mid); }
+.sgp-tab .tl { font-family: var(--font-display); font-weight: 800; font-size: 18px; text-transform: uppercase; color: var(--ink-hi); line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sgp-tab .ts { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sgp-tab .ts b { color: var(--ink-hi); font-weight: 500; }
+.sgp-tab .ts b.ok { color: var(--tac-green); }
+.sgp-tab.on { background: var(--surf-2); }
+.sgp-tab.on::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--heat); }
+.sgp-tab.upcoming .tl { color: var(--ink-mid); }
+.sgp-tab:focus-visible { outline: 2px solid var(--heat); outline-offset: -2px; }
+@media (max-width: 560px) {
+  .sgp-tab { padding: 10px 8px; }
+  .sgp-tab .tl { font-size: 15px; }
+  .sgp-tab .ts { letter-spacing: .02em; gap: 4px; }
+}
+
+/* ── Notices (Steam link, locked stage, live-bracket placeholder) ──────── */
+.sgp-note {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: start;
+  padding: 16px 18px; background: var(--surf-1); border: 1px solid var(--hair);
+  border-radius: var(--r-md); color: var(--ink-hi); text-decoration: none;
+}
+.sgp-note.solo { grid-template-columns: minmax(0, 1fr); }
+a.sgp-note { transition: border-color 160ms var(--ease); }
+a.sgp-note:hover { border-color: var(--hair-3); color: var(--ink-hi); }
+.sgp-note .ic { color: var(--ink-mid); display: inline-flex; padding-top: 2px; }
+.sgp-note .eyebrow { display: block; font-size: 10px; }
+.sgp-note h2, .sgp-note h3 { font-family: var(--font-display); font-weight: 800; font-size: 20px; text-transform: uppercase; line-height: 1.05; margin: 6px 0 0; }
+.sgp-note p { font-size: 14px; color: var(--ink-mid); margin: 6px 0 0; max-width: 560px; line-height: 1.5; text-wrap: pretty; }
+.sgp-note p b { color: var(--ink-hi); font-weight: 500; }
+.sgp-note .go { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; font-family: var(--font-mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-hi); }
+.sgp-note.big { padding: 28px 22px; }
+.sgp-note.big h2 { font-size: clamp(28px, 4vw, 40px); }
+
+/* Stage Wrapped entry — a hairline row with the stage numeral */
+.sgp-wrapped {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: center;
+  padding: 16px 20px; min-height: 44px; background: var(--surf-1); border: 1px solid var(--hair-2);
+  border-radius: var(--r-md); text-decoration: none; color: var(--ink-hi);
+  transition: border-color 160ms var(--ease);
+}
+.sgp-wrapped:hover { border-color: var(--hair-3); color: var(--ink-hi); }
+.sgp-wrapped .num { font-family: var(--font-display); font-weight: 900; font-size: 44px; line-height: .8; color: var(--ink-hi); }
+.sgp-wrapped .t { font-family: var(--font-display); font-weight: 800; font-size: 18px; text-transform: uppercase; line-height: 1.1; display: block; margin-top: 4px; }
+.sgp-wrapped .s { font-size: 13px; color: var(--ink-mid); display: block; margin-top: 2px; }
+.sgp-wrapped .arr { font-family: var(--font-mono); color: var(--ink-mid); font-size: 18px; }
+
+/* ── Board: sticky buckets column + team pool ──────────────────────────── */
+.pickboard-sg { display: grid; gap: 40px; min-width: 0; }
+.sgp-board { display: grid; gap: 28px; min-width: 0; }
+.sgp-pool { min-width: 0; }
+@media (min-width: 1024px) {
+  .sgp-board { grid-template-columns: 360px minmax(0, 1fr); gap: 40px; align-items: start; }
+  .sgp-slots { position: sticky; top: 84px; }
+}
+.sgp-slots { display: grid; gap: 20px; min-width: 0; }
+.sgp-group-name { font-family: var(--font-mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-mid); display: flex; justify-content: space-between; gap: 10px; }
+.sgp-group-name b { color: var(--heat); font-weight: 500; }
+.sgp-bucket { display: grid; gap: 6px; min-width: 0; }
+.sgp-bk { display: flex; justify-content: space-between; gap: 10px; font-family: var(--font-mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-mid); padding-bottom: 4px; }
+.sgp-bk b { color: var(--ink-hi); font-weight: 500; }
+
+.sgp-slot {
+  position: relative; display: flex; align-items: center; gap: 12px;
+  width: 100%; min-height: 54px; padding: 0 10px; text-align: left;
+  font: inherit; color: var(--ink-low); background: transparent;
+  border: 1px dashed var(--hair-2); border-radius: var(--r-md); cursor: pointer;
+  transition: border-color 150ms var(--ease), background 150ms var(--ease), box-shadow 150ms var(--ease);
+}
+.sgp-slot:disabled { cursor: default; }
+.sgp-slot .ph { font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sgp-slot:hover:not(:disabled):not(.on) { border-color: var(--hair-3); }
+.sgp-slot.armed { border-style: solid; border-color: var(--heat); color: var(--heat); background: rgba(240,163,0,.04); }
+.sgp-slot.over { border-style: solid; border-color: var(--ink-hi); background: var(--surf-2); }
+.sgp-slot.on { border-style: solid; border-color: var(--hair-3); background: var(--surf-1); color: var(--ink-hi); }
+.sgp-slot.on:not(:disabled) { cursor: grab; }
+.sgp-slot.on.armed { border-color: var(--heat); }
+.sgp-slot.saved { box-shadow: 0 0 0 1px var(--tac-green); }
+.sgp-slot.error { box-shadow: 0 0 0 1px var(--ember); }
+.sgp-slot .nm { flex: 1; min-width: 0; font-size: 15px; color: var(--ink-hi); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sgp-slot .region-badge { flex: none; }
+.sgp-slot .rec { font-family: var(--font-mono); font-size: 11px; color: var(--ink-mid); letter-spacing: .06em; flex: none; }
+.sgp-slot .st { font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; flex: none; color: var(--ink-low); }
+.sgp-slot .st.ok { color: var(--tac-green); }
+.sgp-slot .st.err { color: var(--ember); }
+.sgp-slot .x {
+  position: relative; flex: none; width: 32px; height: 32px; margin-right: -4px;
+  display: grid; place-items: center; color: var(--ink-low); border-radius: var(--r-sm);
+  transition: color 150ms var(--ease), background 150ms var(--ease);
+}
+.sgp-slot .x::after { content: ''; position: absolute; inset: -6px; }
+.sgp-slot .x svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2.4; }
+.sgp-slot .x:hover { color: var(--ember); background: var(--surf-2); }
+/* Locked, scored stage: inset green / red bar + final record + pts / ✕ */
+.sgp-slot.ro { cursor: default; flex-wrap: wrap; padding-top: 8px; padding-bottom: 8px; }
+.sgp-slot.good { box-shadow: inset 3px 0 0 var(--tac-green); }
+.sgp-slot.bad { box-shadow: inset 3px 0 0 var(--ember); }
+.sgp-slot.bad .nm, .sgp-slot.bad .sgp-mark { opacity: .8; }
+.sgp-slot .hit, .sgp-slot .miss { font-family: var(--font-mono); font-size: 12px; min-width: 28px; text-align: right; flex: none; }
+.sgp-slot .hit { color: var(--tac-green); }
+.sgp-slot .miss { color: var(--ember); }
+.sgp-slot .pend { font-family: var(--font-mono); font-size: 12px; min-width: 28px; text-align: right; color: var(--ink-low); flex: none; }
+.sgp-slot .bleachers { flex-basis: 100%; margin-top: 4px; }
+
+/* Team mark inside a slot / card — logo on a team-colour tile */
+.sgp-mark {
+  flex: none; width: 34px; height: 34px; display: grid; place-items: center;
+  border-radius: var(--r-md); background: rgba(7,7,8,.55); border: 1px solid var(--hair-2); overflow: hidden;
+}
+.sgp-mark.sm { width: 28px; height: 28px; }
+
+/* Pool head */
+.sgp-poolhead {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--ink-hi); padding-bottom: 12px; border-bottom: 1px solid var(--hair-2); margin-bottom: 14px;
+}
+.sgp-poolhead .muted { color: var(--ink-mid); }
+.sgp-poolhead .muted i { font-style: normal; display: inline-block; min-width: 14px; text-align: center; border: 1px solid var(--hair-3); border-radius: 50%; padding: 0 3px; }
+.sgp-armed {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--heat); margin: -4px 0 12px;
+}
+
+/* Pool cards: player cutout, or team colour + code */
+.sgp-pool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+@media (max-width: 480px) { .sgp-pool-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.sgp-card { position: relative; min-width: 0; }
+.sgp-team {
+  position: relative; display: flex; flex-direction: column; justify-content: flex-end;
+  width: 100%; aspect-ratio: 1 / 1.12; padding: 12px; text-align: left;
+  font: inherit; color: var(--ink-hi); background: var(--surf-1);
+  border: 1px solid var(--hair); border-radius: var(--r-md); overflow: hidden;
+  cursor: pointer; user-select: none; -webkit-user-select: none;
+  transition: border-color 150ms var(--ease), transform 150ms var(--ease), opacity 150ms var(--ease);
+}
+.sgp-team:disabled { cursor: default; }
+.sgp-team > img { object-fit: cover; object-position: top; filter: saturate(.7) contrast(1.05); }
+.sgp-team .bg {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-family: var(--font-display); font-weight: 900; font-size: 64px; line-height: 1;
+  color: rgba(255,255,255,.07);
+  background: radial-gradient(ellipse at 50% 90%, var(--team, var(--surf-3)), transparent 70%);
+  opacity: .9;
+}
+.sgp-team::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7,7,8,0) 35%, rgba(7,7,8,.95)); pointer-events: none; }
+.sgp-team > :not(img):not(.bg) { position: relative; z-index: 1; }
+.sgp-team .sgp-mark { position: absolute; top: 10px; left: 10px; z-index: 2; }
+.sgp-team .in { position: absolute; top: 44px; left: 10px; z-index: 2; font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; color: var(--heat); }
+.sgp-team .nm { display: block; font-family: var(--font-display); font-weight: 800; font-size: 20px; text-transform: uppercase; line-height: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sgp-team .meta { display: block; margin-top: 5px; font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sgp-team .meta b { color: var(--ink-hi); font-weight: 500; }
+.sgp-team:hover:not(:disabled), .sgp-team:focus-visible { border-color: var(--hair-3); }
+.sgp-team:focus-visible { outline: 2px solid var(--heat); outline-offset: 2px; }
+.sgp-team.sel { border-color: var(--heat); box-shadow: 0 0 0 1px var(--heat); transform: translateY(-2px); }
+.sgp-team.used { opacity: .32; pointer-events: none; }
+.sgp-info {
+  position: absolute; top: 6px; right: 6px; z-index: 3;
+  width: 36px; height: 36px; display: grid; place-items: center;
+  border-radius: 50%; border: 1px solid var(--hair-3); background: rgba(7,7,8,.6);
+  color: var(--ink-hi); font-family: var(--font-mono); font-size: 12px; line-height: 1;
+  cursor: pointer; user-select: none;
+  transition: border-color 150ms var(--ease);
+}
+.sgp-info::after { content: ''; position: absolute; inset: -4px; }
+.sgp-info:hover, .sgp-info:focus-visible { border-color: var(--ink-hi); outline: none; }
+.sgp-info.spot { color: var(--team-accent, var(--ink-hi)); }
+@media (max-width: 480px) {
+  .sgp-team { padding: 10px; }
+  .sgp-team .nm { font-size: 17px; }
+  .sgp-team .bg { font-size: 52px; }
+}
+@media (prefers-reduced-motion: reduce) { .sgp-team.sel { transform: none; } }
+
+/* Locked board (no pool): three bucket columns on wide screens */
+.sgp-locked { display: grid; gap: 14px; }
+.sgp-locked-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid var(--hair-2); }
+.sgp-locked-head .eyebrow { font-size: 10px; color: var(--ink-hi); }
+.sgp-locked-cols { display: grid; gap: 20px; }
+@media (min-width: 900px) {
+  .sgp-locked-cols.swiss { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; align-items: start; }
+}
+
+/* ── Sticky action bar (above the bottom nav) ──────────────────────────── */
+.sgp-action {
+  position: fixed; left: 0; right: 0; z-index: 49;
+  bottom: calc(64px + env(safe-area-inset-bottom));
+  /* #1269: solid fill — no backdrop-filter on a fixed full-width bar. */
+  background: rgba(7,7,8,.97); border-top: 1px solid var(--hair);
+}
+.sgp-action-in { max-width: 1240px; margin: 0 auto; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+@media (min-width: 1024px) {
+  .sgp-action { bottom: 0; }
+  .sgp-action-in { padding: 14px 32px; }
+}
+.sgp-prog { display: grid; gap: 8px; min-width: 0; }
+.sgp-prog .c { display: flex; gap: 12px; align-items: baseline; font-family: var(--font-mono); font-size: 12px; color: var(--ink-mid); white-space: nowrap; min-width: 0; }
+.sgp-prog .c b { color: var(--ink-hi); font-weight: 500; font-size: 18px; }
+.sgp-prog .s { font-size: 11px; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.sgp-prog .s.ok { color: var(--tac-green); }
+.sgp-prog .s.warn { color: var(--heat); }
+.sgp-prog .s.err { color: var(--ember); }
+.sgp-ticks { display: flex; gap: 3px; }
+.sgp-ticks i { width: 14px; height: 3px; background: var(--hair-2); }
+.sgp-ticks i.on { background: var(--heat); }
+.sgp-action .btn-heat, .sgp-action .btn-ghost, .sgp-action .btn-solid { flex: none; min-height: 48px; padding: 0 22px; }
+@media (max-width: 420px) {
+  .sgp-action-in { padding: 10px 16px; gap: 12px; }
+  .sgp-prog .c { gap: 8px; }
+  .sgp-ticks i { width: 10px; }
+  .sgp-action .btn-heat, .sgp-action .btn-ghost, .sgp-action .btn-solid { padding: 0 14px; font-size: 14px; }
+}
+
+/* Lock-in card (playoff bracket picker keeps the inline card form) */
+.sgp-lockcard { display: grid; gap: 12px; padding: 16px; background: var(--surf-1); border: 1px solid var(--hair); border-radius: var(--r-md); }
+.sgp-lockcard .s { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-mid); }
+.sgp-lockcard .s.ok { color: var(--tac-green); }
+.sgp-lockcard .s.warn { color: var(--heat); }
+.sgp-lockcard .s.err { color: var(--ember); }
+.sgp-lockcard button { width: 100%; }
+
+/* ── Team dossier: bottom sheet (mobile, 88dvh) → right drawer ≥760px ──── */
+.sgp-scrim { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.6); }
+.sgp-drawer {
+  position: fixed; z-index: 201; left: 0; right: 0; bottom: 0; max-height: 88dvh;
+  display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain;
+  background: var(--surf-1); border: 1px solid var(--hair-2); border-radius: 10px 10px 0 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  animation: sgp-sheet-in .3s var(--ease) both;
+}
+@keyframes sgp-sheet-in { from { transform: translateY(105%); } to { transform: none; } }
+@keyframes sgp-drawer-in { from { transform: translateX(105%); } to { transform: none; } }
+@media (min-width: 760px) {
+  .sgp-drawer { left: auto; top: 0; width: 400px; max-height: none; border-radius: 0; padding-bottom: 0; animation-name: sgp-drawer-in; }
+}
+@media (prefers-reduced-motion: reduce) { .sgp-drawer { animation: none; } }
+.sgp-drawer .close {
+  position: absolute; top: 12px; right: 12px; z-index: 2;
+  width: 36px; height: 36px; display: grid; place-items: center;
+  border-radius: 50%; border: 1px solid var(--hair-3); background: rgba(7,7,8,.6);
+  color: var(--ink-hi); cursor: pointer;
+}
+.sgp-drawer .close::after { content: ''; position: absolute; inset: -4px; }
+.sgp-drawer .close svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2.4; }
+.sgp-dh {
+  position: relative; flex: none; height: 260px; display: grid; place-items: center; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 100%, var(--team, var(--surf-3)), var(--surf-1) 75%);
+}
+.sgp-dh > img { object-fit: contain; object-position: bottom; }
+.sgp-dh .big { font-family: var(--font-display); font-weight: 900; font-size: 120px; line-height: 1; color: rgba(255,255,255,.1); }
+.sgp-dh .logo { position: absolute; left: 22px; bottom: 16px; }
+@media (max-width: 759px) { .sgp-dh { height: 200px; } .sgp-dh .big { font-size: 96px; } }
+.sgp-db { padding: 20px 22px 28px; display: grid; gap: 14px; }
+.sgp-db .eyebrow { font-size: 10px; }
+.sgp-db h2 { font-size: 44px; margin: 0; overflow-wrap: anywhere; }
+.sgp-dstats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--hair); border: 1px solid var(--hair); border-radius: var(--r-md); overflow: hidden; }
+.sgp-dstats > div { background: var(--surf-2); padding: 12px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.sgp-dstats .k { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-mid); }
+.sgp-dstats .v { font-family: var(--font-mono); font-size: 17px; color: var(--ink-hi); }
+.sgp-form { display: flex; gap: 3px; margin-top: 6px; }
+.sgp-form i { width: 14px; height: 4px; background: var(--tac-green); }
+.sgp-form i.l { background: var(--ember); }
+.sgp-form i.t { background: var(--ink-low); }
+.sgp-dsec { display: grid; gap: 4px; margin-top: 6px; }
+.sgp-dsec > .eyebrow { padding-bottom: 8px; border-bottom: 1px solid var(--hair-2); }
+.sgp-roster, .sgp-matches { list-style: none; margin: 0; padding: 0; }
+.sgp-roster li, .sgp-matches li { display: grid; align-items: center; gap: 12px; min-height: 44px; border-bottom: 1px solid var(--hair); }
+.sgp-roster li { grid-template-columns: minmax(0, 1fr) auto auto; }
+.sgp-roster a { font-family: var(--font-display); font-weight: 800; font-size: 18px; text-transform: uppercase; color: var(--ink-hi); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 10px 0; }
+.sgp-roster a:hover { color: var(--heat); }
+.sgp-roster .rt { font-family: var(--font-mono); font-size: 13px; color: var(--ink-hi); min-width: 36px; text-align: right; }
+.sgp-matches li { grid-template-columns: 20px minmax(0, 1fr) auto auto; font-size: 14px; }
+.sgp-matches .r { font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
+.sgp-matches .w .r { color: var(--tac-green); }
+.sgp-matches .l .r { color: var(--ember); }
+.sgp-matches .t .r { color: var(--ink-mid); }
+.sgp-matches .o { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sgp-matches .sc { font-family: var(--font-mono); font-size: 13px; color: var(--ink-hi); }
+.sgp-matches .d { font-family: var(--font-mono); font-size: 11px; color: var(--ink-mid); }
+.sgp-dfoot { font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; color: var(--ink-mid); padding-top: 12px; border-top: 1px solid var(--hair); }
+.sgp-db .btn-ghost { justify-self: start; }
+.sgp-db .btn-ghost svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+/* ── Shared team-logo monogram + lock countdown (used beyond the board) ── */
+.team-mono {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  border-radius: var(--r-md); background: var(--surf-3); color: var(--ink-mid);
+  font-family: var(--font-display); font-weight: 800; letter-spacing: .02em; text-transform: uppercase;
+}
+.lock-cd { display: inline-flex; align-items: baseline; gap: 8px; }
+.lock-cd.center { justify-content: center; }
+.lock-cd .t { font-family: var(--font-mono); font-weight: 500; font-size: clamp(20px, 4.5vw, 26px); letter-spacing: .02em; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink-hi); }
+.lock-cd .c { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-mid); }
+.lock-cd.ember .t, .lock-cd.ember .c { color: var(--heat); }
+
+/* StageLogo (Stage Wrapped cover mark) — flat, no foil or glow */
+.stage-logo { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; padding: 14px 28px 12px; margin: 0 auto; }
+.stage-logo .lbl { font-family: var(--font-mono); font-size: 11px; letter-spacing: .42em; text-indent: .42em; line-height: 1; color: var(--heat); text-transform: uppercase; }
+.stage-logo .num { font-family: var(--font-display); font-weight: 900; line-height: .8; color: var(--ink-hi); }
+.stage-logo .sub { font-family: var(--font-mono); font-size: 10px; letter-spacing: .34em; text-indent: .34em; line-height: 1; margin-top: 3px; color: var(--ink-mid); text-transform: uppercase; }

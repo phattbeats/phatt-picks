@@ -79,7 +79,7 @@ export function InboxControls({ filter, unread, page }: Props) {
       const li = link.closest<HTMLLIElement>("li.inbox-row");
       const entryId = li?.dataset.entryId;
       if (!entryId) return;
-      // Optimistic: remove the "fresh" class and dot so the user sees the
+      // Optimistic: remove the "fresh" class and amber dot so the user sees the
       // state change immediately, even though we don't block navigation.
       li?.classList.remove("fresh");
       const dot = li?.querySelector(".inbox-dot");
@@ -116,22 +116,24 @@ export function InboxControls({ filter, unread, page }: Props) {
 
   return (
     <div className="inbox-tabs">
-      <div className="inbox-tabs-row" role="tablist" aria-label="Notifications filter">
+      <div className="tabs inbox-tabs-row" role="tablist" aria-label="Notifications filter">
         <Link
           href={`/notifications?page=${page}`}
           role="tab"
+          prefetch={false}
           aria-selected={filter === "all"}
-          className={`inbox-tab${filter === "all" ? " active" : ""}`}
+          className={`inbox-tab${filter === "all" ? " on" : ""}`}
         >
           All
         </Link>
         <Link
           href={`/notifications?filter=unread&page=${page}`}
           role="tab"
+          prefetch={false}
           aria-selected={filter === "unread"}
-          className={`inbox-tab${filter === "unread" ? " active" : ""}`}
+          className={`inbox-tab${filter === "unread" ? " on" : ""}`}
         >
-          Unread {optimisticUnread > 0 && <span className="inbox-tab-ct">{optimisticUnread}</span>}
+          Unread{optimisticUnread > 0 && <span className="inbox-tab-ct">{optimisticUnread}</span>}
         </Link>
         <div className="inbox-tabs-spacer" />
         <button

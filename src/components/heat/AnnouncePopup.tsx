@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { NotifGlyph } from "./NotifGlyph";
 
 /**
  * One-time broadcast popup (#1211 follow-up). When there's an active
@@ -51,15 +52,22 @@ export function AnnouncePopup({ announcement }: { announcement: PopupAnnouncemen
 
   return (
     <div className="announce-pop" role="status">
-      <span className="announce-pop-icon" aria-hidden="true">{announcement.icon}</span>
+      <NotifGlyph kind="announcement" size="sm" />
       <div className="announce-pop-text">
+        <span className="eyebrow">
+          <b>Broadcast</b> · HOTLINE
+        </span>
         <span className="announce-pop-title">{announcement.title}</span>
         <span className="announce-pop-body">{announcement.body}</span>
-        <Link href={announcement.href} className="announce-pop-cta" onClick={dismiss}>
+        <Link href={announcement.href} prefetch={false} className="announce-pop-cta" onClick={dismiss}>
           Take me there →
         </Link>
       </div>
-      <button type="button" className="announce-pop-x" onClick={dismiss} aria-label="Dismiss">×</button>
+      <button type="button" className="announce-pop-x" onClick={dismiss} aria-label="Dismiss">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
     </div>
   );
 }

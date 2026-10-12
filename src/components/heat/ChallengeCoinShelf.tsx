@@ -1,13 +1,13 @@
 /**
- * Challenge coin shelf (#1278) — the collectible row on a player's profile:
- * one struck, Major-logo coin per event they took part in, gold for a top finish
- * and steel for taking part. Server component (no interactivity) — it just lays
- * out the pre-rendered coin art the pure core resolves.
+ * Challenge coin case (#1278) — the collectible row on a player's profile:
+ * one struck, Major-logo coin per event they took part in, its metal decided by
+ * the finish. Server component — it lays out the pre-rendered coin art the pure
+ * core resolves; each coin opens the drag-to-rotate inspector on tap.
  *
  * Empty by design until a Major concludes (coins mint on archive). On your own
- * profile the velvet display case still shows with empty recesses — no explainer
- * text (#1283: let people figure it out), just an obvious home for coins to
- * land. On someone else's it stays hidden so a fresh profile isn't cluttered.
+ * profile the case still shows with empty slots — an obvious home for coins to
+ * land (#1283). On someone else's it stays hidden so a fresh profile isn't
+ * cluttered. `pending` adds an "in play" slot for the live Major.
  */
 
 import { type ChallengeCoin } from "@/lib/challenge-coin-core";
@@ -24,55 +24,60 @@ function ordSuffix(n: number): string {
   }
 }
 
+/** Display name without the long "CS2 Major Championship" tail. */
+function shortName(name: string): string {
+  return name.replace(/\s+CS2 Major Championship$/i, "");
+}
+
 export function ChallengeCoinShelf({
   coins,
   isSelf,
+  pending = null,
 }: {
   coins: ChallengeCoin[];
   isSelf: boolean;
+  /** The live Major's coin-to-be: an empty "in play" slot. */
+  pending?: { name: string; note: string } | null;
 }) {
-  // Empty velvet case on your own profile — the display case stays so there's an
-  // obvious home for coins, but the explainer text is gone (#1283). Three
-  // empty recesses read as "a coin sits in each of these" without spelling it
-  // out. Hidden on other people's profiles so a fresh one isn't cluttered.
-  if (coins.length === 0) {
-    if (!isSelf) return null;
-    return (
-      <section className="coin-shelf">
-        <div className="coin-shelf-head">
-          <span className="eyebrow-mono">CHALLENGE COINS</span>
-        </div>
-        <div className="coin-shelf-grid" aria-hidden="true">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="coin-collectible">
-              <div className="coin-collectible-disc coin-slot-empty" />
-            </div>
-          ))}
-        </div>
-      </section>
-    );
-  }
+  if (coins.length === 0 && !isSelf) return null;
+
+  const empties = coins.length === 0 && !pending ? 3 : 0;
 
   return (
-    <section className="coin-shelf">
-      <div className="coin-shelf-head">
-        <span className="eyebrow-mono">CHALLENGE COINS</span>
-        <span className="coin-shelf-count">{coins.length}</span>
+    <section className="chap coin-shelf">
+      <div className="chap-h row2">
+        <div>
+          <h2>Challenge coins</h2>
+        </div>
+        {coins.length > 0 && <span className="eyebrow">{coins.length} struck · tap to inspect</span>}
       </div>
       <div className="coin-shelf-grid">
         {coins.map((c, i) => (
           <div key={c.eventId} className="coin-collectible">
             <div className="coin-collectible-disc">
-              <InspectableCoin coin={c} size={112} delay={i * 1.3} />
+              <InspectableCoin coin={c} size={150} delay={i * 1.3} />
             </div>
             <div className={`coin-collectible-tier ${c.tier}`}>{c.tier}</div>
-            <div className="coin-collectible-name">{c.name}</div>
+            <div className="coin-collectible-name">{shortName(c.name)}</div>
             {c.finish != null && (
               <div className="coin-collectible-finish">
                 {c.finish}
                 {ordSuffix(c.finish)} of {c.fieldSize}
               </div>
             )}
+          </div>
+        ))}
+        {pending && (isSelf || coins.length > 0) && (
+          <div className="coin-collectible">
+            <div className="coin-collectible-disc coin-slot-empty" aria-hidden="true" />
+            <div className="coin-collectible-tier">In play</div>
+            <div className="coin-collectible-name">{pending.name}</div>
+            <div className="coin-collectible-finish">{pending.note}</div>
+          </div>
+        )}
+        {Array.from({ length: empties }).map((_, i) => (
+          <div key={`empty-${i}`} className="coin-collectible" aria-hidden="true">
+            <div className="coin-collectible-disc coin-slot-empty" />
           </div>
         ))}
       </div>

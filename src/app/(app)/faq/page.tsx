@@ -1,18 +1,28 @@
+/* eslint-disable @next/next/no-img-element -- static editorial hero photo from /public/wrapped. */
+
 import Link from "next/link";
 import { Faq } from "@/components/heat/Faq";
 
 export const metadata = { title: "FAQ · HOTLINE" };
 
+/**
+ * FAQ (prototype 20). Answers are read off the code: scoring from the layout's
+ * points_per_pick (scoring.ts), locks/reveal from reveal-core, the Valve coin
+ * gate from coin-core, and the challenge-coin rules from challenge-coin-core.
+ */
 const CATEGORIES = [
   {
-    cat: "IEM Cologne 2026",
+    cat: "Singapore 2026",
+    id: "singapore",
     items: [
       {
-        q: "When is IEM Cologne 2026?",
+        q: "When is the Major?",
         a: (
           <>
-            <p><strong>June 2–21, 2026</strong> in Cologne, Germany.</p>
-            <p>The tournament runs for 20 days, covering three Swiss stages and an 8-team playoff bracket.</p>
+            <p>
+              <b>25 November – 13 December 2026.</b> Three Swiss stages run 25 Nov – 6 Dec, then an
+              eight-team bracket at the <b>Singapore Indoor Stadium</b>, 10–13 December.
+            </p>
           </>
         ),
       },
@@ -20,117 +30,172 @@ const CATEGORIES = [
         q: "What is the Viewer Pass?",
         a: (
           <>
-            <p>The <strong>IEM Cologne 2026 Viewer Pass</strong> is a ~$10 in-game purchase that unlocks:</p>
-            <ul>
-              <li>The official Valve Pick&apos;Em Challenge (earn Bronze/Silver/Gold/Diamond coin)</li>
-              <li>Team stickers and graffiti</li>
-              <li>Souvenir drops from matches you watch</li>
-            </ul>
-            <p>If you want HOTLINE to mirror your Valve coin tier, you need to own this Major&apos;s Viewer Pass and complete picks in-game.</p>
+            <p>
+              An in-game CS2 purchase for this Major that unlocks Valve&apos;s official Pick&apos;Em
+              Challenge (and its Bronze / Silver / Gold / Diamond coin), team stickers and graffiti, and
+              souvenir drops from matches you watch.
+            </p>
+            <p>
+              You only need it to <b>sync with Steam</b> — playing on HOTLINE itself is free.
+            </p>
           </>
         ),
       },
     ],
   },
   {
-    cat: "Steam Sync & Coins",
+    cat: "Picks & scoring",
+    id: "scoring",
     items: [
       {
-        q: "How does Steam sync work?",
+        q: "How is it scored?",
         a: (
           <>
-            <p>When you connect your Steam account, HOTLINE uses a <strong>Game Authentication Code</strong> (from Steam Help) to read your in-game Pick&apos;Em data.</p>
-            <p><strong>Prerequisites:</strong></p>
+            <p>
+              Straight from Valve&apos;s Pick&apos;Em weighting. <b>Swiss climbs</b>: each stage has ten
+              calls, and every correct call in a stage is worth the same — the 3–0 / advance / 0–3
+              bucket doesn&apos;t change the value.
+            </p>
             <ul>
-              <li>You own this Major&apos;s Viewer Pass in CS2</li>
-              <li>You&apos;ve made picks in the in-game Pick&apos;Em</li>
+              <li>Stage I: <b>1 pt</b> per call → 10 max</li>
+              <li>Stage II: <b>2 pts</b> per call → 20 max</li>
+              <li>Stage III: <b>3 pts</b> per call → 30 max</li>
             </ul>
-            <p>HOTLINE then mirrors your Valve coin tier on your profile and board. The coin only appears if you actually earned it in-game. <Link href="/help/auth-code">Step-by-step guide →</Link></p>
+            <p>
+              <b>Playoffs flip</b> — nailing all four quarterfinals is harder than calling one final.
+            </p>
+            <ul>
+              <li>Quarterfinal winner: <b>12 pts</b> each → 48 max</li>
+              <li>Semifinal winner: <b>10 pts</b> each → 20 max</li>
+              <li>Grand Final winner: <b>7 pts</b> → 7 max</li>
+            </ul>
+            <p>
+              Perfect Major: <b>135</b> (60 Swiss + 75 playoffs). <Link href="/how-to-play" prefetch={false}>See it explained</Link>.
+            </p>
           </>
         ),
       },
       {
-        q: "Why don't I see a coin on my profile?",
+        q: "Does the order inside a bucket matter?",
         a: (
-          <>
-            <p>Coins only show when you have <strong>real Valve coin data</strong>. This means:</p>
-            <ul>
-              <li>You&apos;re synced with Steam</li>
-              <li>You own this Major&apos;s Viewer Pass</li>
-              <li>You&apos;ve earned a tier (Bronze/Silver/Gold/Diamond) in the in-game Pick&apos;Em</li>
-            </ul>
-            <p><strong>Local players</strong> and <strong>synced players without a coin</strong> both see no coin — this is correct. The coin mirrors Valve exactly; we don&apos;t invent app-specific tiers.</p>
-          </>
-        ),
-      },
-      {
-        q: "Can I still rank #1 without a coin?",
-        a: (
-          <>
-            <p><strong>Yes.</strong> The board ranks everyone by in-app points — local players, synced players, and synced players with coins all compete on the same board.</p>
-            <p>The coin is a Valve-mirrored badge, not a leaderboard tier. A coinless player at #1 is correct and intentional.</p>
-          </>
-        ),
-      },
-    ],
-  },
-  {
-    cat: "Picks & Scoring",
-    items: [
-      {
-        q: "How is scoring calculated?",
-        a: (
-          <>
-            <p>Points come straight from Valve&apos;s Pick&apos;Em — the same weighting every CS2 Major ships with. It&apos;s surprising in two ways: Swiss escalates, and playoffs invert. Both are intentional.</p>
-            <p><strong>Swiss escalates (later stages worth more).</strong> Each stage has 10 picks. Within a stage, <strong>every correct pick is worth the same flat value</strong> — the 3-0 / 0-3 / advance distinction does <em>not</em> change points.</p>
-            <ul>
-              <li>Stage 1: <strong>1 pt</strong> per pick → <strong>10 max</strong></li>
-              <li>Stage 2: <strong>2 pts</strong> per pick → <strong>20 max</strong></li>
-              <li>Stage 3: <strong>3 pts</strong> per pick → <strong>30 max</strong></li>
-              <li>Swiss total: <strong>60 pts</strong></li>
-            </ul>
-            <p><strong>Playoffs invert (earlier rounds worth more).</strong> Nailing all four quarterfinals is much harder than calling one Grand Final.</p>
-            <ul>
-              <li>Quarterfinal winner: <strong>12 pts</strong> each → <strong>48 max</strong></li>
-              <li>Semifinal winner: <strong>10 pts</strong> each → <strong>20 max</strong></li>
-              <li>Grand Final winner: <strong>7 pts</strong> → <strong>7 max</strong></li>
-              <li>Playoffs total: <strong>75 pts</strong></li>
-            </ul>
-            <p><strong>Perfect tournament: 135 points</strong> (60 Swiss + 75 Playoffs). This mirrors the in-game Pick&apos;Em coin exactly.</p>
-          </>
+          <p>
+            No. Slots within a Swiss bucket are interchangeable — put the right team in the right bucket
+            and it counts. A 3–0 team placed in Advance is a miss: Advance means <b>3–1 or 3–2</b>.
+          </p>
         ),
       },
       {
         q: "When do picks lock?",
         a: (
           <>
-            <p>Each stage locks right before it starts. Once a stage locks you can&apos;t change those picks, and results are revealed as matches finish.</p>
-            <p>Stages open in order — Stage 2&apos;s picks unlock once Stage 1&apos;s results are in.</p>
+            <p>
+              At the <b>first match of each stage</b>. Once a stage locks you can&apos;t change those
+              picks, and everyone&apos;s calls for it are revealed.
+            </p>
+            <p>Stages open in order — Stage II&apos;s picks unlock once Stage I&apos;s results are in.</p>
           </>
+        ),
+      },
+      {
+        q: "Can I rank #1 without Steam?",
+        a: (
+          <p>
+            <b>Yes.</b> Local players, synced players, and synced players with a Valve coin all share
+            one board, ranked by points. A coinless player at #1 is correct and intentional.
+          </p>
         ),
       },
       {
         q: "Can I compare my picks with friends?",
         a: (
-          <p>Yes. Tap any player on the <Link href="/leaderboard">leaderboard</Link> to open their profile, then hit <strong>Compare with mine</strong>. You&apos;ll see your picks side-by-side with theirs for every revealed stage.</p>
+          <p>
+            Yes. Tap any player on the <Link href="/leaderboard" prefetch={false}>leaderboard</Link> to
+            open their profile, then hit <b>Compare with mine</b> to see both sets side by side for every
+            revealed stage.
+          </p>
         ),
       },
     ],
   },
   {
-    cat: "Technical",
+    cat: "Coins",
+    id: "coins",
     items: [
       {
-        q: "Can I install this as an app?",
+        q: "What are challenge coins?",
         a: (
           <>
-            <p><strong>Yes.</strong> HOTLINE is a Progressive Web App (PWA). Install it for faster access and live pick-lock notifications.</p>
+            <p>
+              HOTLINE&apos;s own collectible: <b>one coin per Major you take part in</b>. Make at least
+              one pick and your coin mints when that Major concludes — its Grand Final resolved.
+            </p>
+            <p>Where you finish on the board decides the metal:</p>
             <ul>
-              <li><strong>Android/Desktop:</strong> tap the install prompt, or &ldquo;Install&rdquo; in your browser menu.</li>
-              <li><strong>iOS:</strong> tap Share → &ldquo;Add to Home Screen&rdquo; in Safari.</li>
+              <li><b>Diamond</b> — the winner, or the top 10%</li>
+              <li><b>Gold</b> — top 25%</li>
+              <li><b>Silver</b> — top 50%</li>
+              <li><b>Bronze</b> — everyone else who took part</li>
             </ul>
-            <p>See the <Link href="/pwa">install guide</Link> for step-by-step instructions.</p>
+            <p>Coins sit on the shelf on your player profile, and you get a notification when one is struck.</p>
           </>
+        ),
+      },
+      {
+        q: "Is that the same as the Valve coin?",
+        a: (
+          <p>
+            No. The Valve coin is earned in the in-game Pick&apos;Em and only mirrors here for synced
+            players. Challenge coins are <b>earned on HOTLINE, by everyone</b> — local or synced.
+          </p>
+        ),
+      },
+      {
+        q: "Why don't I see a Valve coin on my profile?",
+        a: (
+          <>
+            <p>It only appears with real Valve coin data, which means all three:</p>
+            <ul>
+              <li>You&apos;re synced with Steam</li>
+              <li>You own this Major&apos;s Viewer Pass</li>
+              <li>You&apos;ve earned a tier in the in-game Pick&apos;Em</li>
+            </ul>
+            <p>
+              Local players, and synced players without a coin, see none — that&apos;s correct. HOTLINE
+              mirrors Valve exactly and never invents a tier.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
+  {
+    cat: "Steam & technical",
+    id: "technical",
+    items: [
+      {
+        q: "How does Steam sync work?",
+        a: (
+          <>
+            <p>
+              You give HOTLINE a <b>Game Authentication Code</b> from Steam Help, and it reads your
+              in-game Pick&apos;Em. You need this Major&apos;s Viewer Pass and to have made picks in the
+              in-game Pick&apos;Em.
+            </p>
+            <p>
+              Synced picks mirror your official ones — including stages that already locked.{" "}
+              <Link href="/help/auth-code" prefetch={false}>Step-by-step guide</Link>.
+            </p>
+          </>
+        ),
+      },
+      {
+        q: "Can I install it as an app?",
+        a: (
+          <p>
+            <b>Yes.</b> HOTLINE is a Progressive Web App — see the{" "}
+            <Link href="/pwa" prefetch={false}>install guide</Link>. On iPhone, lock alerts only work from
+            the installed app.
+          </p>
         ),
       },
     ],
@@ -139,24 +204,21 @@ const CATEGORIES = [
 
 export default function FaqPage() {
   return (
-    <>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <span className="eyebrow-mono">FIELD MANUAL</span>
-        <h1 className="font-display" style={{
-          fontWeight: 900,
-          fontSize: "clamp(34px, 7vw, 52px)",
-          textTransform: "uppercase",
-          lineHeight: 0.92,
-          letterSpacing: "-0.01em",
-        }}>
-          FAQ
-        </h1>
-        <p style={{ color: "var(--ink-mid)", fontSize: 14, margin: "2px 0 0" }}>
-          Scoring, Swiss structure, the Viewer Pass, and how Steam sync works.
-        </p>
-      </div>
+    <div className="sgc-ed">
+      <section className="bleed short">
+        <img src="/wrapped/major-thanks.jpg" alt="" />
+        <span className="credit">Photo · HLTV</span>
+        <div className="in">
+          <span className="eyebrow rise">Field manual</span>
+          <h1 className="display rise d1">FAQ</h1>
+          <p className="rise d2">
+            Short answers. For the full picture,{" "}
+            <Link href="/how-to-play" prefetch={false} className="sgc-link">read how it works</Link>.
+          </p>
+        </div>
+      </section>
 
       <Faq categories={CATEGORIES} />
-    </>
+    </div>
   );
 }

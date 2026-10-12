@@ -1,20 +1,93 @@
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import { LastUpdated } from "@/components/LastUpdated";
-import { prisma } from "@/lib/db";
 import { getCommittedLayout } from "@/lib/layout";
-import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
-import { visibleCoinTier } from "@/lib/coin-core";
 import { getSession } from "@/lib/session";
 import { rankMapForSection, snapshotSectionIds } from "@/lib/rank-snapshot";
 import { baselineSectionId, latestSectionId, rankDelta, type RankDelta } from "@/lib/rank-snapshot-core";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
-import { currentEventId } from "@/lib/events-core";
+import { currentEvent, previousMajor, type EventConfig } from "@/lib/events-core";
+import {
+  buildLeaderboard,
+  eventShortName,
+  layoutForEvent,
+  resolveArchiveEvent,
+  type LeaderboardRow,
+} from "@/lib/leaderboard";
+import { Podium } from "@/components/sg/ranks/Podium";
+import { LeaderRows } from "@/components/sg/ranks/LeaderRows";
 
-export default async function LeaderboardPage() {
+/** Rank-delta arrows: current rank vs the snapshot frozen at the previous resolved stage. */
+async function rankDeltas(eventId: number, rows: LeaderboardRow[]) {
+  const resolvedSections = await snapshotSectionIds(eventId);
+  const baseSection = baselineSectionId(resolvedSections);
+  const baselineRanks = await rankMapForSection(eventId, baseSection);
+  const deltas = new Map<string, RankDelta>();
+  rows.forEach((row, idx) => deltas.set(row.playerId, rankDelta(idx + 1, baselineRanks.get(row.playerId))));
+  // Before two stages have resolved there's nothing to diff, so no arrows render
+  // (honest — we never invent movement).
+  return { deltas, showDeltas: baseSection !== null, latestSection: latestSectionId(resolvedSections) };
+}
+
+function ordinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
+}
+
+/** Server-clock check, outside render so the purity lint stays quiet. */
+function isFuture(iso: string | null): iso is string {
+  return !!iso && Date.parse(iso) > Date.now();
+}
+
+function dayLabel(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+}
+
+function Footer({ latestResolvedAt, final }: { latestResolvedAt: Date | null; final: boolean }) {
+  return (
+    <footer className="rk-foot">
+      <p>
+        {latestResolvedAt ? (
+          <>
+            {final && "Final · "}
+            <LastUpdated iso={latestResolvedAt.toISOString()} />
+          </>
+        ) : (
+          "Scores update from official results as each stage completes."
+        )}
+      </p>
+      <p>
+        Results:{" "}
+        <a href="https://liquipedia.net" target="_blank" rel="noopener noreferrer">
+          Liquipedia
+        </a>{" "}
+        (CC-BY-SA 3.0)
+      </p>
+    </footer>
+  );
+}
+
+export default async function LeaderboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ major?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const slug = Array.isArray(params.major) ? params.major[0] : params.major;
+  const archive = resolveArchiveEvent(slug);
+  if (archive) return <FinalBoard event={archive} />;
+  return <LiveBoard />;
+}
+
+/* ── Live board (current event) ───────────────────────────────────────── */
+
+async function LiveBoard() {
   // Per-request active event (#1046) — follows the clock across Majors, no redeploy.
-  const EVENT_ID = currentEventId();
-  const layout = getCommittedLayout();
+  const event = currentEvent();
+  const EVENT_ID = event.eventId;
+  const eventName = eventShortName(event);
+  const last = previousMajor();
   const session = await getSession();
 
   // Live driver (#866): atomic 30s claim → deferred background ingest, so the
@@ -22,463 +95,254 @@ export default async function LeaderboardPage() {
   // runs past the response via `after`).
   await refreshOutcomesOnRead(EVENT_ID);
 
-  const allPicks = await prisma.pick.findMany({
-    where: { eventId: EVENT_ID },
-    include: { player: true },
+  const { rows, latestResolvedAt } = await buildLeaderboard({
+    eventId: EVENT_ID,
+    layout: getCommittedLayout(),
+    sessionPlayerId: session?.playerId,
   });
+  const { deltas, showDeltas, latestSection } = await rankDeltas(EVENT_ID, rows);
 
-  const outcomes = await prisma.stageOutcome.findMany({
-    where: { eventId: EVENT_ID },
-  });
-
-  const latestResolvedAt = outcomes.reduce<Date | null>(
-    (max, o) => (max === null || o.resolvedAt > max ? o.resolvedAt : max),
-    null,
-  );
-
-  const outcomeMap: OutcomeMap = {};
-  for (const o of outcomes) {
-    outcomeMap[o.sectionId] ??= {};
-    outcomeMap[o.sectionId][o.groupId] ??= {};
-    outcomeMap[o.sectionId][o.groupId][o.slotIndex] = o.winnerPickId;
-  }
-
-  const playerPickMap: PlayerPickMap = {};
-  const playerMeta: Record<
-    string,
-    {
-      id: string;
-      displayName: string;
-      avatarUrl: string | null;
-      isLocal: boolean;
-      synced: boolean;
-      hasViewerPass: boolean;
-      hasValveCoin: boolean;
-      coinTier: string | null;
-    }
-  > = {};
-
-  for (const pick of allPicks) {
-    const pid = pick.playerId;
-    playerPickMap[pid] ??= {};
-    playerPickMap[pid][pick.sectionId] ??= {};
-    playerPickMap[pid][pick.sectionId][pick.groupId] ??= {};
-    playerPickMap[pid][pick.sectionId][pick.groupId][pick.slotIndex] = pick.pickId;
-
-    if (!playerMeta[pid]) {
-      const p = pick.player;
-      playerMeta[pid] = {
-        id: p.id,
-        displayName: p.displayName,
-        avatarUrl: p.avatarUrl,
-        isLocal: p.isLocal,
-        synced: p.synced,
-        hasViewerPass: p.hasViewerPass,
-        hasValveCoin: p.hasValveCoin,
-        coinTier: p.coinTier,
-      };
-    }
-  }
-
-  const allPlayers = await prisma.player.findMany();
-  for (const p of allPlayers) {
-    if (!playerMeta[p.id]) {
-      playerMeta[p.id] = {
-        id: p.id,
-        displayName: p.displayName,
-        avatarUrl: p.avatarUrl,
-        isLocal: p.isLocal,
-        synced: p.synced,
-        hasViewerPass: p.hasViewerPass,
-        hasValveCoin: p.hasValveCoin,
-        coinTier: p.coinTier,
-      };
-    }
-  }
-
-  const rows = Object.entries(playerMeta)
-    .map(([pid, meta]) => {
-      const picks = playerPickMap[pid] ?? {};
-      const score = scorePlayer(layout, picks, outcomeMap);
-      return {
-        playerId: pid,
-        displayName: meta.displayName,
-        avatarUrl: meta.avatarUrl,
-        isLocal: meta.isLocal,
-        synced: meta.synced,
-        coinTier: visibleCoinTier(meta),
-        score: score.total,
-        isSelf: session?.playerId === pid,
-      };
-    })
-    .sort((a, b) => b.score - a.score || a.displayName.localeCompare(b.displayName));
-
-  // Rank-delta arrows (mockup-04). Movement is measured across the most recently
-  // resolved stage: current live rank vs. the snapshot frozen at the previous
-  // resolved stage. Before two stages have resolved there's nothing to diff, so
-  // no arrows render (honest — we never invent movement).
-  const resolvedSections = await snapshotSectionIds(EVENT_ID);
-  const baseSection = baselineSectionId(resolvedSections);
-  const baselineRanks = await rankMapForSection(EVENT_ID, baseSection);
-  const latestSection = latestSectionId(resolvedSections);
-  const deltaByPlayer = new Map<string, RankDelta>();
-  rows.forEach((row, idx) => {
-    deltaByPlayer.set(row.playerId, rankDelta(idx + 1, baselineRanks.get(row.playerId)));
-  });
-  const showDeltas = baseSection !== null;
+  const preEvent = rows.every((r) => r.score === 0);
+  const showPodium = !preEvent && rows.length >= 3;
+  const selfIdx = rows.findIndex((r) => r.isSelf);
+  const self = selfIdx >= 0 ? rows[selfIdx] : null;
+  const leaderGap = self ? rows[0].score - self.score : 0;
+  const profileHref = (r: LeaderboardRow) => `/players/${encodeURIComponent(r.playerId)}`;
 
   return (
-    <>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <span className="eyebrow-mono">STANDINGS</span>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-          <h1 className="font-display" style={{
-            fontWeight: 800,
-            fontSize: "clamp(28px, 5vw, 40px)",
-            textTransform: "uppercase",
-            lineHeight: 0.95,
-          }}>
-            Leaderboard
-          </h1>
-          {rows.length >= 2 && (
-            <Link href="/leaderboard/compare" className="btn-ghost" style={{ padding: "10px 16px", fontSize: 12 }}>
-              Compare picks
-              <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12, stroke: "currentColor", fill: "none", strokeWidth: 2.5 }}>
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </Link>
-          )}
+    <div className="rk-page">
+      <section className="bleed short">
+        <Image src="/wrapped/major-thanks.jpg" alt="" fill priority sizes="100vw" />
+        <span className="credit">Photo · IEM Cologne Major 2026 · HLTV</span>
+        <div className="in">
+          <span className="eyebrow rise">
+            Leaderboard · <b>{eventName}</b> · {rows.length} player{rows.length !== 1 ? "s" : ""}
+          </span>
+          <h1 className="display rise d1">The board</h1>
         </div>
-        <p style={{
-          color: "var(--ink-mid)",
-          fontSize: 13,
-          margin: 0,
-        }}>
-          {rows.length} participant{rows.length !== 1 ? "s" : ""} · IEM Cologne 2026 ·{" "}
-          <Link href="/players" style={{ color: "var(--heat)", textDecoration: "none" }}>
-            directory →
-          </Link>{" "}
-          ·{" "}
-          <Link href="/majors" style={{ color: "var(--heat)", textDecoration: "none" }}>
-            your Majors →
-          </Link>
+      </section>
+
+      {last && (
+        <Link href={`/leaderboard?major=${encodeURIComponent(last.slug)}`} prefetch={false} className="rk-archive">
+          <span className="eyebrow">Last Major</span>
+          <span className="rk-archive-t">
+            Final standings · {eventShortName(last)} <span aria-hidden>→</span>
+          </span>
+        </Link>
+      )}
+
+      {preEvent && (
+        <p className="rk-note">
+          {isFuture(event.dates.start) ? (
+            <>
+              {eventName} scoring starts when Stage I locks — <b>{dayLabel(event.dates.start)}</b>. Until then everyone
+              sits level on zero.
+            </>
+          ) : (
+            <>
+              {eventName} scores land as the first <b>Stage I</b> results resolve.
+            </>
+          )}
         </p>
-        {latestSection !== null && (
-          <Link
-            href={`/reveal/${latestSection}`}
-            className="btn-ghost"
-            style={{ padding: "10px 16px", fontSize: 12, alignSelf: "flex-start", marginTop: 2 }}
-          >
-            Latest Stage Reveal
-            <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12, stroke: "currentColor", fill: "none", strokeWidth: 2.5 }}>
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          </Link>
-        )}
-      </div>
+      )}
 
       {rows.length === 0 ? (
-        <div className="panel brk" style={{ textAlign: "center", padding: "48px 24px" }}>
-          <span className="br-tr" />
-          <span className="br-bl" />
-          <p className="font-display" style={{
-            fontWeight: 700,
-            fontSize: 22,
-            color: "var(--ink-hi)",
-            textTransform: "uppercase",
-            margin: "0 0 6px",
-          }}>
-            No players yet
-          </p>
-          <p style={{ color: "var(--ink-mid)", fontSize: 14, margin: 0 }}>
-            Be the first —{" "}
-            <Link href="/login/auth" style={{ color: "var(--heat)" }}>sign in</Link>{" "}
-            or{" "}
-            <Link href="/login/local" style={{ color: "var(--ink-mid)" }}>play locally</Link>.
-          </p>
-        </div>
+        <section className="chap">
+          <div className="chap-h">
+            <h2>No players yet</h2>
+            <p>
+              Be the first — <Link href="/login">sign in</Link> or <Link href="/login/local">play locally</Link>.
+            </p>
+          </div>
+        </section>
       ) : (
         <>
-          {/* Podium — top 3 (mockup 04). Order 2 · 1 · 3 so #1 centers. */}
-          {rows.length >= 3 && (
-            <div className="podium">
-              {[1, 0, 2].map((i) => {
-                const row = rows[i];
-                const rank = i + 1;
-                const first = i === 0;
-                return (
-                  <Link
-                    key={row.playerId}
-                    href={`/players/${encodeURIComponent(row.playerId)}`}
-                    className={`podium-slot${first ? " first brk" : ""}`}
-                  >
-                    {first && (
-                      <>
-                        <span className="br-tr" />
-                        <span className="br-bl" />
-                      </>
-                    )}
-                    <span className="podium-rank">{String(rank).padStart(2, "0")}</span>
-                    <span className="podium-av">
-                      {row.avatarUrl ? (
-                        <Image src={row.avatarUrl} alt="" width={first ? 52 : 44} height={first ? 52 : 44} unoptimized style={{ objectFit: "cover", width: "100%", height: "100%" }} />
-                      ) : (
-                        row.displayName.slice(0, 2).toUpperCase()
-                      )}
-                    </span>
-                    <span className="podium-name">{row.displayName}</span>
-                    <span className="podium-score">{row.score}</span>
-                    <span className="podium-pts">pts</span>
-                    {row.coinTier && <span className={`coin-sticker ${row.coinTier}`} title={`${row.coinTier} coin`} />}
-                  </Link>
-                );
-              })}
-            </div>
+          {showPodium && (
+            <section className="chap">
+              <div className="chap-h">
+                <h2>Top three</h2>
+                <p>
+                  <b>{rows[0].displayName}</b> leads on {rows[0].score} pts.
+                </p>
+              </div>
+              <Podium rows={rows} hrefFor={profileHref} />
+            </section>
           )}
 
-          {/* Full rankings */}
-          <div className="section-label" style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 9,
-            letterSpacing: "0.16em",
-            textTransform: "uppercase",
-            color: "var(--ink-low)",
-            margin: "4px 0 2px",
-          }}>
-            Full Rankings
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {rows.map((row, idx) => (
-              <LeaderRow
-                key={row.playerId}
-                row={row}
-                rank={idx + 1}
-                delta={deltaByPlayer.get(row.playerId)}
-                showDelta={showDeltas}
-              />
-            ))}
-          </div>
+          {self && !preEvent && (
+            <section className="rk-me">
+              <span className="bignum">{String(selfIdx + 1).padStart(2, "0")}</span>
+              <span className="rk-me-t">
+                <b>You&apos;re {ordinal(selfIdx + 1)}</b>
+                {leaderGap > 0 ? `, ${leaderGap} pt${leaderGap !== 1 ? "s" : ""} off the lead.` : " — top of the board."}
+              </span>
+              <Link href="/leaderboard/compare" prefetch={false} className="btn-solid">
+                Compare picks
+              </Link>
+            </section>
+          )}
+
+          <section className="chap">
+            <div className="chap-h row2">
+              <div>
+                <h2>The field</h2>
+              </div>
+              <nav className="rk-links" aria-label="Leaderboard links">
+                {rows.length >= 2 && (
+                  <Link href="/leaderboard/compare" prefetch={false}>
+                    Compare picks →
+                  </Link>
+                )}
+                {latestSection !== null && (
+                  <Link href={`/reveal/${latestSection}`} prefetch={false}>
+                    Latest Stage Reveal →
+                  </Link>
+                )}
+                <Link href="/players" prefetch={false}>
+                  Directory →
+                </Link>
+                <Link href="/majors" prefetch={false}>
+                  Your Majors →
+                </Link>
+              </nav>
+            </div>
+            <LeaderRows
+              rows={showPodium ? rows.slice(3) : rows}
+              startRank={showPodium ? 4 : 1}
+              deltas={deltas}
+              showDelta={showDeltas}
+              hrefFor={profileHref}
+            />
+          </section>
         </>
       )}
 
-      <footer style={{
-        marginTop: 12,
-        paddingTop: 16,
-        borderTop: "1px solid var(--hair-2)",
-        textAlign: "center",
-      }}>
-        <p style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: 11,
-          letterSpacing: "0.1em",
-          textTransform: "uppercase",
-          color: "var(--ink-mid)",
-          margin: 0,
-        }}>
-          {latestResolvedAt ? (
-            <LastUpdated iso={latestResolvedAt.toISOString()} />
-          ) : (
-            "Scores update from official results as each stage completes."
-          )}
-        </p>
-        <p style={{
-          fontFamily: "var(--font-mono)",
-          color: "var(--ink-mid)",
-          fontSize: 10.5,
-          margin: "6px 0 0",
-          letterSpacing: "0.08em",
-        }}>
-          Results:{" "}
-          <a
-            href="https://liquipedia.net"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "var(--ink-mid)" }}
-          >
-            Liquipedia
-          </a>{" "}
-          (CC-BY-SA 3.0)
-        </p>
-      </footer>
-    </>
+      <Footer latestResolvedAt={latestResolvedAt} final={false} />
+    </div>
   );
 }
 
-/** Rank movement chip for mockup-04: ↑N climbed, ↓N dropped, — held, NEW. */
-function RankArrow({ delta }: { delta?: RankDelta }) {
-  if (!delta) return null;
-  const base = {
-    fontFamily: "var(--font-mono)",
-    fontSize: 11,
-    fontWeight: 600,
-    textAlign: "right" as const,
-    minWidth: 24,
-  };
-  if (delta.direction === "new") {
-    return <span style={{ ...base, fontSize: 8, letterSpacing: "0.1em", color: "var(--ink-low)", textTransform: "uppercase" }} title="New this stage">NEW</span>;
-  }
-  const moved = Math.abs(delta.delta ?? 0);
-  if (delta.direction === "flat") {
-    return <span style={{ ...base, color: "var(--ink-low)" }} title="No change">—</span>;
-  }
-  const up = delta.direction === "up";
-  return (
-    <span
-      style={{ ...base, color: up ? "var(--tac-green, #9bd23c)" : "var(--ember, #d8351c)" }}
-      title={`${up ? "Up" : "Down"} ${moved} since last stage`}
-    >
-      {up ? "↑" : "↓"}{moved}
-    </span>
-  );
-}
+/* ── Final standings (a past registered event, read-only) ─────────────── */
 
-function LeaderRow({
-  row,
-  rank,
-  delta,
-  showDelta,
-}: {
-  row: {
-    playerId: string;
-    displayName: string;
-    avatarUrl: string | null;
-    isLocal: boolean;
-    synced: boolean;
-    coinTier: string | null;
-    score: number;
-    isSelf: boolean;
-  };
-  rank: number;
-  delta?: RankDelta;
-  showDelta: boolean;
-}) {
-  const isPodium = rank <= 3;
-  return (
-    <Link
-      href={`/players/${encodeURIComponent(row.playerId)}`}
-      style={{
-        display: "grid",
-        gridTemplateColumns: showDelta ? "32px 48px 1fr auto auto" : "32px 48px 1fr auto",
-        gap: 12,
-        alignItems: "center",
-        padding: "12px 16px",
-        background: row.isSelf
-          ? "rgba(240,163,0,0.07)"
-          : "var(--surf-1)",
-        border: row.isSelf ? "1px solid var(--hair-3)" : "1px solid var(--hair)",
-        textDecoration: "none",
-        color: "inherit",
-        minHeight: 60,
-        transition: "border-color 160ms var(--ease), background 160ms var(--ease)",
-      }}
-    >
-      <span style={{
-        fontFamily: "var(--font-mono)",
-        fontWeight: 600,
-        fontSize: isPodium ? 16 : 13,
-        color: isPodium ? "var(--heat)" : "var(--ink-mid)",
-        textAlign: "center",
-      }}>
-        {String(rank).padStart(2, "0")}
-      </span>
+async function FinalBoard({ event }: { event: EventConfig }) {
+  const eventName = eventShortName(event);
+  const live = currentEvent();
+  const liveName = eventShortName(live);
+  const layout = layoutForEvent(event.eventId);
+  const session = await getSession();
+  const slugQ = encodeURIComponent(event.slug);
 
-      <div style={{
-        width: 48,
-        height: 48,
-        borderRadius: "var(--r-sm)",
-        border: "1px solid var(--hair-2)",
-        overflow: "hidden",
-        background: row.avatarUrl ? "var(--surf-2)" : "linear-gradient(135deg, var(--surf-3), var(--surf-2))",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}>
-        {row.avatarUrl ? (
-          <Image
-            src={row.avatarUrl}
-            alt=""
-            width={48}
-            height={48}
-            unoptimized
-            style={{ objectFit: "cover", width: "100%", height: "100%" }}
-          />
-        ) : (
-          <span style={{
-            fontFamily: "var(--font-display)",
-            fontWeight: 700,
-            fontSize: 14,
-            color: "var(--ink-mid)",
-          }}>
-            {row.displayName.slice(0, 2).toUpperCase()}
-          </span>
-        )}
-      </div>
-
-      <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{
-            fontWeight: 500,
-            fontSize: 14,
-            color: "var(--ink-hi)",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}>
-            {row.displayName}
-          </span>
-          {row.isSelf && (
-            <span style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: 9,
-              letterSpacing: "0.1em",
-              color: "var(--heat)",
-              textTransform: "uppercase",
-            }}>
-              · you
-            </span>
-          )}
-          {row.synced && !row.isLocal && (
-            <span style={{
-              padding: "2px 6px",
-              background: "rgba(240,163,0,0.1)",
-              border: "1px solid var(--hair-3)",
-              fontFamily: "var(--font-mono)",
-              fontSize: 9,
-              fontWeight: 500,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-              color: "var(--heat)",
-            }}>
-              Synced
-            </span>
-          )}
-        </div>
-        {row.coinTier && (
-          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span className={`coin-sticker ${row.coinTier}`} title={`${row.coinTier} coin`} />
-            <span style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: 10,
-              letterSpacing: "0.08em",
-              color: "var(--ink-mid)",
-              textTransform: "uppercase",
-            }}>
-              {row.coinTier} coin
-            </span>
-          </span>
-        )}
-      </div>
-
-      {showDelta && <RankArrow delta={delta} />}
-
-      <span style={{
-        fontFamily: "var(--font-mono)",
-        fontWeight: 600,
-        fontSize: 20,
-        color: row.score > 0 ? "var(--ink-hi)" : "var(--ink-low)",
-      }}>
-        {row.score}
+  const backLink = (
+    <Link href="/leaderboard" prefetch={false} className="rk-archive">
+      <span className="eyebrow">Live board</span>
+      <span className="rk-archive-t">
+        <span aria-hidden>←</span> {liveName}
       </span>
     </Link>
+  );
+
+  const hero = (count: number | null) => (
+    <section className="bleed short">
+      <Image src="/wrapped/major-champion.jpg" alt="" fill priority sizes="100vw" />
+      <span className="credit">Photo · IEM Cologne Major 2026 · HLTV</span>
+      <div className="in">
+        <span className="eyebrow rise">
+          Final standings · <b>{eventName}</b>
+          {count !== null && ` · ${count} player${count !== 1 ? "s" : ""}`}
+        </span>
+        <h1 className="display rise d1">Final standings</h1>
+      </div>
+    </section>
+  );
+
+  // This build can only load the committed layout fixture; any other event's
+  // picks can't be scored here, so say so rather than show a board of zeros.
+  if (!layout) {
+    return (
+      <div className="rk-page">
+        {hero(null)}
+        {backLink}
+        <p className="rk-note">
+          Final scores for <b>{eventName}</b> aren&apos;t available on this build. Every pick is stored — the board
+          returns when its layout is restored.
+        </p>
+      </div>
+    );
+  }
+
+  // Read-only: no refreshOutcomesOnRead — the event is history.
+  const { rows, latestResolvedAt } = await buildLeaderboard({
+    eventId: event.eventId,
+    layout,
+    sessionPlayerId: session?.playerId,
+    entrantsOnly: true,
+  });
+  const { deltas, showDeltas } = await rankDeltas(event.eventId, rows);
+  const compareHref = (r: LeaderboardRow) => `/leaderboard/compare?major=${slugQ}&b=${encodeURIComponent(r.playerId)}`;
+  const champ = rows[0];
+  const showPodium = rows.length >= 3 && champ.score > 0;
+  const selfIdx = rows.findIndex((r) => r.isSelf);
+
+  return (
+    <div className="rk-page">
+      {hero(rows.length)}
+      {backLink}
+
+      {rows.length === 0 ? (
+        <p className="rk-note">Nobody locked picks for {eventName}.</p>
+      ) : (
+        <>
+          <section className="chap">
+            <div className="chap-h">
+              <h2>{champ.score > 0 ? `${champ.displayName} takes it` : "No points scored"}</h2>
+              <p>
+                {champ.score > 0 ? (
+                  <>
+                    <b>{champ.score} pts</b> won {eventName}
+                    {rows[1] ? `, ${champ.score - rows[1].score} clear of ${rows[1].displayName}` : ""}.
+                  </>
+                ) : (
+                  <>No pick scored at {eventName}.</>
+                )}
+                {selfIdx >= 0 && (
+                  <>
+                    {" "}
+                    You finished <b>{ordinal(selfIdx + 1)}</b>.
+                  </>
+                )}
+              </p>
+            </div>
+            {showPodium && <Podium rows={rows} final hrefFor={compareHref} />}
+          </section>
+
+          <section className="chap">
+            <div className="chap-h row2">
+              <div>
+                <h2>The final table</h2>
+              </div>
+              <nav className="rk-links" aria-label="Final standings links">
+                {rows.length >= 2 && (
+                  <Link href={`/leaderboard/compare?major=${slugQ}`} prefetch={false}>
+                    Compare picks →
+                  </Link>
+                )}
+                <Link href="/majors" prefetch={false}>
+                  Your Majors →
+                </Link>
+              </nav>
+            </div>
+            <LeaderRows
+              rows={showPodium ? rows.slice(3) : rows}
+              startRank={showPodium ? 4 : 1}
+              deltas={deltas}
+              showDelta={showDeltas}
+              hrefFor={compareHref}
+            />
+          </section>
+        </>
+      )}
+
+      <Footer latestResolvedAt={latestResolvedAt} final />
+    </div>
   );
 }

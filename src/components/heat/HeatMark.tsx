@@ -3,7 +3,7 @@
 /**
  * HOTLINE brand marks — the official ticket-H symbol and horizontal lockup
  * (Singapore brand). Always rendered from the supplied artwork in
- * /public/brand, never re-typeset. The old reticle + text wordmark are retired.
+ * /public/brand, never re-typeset. The old crosshair mark + text wordmark are retired.
  */
 
 /** Horizontal lockup (amber ticket + cream wordmark), sized by height. */
@@ -49,16 +49,3 @@ export function HotlineStacked({ height = 120 }: { height?: number }) {
   );
 }
 
-/** @deprecated Transitional: the text wordmark is retired — use HotlineLockup. */
-export function HeatWordmark({ size = 20 }: { size?: number }) {
-  return (
-    <img
-      className="lockup"
-      src="/brand/wordmark-cream.png"
-      alt="HOTLINE"
-      width={Math.round((size * 2400) / 698)}
-      height={size}
-      style={{ height: size, width: "auto" }}
-    />
-  );
-}

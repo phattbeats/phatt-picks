@@ -75,91 +75,38 @@ export function AdminLocalPlayers() {
   if (state.kind === "error" && state.message === "hidden") return null;
 
   return (
-    <div
-      style={{
-        background: "var(--bg1)",
-        border: "1px solid var(--bg3)",
-        borderRadius: "var(--radius-lg)",
-        padding: "var(--space-4)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-3)",
-      }}
-    >
-      <p
-        style={{
-          fontFamily: "'Rajdhani', sans-serif",
-          fontSize: "0.6875rem",
-          fontWeight: 600,
-          letterSpacing: "0.1em",
-          textTransform: "uppercase",
-          color: "var(--text-low)",
-          margin: 0,
-        }}
-      >
-        Admin · Local players
-      </p>
-      <p style={{ color: "var(--text-mid)", fontSize: "0.8125rem", margin: 0, lineHeight: 1.4 }}>
-        Guest accounts that never paired Steam. Delete cascades to their picks; leaderboard auto-recovers.
-      </p>
+    <section className="sec" id="admin">
+      <div className="chap-h">
+        <span className="n">Admin</span>
+        <h2>Local players</h2>
+        <p>Guest accounts that never paired Steam. Delete cascades to their picks; the leaderboard recovers on its own.</p>
+      </div>
 
-      {state.kind === "loading" && (
-        <p style={{ color: "var(--text-low)", fontSize: "0.8125rem", margin: 0 }}>Loading…</p>
-      )}
+      {state.kind === "loading" && <p className="muted nf-small">Loading…</p>}
 
       {state.kind === "error" && state.message !== "hidden" && (
-        <p style={{ color: "var(--danger, #c33)", fontSize: "0.8125rem", margin: 0 }}>
-          Couldn&apos;t load: {state.message}
-        </p>
+        <p className="nf-err">Couldn&apos;t load: {state.message}</p>
       )}
 
       {state.kind === "ready" && state.rows.length === 0 && (
-        <p style={{ color: "var(--text-low)", fontSize: "0.8125rem", margin: 0 }}>
-          No local players to clean up.
-        </p>
+        <p className="muted nf-small">No local players to clean up.</p>
       )}
 
       {state.kind === "ready" && state.rows.length > 0 && (
-        <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+        <ul className="list nf-admin-list">
           {state.rows.map((row) => (
-            <li
-              key={row.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--space-3)",
-                padding: "var(--space-2)",
-                background: "var(--bg2)",
-                borderRadius: "var(--radius-md)",
-              }}
-            >
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <p style={{ color: "var(--text-hi)", fontSize: "0.9375rem", fontWeight: 600, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {row.displayName}
-                </p>
-                <p style={{ color: "var(--text-low)", fontSize: "0.75rem", margin: "2px 0 0" }}>
+            <li key={row.id} className="row">
+              <div className="nf-admin-who">
+                <div className="t">{row.displayName}</div>
+                <div className="s mono">
                   {row.pickCount} pick{row.pickCount === 1 ? "" : "s"} · last active {formatRelative(row.lastActivity)}
-                </p>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => onDelete(row)}
                 disabled={deleting === row.id}
-                style={{
-                  background: "transparent",
-                  border: "1px solid var(--bg3)",
-                  color: "var(--danger, #c33)",
-                  borderRadius: "var(--radius-md)",
-                  padding: "6px 12px",
-                  fontFamily: "'Rajdhani', sans-serif",
-                  fontWeight: 600,
-                  fontSize: "0.75rem",
-                  letterSpacing: "0.05em",
-                  textTransform: "uppercase",
-                  minHeight: 32,
-                  cursor: deleting === row.id ? "wait" : "pointer",
-                  opacity: deleting === row.id ? 0.6 : 1,
-                }}
+                className="btn-ghost nf-btn-sm nf-danger"
               >
                 {deleting === row.id ? "…" : "Delete"}
               </button>
@@ -167,7 +114,7 @@ export function AdminLocalPlayers() {
           ))}
         </ul>
       )}
-    </div>
+    </section>
   );
 }
 

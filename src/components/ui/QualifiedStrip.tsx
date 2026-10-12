@@ -35,8 +35,8 @@ export function QualifiedStrip({ teams, liveTeamStats, liveStatsAsOf }: Props) {
 
   return (
     <section className="qstrip">
-      <span className="eyebrow-mono qstrip-label">
-        Qualified for playoffs · {qualified.length}/8
+      <span className="eyebrow qstrip-label">
+        Qualified for playoffs · <b>{qualified.length}/8</b>
       </span>
       <div className="qstrip-row">
         {qualified.map((t) => {

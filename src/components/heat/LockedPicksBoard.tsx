@@ -6,13 +6,12 @@
  * bucket slots — with the teams you locked in, then turn each one green when it's
  * confirmed right and red when it's confirmed wrong.
  *
- * Read-only mirror of <PicksBoard>: it reuses the exact picker CSS (.pickboard /
- * .bucket-cols.swiss / .pslot.filled) so it looks identical to where you picked,
- * minus the team pool and any interaction. Each filled slot is colored by
+ * Read-only mirror of <PicksBoard>: the same Singapore bucket rows (.sgp-slot),
+ * minus the team pool and any interaction. Each filled slot is marked by
  * confirmPick() against the live answer key (StageOutcome): green = the team
  * landed in the bucket you called, red = it clinched a different one, neutral =
- * still in play. Logos are large. Honest: nothing turns green/red until the
- * answer key actually confirms it.
+ * still in play. Singapore §3: an inset green / red bar, the live record, and
+ * `+pts` or ✕. Honest: nothing turns green/red until the answer key confirms it.
  */
 
 import { TeamLogo } from "@/components/ui/TeamLogo";
@@ -29,13 +28,14 @@ import {
 } from "@/lib/swiss-standings-core";
 import { LastUpdated } from "@/components/LastUpdated";
 import { BleachersStrip, type TallyLine } from "@/components/heat/BleachersStrip";
+import { bucketDisplay } from "@/components/sg/picks/team-art";
 
-const LOGO = 56;
+const LOGO = 26;
 
-const CONFIRM_META: Record<PickConfirm, { cls: string; mark: string; color: string; title: string }> = {
-  right: { cls: "pick-right", mark: "✓", color: "var(--tac-green, #9bd23c)", title: "Called it" },
-  wrong: { cls: "pick-wrong", mark: "✗", color: "var(--ember, #d8351c)", title: "Landed elsewhere" },
-  pending: { cls: "", mark: "", color: "var(--ink-low)", title: "Still in play" },
+const CONFIRM_META: Record<PickConfirm, { cls: string; title: string }> = {
+  right: { cls: "good", title: "Called it" },
+  wrong: { cls: "bad", title: "Landed elsewhere" },
+  pending: { cls: "", title: "Still in play" },
 };
 
 export function LockedPicksBoard({
@@ -68,117 +68,105 @@ export function LockedPicksBoard({
     canReact: boolean;
     tallyFor: (groupId: number, slotIndex: number) => TallyLine[];
   };
-  /** Drop the panel chrome + title row — for when an outer wrapper (e.g. the
-   *  collapsible stage card on the profile, #1283) already supplies them. */
+  /** Drop the title row — for when an outer wrapper (e.g. the collapsible
+   *  stage card on the profile, #1283) already supplies it. */
   bare?: boolean;
 }) {
-  const board = (
-    <>
+  return (
+    <div className="sgp-locked">
       {!bare && (
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
-          <span className="eyebrow-mono" style={{ color: "var(--heat)" }}>{title}</span>
+        <div className="sgp-locked-head">
+          <span className="eyebrow">{title}</span>
           <span className="last-updated">
             {resolvedAtIso ? <LastUpdated iso={resolvedAtIso} /> : "Turns green / red as teams clinch"}
           </span>
         </div>
       )}
 
-      <div className="pickboard">
-        {section.groups.map((group) => {
-          const groupPicks = myPicks[group.groupid] ?? {};
-          const buckets = bucketSwissSlots(group.picks.length);
-          const filled = Object.values(groupPicks).filter((p) => p > 0).length;
-          return (
-            <div key={group.groupid} className="pickgroup">
-              <div className="pickgroup-head">
-                <span className="pickgroup-name">{group.name.split(" | ")[0]}</span>
-                <span className="pickgroup-pts">{filled}/{group.picks.length} LOCKED</span>
-              </div>
-              <div className="pickgroup-body">
-                <div className="bucket-cols swiss">
-                  {buckets.map((bucket) => (
-                    <div key={bucket.label} className="bucket">
-                      <div className="bucket-label">
-                        <span>{bucket.label}</span>
+      {section.groups.map((group) => {
+        const groupPicks = myPicks[group.groupid] ?? {};
+        const buckets = bucketSwissSlots(group.picks.length);
+        const pts = group.points_per_pick;
+        return (
+          <div key={group.groupid} className={`sgp-locked-cols${buckets.length === 3 ? " swiss" : ""}`}>
+            {buckets.map((bucket) => {
+              const disp = bucketDisplay(bucket.label);
+              const placed = bucket.slotIndexes.filter((i) => groupPicks[i] > 0).length;
+              return (
+                <div key={bucket.label} className="sgp-bucket">
+                  <div className="sgp-bk">
+                    <span>{disp.title}</span>
+                    <b>
+                      {placed}/{bucket.slotIndexes.length}
+                    </b>
+                  </div>
+                  {bucket.slotIndexes.map((slotIndex) => {
+                    const pickId = groupPicks[slotIndex];
+                    const team = pickId ? teamMap.get(pickId) : undefined;
+                    if (!pickId || !team) {
+                      return (
+                        <div key={slotIndex} className="sgp-slot ro">
+                          <span className="ph">No pick</span>
+                        </div>
+                      );
+                    }
+                    const bucketFull = isPredictedBucketFull(
+                      bucket.label,
+                      pickId,
+                      teamStatus.entries(),
+                      bucket.slotIndexes.length,
+                    );
+                    const rec = recordByTeam?.get(pickId);
+                    const impossible = isBucketImpossibleByRecord(bucket.label, rec);
+                    const confirm = confirmPick(bucket.label, teamStatus.get(pickId), bucketFull, impossible);
+                    const meta = CONFIRM_META[confirm];
+                    return (
+                      <div
+                        key={slotIndex}
+                        className={`sgp-slot on ro${meta.cls ? ` ${meta.cls}` : ""}`}
+                        title={`${team.name} — ${meta.title}`}
+                      >
+                        <span className="sgp-mark" aria-hidden="true">
+                          <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={LOGO} />
+                        </span>
+                        <span className="nm">{team.name}</span>
+                        {rec && (
+                          <span className="rec">
+                            {rec.wins}–{rec.losses}
+                          </span>
+                        )}
+                        {confirm === "right" ? (
+                          <span className="hit">
+                            +{pts}
+                          </span>
+                        ) : confirm === "wrong" ? (
+                          <span className="miss">
+                            ✕
+                          </span>
+                        ) : (
+                          <span className="pend" aria-hidden="true">
+                            ·
+                          </span>
+                        )}
+                        {reactions && (
+                          <BleachersStrip
+                            targetPlayerId={reactions.targetPlayerId}
+                            sectionId={section.sectionid}
+                            groupId={group.groupid}
+                            slotIndex={slotIndex}
+                            initialTally={reactions.tallyFor(group.groupid, slotIndex)}
+                            canReact={reactions.canReact}
+                          />
+                        )}
                       </div>
-                      {bucket.slotIndexes.map((slotIndex) => {
-                        const pickId = groupPicks[slotIndex];
-                        const team = pickId ? teamMap.get(pickId) : undefined;
-                        if (!pickId || !team) {
-                          return (
-                            <div key={slotIndex} className="pslot" style={{ cursor: "default", minHeight: 96 }}>
-                              <span className="pslot-ph">No pick</span>
-                            </div>
-                          );
-                        }
-                        const bucketFull = isPredictedBucketFull(
-                          bucket.label,
-                          pickId,
-                          teamStatus.entries(),
-                          bucket.slotIndexes.length,
-                        );
-                        const impossible = isBucketImpossibleByRecord(
-                          bucket.label,
-                          recordByTeam?.get(pickId),
-                        );
-                        const confirm = confirmPick(bucket.label, teamStatus.get(pickId), bucketFull, impossible);
-                        const meta = CONFIRM_META[confirm];
-                        return (
-                          <div
-                            key={slotIndex}
-                            className={`pslot filled${meta.cls ? " " + meta.cls : ""}`}
-                            style={{ cursor: "default" }}
-                            title={`${team.name} — ${meta.title}`}
-                          >
-                            <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={LOGO} />
-                            <span className="pslot-name">{team.name}</span>
-                            {meta.mark && (
-                              <span
-                                aria-hidden="true"
-                                style={{ position: "absolute", top: 6, right: 8, fontSize: 16, fontWeight: 800, color: meta.color }}
-                              >
-                                {meta.mark}
-                              </span>
-                            )}
-                            {reactions && (
-                              <BleachersStrip
-                                targetPlayerId={reactions.targetPlayerId}
-                                sectionId={section.sectionid}
-                                groupId={group.groupid}
-                                slotIndex={slotIndex}
-                                initialTally={reactions.tallyFor(group.groupid, slotIndex)}
-                                canReact={reactions.canReact}
-                              />
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <style>{`
-        /* Confirm colors layered on the picker's .pslot.filled look. */
-        .pslot.pick-right { border-color: var(--tac-green, #9bd23c) !important; background: rgba(155,210,60,0.07); }
-        .pslot.pick-right::before { background: var(--tac-green, #9bd23c) !important; }
-        .pslot.pick-wrong { border-color: var(--ember, #d8351c) !important; background: rgba(216,53,28,0.07); }
-        .pslot.pick-wrong::before { background: var(--ember, #d8351c) !important; }
-      `}</style>
-    </>
-  );
-
-  if (bare) return board;
-
-  return (
-    <div className="panel brk" style={{ padding: "18px 16px 20px" }}>
-      <span className="br-tr" />
-      <span className="br-bl" />
-      {board}
+              );
+            })}
+          </div>
+        );
+      })}
     </div>
   );
 }

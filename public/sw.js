@@ -97,8 +97,12 @@ self.addEventListener("push", (event) => {
   const title = data.title || "HOTLINE";
   const options = {
     body: data.body || "",
+    // Full-colour HOTLINE app icon (amber "H" ticket, Singapore brand pass).
     icon: "/icon-192.png",
-    badge: "/icon-192.png",
+    // Android paints the badge from its ALPHA channel only — an opaque square
+    // icon becomes a solid white blob in the status bar. The white symbol on
+    // transparent is the correct monochrome mask.
+    badge: "/brand/symbol-white.png",
     tag: data.tag || "phatt-picks",
     renotify: Boolean(data.tag),
     data: { url: data.url || "/picks" },

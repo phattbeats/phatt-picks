@@ -39,23 +39,9 @@ export function GameTime({
   const time = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 
   return (
-    <div
-      className="game-time"
-      style={{
-        display: "flex",
-        justifyContent: align === "center" ? "center" : "flex-start",
-        gap: 6,
-        /* #1007: bumped from a tiny 9.5px to a legible 12.5px (Brandon: the
-           small robotic times were hard to read). Mono kept for tabular dates. */
-        fontFamily: "var(--font-mono)",
-        fontSize: 12.5,
-        letterSpacing: "0.04em",
-        textTransform: "uppercase",
-        color: "var(--ink-mid)",
-      }}
-    >
+    <div className={align === "center" ? "game-time" : "game-time left"}>
       <span>{day}</span>
-      <span style={{ color: "var(--hair-3)" }}>&middot;</span>
+      <span className="sep">&middot;</span>
       <span>{time}</span>
     </div>
   );

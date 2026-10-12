@@ -52,16 +52,19 @@ console.log("\nm8.4 - leaderboard rows are clickable");
 
 const lbSrc = read("src/app/(app)/leaderboard/page.tsx");
 check("leaderboard imports Link", /import Link from "next\/link"/.test(lbSrc));
+// The rows render through the shared LeaderRows component (Singapore skin);
+// the page supplies the /players/{id} href, LeaderRows wraps each row in <Link>.
+const rowsSrc = read("src/components/sg/ranks/LeaderRows.tsx");
 check(
   "each row is a <Link href=\"/players/{id}\">",
-  /<Link[\s\S]*?href=\{`\/players\/\$\{encodeURIComponent\(row\.playerId\)\}`\}/.test(lbSrc),
+  /`\/players\/\$\{encodeURIComponent\(r\.playerId\)\}`/.test(lbSrc) &&
+    /<Link key=\{row\.playerId\} href=\{hrefFor\(row\)\}/.test(rowsSrc),
 );
 check(
-  "no plain <div> row wrapper left behind",
-  // narrowly: the old block that opened with `<div key={row.playerId}` must be gone
+  "no leftover <div key={row.playerId}> row wrapper",
   !/<div\s+key=\{row\.playerId\}/.test(lbSrc),
 );
-check("rows close with </Link>", /<\/Link>\s*\);\s*\}\)\}/.test(lbSrc));
+check("rows close with </Link>", /<\/Link>/.test(rowsSrc));
 
 console.log("\nm8.4 - /profile graceful sign-in card (no redirect)");
 

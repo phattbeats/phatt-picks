@@ -1,16 +1,20 @@
 /**
- * Pick comparison — head-to-head, redesigned (#900).
+ * Pick comparison — head-to-head (#900), Singapore skin (prototype 14).
  *
  * The hook: when a stage is revealed AND results have landed, the picks YOU
- * called right that your opponent whiffed ("THE STEAL") get top billing —
- * that's the good stuff. Below it, every stage is a logo grid: all of your
- * picks lined up against all of theirs, hit/miss ringed once a result exists.
+ * called right that your opponent whiffed ("THE STEAL") get top billing.
+ * Above it, an agreement strip (how many calls you share); below it, every
+ * stage split into its buckets, your picks lined up against theirs with the
+ * shared calls first, hit/miss marked once a result exists.
  *
  * Reveal rule is unchanged (#862 / #898): a group's team choices stay
  * hidden for EVERYONE until its stage locks (either Valve flips picks_allowed,
  * the published lock time passes, or a result lands). Scores are always public.
  * Section-qualified pick maps prevent a revealed stage from leaking a still-open
  * stage's secret pick across a reused groupid.
+ *
+ * `?major=<slug>` compares a past registered event (read-only: no outcome
+ * refresh, no reactions, entrants only). Unknown / current slug → live event.
  */
 
 import { LockIcon } from "@/components/ui/LockIcon";
@@ -35,8 +39,10 @@ import {
 } from "@/lib/swiss-bucket-core";
 import { isBucketImpossibleByRecord } from "@/lib/swiss-standings-core";
 import { getSwissRecords } from "@/lib/swiss-results";
-import { currentEventId, getEventConfig } from "@/lib/events-core";
+import { currentEvent } from "@/lib/events-core";
 import { isRevealForcedById } from "@/lib/event-freeze";
+import { eventShortName, layoutForEvent, resolveArchiveEvent } from "@/lib/leaderboard";
+import { RankAvatar } from "@/components/sg/ranks/RankAvatar";
 
 export const dynamic = "force-dynamic";
 
@@ -62,136 +68,83 @@ function provenance(p: PlayerLite): string {
   return p.isLocal ? "Local" : p.synced ? "Synced" : "Steam";
 }
 
-/** Round avatar / monogram, matching the player-profile hero. */
-function Avatar({ player, size }: { player: PlayerLite; size: number }) {
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: "50%",
-        overflow: "hidden",
-        background: "var(--bg3)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "'Rajdhani', sans-serif",
-        fontWeight: 700,
-        fontSize: size * 0.34,
-        color: "var(--text-mid)",
-        flexShrink: 0,
-      }}
-      aria-hidden
-    >
-      {player.avatarUrl ? (
-        <Image src={player.avatarUrl} alt="" width={size} height={size} unoptimized style={{ objectFit: "cover", width: "100%", height: "100%" }} />
-      ) : (
-        player.displayName.slice(0, 2).toUpperCase()
-      )}
-    </div>
-  );
+/** "3:0 ADVANCED" → "3–0", "3:1 / 3:2 ADVANCED" → "Advance", "0:3 ELIMINATED" → "0–3". */
+function bucketTitle(label: string): string {
+  if (/^3:0/.test(label)) return "3–0";
+  if (/^0:3/.test(label)) return "0–3";
+  if (/ADVANCED/i.test(label)) return "Advance";
+  return label;
 }
 
 type TileState = "hit" | "miss" | "pending" | "empty";
 
-/** One team chip in a comparison row — logo + name, ringed by outcome. */
-function PickTile({
-  team,
-  state,
-  align,
-  steal,
-}: {
-  team: TeamDef | undefined;
-  state: TileState;
-  align: "left" | "right";
-  steal: boolean;
-}) {
+/** One side of a split row — logo + name + ✓/✕ once judged. */
+function PickSide({ team, state, steal }: { team: TeamDef | undefined; state: TileState; steal: boolean }) {
   const name = team?.name ?? "—";
-  const isHit = state === "hit";
-  const isMiss = state === "miss";
-  const reverse = align === "right";
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: reverse ? "row-reverse" : "row",
-        alignItems: "center",
-        gap: 8,
-        padding: "6px 9px",
-        border: isHit ? "1px solid var(--correct)" : "1px solid var(--bg3)",
-        background: isHit ? "rgba(155,210,60,0.09)" : "var(--bg2)",
-        borderRadius: "var(--radius-md)",
-        minWidth: 0,
-        opacity: isMiss ? 0.6 : 1,
-        boxShadow: steal ? "0 0 0 1px var(--correct), 0 0 14px rgba(155,210,60,0.28)" : undefined,
-      }}
-    >
+    <span className={`cmp-s ${state}${steal ? " steal" : ""}`}>
       {team ? (
-        <TeamLogo tiers={resolveLogoTiers(team)} teamName={name} size={32} />
+        <TeamLogo tiers={resolveLogoTiers(team)} teamName={name} size={30} />
       ) : (
-        <div style={{ width: 26, height: 26, borderRadius: "50%", background: "var(--bg3)", flexShrink: 0 }} />
+        <span className="tile cmp-blank" aria-hidden />
       )}
-      <span
-        style={{
-          flex: 1,
-          minWidth: 0,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          fontSize: 13,
-          fontWeight: 600,
-          color: isHit ? "var(--text-hi)" : "var(--text-mid)",
-          textAlign: reverse ? "right" : "left",
-          textDecoration: isMiss ? "line-through" : undefined,
-        }}
-      >
-        {name}
-      </span>
-      {(isHit || isMiss) && (
-        <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 13, color: isHit ? "var(--correct)" : "var(--text-low)", flexShrink: 0 }}>
-          {isHit ? "✓" : "✗"}
+      <span className="cmp-nm">{name}</span>
+      {state === "hit" && (
+        <span className="cmp-r y" aria-label="correct">
+          ✓
         </span>
       )}
-    </div>
-  );
-}
-
-/** A "you called it" trophy chip in THE STEAL reel. */
-function StealChip({ team, label }: { team: TeamDef; label: string }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "8px 14px 8px 9px",
-        background: "rgba(155,210,60,0.10)",
-        border: "1px solid var(--correct)",
-        borderRadius: "var(--radius-md)",
-        flexShrink: 0,
-      }}
-    >
-      <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={34} />
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-hi)", whiteSpace: "nowrap" }}>{team.name}</div>
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-mid)", whiteSpace: "nowrap" }}>{label}</div>
-      </div>
-    </div>
+      {state === "miss" && (
+        <span className="cmp-r n" aria-label="missed">
+          ✕
+        </span>
+      )}
+    </span>
   );
 }
 
 export default async function ComparePage({
   searchParams,
 }: {
-  searchParams: Promise<{ a?: string; b?: string }>;
+  searchParams: Promise<{ a?: string; b?: string; major?: string }>;
 }) {
-  const EVENT_ID = currentEventId(); // per-request active event (#1046)
-  const event = getEventConfig(EVENT_ID);
   const params = await searchParams;
-  const layout = getCommittedLayout();
+  const archive = resolveArchiveEvent(params.major);
+  // Per-request active event (#1046), or the requested past Major.
+  const event = archive ?? currentEvent();
+  const EVENT_ID = event.eventId;
+  const eventName = eventShortName(event);
+  const majorQ = archive ? `major=${encodeURIComponent(archive.slug)}&` : "";
+  const boardHref = archive ? `/leaderboard?major=${encodeURIComponent(archive.slug)}` : "/leaderboard";
+  const compareHref = (aId: string, bId: string) => `/leaderboard/compare?${majorQ}a=${encodeURIComponent(aId)}&b=${encodeURIComponent(bId)}`;
+
+  const layout = archive ? layoutForEvent(EVENT_ID) : getCommittedLayout();
+  if (!layout) {
+    return (
+      <div className="rk-page">
+        <section className="chap">
+          <div className="chap-h">
+            <span className="eyebrow">
+              Head to head · <b>{eventName}</b>
+            </span>
+            <h2>Not on this build</h2>
+            <p>
+              Picks for <b>{eventName}</b> are stored but can&apos;t be laid out here yet.
+            </p>
+          </div>
+          <div className="cta">
+            <Link href="/leaderboard" prefetch={false} className="btn-ghost">
+              ← Live board
+            </Link>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   const teamMap = buildTeamMap(layout);
   const session = await getSession();
-  await refreshOutcomesOnRead(EVENT_ID); // live driver (#866) — shared 30s claim
+  if (!archive) await refreshOutcomesOnRead(EVENT_ID); // live driver (#866) — shared 30s claim
 
   // Live partial W-L per Swiss section (#951): a 3:0/0:3 pick reads red in the
   // grid the moment the team's record rules its bucket out, before the answer key
@@ -218,32 +171,43 @@ export default async function ComparePage({
   // the per-stage lock gate alone decides reveal, exactly as before.
   const eventArchived = await isRevealForcedById(EVENT_ID, nowMs);
 
-  const players: PlayerLite[] = await prisma.player.findMany({
+  // Load every pick + outcome for the event once.
+  const allPicks = await prisma.pick.findMany({ where: { eventId: EVENT_ID } });
+  const outcomes = await prisma.stageOutcome.findMany({ where: { eventId: EVENT_ID } });
+
+  const picksByPlayer = new Map<string, typeof allPicks>();
+  for (const p of allPicks) {
+    const arr = picksByPlayer.get(p.playerId) ?? [];
+    arr.push(p);
+    picksByPlayer.set(p.playerId, arr);
+  }
+
+  const allPlayers: PlayerLite[] = await prisma.player.findMany({
     orderBy: { displayName: "asc" },
     select: { id: true, displayName: true, avatarUrl: true, isLocal: true, synced: true },
   });
+  // A past Major compares only the players who actually played it.
+  const players = archive ? allPlayers.filter((p) => picksByPlayer.has(p.id)) : allPlayers;
 
   // Need at least two players to compare.
   if (players.length < 2) {
     return (
-      <div className="panel brk" style={{ padding: 32, textAlign: "center" }}>
-        <span className="br-tr" />
-        <span className="br-bl" />
-        <span className="eyebrow-mono">COMPARE</span>
-        <h1 className="font-display" style={{ fontWeight: 800, fontSize: 28, textTransform: "uppercase", color: "var(--ink-hi)", margin: "8px 0" }}>
-          Two players minimum
-        </h1>
-        <p style={{ color: "var(--ink-mid)", fontSize: 14, margin: "0 0 16px" }}>
-          You need at least two players on the board before you can compare picks.
-        </p>
-        <Link href="/leaderboard" className="btn-ghost">← Leaderboard</Link>
+      <div className="rk-page">
+        <section className="chap">
+          <div className="chap-h">
+            <span className="eyebrow">Head to head</span>
+            <h2>Two players minimum</h2>
+            <p>You need at least two players on the board before you can compare picks.</p>
+          </div>
+          <div className="cta">
+            <Link href={boardHref} prefetch={false} className="btn-ghost">
+              ← Leaderboard
+            </Link>
+          </div>
+        </section>
       </div>
     );
   }
-
-  // Load every pick + outcome for the event once.
-  const allPicks = await prisma.pick.findMany({ where: { eventId: EVENT_ID } });
-  const outcomes = await prisma.stageOutcome.findMany({ where: { eventId: EVENT_ID } });
 
   const outcomeMap: OutcomeMap = {};
   const groupHasOutcome = new Set<string>(); // `${sectionId}:${groupId}` with ≥1 resolved slot
@@ -254,13 +218,6 @@ export default async function ComparePage({
     groupHasOutcome.add(groupOutcomeKey(o.sectionId, o.groupId));
   }
 
-  const picksByPlayer = new Map<string, typeof allPicks>();
-  for (const p of allPicks) {
-    const arr = picksByPlayer.get(p.playerId) ?? [];
-    arr.push(p);
-    picksByPlayer.set(p.playerId, arr);
-  }
-
   // Rank players to pick sensible defaults (self vs top opponent).
   const ranked = players
     .map((p) => ({
@@ -268,6 +225,7 @@ export default async function ComparePage({
       score: scorePlayer(layout, toPlayerPickMap(picksByPlayer.get(p.id) ?? []), outcomeMap).total,
     }))
     .sort((x, y) => y.score - x.score || x.player.displayName.localeCompare(y.player.displayName));
+  const rankOf = (id: string) => ranked.findIndex((r) => r.player.id === id) + 1;
 
   const defaultA = (session && ranked.find((r) => r.player.id === session.playerId)?.player.id) || ranked[0].player.id;
   const aId = params.a && players.some((p) => p.id === params.a) ? params.a : defaultA;
@@ -278,10 +236,13 @@ export default async function ComparePage({
   const b = players.find((p) => p.id === bId)!;
   const aIsYou = session?.playerId === aId;
   const bIsYou = session?.playerId === bId;
+  const aName = aIsYou ? "You" : a.displayName;
+  const bName = bIsYou ? "you" : b.displayName;
 
   const viewerId = session?.playerId ?? null;
-  const canReactA = !!session && session.playerId !== aId;
-  const canReactB = !!session && session.playerId !== bId;
+  // Past Majors are read-only history — no new reactions.
+  const canReactA = !archive && !!session && session.playerId !== aId;
+  const canReactB = !archive && !!session && session.playerId !== bId;
 
   const reactionRows = await prisma.reaction.findMany({
     where: { eventId: EVENT_ID, targetPlayerId: { in: [aId, bId] } },
@@ -313,12 +274,15 @@ export default async function ComparePage({
   const team = (pickId: number | undefined): TeamDef | undefined =>
     pickId && pickId !== 0 ? teamMap.get(pickId) : undefined;
 
-  // Walk every revealed + resolved slot once: compute THE STEAL (picks one
-  // player nailed that the other whiffed) and the head-to-head record.
-  // Only revealed groups are inspected, so this never leaks a hidden pick.
+  // Walk every revealed slot once: THE STEAL (picks one player nailed that the
+  // other whiffed), the shared-hit count and the agreement strip (calls both
+  // made identically). Only revealed groups are inspected, so this never leaks
+  // a hidden pick.
   const aSteals: { team: TeamDef; label: string }[] = [];
   const bSteals: { team: TeamDef; label: string }[] = [];
   let bothRight = 0;
+  let agreed = 0;
+  let compared = 0;
   // sectionId:groupid → revealed?  (computed once, reused by the grid below)
   const revealedByGroup = new Map<string, boolean>();
 
@@ -329,7 +293,7 @@ export default async function ComparePage({
       const revealed = arePicksRevealed(
         group,
         groupHasOutcome.has(groupOutcomeKey(section.sectionid, group.groupid)),
-        isLockTimePassed(section.sectionid, nowMs, event?.lockSchedule),
+        isLockTimePassed(section.sectionid, nowMs, event.lockSchedule),
         eventArchived,
       );
       revealedByGroup.set(gKey, revealed);
@@ -351,11 +315,14 @@ export default async function ComparePage({
         : group.picks.map((p) => ({ label: "", slotIndexes: [p.index] }));
 
       for (const bucket of buckets) {
-        const { winners } = resolveBucketWinners(bucket.slotIndexes, groupOutcomes);
-        if (winners.size === 0) continue; // nothing resolved in this bucket yet
         const aPicked = new Set(bucket.slotIndexes.map((i) => aGroup[i]).filter((x) => x && x !== 0));
         const bPicked = new Set(bucket.slotIndexes.map((i) => bGroup[i]).filter((x) => x && x !== 0));
-        const label = isSwiss ? `${stageLabel} · ${bucket.label.split(" ")[0]}` : stageLabel;
+        compared += Math.min(aPicked.size, bPicked.size);
+        for (const t of aPicked) if (bPicked.has(t)) agreed++;
+
+        const { winners } = resolveBucketWinners(bucket.slotIndexes, groupOutcomes);
+        if (winners.size === 0) continue; // nothing resolved in this bucket yet
+        const label = isSwiss ? `${stageLabel} · ${bucketTitle(bucket.label)}` : stageLabel;
         for (const winner of winners) {
           const winTeam = team(winner);
           if (!winTeam) continue;
@@ -369,315 +336,320 @@ export default async function ComparePage({
     }
   }
 
-  const head = (p: PlayerLite, score: number, you: boolean, side: "left" | "right") => (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: side === "left" ? "flex-start" : "flex-end", gap: 6, minWidth: 0 }}>
-      <Avatar player={p} size={52} />
-      <div
-        style={{
-          fontWeight: 700,
-          fontSize: 15,
-          color: "var(--text-hi)",
-          maxWidth: "100%",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          textAlign: side,
-        }}
-      >
-        {p.displayName}
-        {you && <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.12em", color: "var(--heat)", marginLeft: 6 }}>· YOU</span>}
+  const resolvedAny = aSteals.length + bSteals.length + bothRight > 0;
+  const agreePct = compared > 0 ? Math.round((agreed / compared) * 100) : 0;
+
+  const side = (p: PlayerLite, score: number, you: boolean) => {
+    const rank = rankOf(p.id);
+    return (
+      <div className="cmp-p">
+        <span className="eyebrow">
+          #{String(rank).padStart(2, "0")}
+          {you && (
+            <>
+              {" "}
+              · <b>you</b>
+            </>
+          )}{" "}
+          · {provenance(p)}
+        </span>
+        <span className="cmp-who">
+          <RankAvatar name={p.displayName} avatarUrl={p.avatarUrl} size={36} />
+          <span className="cmp-big">{p.displayName}</span>
+        </span>
+        <span className="cmp-pts">
+          <b>{score}</b> pts
+        </span>
       </div>
-      <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 40, lineHeight: 0.9, color: score > 0 ? "var(--correct)" : "var(--text-low)" }}>
-        {score}
-      </div>
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-low)" }}>
-        {provenance(p)}
-      </div>
+    );
+  };
+
+  const stealCard = (steals: { team: TeamDef; label: string }[], who: string, other: string, win: boolean) => (
+    <div className={`cmp-st${steals.length ? (win ? " win" : " loss") : ""}`}>
+      <span className="cmp-st-who">
+        {who} called it · {other} didn&apos;t — {steals.length}
+      </span>
+      {steals.length ? (
+        <ul className="cmp-st-list">
+          {steals.map((s, i) => (
+            <li key={i}>
+              <TeamLogo tiers={resolveLogoTiers(s.team)} teamName={s.team.name} size={40} />
+              <span>
+                <b>{s.team.name}</b>
+                <span className="cmp-st-l">{s.label}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>Nothing yet.</p>
+      )}
     </div>
   );
 
-  const resolvedAny = aSteals.length + bSteals.length + bothRight > 0;
-
   return (
-    <>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <Link href="/leaderboard" style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--ink-mid)", textDecoration: "none" }}>
-          ← Leaderboard
-        </Link>
-        <span className="eyebrow-mono">HEAD TO HEAD</span>
-        <h1 className="font-display" style={{ fontWeight: 800, fontSize: "clamp(28px, 5vw, 40px)", textTransform: "uppercase", lineHeight: 0.95 }}>
-          Compare
-        </h1>
-      </div>
-
-      {/* Hero scoreboard */}
-      <section
-        className="brk"
-        style={{
-          position: "relative",
-          display: "grid",
-          gridTemplateColumns: "1fr auto 1fr",
-          alignItems: "center",
-          gap: "var(--space-3)",
-          margin: "var(--space-4) 0",
-          padding: "var(--space-4) var(--space-3)",
-          background: "linear-gradient(135deg, var(--surf-2), var(--surf-1))",
-          border: "1px solid var(--bg3)",
-          borderRadius: "var(--radius-lg)",
-        }}
-      >
-        <span className="br-tr" />
-        <span className="br-bl" />
-        {head(a, aScore, aIsYou, "left")}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-          <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 18, color: "var(--text-low)" }}>VS</span>
-          <span
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: 10,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              color: lead === 0 ? "var(--text-low)" : "var(--heat)",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {lead === 0 ? "TIED" : lead > 0 ? `+${lead} ←` : `→ +${-lead}`}
+    <div className="rk-page">
+      <section className="bleed cmp-hero">
+        <Image src="/wrapped/major-cinderella.jpg" alt="" fill priority sizes="100vw" />
+        <span className="credit">Photo · IEM Cologne Major 2026 · HLTV</span>
+        <div className="in">
+          <Link href={boardHref} prefetch={false} className="eyebrow cmp-back">
+            ← {archive ? `Final standings · ${eventName}` : "Leaderboard"}
+          </Link>
+          <span className="eyebrow rise">
+            Head to head · <b>{eventName}</b>
+            {archive ? " · final" : ""}
           </span>
+          <h1 className="rk-sr">Compare</h1>
+          <div className="cmp-duel rise d1">
+            {side(a, aScore, aIsYou)}
+            <span className="cmp-x">
+              VS
+              <span className={lead === 0 ? "" : "lead"}>
+                {lead === 0 ? "Tied" : lead > 0 ? `+${lead} ←` : `→ +${-lead}`}
+              </span>
+            </span>
+            {side(b, bScore, bIsYou)}
+          </div>
         </div>
-        {head(b, bScore, bIsYou, "right")}
       </section>
 
-      {/* THE STEAL — picks called right that the other whiffed */}
-      <section style={{ marginBottom: "var(--space-4)" }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "var(--space-2)" }}>
-          <span className="eyebrow-mono" style={{ color: "var(--correct)" }}>THE STEAL</span>
-          {resolvedAny && (
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.08em", color: "var(--text-low)" }}>
-              {aSteals.length}–{bSteals.length} · {bothRight} SHARED
-            </span>
-          )}
+      {/* Agreement strip */}
+      <section className="chap">
+        <div className="chap-h">
+          <h2>{compared === 0 ? "Calls under wraps" : agreePct >= 60 ? "Same brain, mostly" : agreePct >= 40 ? "Split down the middle" : "Different reads"}</h2>
+          <p>
+            {compared === 0 ? (
+              <>Picks reveal as each stage locks — then you&apos;ll see every call you share.</>
+            ) : (
+              <>
+                {aIsYou ? "You" : a.displayName} and {b.displayName} agreed on <b>{agreed} of {compared}</b> revealed
+                calls. The rest decide it.
+              </>
+            )}
+          </p>
         </div>
-
-        {!resolvedAny ? (
-          <div style={{ padding: "var(--space-4)", textAlign: "center", color: "var(--text-low)", fontSize: 13, background: "var(--bg1)", border: "1px dashed var(--bg3)", borderRadius: "var(--radius-md)" }}>
-            No results in yet. The moment matches resolve, the picks you nailed that {bIsYou ? "they" : b.displayName} missed land right here.
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-            <div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-mid)", marginBottom: 6 }}>
-                {aIsYou ? "You" : a.displayName} called it · {b.displayName} didn&apos;t — {aSteals.length}
-              </div>
-              {aSteals.length ? (
-                <div style={{ display: "flex", gap: "var(--space-2)", overflowX: "auto", paddingBottom: 4 }}>
-                  {aSteals.map((s, i) => <StealChip key={`a${i}`} team={s.team} label={s.label} />)}
-                </div>
-              ) : (
-                <div style={{ fontSize: 12, color: "var(--text-low)" }}>Nothing yet.</div>
-              )}
+        {compared > 0 && (
+          <div className="cmp-meter" role="img" aria-label={`${agreed} of ${compared} calls in common`}>
+            <div className="cmp-bar">
+              <i style={{ width: `${agreePct}%` }} />
+              <u style={{ width: `${100 - agreePct}%` }} />
             </div>
-            <div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-mid)", marginBottom: 6 }}>
-                {b.displayName} called it · {aIsYou ? "you" : a.displayName} didn&apos;t — {bSteals.length}
-              </div>
-              {bSteals.length ? (
-                <div style={{ display: "flex", gap: "var(--space-2)", overflowX: "auto", paddingBottom: 4 }}>
-                  {bSteals.map((s, i) => <StealChip key={`b${i}`} team={s.team} label={s.label} />)}
-                </div>
-              ) : (
-                <div style={{ fontSize: 12, color: "var(--text-low)" }}>Nothing yet.</div>
-              )}
+            <div className="cmp-lg">
+              <span>{agreed} in common</span>
+              <span>{compared - agreed} split</span>
             </div>
           </div>
         )}
       </section>
 
-      {/* Opponent switcher */}
-      <div style={{ marginBottom: "var(--space-4)" }}>
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-low)", marginBottom: 6 }}>
-          Compare against
+      {/* THE STEAL — picks called right that the other whiffed */}
+      <section className="chap">
+        <div className="chap-h row2">
+          <div>
+            <h2>The steal</h2>
+          </div>
+          {resolvedAny && (
+            <span className="eyebrow">
+              {aSteals.length}–{bSteals.length} · {bothRight} shared
+            </span>
+          )}
         </div>
-        <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
+        {!resolvedAny ? (
+          <p className="rk-note">
+            No results in yet. The moment matches resolve, the picks {aIsYou ? "you" : a.displayName} nailed that{" "}
+            {bIsYou ? "they" : b.displayName} missed land right here.
+          </p>
+        ) : (
+          <div className="cmp-steal">
+            {stealCard(aSteals, aName, b.displayName, true)}
+            {stealCard(bSteals, b.displayName, bName, false)}
+          </div>
+        )}
+      </section>
+
+      {/* Opponent switcher */}
+      <section className="chap">
+        <div className="chap-h row2">
+          <div>
+            <h2>Compare against</h2>
+          </div>
+        </div>
+        <div className="cmp-opps">
           {players
             .filter((p) => p.id !== aId)
-            .map((p) => {
-              const active = p.id === bId;
-              return (
-                <a
-                  key={p.id}
-                  href={`/leaderboard/compare?a=${aId}&b=${p.id}`}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 7,
-                    padding: "5px 12px 5px 6px",
-                    borderRadius: "var(--radius-md)",
-                    background: active ? "var(--accent)" : "var(--bg2)",
-                    color: active ? "#1c1812" : "var(--text-mid)",
-                    textDecoration: "none",
-                    fontSize: 13,
-                    fontWeight: 700,
-                    minHeight: 36,
-                    border: active ? "1px solid var(--accent)" : "1px solid var(--bg3)",
-                  }}
-                >
-                  <Avatar player={p} size={24} />
-                  {p.displayName}
-                </a>
-              );
-            })}
+            .map((p) => (
+              <Link
+                key={p.id}
+                href={compareHref(aId, p.id)}
+                prefetch={false}
+                className={p.id === bId ? "on" : undefined}
+                aria-current={p.id === bId ? "true" : undefined}
+              >
+                <RankAvatar name={p.displayName} avatarUrl={p.avatarUrl} size={24} />
+                {p.displayName}
+              </Link>
+            ))}
         </div>
-      </div>
+      </section>
 
-      {/* Per-stage logo grid */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-        {layout.sections.map((section) => {
-          const stageLabel = section.name.split(" | ")[0];
-          const isSwiss = isSwissSection(section.sectionid);
-          return (
-            <div key={section.sectionid}>
-              <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--text-mid)", margin: "0 0 var(--space-2)" }}>
-                {stageLabel}
-              </h2>
+      {/* Side by side — per-stage, per-bucket split rows */}
+      {layout.sections.map((section) => {
+        const stageLabel = section.name.split(" | ")[0];
+        const isSwiss = isSwissSection(section.sectionid);
+        return (
+          <section key={section.sectionid} className="chap">
+            <div className="chap-h">
+              <h2>{stageLabel}</h2>
+            </div>
 
-              {section.groups.map((group) => {
-                const revealed = revealedByGroup.get(`${section.sectionid}:${group.groupid}`) ?? false;
-                const aGroup = aPicksMap[section.sectionid]?.[group.groupid] ?? {};
-                const bGroup = bPicksMap[section.sectionid]?.[group.groupid] ?? {};
-                const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
-                // Read-only on resolution applies to SWISS only. The playoff bracket
-                // resolves match-by-match while it's still the live event everyone is
-                // reacting to (#1262) — gating those per-match would silently kill
-                // reactions on each QF/SF as it finishes. Keep playoff picks reactable.
-                const groupClosed = isSwiss && Object.keys(groupOutcomes).length >= group.picks.length;
+            {section.groups.map((group) => {
+              const revealed = revealedByGroup.get(`${section.sectionid}:${group.groupid}`) ?? false;
+              const aGroup = aPicksMap[section.sectionid]?.[group.groupid] ?? {};
+              const bGroup = bPicksMap[section.sectionid]?.[group.groupid] ?? {};
+              const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
+              // Read-only on resolution applies to SWISS only. The playoff bracket
+              // resolves match-by-match while it's still the live event everyone is
+              // reacting to (#1262) — gating those per-match would silently kill
+              // reactions on each QF/SF as it finishes. Keep playoff picks reactable.
+              const groupClosed = isSwiss && Object.keys(groupOutcomes).length >= group.picks.length;
+              const ppp = `${group.points_per_pick} pt${group.points_per_pick !== 1 ? "s" : ""} / pick`;
 
+              if (!revealed) {
                 return (
-                  <div
-                    key={group.groupid}
-                    style={{ background: "var(--bg1)", border: "1px solid var(--bg3)", borderRadius: "var(--radius-md)", overflow: "hidden", marginBottom: "var(--space-2)" }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "var(--space-2) var(--space-3)",
-                        borderBottom: revealed ? "1px solid var(--bg3)" : "none",
-                      }}
-                    >
-                      <span style={{ fontSize: 13, color: "var(--text-mid)", fontWeight: 700 }}>
-                        {group.name.split(" | ").slice(-1)[0]}
-                      </span>
-                      <span style={{ fontSize: 11, color: "var(--accent)", fontFamily: "'Rajdhani', sans-serif", fontWeight: 700 }}>
-                        {group.points_per_pick} PT{group.points_per_pick !== 1 ? "S" : ""}/PICK
-                      </span>
+                  <div key={group.groupid} className="cmp-grp">
+                    <div className="cmp-gh">
+                      <h3>{group.name.split(" | ").slice(-1)[0]}</h3>
+                      <span>{ppp}</span>
                     </div>
+                    <p className="cmp-locked">
+                      <LockIcon size={11} /> Both players&apos; picks unlock when this stage starts
+                    </p>
+                  </div>
+                );
+              }
 
-                    {!revealed ? (
-                      <div style={{ padding: "var(--space-4)", textAlign: "center", color: "var(--text-low)", fontSize: 13 }}>
-                        <LockIcon size={11} /> Both players&apos; picks unlock when this stage starts
-                      </div>
-                    ) : (
-                      <div style={{ padding: "var(--space-2) var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-                        {/* Swiss stages split into the 2 / 6 / 2 buckets (3:0 advance,
-                            advancing, 0:3 out) — the real structure, not a flat 1-10.
-                            Reuses the same convention as the picks board (#853). */}
-                        {(isSwiss
-                          ? bucketSwissSlots(group.picks.length)
-                          : [{ label: group.name.split(" | ").slice(-1)[0], slotIndexes: group.picks.map((p) => p.index) }]
-                        ).map((bucket) => {
-                          // Swiss → judge the whole bucket as a set (#946);
-                          // playoffs → each slot is its own match, resolved per row.
-                          const swissRes = isSwiss ? resolveBucketWinners(bucket.slotIndexes, groupOutcomes) : null;
-                          const aBucketPicked = isSwiss
-                            ? new Set(bucket.slotIndexes.map((i) => aGroup[i]).filter((x) => x && x !== 0))
-                            : null;
-                          const bBucketPicked = isSwiss
-                            ? new Set(bucket.slotIndexes.map((i) => bGroup[i]).filter((x) => x && x !== 0))
-                            : null;
+              // Swiss stages split into the 2 / 6 / 2 buckets (3:0 advance,
+              // advancing, 0:3 out) — the real structure, not a flat 1-10.
+              const buckets = isSwiss
+                ? bucketSwissSlots(group.picks.length)
+                : [{ label: group.name.split(" | ").slice(-1)[0], slotIndexes: group.picks.map((p) => p.index) }];
+
+              return (
+                <div key={group.groupid} className={`cmp-grps${isSwiss && buckets.length === 3 ? " swiss" : ""}`}>
+                  {buckets.map((bucket) => {
+                    // Swiss → judge the whole bucket as a set (#946);
+                    // playoffs → each slot is its own match, resolved per row.
+                    const swissRes = isSwiss ? resolveBucketWinners(bucket.slotIndexes, groupOutcomes) : null;
+                    const aBucketPicked = isSwiss
+                      ? new Set(bucket.slotIndexes.map((i) => aGroup[i]).filter((x) => x && x !== 0))
+                      : null;
+                    const bBucketPicked = isSwiss
+                      ? new Set(bucket.slotIndexes.map((i) => bGroup[i]).filter((x) => x && x !== 0))
+                      : null;
+
+                    // Row pairing. Swiss slots within a bucket are interchangeable,
+                    // so line shared teams up first, then the split calls. Playoff
+                    // rows stay slot-for-slot (each slot is one match).
+                    type Pair = { aSlot: number; bSlot: number };
+                    let pairs: Pair[];
+                    if (isSwiss) {
+                      const aSlots = [...bucket.slotIndexes];
+                      const bSlots = [...bucket.slotIndexes];
+                      pairs = [];
+                      for (const s of [...aSlots]) {
+                        const pick = aGroup[s];
+                        if (!pick) continue;
+                        const j = bSlots.findIndex((t) => bGroup[t] === pick);
+                        if (j < 0) continue;
+                        pairs.push({ aSlot: s, bSlot: bSlots[j] });
+                        aSlots.splice(aSlots.indexOf(s), 1);
+                        bSlots.splice(j, 1);
+                      }
+                      aSlots.forEach((s, i) => pairs.push({ aSlot: s, bSlot: bSlots[i] }));
+                    } else {
+                      pairs = bucket.slotIndexes.map((s) => ({ aSlot: s, bSlot: s }));
+                    }
+                    const same = pairs.filter((p) => aGroup[p.aSlot] && aGroup[p.aSlot] === bGroup[p.bSlot]).length;
+
+                    const recs = isSwiss ? recordsBySection.get(section.sectionid) : undefined;
+                    const stateFor = (pick: number | undefined, slotIndex: number) => {
+                      const res = swissRes ?? resolveBucketWinners([slotIndex], groupOutcomes);
+                      // Early-red (#951): a 3:0/0:3 pick whose team's partial
+                      // record already rules its bucket out is a miss now, before
+                      // the answer key resolves it. Swiss only.
+                      const impossible = !!pick && isBucketImpossibleByRecord(bucket.label, recs?.get(pick));
+                      return bucketPickState(pick, res, impossible);
+                    };
+
+                    return (
+                      <div key={bucket.label} className="cmp-grp">
+                        <div className="cmp-gh">
+                          <h3>{isSwiss ? bucketTitle(bucket.label) : bucket.label}</h3>
+                          <span>
+                            {same}/{pairs.length} same · {ppp}
+                          </span>
+                        </div>
+                        {pairs.map(({ aSlot, bSlot }) => {
+                          const aPick = aGroup[aSlot];
+                          const bPick = bGroup[bSlot];
+                          const aScope = aBucketPicked ?? new Set([aPick].filter((x) => x && x !== 0));
+                          const bScope = bBucketPicked ?? new Set([bPick].filter((x) => x && x !== 0));
+                          const aState = stateFor(aPick, aSlot);
+                          const bState = stateFor(bPick, bSlot);
+                          // Steal = you hit a team your opponent never picked (in scope).
+                          const aSteal = aState === "hit" && aPick !== undefined && !bScope.has(aPick);
+                          const bSteal = bState === "hit" && bPick !== undefined && !aScope.has(bPick);
+                          const isSame = !!aPick && aPick === bPick;
                           return (
-                          <div key={bucket.label}>
-                            {isSwiss && (
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                                <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-mid)", fontWeight: 700 }}>
-                                  {bucket.label}
-                                </span>
-                                <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-low)" }}>
-                                  {bucket.slotIndexes.length} PICK{bucket.slotIndexes.length !== 1 ? "S" : ""}
-                                </span>
+                            <div key={`${aSlot}-${bSlot}`} className={`cmp-cr${isSame ? " same" : ""}`}>
+                              <div className="cmp-cell">
+                                <PickSide team={team(aPick)} state={aState} steal={aSteal} />
+                                {aPick && aPick !== 0 && (
+                                  <BleachersStrip
+                                    targetPlayerId={aId}
+                                    sectionId={section.sectionid}
+                                    groupId={group.groupid}
+                                    slotIndex={aSlot}
+                                    initialTally={tallyFor(aId, section.sectionid, group.groupid, aSlot)}
+                                    canReact={canReactA && !groupClosed}
+                                  />
+                                )}
                               </div>
-                            )}
-                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                              {bucket.slotIndexes.map((slotIndex) => {
-                                const aPick = aGroup[slotIndex];
-                                const bPick = bGroup[slotIndex];
-                                const res = swissRes ?? resolveBucketWinners([slotIndex], groupOutcomes);
-                                const aScope = aBucketPicked ?? new Set([aPick].filter((x) => x && x !== 0));
-                                const bScope = bBucketPicked ?? new Set([bPick].filter((x) => x && x !== 0));
-                                // Early-red (#951): a 3:0/0:3 pick whose team's
-                                // partial record already rules its bucket out is a
-                                // miss now, before the answer key resolves it. Swiss
-                                // only — playoff matches resolve strictly per slot.
-                                const recs = isSwiss ? recordsBySection.get(section.sectionid) : undefined;
-                                const aImpossible = !!aPick && isBucketImpossibleByRecord(bucket.label, recs?.get(aPick));
-                                const bImpossible = !!bPick && isBucketImpossibleByRecord(bucket.label, recs?.get(bPick));
-                                const aState = bucketPickState(aPick, res, aImpossible);
-                                const bState = bucketPickState(bPick, res, bImpossible);
-                                // Steal = you hit a team your opponent never picked (in scope).
-                                const aSteal = aState === "hit" && aPick !== undefined && !bScope.has(aPick);
-                                const bSteal = bState === "hit" && bPick !== undefined && !aScope.has(bPick);
-                                const aInitialTally = tallyFor(aId, section.sectionid, group.groupid, slotIndex);
-                                const bInitialTally = tallyFor(bId, section.sectionid, group.groupid, slotIndex);
-                                const effectiveCanReactA = canReactA && !groupClosed;
-                                const effectiveCanReactB = canReactB && !groupClosed;
-                                return (
-                                  <div
-                                    key={slotIndex}
-                                    style={{ display: "grid", gridTemplateColumns: "1fr 22px 1fr", alignItems: "start", gap: "var(--space-2)" }}
-                                  >
-                                    <div>
-                                      <PickTile team={team(aPick)} state={aState} align="left" steal={aSteal} />
-                                      {aPick && aPick !== 0 && (
-                                        <BleachersStrip
-                                          targetPlayerId={aId}
-                                          sectionId={section.sectionid}
-                                          groupId={group.groupid}
-                                          slotIndex={slotIndex}
-                                          initialTally={aInitialTally}
-                                          canReact={effectiveCanReactA}
-                                        />
-                                      )}
-                                    </div>
-                                    <span style={{ textAlign: "center", color: "var(--text-low)", fontFamily: "var(--font-mono)", fontSize: 10, paddingTop: 10 }}>·</span>
-                                    <div>
-                                      <PickTile team={team(bPick)} state={bState} align="right" steal={bSteal} />
-                                      {bPick && bPick !== 0 && (
-                                        <BleachersStrip
-                                          targetPlayerId={bId}
-                                          sectionId={section.sectionid}
-                                          groupId={group.groupid}
-                                          slotIndex={slotIndex}
-                                          initialTally={bInitialTally}
-                                          canReact={effectiveCanReactB}
-                                        />
-                                      )}
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                              <span className="cmp-m" aria-label={isSame ? "same pick" : "different pick"}>
+                                {isSame ? "=" : "≠"}
+                              </span>
+                              <div className="cmp-cell r">
+                                <PickSide team={team(bPick)} state={bState} steal={bSteal} />
+                                {bPick && bPick !== 0 && (
+                                  <BleachersStrip
+                                    targetPlayerId={bId}
+                                    sectionId={section.sectionid}
+                                    groupId={group.groupid}
+                                    slotIndex={bSlot}
+                                    initialTally={tallyFor(bId, section.sectionid, group.groupid, bSlot)}
+                                    canReact={canReactB && !groupClosed}
+                                  />
+                                )}
+                              </div>
                             </div>
-                          </div>
                           );
                         })}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })}
-      </div>
-    </>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </section>
+        );
+      })}
+
+      <section className="cta">
+        <Link href={boardHref} prefetch={false} className="btn-ghost">
+          Back to ranks
+        </Link>
+      </section>
+    </div>
   );
 }

@@ -37,7 +37,10 @@ import { recordsByPickId } from "@/lib/swiss-results-core";
 import { refreshTeamStatsOnRead, getLiveTeamStats } from "@/lib/team-stats";
 import { refreshSpotlightOddsOnRead, getSpotlightMarket } from "@/lib/spotlight-odds";
 import { AutoRefresh } from "@/components/AutoRefresh";
-import { currentEventId, getEventConfig } from "@/lib/events-core";
+import { currentEventId, getEventConfig, stageOneStartFor } from "@/lib/events-core";
+import { scorePlayer, type OutcomeMap } from "@/lib/scoring";
+import { StageHeader } from "@/components/sg/picks/StageHeader";
+import { StageTabs, type StageTab } from "@/components/sg/picks/StageTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -294,179 +297,235 @@ export default async function PicksPage({
   // matchup is authored, in which case the modal shows its "coming soon" state.
   const spotlightMarket = playoffActive ? await getSpotlightMarket(EVENT_ID, nowMs) : undefined;
 
+  // Tab sub-lines + header result (Singapore §3): the viewer's progress per
+  // stage while open, and their scored points once outcomes land. Read-only —
+  // scored with the same engine as the leaderboard (scorePlayer).
+  const filledBySection = new Map<number, number>();
+  const scoreBySection = new Map<number, { points: number; correct: number; possible: number }>();
+  if (session) {
+    const [allMyPicks, eventOutcomes] = await Promise.all([
+      prisma.pick.findMany({
+        where: { playerId: session.playerId, eventId: EVENT_ID },
+        select: { sectionId: true, groupId: true, slotIndex: true, pickId: true },
+      }),
+      prisma.stageOutcome.findMany({
+        where: { eventId: EVENT_ID },
+        select: { sectionId: true, groupId: true, slotIndex: true, winnerPickId: true },
+      }),
+    ]);
+    const picksBySection: Record<number, Record<number, Record<number, number>>> = {};
+    for (const p of allMyPicks) {
+      if (p.pickId === 0) continue;
+      filledBySection.set(p.sectionId, (filledBySection.get(p.sectionId) ?? 0) + 1);
+      ((picksBySection[p.sectionId] ??= {})[p.groupId] ??= {})[p.slotIndex] = p.pickId;
+    }
+    const outcomeMap: OutcomeMap = {};
+    for (const o of eventOutcomes) {
+      ((outcomeMap[o.sectionId] ??= {})[o.groupId] ??= {})[o.slotIndex] = o.winnerPickId;
+    }
+    for (const row of scorePlayer(layout, picksBySection, outcomeMap).bySection) {
+      scoreBySection.set(row.sectionId, row);
+    }
+  }
+  const slotCount = (secs: typeof layout.sections) =>
+    secs.reduce((n, s) => n + s.groups.reduce((m, g) => m + g.picks.length, 0), 0);
+  const sumOver = (ids: number[], f: (id: number) => number) => ids.reduce((n, id) => n + f(id), 0);
+
   // Header: the consolidated Playoffs tab reads as one stage regardless of
-  // which playoff section id is in the URL; Swiss stages keep their number.
-  const firstPlayoffIdx = layout.sections.findIndex((s) => isPlayoffSection(s.sectionid));
-  const activeIdx = playoffActive
-    ? firstPlayoffIdx
-    : layout.sections.findIndex((s) => s.sectionid === activeSectionId);
+  // which playoff section id is in the URL; Swiss stages keep their name.
   const activeLabel = playoffActive
     ? "Playoffs"
     : section?.name.split(" | ")[0] ?? "Picks";
-  const activeNumber = activeIdx >= 0 ? activeIdx + 1 : 1;
+
+  // ── Presentation (Singapore skin, HANDOFF §3) ─────────────────────────
+  const lockTitleFor = (pick: StagePickability) =>
+    pick.pickable
+      ? undefined
+      : pick.reason === "teams-not-set"
+        ? "Locked — teams not set yet"
+        : pick.reason === "locked-by-valve"
+          ? "Locked by Valve"
+          : "Locked";
+
+  // Tab model (#1016): one tab per Swiss stage, then a single Playoffs tab —
+  // quarters/semis/finals open and lock together as one pick'em stage.
+  const tabSub = (opts: { pickable: boolean; notSeeded: boolean; filled: number; total: number; score?: { points: number; possible: number } }) => {
+    if (opts.pickable) {
+      return (
+        <>
+          <b>
+            {opts.filled}/{opts.total}
+          </b>{" "}
+          · open
+        </>
+      );
+    }
+    if (opts.score && opts.score.possible > 0) {
+      return (
+        <>
+          <b className="ok">+{opts.score.points}</b> scored
+        </>
+      );
+    }
+    return opts.notSeeded ? "Not open" : "Locked";
+  };
+
+  const tabs: StageTab[] = layout.sections
+    .filter((s) => !isPlayoffSection(s.sectionid))
+    .map((s) => {
+      const pick = sectionPickability.get(s.sectionid)!;
+      return {
+        key: String(s.sectionid),
+        href: `/picks?section=${s.sectionid}`,
+        label: s.name.split(" | ")[0],
+        active: !playoffActive && s.sectionid === activeSectionId,
+        locked: !pick.pickable,
+        upcoming: !pick.pickable && pick.reason === "teams-not-set",
+        lockTitle: lockTitleFor(pick),
+        sub: tabSub({
+          pickable: pick.pickable,
+          notSeeded: !pick.pickable && pick.reason === "teams-not-set",
+          filled: filledBySection.get(s.sectionid) ?? 0,
+          total: slotCount([s]),
+          score: scoreBySection.get(s.sectionid),
+        }),
+      };
+    });
+  if (playoffSections.length > 0) {
+    const repPick =
+      sectionPickability.get(playoffSections[0].sectionid) ??
+      ({ pickable: false, reason: "unknown-section" } as StagePickability);
+    const ids = playoffSections.map((s) => s.sectionid);
+    tabs.push({
+      key: "playoffs",
+      href: `/picks?section=${playoffSections[0].sectionid}`,
+      label: "Playoffs",
+      active: playoffActive,
+      locked: !anyPlayoffPickable,
+      upcoming: !anyPlayoffPickable && !playoffSeeded,
+      lockTitle: anyPlayoffPickable ? undefined : lockTitleFor(repPick),
+      sub: tabSub({
+        pickable: anyPlayoffPickable,
+        notSeeded: !playoffSeeded,
+        // One saved winner per match (slot 0 of each group).
+        filled: sumOver(ids, (id) => filledBySection.get(id) ?? 0),
+        total: slotCount(playoffSections),
+        score: {
+          points: sumOver(ids, (id) => scoreBySection.get(id)?.points ?? 0),
+          possible: sumOver(ids, (id) => scoreBySection.get(id)?.possible ?? 0),
+        },
+      }),
+    });
+  }
+
+  // Stage header copy + lockbox.
+  const activeScore = playoffActive
+    ? {
+        points: sumOver(playoffSectionIds, (id) => scoreBySection.get(id)?.points ?? 0),
+        correct: sumOver(playoffSectionIds, (id) => scoreBySection.get(id)?.correct ?? 0),
+        possible: sumOver(playoffSectionIds, (id) => scoreBySection.get(id)?.possible ?? 0),
+      }
+    : scoreBySection.get(activeSectionId);
+  const ptsPerCall = section?.groups[0]?.points_per_pick;
+  const isFirstSwiss =
+    !playoffActive && layout.sections.find((s) => isSwissSection(s.sectionid))?.sectionid === activeSectionId;
+  // Before a stage's first-match lock is published, Stage I counts down to the
+  // event's registry start (the home page uses the same instant).
+  const publishedLock = playoffActive
+    ? lockTimeForSection(playoffSectionIds[0], event?.lockSchedule)
+    : lockTimeForSection(activeSectionId, event?.lockSchedule);
+  const registryStart = !publishedLock && isFirstSwiss && event ? stageOneStartFor(event) : null;
+  const fallbackStart = registryStart && Date.parse(registryStart) > nowMs ? registryStart : null;
+  const headerOpen = playoffActive ? anyPlayoffPickable : activePickability.pickable;
+  const headerNotSeeded = playoffActive
+    ? !playoffSeeded
+    : !activePickability.pickable && activePickability.reason === "teams-not-set";
+
+  const eyebrow = playoffActive ? (
+    headerOpen ? (
+      <>
+        Playoffs · Single elimination · <b>open for calls</b>
+      </>
+    ) : headerNotSeeded ? (
+      <>
+        Playoffs · Eight remain · <b>not seeded yet</b>
+      </>
+    ) : (
+      <>
+        Playoffs · Single elimination · <b>locked</b>
+      </>
+    )
+  ) : headerOpen ? (
+    <>
+      {activeLabel} · Swiss · <b>{ptsPerCall ?? 1} pt{ptsPerCall === 1 ? "" : "s"} per call</b>
+    </>
+  ) : headerNotSeeded ? (
+    <>
+      {activeLabel} · <b>not open yet</b>
+    </>
+  ) : stageComplete ? (
+    <>
+      {activeLabel} · Swiss · <b>locked &amp; scored</b>
+    </>
+  ) : (
+    <>
+      {activeLabel} · Swiss · <b>locked · in play</b>
+    </>
+  );
+
+  const lockbox = headerOpen ? (
+    publishedLock || fallbackStart ? (
+      <LockCountdown
+        variant="box"
+        lockAt={publishedLock ?? fallbackStart}
+        boxLabel={publishedLock ? "Locks in" : `${activeLabel} starts`}
+      />
+    ) : (
+      <>
+        <span className="k">Status</span>
+        <span className="v sm">Open</span>
+        <span className="k">Locks at the first match</span>
+      </>
+    )
+  ) : activeScore && activeScore.possible > 0 ? (
+    <>
+      <span className="k">Result</span>
+      <span className="v">
+        {activeScore.correct}
+        <small>/{playoffActive ? slotCount(playoffSections) : slotCount(section ? [section] : [])}</small>
+      </span>
+      <span className="k">+{activeScore.points} pts</span>
+    </>
+  ) : (
+    <>
+      <span className="k">Status</span>
+      <span className="v sm">{headerNotSeeded ? "Not seeded" : "Locked"}</span>
+    </>
+  );
+
+  const headerPhoto = playoffActive ? "/wrapped/major-cathedral.jpg" : "/wrapped/major-cover.jpg";
+  // Room for a fixed bar: the Swiss action bar (signed in, open) or sign-in bar.
+  const hasBar = !session || (!playoffActive && activePickability.pickable && !!section);
 
   return (
-    <>
-      {/* Stage header. Playoffs wear the v3 "Cathedral" treatment (#1065):
-          Cologne is the Cathedral of Counter-Strike, so the climax stage gets a
-          centered hero crowned by a thin pointed-arch vault. Swiss stages keep
-          the standard left-aligned eyebrow + wordmark. */}
-      {playoffActive ? (
-        <div className="cath-hero">
-          <svg className="cath-arch" viewBox="0 0 188 60" fill="none" aria-hidden="true">
-            <path d="M2 60 L2 30 Q2 2 94 2 Q186 2 186 30 L186 60" stroke="rgba(240,175,80,0.30)" strokeWidth="1" />
-            <path d="M22 60 L22 34 Q22 14 94 14 Q166 14 166 34 L166 60" stroke="rgba(240,175,80,0.16)" strokeWidth="1" />
-            <line x1="94" y1="6" x2="94" y2="60" stroke="rgba(240,175,80,0.14)" strokeWidth="1" />
-          </svg>
-          <span className="cath-eyebrow">Cathedral of Counter&#8209;Strike</span>
-          <h1 className="cath-title">{activeLabel}</h1>
-          <div className="cath-sub">Single Elimination &middot; Eight Remain</div>
-          {anyPlayoffPickable && (
-            <div style={{ display: "flex", justifyContent: "center", marginTop: 13 }}>
-              <LockCountdown lockAt={lockTimeForSection(playoffSectionIds[0], event?.lockSchedule)} />
-            </div>
-          )}
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <span className="eyebrow-mono">STAGE {String(activeNumber).padStart(2, "0")}</span>
-          <h1 className="font-display" style={{
-            fontWeight: 800,
-            fontSize: "clamp(28px, 5vw, 40px)",
-            textTransform: "uppercase",
-            lineHeight: 0.95,
-          }}>
-            {activeLabel}
-          </h1>
-          {activePickability.pickable && (
-            <LockCountdown lockAt={lockTimeForSection(activeSectionId, event?.lockSchedule)} />
-          )}
-        </div>
-      )}
+    <div className={`sgp-page${hasBar ? " with-bar" : ""}`}>
+      <StageHeader photo={headerPhoto} eyebrow={eyebrow} title={activeLabel} lockbox={lockbox} />
 
       {/* Steam-connected but no auth code: picks live in HOTLINE, not yet
           pushed to the official in-game Pick'Em. Point them at the page. */}
       {needsSteamLink && <SteamLinkNotice />}
 
-      {/* Stage tabs */}
-      <div
-        style={{
-          display: "flex",
-          gap: 6,
-          overflowX: "auto",
-          paddingBottom: 4,
-          marginBottom: 4,
-        }}
-      >
-        {(() => {
-          // Tab model (#1016): one chip per Swiss stage, then a single
-          // PLAYOFFS chip — quarters/semis/finals open and lock together as
-          // one pick'em stage, so they tab as one.
-          const lockTitleFor = (pick: StagePickability) =>
-            pick.pickable
-              ? undefined
-              : pick.reason === "teams-not-set"
-                ? "Locked — teams not set yet"
-                : pick.reason === "locked-by-valve"
-                  ? "Locked by Valve"
-                  : "Locked";
-
-          const tabs = layout.sections
-            .filter((s) => !isPlayoffSection(s.sectionid))
-            .map((s) => {
-              const pick = sectionPickability.get(s.sectionid)!;
-              return {
-                key: String(s.sectionid),
-                href: `/picks?section=${s.sectionid}`,
-                label: s.name.split(" | ")[0],
-                active: !playoffActive && s.sectionid === activeSectionId,
-                locked: !pick.pickable,
-                lockTitle: lockTitleFor(pick),
-              };
-            });
-          if (playoffSections.length > 0) {
-            const repPick =
-              sectionPickability.get(playoffSections[0].sectionid) ??
-              ({ pickable: false, reason: "unknown-section" } as StagePickability);
-            tabs.push({
-              key: "playoffs",
-              href: `/picks?section=${playoffSections[0].sectionid}`,
-              label: "Playoffs",
-              active: playoffActive,
-              locked: !anyPlayoffPickable,
-              lockTitle: anyPlayoffPickable ? undefined : lockTitleFor(repPick),
-            });
-          }
-          return tabs.map((t) => {
-            const { active, locked } = t;
-
-            const baseStyle: React.CSSProperties = {
-            flexShrink: 0,
-            padding: "10px 16px",
-            fontFamily: "var(--font-mono)",
-            fontSize: 10,
-            fontWeight: 500,
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-            whiteSpace: "nowrap",
-            textDecoration: "none",
-            minHeight: 40,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            transition: "border-color 160ms var(--ease), color 160ms var(--ease), background 160ms var(--ease)",
-            background: active
-              ? "rgba(240,163,0,0.08)"
-              : "var(--surf-1)",
-            color: active
-              ? "var(--heat)"
-              : locked
-                ? "var(--ink-low)"
-                : "var(--ink-mid)",
-            border: active
-              ? "1px solid var(--hair-3)"
-              : locked
-                ? "1px dashed var(--hair)"
-                : "1px solid var(--hair)",
-            cursor: "pointer",
-            boxShadow: active ? "0 0 0 0px var(--heat)" : "none",
-          };
-
-            // Every tab is navigable — a locked stage is "can't pick", not
-            // "can't look": clicking it shows that stage's content (its live
-            // lineup / your build, or a "teams not set" card). Previously a
-            // locked, non-active tab rendered as a disabled span, so once you
-            // left Stage I you couldn't click back to view it (Brandon,
-            // 2026-06-03). The small padlock still flags that picks are closed.
-            return (
-              <Link
-                key={t.key}
-                href={t.href}
-                title={t.lockTitle}
-                aria-current={active ? "page" : undefined}
-                style={baseStyle}
-              >
-                {locked && (
-                  <span aria-hidden="true" style={{ opacity: 0.65, display: "inline-flex" }}>
-                    <LockIcon size={10} />
-                  </span>
-                )}
-                {t.label}
-              </Link>
-            );
-          });
-        })()}
-      </div>
+      <StageTabs tabs={tabs} />
 
       {/* Stage content */}
       {!section ? (
-        <p style={{ color: "var(--ink-mid)" }}>Section not found.</p>
+        <p className="muted">Section not found.</p>
       ) : playoffActive ? (
         // Consolidated Playoffs view (#1016): one stage, one tab. When
         // Valve seeds + opens the bracket the three round pickers stack here
         // (they all lock together); until then an honest status strip. The
         // full QF → SF → GF tree renders beneath either way.
-        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        <div className="sgp-stack rise d2">
           {anyPlayoffPickable && playoffPickModel ? (
             // #1204: picks OPEN — interactive QF→SF→GF bracket. Crown a
             // winner and they advance into the round they feed.
@@ -551,7 +610,7 @@ export default async function PicksPage({
           )}
         </div>
       ) : activePickability.pickable ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        <div className="sgp-stack rise d2">
           <PicksBoard
             section={section}
             teams={layout.teams}
@@ -562,6 +621,7 @@ export default async function PicksPage({
             initiallySynced={mySectionSynced}
             liveTeamStats={liveTeamStats?.byPickid}
             liveStatsAsOf={liveTeamStats?.asOf}
+            recordByTeam={liveStandings ? Object.fromEntries(recordsByPickId(liveStandings.rows)) : undefined}
           />
           {/* #943: 24h before this stage locks, the live Swiss bracket AND the
               W-L standings table appear beneath the picker so you can study the
@@ -591,58 +651,31 @@ export default async function PicksPage({
                 )}
               </>
             ) : (
-              <div className="panel" style={{ padding: "20px 18px" }}>
-                <span className="eyebrow-mono" style={{ color: "var(--heat)" }}>LIVE BRACKET</span>
-                <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "10px 0 0", lineHeight: 1.5 }}>
-                  The bracket and standings go live here as soon as the opening matchups are announced.
-                </p>
+              <div className="sgp-note solo">
+                <div>
+                  <span className="eyebrow">Live bracket</span>
+                  <p>The bracket and standings go live here <b>as soon as the opening matchups are announced</b>.</p>
+                </div>
               </div>
             ))}
         </div>
       ) : swissStandings ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div className="sgp-stack rise d2">
           <LockedStageCard pickability={activePickability} compact complete={stageComplete} />
           {/* Stage Wrapped entry (#1054) — once the stage is OVER, the recap
               is the headline action here, right where the player lands. Opens the
               full personal deck on the stage reveal. */}
           {stageComplete && stageWrappedHasContent(activeSectionId) && (
-            <Link
-              href={`/reveal/${activeSectionId}`}
-              className="panel brk"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 16,
-                textDecoration: "none",
-                padding: "16px 20px",
-                borderColor: "var(--heat)",
-                background: "rgba(240,163,0,0.05)",
-              }}
-            >
-              <span className="br-tr" />
-              <span className="br-bl" />
-              <span
-                className="font-display foil"
-                aria-hidden="true"
-                style={{ fontWeight: 800, fontSize: 40, lineHeight: 0.8, letterSpacing: "0.03em", filter: "drop-shadow(0 0 12px var(--heat-glow))" }}
-              >
+            <Link href={`/reveal/${activeSectionId}`} className="sgp-wrapped" prefetch={false}>
+              <span className="num" aria-hidden="true">
                 {stageNumeral(activeLabel)}
               </span>
-              <span style={{ minWidth: 0, flex: 1 }}>
-                <span className="eyebrow-mono" style={{ color: "var(--heat)", display: "block" }}>
-                  STAGE WRAPPED
-                </span>
-                <span
-                  className="font-display"
-                  style={{ display: "block", fontWeight: 800, fontSize: 17, textTransform: "uppercase", color: "var(--ink-hi)", margin: "5px 0 0", lineHeight: 1.15 }}
-                >
-                  Your {activeLabel} recap is in
-                </span>
-                <span style={{ display: "block", color: "var(--ink-mid)", fontSize: 13, margin: "4px 0 0" }}>
-                  The craziest moments, your score, and where you landed — tap through the recap.
-                </span>
+              <span style={{ minWidth: 0 }}>
+                <span className="eyebrow">Stage Wrapped</span>
+                <span className="t">Your {activeLabel} recap is in</span>
+                <span className="s">Your score, the calls that landed, and the moments that decided it.</span>
               </span>
-              <span className="font-display" aria-hidden="true" style={{ color: "var(--heat)", fontSize: 22, fontWeight: 800 }}>
+              <span className="arr" aria-hidden="true">
                 →
               </span>
             </Link>
@@ -692,101 +725,50 @@ export default async function PicksPage({
       )}
 
       {!session && (
-        <Link
-          href="/login/auth"
-          className="btn-heat"
-          style={{
-            position: "fixed",
-            bottom: "calc(76px + env(safe-area-inset-bottom))",
-            right: 20,
-            zIndex: 49,
-          }}
-        >
-          Sign in to Save
-          <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-        </Link>
+        <div className="sgp-action" role="region" aria-label="Sign in">
+          <div className="sgp-action-in">
+            <div className="sgp-prog">
+              <div className="c">
+                <span className="s">Sign in to save your calls.</span>
+              </div>
+            </div>
+            <Link href="/login" className="btn-solid" prefetch={false}>
+              Sign in to Save
+            </Link>
+          </div>
+        </div>
       )}
-    </>
+    </div>
   );
 }
 
 function SteamLinkNotice() {
   return (
-    <Link
-      href="/help/auth-code"
-      className="panel brk"
-      style={{
-        display: "block",
-        textDecoration: "none",
-        borderColor: "var(--hair-3)",
-        background: "rgba(240,163,0,0.06)",
-      }}
-    >
-      <span className="br-tr" />
-      <span className="br-bl" />
-      <span
-        className="eyebrow-mono"
-        style={{ color: "var(--heat)", display: "block" }}
-      >
-        SAVED HERE — NOT ON STEAM YET
-      </span>
-      <p
-        className="font-display"
-        style={{
-          fontWeight: 800,
-          fontSize: 17,
-          textTransform: "uppercase",
-          letterSpacing: "0.01em",
-          color: "var(--ink-hi)",
-          margin: "8px 0 0",
-          lineHeight: 1.1,
-        }}
-      >
-        Your picks are locked into HOTLINE
-      </p>
-      <p
-        style={{
-          color: "var(--ink-mid)",
-          fontSize: 13,
-          lineHeight: 1.55,
-          margin: "6px 0 0",
-        }}
-      >
-        To push them to your <em style={{ marginRight: "0.15em" }}>official</em>{" "}
-        in-game CS2 Pick&apos;Em, connect your Steam Game Authentication Code.
-        Takes a minute.
-      </p>
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-          marginTop: 12,
-          fontFamily: "var(--font-mono)",
-          fontSize: 11,
-          fontWeight: 600,
-          letterSpacing: "0.12em",
-          textTransform: "uppercase",
-          color: "var(--heat)",
-        }}
-      >
-        Connect Steam to sync
-        <svg
-          viewBox="0 0 24 24"
-          width={14}
-          height={14}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <polyline points="9 18 15 12 9 6" />
-        </svg>
-      </span>
+    <Link href="/help/auth-code" className="sgp-note solo" prefetch={false}>
+      <div>
+        <span className="tag warn">Saved here — not on Steam yet</span>
+        <h2>Your picks are saved in HOTLINE</h2>
+        <p>
+          To push them to your <b>official in-game CS2 Pick&apos;Em</b>, connect your Steam Game
+          Authentication Code. It takes a minute.
+        </p>
+        <span className="go">
+          Connect Steam to sync
+          <svg
+            viewBox="0 0 24 24"
+            width={12}
+            height={12}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </span>
+      </div>
     </Link>
   );
 }
@@ -818,70 +800,33 @@ function LockedStageCard({
     pickability.pickable
       ? undefined
       : complete
-        ? "This stage is over. See how your picks landed in the final lineup below — and tap the Stage Wrapped recap for the story."
+        ? "This stage is over. See how your picks landed below, then open the Stage Wrapped recap."
         : pickability.reason === "teams-not-set"
           ? "Teams for this stage aren't seeded yet. Picks open automatically once Valve sets the bracket."
           : pickability.reason === "locked-time-passed"
-            ? "This stage has begun, so picks are locked. Track how the teams you called are doing in the live lineup below."
+            ? "This stage has begun, so picks are locked. Track the teams you called in the live lineup below."
             : pickability.reason === "locked-by-valve"
-              ? "Valve closed the pick window for this stage. Results will appear here as matches complete."
+              ? "Valve closed the pick window for this stage. Results appear here as matches complete."
               : "This stage isn't available.";
 
-  // #1016: the lock state is a status strip, not a billboard — left-aligned
-  // mono tag + one line of plain copy, small stroke padlock instead of the
-  // emoji shout. Same information, lower volume.
+  // #1016: the lock state is a status strip, not a billboard — mono tag + one
+  // line of plain copy, small stroke padlock. Same information, lower volume.
   const tag =
     !pickability.pickable && pickability.reason === "teams-not-set"
-      ? "AWAITING SEEDING"
+      ? "Awaiting seeding"
       : complete
-        ? "STAGE OVER"
-        : "PICKS LOCKED";
+        ? "Stage over"
+        : "Picks locked";
 
   return (
-    <div
-      className="panel"
-      style={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 14,
-        padding: compact ? "16px 18px" : "22px 20px",
-        borderLeft: "2px solid var(--heat)",
-      }}
-    >
-      <span aria-hidden="true" style={{ color: "var(--heat)", marginTop: 1, display: "inline-flex" }}>
+    <div className={`sgp-note${compact ? "" : " big"}`}>
+      <span className="ic" aria-hidden="true">
         <LockIcon size={15} />
       </span>
-      <div style={{ minWidth: 0 }}>
-        <span className="eyebrow-mono" style={{ color: "var(--heat)", display: "block" }}>
-          {tag}
-        </span>
-        <p
-          className="font-display"
-          style={{
-            fontWeight: 800,
-            fontSize: compact ? 15 : 17,
-            textTransform: "uppercase",
-            letterSpacing: "0.01em",
-            color: "var(--ink-hi)",
-            margin: "7px 0 0",
-            lineHeight: 1.15,
-          }}
-        >
-          {heading}
-        </p>
-        {subline && (
-          <p
-            style={{
-              color: "var(--ink-mid)",
-              fontSize: 13,
-              margin: "5px 0 0",
-              maxWidth: 520,
-              lineHeight: 1.5,
-            }}
-          >
-            {subline}
-          </p>
-        )}
+      <div>
+        <span className="eyebrow">{tag}</span>
+        <h2>{heading}</h2>
+        {subline && <p>{subline}</p>}
       </div>
     </div>
   );

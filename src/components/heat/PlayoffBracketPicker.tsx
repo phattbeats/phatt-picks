@@ -1,18 +1,19 @@
 "use client";
 
 /**
- * Interactive playoff bracket predictor (#1204).
+ * Interactive playoff bracket predictor (#1204), Singapore skin (prototype 04).
  *
  * Brandon: "Playoffs: it is ONE stage, you place the whole bracket at once. You
  * could visualize it as the entire bracket as is, and the player drags their
- * winning team." This replaces the three stacked round-pickers with a single
- * QF → SF → GF tree you fill in one pass: tap the team you call to win a match
- * and it ADVANCES into the Semifinal (then the Final) it feeds. Re-pick an
- * upstream match and anything downstream that depended on it clears.
+ * winning team." A single QF → SF → GF bracket you fill in one pass: tap the
+ * team you call to win a match and it ADVANCES into the Semifinal (then the
+ * Final) it feeds. Re-pick an upstream match and anything downstream that
+ * depended on it clears.
  *
- * The geometry mirrors the read-only LivePlayoffBracket (fixed-pixel columns
- * whose gap doubles each round, connector lines drawn from the same maths), so
- * the picker and the live bracket read as the same object — one is just live.
+ * Layout: a venue banner, then three columns (Quarterfinals / Semifinals /
+ * Grand Final) that stack on mobile — no horizontal scroll. The picked side of
+ * each match carries an inset amber bar; the other side dims. Your champion
+ * sits under the Grand Final.
  *
  * Persistence: each match is one Pick row (slot 0 of its layout group), saved
  * through POST /api/picks per section. A cascade can touch more than one round,
@@ -21,41 +22,44 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import Link from "next/link";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
 import { SpotlightModal, type SpotlightMarketLine } from "@/components/ui/SpotlightModal";
 import { LockInStage } from "@/components/LockInStage";
 import { teamAccent } from "@/lib/playoff-spotlights";
+import { teamHref, teamPortrait } from "@/components/sg/teams/team-assets";
 import type { TeamDef } from "@/lib/layout";
 import type { TeamStats } from "@/lib/team-stats-core";
 import {
   resolveBracketPicks,
   type BracketPickModel,
   type BracketPickMatch,
+  type PlayoffRoundKey,
 } from "@/lib/playoff-bracket-core";
 
-interface BracketGeo {
-  mh: number; // match cell height
-  g0: number; // base gap between first-round matches
-  colw: number; // column width
-  cw: number; // connector lane width between columns
-  hh: number; // column header height
-  logo: number;
-  nameFs: number;
-  headFs: number;
-  rowPad: string;
-}
-
-const GEO_COMPACT: BracketGeo = {
-  mh: 84, g0: 18, colw: 200, cw: 34, hh: 30, logo: 22, nameFs: 12, headFs: 9, rowPad: "8px 9px",
-};
-const GEO_DESKTOP: BracketGeo = {
-  mh: 132, g0: 30, colw: 384, cw: 72, hh: 42, logo: 40, nameFs: 16, headFs: 11, rowPad: "11px 14px",
-};
-
-const HEAT = "var(--heat)";
-const GREEN = "var(--tac-green, #9bd23c)";
 const DND_MIME = "application/x-phatt-picks-team";
+
+/** Points per correct call, per round — mirrors the committed layout's
+ *  points_per_pick (12 / 10 / 7). Display only; scoring reads the layout. */
+const ROUND_POINTS: Record<PlayoffRoundKey, string> = {
+  QF: "12 pts each",
+  SF: "10 pts each",
+  GF: "7 pts",
+};
+
+const ROUND_TITLE: Record<PlayoffRoundKey, string> = {
+  QF: "Quarterfinals",
+  SF: "Semifinals",
+  GF: "Grand Final",
+};
+
+/** Venue banner copy per Major (eventId → arena + playoff dates). */
+const VENUES: Record<number, { venue: string; dates: string }> = {
+  26: { venue: "LANXESS Arena", dates: "18–21 Jun" },
+  27: { venue: "Singapore Indoor Stadium", dates: "10–13 Dec" },
+};
+const DEFAULT_VENUE = VENUES[27];
 
 type SaveState = "saving" | "saved" | "error";
 
@@ -196,61 +200,79 @@ export function PlayoffBracketPicker({
     resolved.championPickid != null ? teamMap.get(resolved.championPickid) : undefined;
   const pickCount = Object.values(resolved.picks).filter((p) => p > 0).length;
   const totalMatches = model.rounds.reduce((n, r) => n + r.matches.length, 0);
+  const venue = VENUES[eventId] ?? DEFAULT_VENUE;
+  const saveLabel =
+    saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : saveState === "error" ? "Retry" : null;
 
   return (
-    <div className="cath-nave">
-      {/* Header — bracket-free overline (v3 Cathedral, #1065), accent budget
-          spent on the live counter, not the label. */}
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--ink-mid)" }}>
-          {enabled ? "Place the whole bracket" : "Your bracket"}
-        </span>
-        <span className="last-updated">
-          {enabled
-            ? `${pickCount}/${totalMatches} called${saveState === "saving" ? " · saving…" : saveState === "saved" ? " · saved" : saveState === "error" ? " · retry" : ""}`
-            : "Locked"}
-        </span>
-      </div>
-      <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "10px 0 0", lineHeight: 1.5 }}>
-        {enabled ? (
-          <>
-            One stage, one bracket. Tap the team you call to win each match — they
-            advance up the nave to the next round. Tap{" "}
-            <span style={{ color: "var(--heat)", fontWeight: 600 }}>★ SPOTLIGHT</span> on any
-            team for its story. Change your mind upstream and the rounds below re-open.
-            {!steamLinked && signedIn ? " Saves as you go." : null}
-          </>
-        ) : (
-          // #1263: locked read-only — the bracket the viewer crowned, frozen.
-          <>
-            Picks are locked — this is the bracket you called, your crowned
-            champion at the bottom. Tap{" "}
-            <span style={{ color: "var(--heat)", fontWeight: 600 }}>★ SPOTLIGHT</span> on any
-            team for its story. Live results fill in below as matches finish.
-          </>
-        )}
-      </p>
-
-      <div className="po-tree-compact">
-        <Tree model={model} resolved={resolved} teamMap={teamMap} geo={GEO_COMPACT} enabled={enabled} dragOver={dragOver} setDragOver={setDragOver} onCrown={crown} onSpotlight={setStatsTeam} />
-      </div>
-      <div className="po-tree-desktop">
-        <Tree model={model} resolved={resolved} teamMap={teamMap} geo={GEO_DESKTOP} enabled={enabled} dragOver={dragOver} setDragOver={setDragOver} onCrown={crown} onSpotlight={setStatsTeam} />
-      </div>
-
-      {/* Your champion (#1007): the floating arch outline above the card read
-          goofy, so it's gone — the champion is now carried by a big, legible team
-          logo instead. Clean card, logo forward. */}
-      {champion && (
-        <div className="cath-altar">
-          <div className="cath-altar-card">
-            <div className="cath-altar-lab">Your champion</div>
-            <TeamLogo tiers={resolveLogoTiers(champion)} teamName={champion.name} size={72} />
-            <div className="cath-altar-who">{champion.name}</div>
-            <div className="cath-altar-note">Crowned at the Cathedral</div>
-          </div>
+    <div className="sgb">
+      {/* Venue banner (04): the venue line and one statement. The arena photo
+          is carried by the /picks stage header directly above, so it isn't
+          repeated here. */}
+      <section className="sgb-venue">
+        <div className="in">
+          <span className="eyebrow">
+            Playoffs · <b>{venue.venue}</b> · {venue.dates}
+          </span>
+          <h2 className="display">{enabled ? <>Eight in.<br />Pick the one.</> : <>Your bracket.<br />Sealed.</>}</h2>
+          <p>
+            {enabled ? (
+              <>
+                Tap a team to send it through. Quarterfinals pay <b>12 each</b>, semis <b>10</b>, the
+                final <b>7</b> — all locked at the first quarterfinal.
+                {!steamLinked && signedIn ? " Saves as you go." : null}
+              </>
+            ) : (
+              <>
+                Picks are locked — this is the bracket you called. <b>Live results fill in below</b> as
+                matches finish.
+              </>
+            )}
+          </p>
         </div>
-      )}
+      </section>
+
+      <div className="sgb-status" aria-live="polite">
+        <span className="mono">
+          {enabled ? (
+            <>
+              <b>{pickCount}</b> / {totalMatches} calls
+            </>
+          ) : (
+            "Locked"
+          )}
+        </span>
+        {enabled && saveLabel && (
+          <span className={`sgb-save${saveState === "error" ? " err" : ""}`}>{saveLabel}</span>
+        )}
+      </div>
+
+      <div className="sgb-grid">
+        {model.rounds.map((round) => (
+          <div key={round.key} className="sgb-rd">
+            <div className="sgb-k">
+              <span>{ROUND_TITLE[round.key]}</span>
+              <b>{ROUND_POINTS[round.key]}</b>
+            </div>
+            {round.matches.map((m) => (
+              <PickCell
+                key={m.groupId}
+                match={m}
+                pick={resolved.picks[m.groupId] ?? 0}
+                top={resolved.participants.get(m.groupId)?.top ?? null}
+                bottom={resolved.participants.get(m.groupId)?.bottom ?? null}
+                teamMap={teamMap}
+                enabled={enabled}
+                over={dragOver === m.groupId}
+                setOver={(on) => setDragOver(on ? m.groupId : dragOver === m.groupId ? null : dragOver)}
+                onCrown={crown}
+                onSpotlight={setStatsTeam}
+              />
+            ))}
+            {round.key === "GF" && <ChampionCard champion={champion} />}
+          </div>
+        ))}
+      </div>
 
       {enabled && steamLinked && (
         <LockInStage sectionId="playoff" unsavedSinceSync={unsavedSinceSync} initiallySynced={initiallySynced} onSynced={() => setUnsavedSinceSync(false)} />
@@ -265,109 +287,33 @@ export function PlayoffBracketPicker({
           market={spotlightMarket?.[statsTeam.pickid]}
         />
       )}
-
-      <style>{`
-        .po-scroll { overflow-x: auto; overflow-y: hidden; margin: 0 -4px; padding: 0 4px 6px; -webkit-overflow-scrolling: touch; }
-        .po-colhead { font-family: var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; padding: 0 2px; }
-        .po-tree-desktop { display: none; }
-        @media (min-width: 1024px) { .po-tree-compact { display: none; } .po-tree-desktop { display: block; } }
-      `}</style>
     </div>
   );
 }
 
-function Tree({
-  model,
-  resolved,
-  teamMap,
-  geo,
-  enabled,
-  dragOver,
-  setDragOver,
-  onCrown,
-  onSpotlight,
-}: {
-  model: BracketPickModel;
-  resolved: ReturnType<typeof resolveBracketPicks>;
-  teamMap: Map<number, TeamDef>;
-  geo: BracketGeo;
-  enabled: boolean;
-  dragOver: number | null;
-  setDragOver: (g: number | null) => void;
-  onCrown: (groupId: number, teamId: number) => void;
-  onSpotlight: (t: TeamDef) => void;
-}) {
-  const { mh, g0, colw, cw, hh } = geo;
-  const rounds = model.rounds;
-
-  const unit = mh + g0;
-  const gapFor = (r: number) => unit * 2 ** r - mh;
-  const offsetFor = (r: number) => (unit * (2 ** r - 1)) / 2;
-  const centerY = (r: number, i: number) => hh + offsetFor(r) + i * (mh + gapFor(r)) + mh / 2;
-
-  const tallest = Math.max(
-    ...rounds.map((rd, r) => offsetFor(r) + rd.matches.length * mh + (rd.matches.length - 1) * gapFor(r)),
-  );
-  const svgH = hh + tallest;
-  const svgW = rounds.length * colw + (rounds.length - 1) * cw;
-  const colLeft = (r: number) => r * (colw + cw);
-
-  const lines: Array<[number, number, number, number]> = [];
-  for (let r = 0; r < rounds.length - 1; r++) {
-    const cur = rounds[r].matches.length;
-    const next = rounds[r + 1].matches.length;
-    if (next * 2 !== cur) continue;
-    const xRight = colLeft(r) + colw;
-    const xJunction = xRight + cw / 2;
-    const xNextLeft = colLeft(r + 1);
-    for (let j = 0; j < next; j++) {
-      const yTop = centerY(r, 2 * j);
-      const yBot = centerY(r, 2 * j + 1);
-      const yMid = centerY(r + 1, j);
-      lines.push([xRight, yTop, xJunction, yTop]);
-      lines.push([xRight, yBot, xJunction, yBot]);
-      lines.push([xJunction, yTop, xJunction, yBot]);
-      lines.push([xJunction, yMid, xNextLeft, yMid]);
-    }
-  }
-
+/** "Your champion" — the cutout on a faint radial of the team colour. */
+function ChampionCard({ champion }: { champion: TeamDef | undefined }) {
+  const accent = champion ? teamAccent(champion) : null;
+  const portrait = champion ? teamPortrait(champion.pickid) : null;
+  const style = accent ? ({ "--c": accent } as CSSProperties) : undefined;
   return (
-    <div className="po-scroll" style={{ marginTop: 16 }}>
-      <div style={{ width: svgW, minWidth: svgW, height: svgH, position: "relative" }}>
-        {lines.length > 0 && (
-          <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} aria-hidden="true" style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-            {lines.map(([x1, y1, x2, y2], i) => (
-              <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--hair)" strokeWidth={1.5} />
-            ))}
-          </svg>
-        )}
-
-        {rounds.map((round, r) => (
-          <div key={round.key} style={{ position: "absolute", top: 0, left: colLeft(r), width: colw }}>
-            <div className="po-colhead" style={{ height: hh, display: "flex", alignItems: "center", gap: 6, fontSize: geo.headFs }}>
-              <span style={{ color: "var(--ink-hi)", fontWeight: 700 }}>{round.short}</span>
-              <span style={{ color: "var(--ink-low)" }}>{round.label}</span>
-            </div>
-            {round.matches.map((m, i) => (
-              <div key={m.groupId} style={{ position: "absolute", top: centerY(r, i) - mh / 2, left: 0, width: colw, height: mh }}>
-                <PickCell
-                  match={m}
-                  pick={resolved.picks[m.groupId] ?? 0}
-                  top={resolved.participants.get(m.groupId)?.top ?? null}
-                  bottom={resolved.participants.get(m.groupId)?.bottom ?? null}
-                  teamMap={teamMap}
-                  geo={geo}
-                  enabled={enabled}
-                  over={dragOver === m.groupId}
-                  setOver={(on) => setDragOver(on ? m.groupId : dragOver === m.groupId ? null : dragOver)}
-                  onCrown={onCrown}
-                  onSpotlight={onSpotlight}
-                />
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
+    <div className={`sgb-champ${champion ? "" : " empty"}`} style={style}>
+      {portrait ? (
+        // eslint-disable-next-line @next/next/no-img-element -- static cutout
+        <img src={portrait} alt="" loading="lazy" />
+      ) : champion ? (
+        <span className="sgb-champ-logo">
+          <TeamLogo tiers={resolveLogoTiers(champion)} teamName={champion.name} size={96} />
+        </span>
+      ) : null}
+      <span className="eyebrow">Your champion</span>
+      {champion ? (
+        <Link href={teamHref(champion)} prefetch={false} className="nm">
+          {champion.name}
+        </Link>
+      ) : (
+        <span className="nm">—</span>
+      )}
     </div>
   );
 }
@@ -378,7 +324,6 @@ function PickCell({
   top,
   bottom,
   teamMap,
-  geo,
   enabled,
   over,
   setOver,
@@ -390,14 +335,12 @@ function PickCell({
   top: number | null;
   bottom: number | null;
   teamMap: Map<number, TeamDef>;
-  geo: BracketGeo;
   enabled: boolean;
   over: boolean;
   setOver: (on: boolean) => void;
   onCrown: (groupId: number, teamId: number) => void;
   onSpotlight: (t: TeamDef) => void;
 }) {
-  const decided = pick > 0;
   const onDrop = (e: React.DragEvent) => {
     if (!enabled) return;
     const raw = e.dataTransfer.getData(DND_MIME) || e.dataTransfer.getData("text/plain");
@@ -411,6 +354,7 @@ function PickCell({
 
   return (
     <div
+      className={`sgb-mt${over ? " over" : ""}`}
       onDragOver={(e) => {
         if (!enabled) return;
         const types = e.dataTransfer.types;
@@ -422,26 +366,12 @@ function PickCell({
       }}
       onDragLeave={() => over && setOver(false)}
       onDrop={onDrop}
-      style={{
-        height: "100%",
-        background: "var(--surf-1)",
-        border: `1px solid ${over ? HEAT : decided ? "var(--hair-3)" : "var(--hair-2)"}`,
-        borderRadius: 11,
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        boxShadow: over ? "0 0 0 1px var(--heat)" : "none",
-        transition: "border-color 140ms var(--ease)",
-      }}
     >
-      {/* Scout only in the Quarterfinals (#1204): from the SF on it's the
-          same eight teams advancing, so a Scout button on every later round is
-          redundant noise (Brandon). The bracket carries it once, where the field
-          is first introduced. */}
-      <PickSide groupId={match.groupId} teamId={top} pick={pick} teamMap={teamMap} geo={geo} enabled={enabled} scoutable={match.round === "QF"} onCrown={onCrown} onSpotlight={onSpotlight} />
-      <div style={{ height: 1, background: "var(--hair)", margin: "0 8px" }} />
-      <PickSide groupId={match.groupId} teamId={bottom} pick={pick} teamMap={teamMap} geo={geo} enabled={enabled} scoutable={match.round === "QF"} onCrown={onCrown} onSpotlight={onSpotlight} />
+      {/* Spotlight only in the Quarterfinals (#1204): from the SF on it's the
+          same eight teams advancing, so the bracket carries it once, where the
+          field is first introduced. */}
+      <PickSide groupId={match.groupId} teamId={top} pick={pick} teamMap={teamMap} enabled={enabled} scoutable={match.round === "QF"} firstRound={match.round === "QF"} onCrown={onCrown} onSpotlight={onSpotlight} />
+      <PickSide groupId={match.groupId} teamId={bottom} pick={pick} teamMap={teamMap} enabled={enabled} scoutable={match.round === "QF"} firstRound={match.round === "QF"} onCrown={onCrown} onSpotlight={onSpotlight} />
     </div>
   );
 }
@@ -451,9 +381,9 @@ function PickSide({
   teamId,
   pick,
   teamMap,
-  geo,
   enabled,
   scoutable,
+  firstRound,
   onCrown,
   onSpotlight,
 }: {
@@ -461,10 +391,11 @@ function PickSide({
   teamId: number | null;
   pick: number;
   teamMap: Map<number, TeamDef>;
-  geo: BracketGeo;
   enabled: boolean;
-  /** Show the Scout button (Quarterfinals only — see PickCell). */
+  /** Show the Spotlight button (Quarterfinals only — see PickCell). */
   scoutable: boolean;
+  /** QF slots are seeded by Valve; later slots are fed by your own calls. */
+  firstRound: boolean;
   onCrown: (groupId: number, teamId: number) => void;
   onSpotlight: (t: TeamDef) => void;
 }) {
@@ -475,66 +406,49 @@ function PickSide({
   const dimmed = decided && !isWinner && !tbd;
   const pickable = enabled && !tbd;
 
+  if (tbd || !team) {
+    return (
+      <div className="sgb-sd tbd" aria-label="To be decided">
+        <span className="sgb-tile" aria-hidden="true" />
+        <span className="nm">{firstRound ? "TBD" : "Pick the round before"}</span>
+      </div>
+    );
+  }
+
   return (
     <div
+      className={`sgb-sd${isWinner ? " pk" : dimmed ? " lo" : ""}${pickable ? " can" : ""}`}
       role={pickable ? "button" : undefined}
       tabIndex={pickable ? 0 : undefined}
       aria-pressed={pickable ? isWinner : undefined}
-      aria-label={
-        team
-          ? `${team.name}${isWinner ? " — your pick to advance" : ""}. ${pickable ? "Tap to advance." : ""}`
-          : "To be decided"
-      }
+      aria-label={`${team.name}${isWinner ? " — your pick to advance" : ""}. ${pickable ? "Tap to advance." : ""}`}
       draggable={pickable}
       onDragStart={(e) => {
-        if (!team) return;
         e.dataTransfer.setData(DND_MIME, String(team.pickid));
         e.dataTransfer.setData("text/plain", String(team.pickid));
         e.dataTransfer.effectAllowed = "move";
       }}
-      onClick={() => pickable && team && onCrown(groupId, team.pickid)}
+      onClick={() => pickable && onCrown(groupId, team.pickid)}
       onKeyDown={(e) => {
-        if (pickable && team && (e.key === "Enter" || e.key === " ")) {
+        if (pickable && (e.key === "Enter" || e.key === " ")) {
           e.preventDefault();
           onCrown(groupId, team.pickid);
         }
       }}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: Math.round(geo.logo * 0.4),
-        padding: geo.rowPad,
-        background: isWinner ? "rgba(240,163,0,0.12)" : "transparent",
-        borderLeft: isWinner ? "2px solid var(--heat)" : "2px solid transparent",
-        opacity: dimmed ? 0.45 : 1,
-        cursor: pickable ? "pointer" : "default",
-        position: "relative",
-        minWidth: 0,
-      }}
     >
-      {team ? (
-        <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={geo.logo} />
-      ) : (
-        <span aria-hidden="true" style={{ ...monogram, width: geo.logo, height: geo.logo, fontSize: Math.round(geo.logo * 0.45) }}>?</span>
-      )}
-      <span style={{ minWidth: 0, flex: 1 }}>
-        <span style={{ ...nameStyle, fontSize: geo.nameFs, color: tbd ? "var(--ink-low)" : isWinner ? "var(--ink-hi)" : "var(--ink-mid)", fontStyle: tbd ? "italic" : "normal" }}>
-          {team?.name ?? "TBD"}
-        </span>
+      <span className="sgb-tile">
+        <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={24} />
       </span>
-      {/* Spotlight button — a labelled pill, not a lone star, so it reads as
-          "click me" rather than decoration (Brandon, #1204). Sibling tap
-          target with stopPropagation so it stays usable while the whole row is
-          also the crown-the-winner button. Wears the team's accent. Quarterfinals
-          only — the later rounds replay the same eight teams. */}
-      {team && scoutable && (
+      <span className="nm">{team.name}</span>
+      {/* Spotlight — a labelled sibling tap target with stopPropagation so it
+          stays usable while the whole row is also the crown-the-winner button. */}
+      {scoutable && (
         <span
-          className="po-spot"
+          className="sgb-spot"
           role="button"
           tabIndex={0}
           aria-label={`Open ${team.name} spotlight`}
           title={`${team.name} spotlight`}
-          style={teamAccent(team) ? ({ "--team-accent": teamAccent(team) } as CSSProperties) : undefined}
           onClick={(e) => {
             e.stopPropagation();
             onSpotlight(team);
@@ -547,33 +461,15 @@ function PickSide({
             }
           }}
         >
-          <span className="po-spot-star" aria-hidden="true">★</span>
-          <span className="po-spot-label">SPOTLIGHT</span>
+          <span aria-hidden="true">★</span>
+          <span className="lbl">Spotlight</span>
         </span>
       )}
       {isWinner && (
-        <span aria-hidden="true" style={{ flexShrink: 0, color: GREEN, fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: Math.round(geo.nameFs * 1.05) }}>✓</span>
+        <span className="sgb-tick" aria-hidden="true">
+          ✓
+        </span>
       )}
     </div>
   );
 }
-
-const nameStyle: CSSProperties = {
-  display: "block",
-  fontWeight: 500,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-};
-
-const monogram: CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flexShrink: 0,
-  fontFamily: "var(--font-mono)",
-  fontWeight: 700,
-  color: "var(--ink-low)",
-  background: "var(--surf-2, rgba(255,255,255,0.04))",
-  border: "1px dashed var(--hair)",
-};

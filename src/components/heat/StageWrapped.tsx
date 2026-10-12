@@ -303,51 +303,26 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
     >
       <div
         ref={panelRef}
-        className="tsd-panel sw-panel panel brk"
+        className="tsd-panel sw-panel"
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        <span className="br-tr" />
-        <span className="br-bl" />
 
         {/* Royalty-free soundtrack — Kevin MacLeod (CC-BY 3.0). Multiple moods
             (#1274): the sound button plays/mutes; the mood button cycles
             epic → bittersweet → somber. `key` remounts the element on track
             change so the new src is picked up cleanly. */}
         <audio key={track.id} ref={audioRef} src={track.src} loop preload="none" aria-hidden="true" />
-        <div
-          style={{
-            position: "absolute",
-            top: 10,
-            left: 12,
-            zIndex: 2,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
+        <div className="sw-audio">
           <button
-            className="sw-sound"
+            className={`sw-sound${soundOn ? " on" : ""}`}
             type="button"
             aria-pressed={soundOn}
             aria-label={soundOn ? "Mute soundtrack" : `Play soundtrack — ${track.title}`}
             title={soundOn ? "Mute" : `Play soundtrack — ${track.credit}`}
             onClick={toggleSound}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "5px 9px",
-              background: soundOn ? "rgba(240,163,0,0.14)" : "transparent",
-              border: "1px solid var(--hair-2)",
-              borderColor: soundOn ? "var(--heat)" : "var(--hair-2)",
-              color: soundOn ? "var(--heat)" : "var(--ink-mid)",
-              borderRadius: 4,
-              cursor: "pointer",
-              font: "inherit",
-            }}
           >
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" />
@@ -361,9 +336,7 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
               )}
               {!soundOn && <line x1="22" y1="9" x2="16" y2="15" />}
             </svg>
-            <span className="eyebrow-mono" style={{ fontSize: 9, letterSpacing: "0.12em" }}>
-              {soundOn ? "SOUND ON" : "MUSIC"}
-            </span>
+            <span className="sw-audio-lbl">{soundOn ? "Sound on" : "Music"}</span>
           </button>
           {/* Mood cycle — only worth showing when there's more than one track. */}
           {WRAPPED_TRACKS.length > 1 && (
@@ -373,18 +346,6 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
               aria-label={`Change soundtrack mood (now: ${track.title} — ${track.mood})`}
               title={`${track.title} — ${track.mood}. Tap for the next mood.`}
               onClick={cycleTrack}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-                padding: "5px 9px",
-                background: "transparent",
-                border: "1px solid var(--hair-2)",
-                color: "var(--ink-mid)",
-                borderRadius: 4,
-                cursor: "pointer",
-                font: "inherit",
-              }}
             >
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M17 1l4 4-4 4" />
@@ -392,9 +353,7 @@ export function StageWrapped({ open, onClose, slides, title = "Stage", loading =
                 <path d="M7 23l-4-4 4-4" />
                 <path d="M21 13v2a4 4 0 0 1-4 4H3" />
               </svg>
-              <span className="eyebrow-mono" style={{ fontSize: 9, letterSpacing: "0.12em" }}>
-                {track.mood.toUpperCase()}
-              </span>
+              <span className="sw-audio-lbl">{track.mood}</span>
             </button>
           )}
         </div>
@@ -586,24 +545,14 @@ function SlideCard({ slide }: { slide: WrappedSlide }) {
       {slide.brandLogo && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          className="sw-brand"
+          className={`sw-brand${badge ? " small" : ""}${slide.brandLogo.invert ? " invert" : ""}`}
           src={slide.brandLogo.src}
           alt={slide.brandLogo.alt}
-          style={{
-            height: badge ? 34 : 52,
-            width: "auto",
-            maxWidth: "60%",
-            objectFit: "contain",
-            display: "block",
-            margin: badge ? "0 auto 10px" : "0 auto 16px",
-            opacity: badge ? 0.85 : 1,
-            filter: slide.brandLogo.invert ? "brightness(0) invert(1)" : undefined,
-          }}
         />
       )}
       {/* Stage logo (HEAT v3 lockup) — the hero mark; replaces the plain eyebrow. */}
       {badge ? (
-        <div style={{ margin: "2px 0 10px" }}>
+        <div className="sw-badge">
           <StageLogo numeral={badge.numeral} label={badge.label} sub={badge.sub} />
         </div>
       ) : (
@@ -611,18 +560,11 @@ function SlideCard({ slide }: { slide: WrappedSlide }) {
       )}
       {/* Team logos — matchups / clinchers. One logo centred; two flank a "vs". */}
       {logos.length > 0 && (
-        <div
-          className="sw-logos"
-          style={{ display: "flex", gap: 16, justifyContent: "center", alignItems: "center", margin: "6px 0 12px" }}
-        >
+        <div className="sw-logos">
           {logos.map((t, i) => (
-            <span key={`${t.name}-${i}`} style={{ display: "inline-flex", alignItems: "center", gap: 16 }}>
+            <span key={`${t.name}-${i}`} className="sw-logo">
               {i > 0 && (
-                <span
-                  className="font-display"
-                  aria-hidden="true"
-                  style={{ color: "var(--ink-low)", fontWeight: 700, fontSize: 18 }}
-                >
+                <span className="sw-vs" aria-hidden="true">
                   {logos.length === 2 ? "vs" : "·"}
                 </span>
               )}
@@ -642,38 +584,14 @@ function SlideCard({ slide }: { slide: WrappedSlide }) {
       <h3 className="sw-headline font-display">{slide.headline}</h3>
       {/* Personal reward — the viewer's pick matched this narrative moment. */}
       {slide.calledIt && (
-        <div
-          className="sw-calledit brk"
-          style={{
-            position: "relative",
-            margin: "12px auto 2px",
-            padding: "8px 16px",
-            border: "1px solid var(--heat)",
-            background: "rgba(240,163,0,0.12)",
-            display: "inline-flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 2,
-            boxShadow: "0 0 18px var(--heat-glow)",
-          }}
-        >
-          <span className="br-tr" />
-          <span className="br-bl" />
-          <span className="font-display foil" style={{ fontWeight: 800, fontSize: 17, letterSpacing: "0.04em", textTransform: "uppercase" }}>
-            ✓ {slide.calledIt.label}
-          </span>
-          {slide.calledIt.sub && (
-            <span className="eyebrow-mono" style={{ color: "var(--heat)", fontSize: 9.5, letterSpacing: "0.16em" }}>
-              {slide.calledIt.sub}
-            </span>
-          )}
+        <div className="sw-calledit">
+          <span className="sw-calledit-l">✓ {slide.calledIt.label}</span>
+          {slide.calledIt.sub && <span className="sw-calledit-s">{slide.calledIt.sub}</span>}
         </div>
       )}
       {slide.body && <p className="sw-body">{slide.body}</p>}
       {slide.cta && (
-        <a className="sw-cta brk" href={slide.cta.href}>
-          <span className="br-tr" />
-          <span className="br-bl" />
+        <a className="sw-cta" href={slide.cta.href}>
           {slide.cta.label}
         </a>
       )}
@@ -691,29 +609,17 @@ function SlideAvatar({ avatar }: { avatar: NonNullable<WrappedSlide["avatar"]> }
     .toUpperCase()
     .slice(0, 2) || "?";
   const size = 64;
-  const base: React.CSSProperties = {
-    width: size,
-    height: size,
-    borderRadius: "50%",
-    margin: "4px auto 12px",
-    border: "2px solid var(--hair-3)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    background: "var(--surf-2, rgba(255,255,255,0.04))",
-  };
   if (avatar.src) {
     return (
-      <div style={base}>
+      <div className="sw-avatar">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={avatar.src} alt={avatar.label} width={size} height={size} style={{ objectFit: "cover", width: "100%", height: "100%" }} />
+        <img src={avatar.src} alt={avatar.label} width={size} height={size} />
       </div>
     );
   }
   return (
-    <div style={base} aria-label={avatar.label} title={avatar.label}>
-      <span className="font-display" style={{ fontWeight: 800, fontSize: 24, color: "var(--ink-hi)" }}>{initials}</span>
+    <div className="sw-avatar" aria-label={avatar.label} title={avatar.label}>
+      <span>{initials}</span>
     </div>
   );
 }
@@ -733,7 +639,7 @@ function SkeletonSlide() {
 function EmptySlide({ title }: { title: string }) {
   return (
     <div className="sw-slide sw-empty sw-enter">
-      <span className="eyebrow-mono sw-eyebrow">{title.toUpperCase()} · WRAPPED</span>
+      <span className="sw-eyebrow">{title} · Wrapped</span>
       <h3 className="sw-headline font-display">Nothing to wrap yet.</h3>
       <p className="sw-body">
         This stage&apos;s recap lands once it resolves. Check back when the games are in.

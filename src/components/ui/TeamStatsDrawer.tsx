@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
 import type { TeamDef } from "@/lib/layout";
 import { statsForPickid, TEAM_STATS_AS_OF, type TeamStats } from "@/lib/team-stats-core";
+import { regionMetaForPickid } from "@/lib/regions-core";
+import { playerCutout, teamCode, teamColor } from "@/components/sg/picks/team-art";
 
 interface Props {
   team: TeamDef;
@@ -18,31 +21,27 @@ interface Props {
   liveStats?: TeamStats;
   /** Snapshot date of the live crawl (YYYY-MM-DD); falls back to the frozen label. */
   liveAsOf?: string;
+  /** Live partial Swiss record this stage, when the bracket is revealed. */
+  record?: { wins: number; losses: number };
 }
 
 /**
- * Team dossier (#893) — roster, world standing, and the five most recent
- * matches. Deliberately off-board: nothing here renders on the pickems stage by
- * default; it surfaces only when a scout taps the [i] on a team. Pure-data
- * backed (team-stats-core), so it degrades to "no stats yet" for TBD slots.
+ * Team dossier (#893) — photo, HLTV rank, last five results, Swiss record and
+ * roster. Off-board by default: it surfaces only when a player taps the `i` on
+ * a pool card. Pure-data backed (team-stats-core), so it degrades to "no stats
+ * yet" for TBD slots.
  *
- * #897: rendered through a body portal. PicksBoard lives inside `main.shell`,
- * which is a `z-index: 3` stacking context — so an in-tree backdrop's `z-index`
- * is trapped below it and the root-level `.botnav` (z-index 50) painted over the
- * bottom of the panel on mobile, clipping the last match + footer. Portaling to
- * <body> lifts the modal out of that context so the backdrop covers everything.
+ * Singapore skin (HANDOFF §3): a bottom sheet on mobile (88dvh) and a right
+ * drawer from 760px. Rendered through a body portal (#897) so the root-level
+ * bottom nav can't paint over it — `main.shell` is its own stacking context.
+ * The scrim is a solid dim, no blur (#1269).
  *
- * #897 follow-up (Brandon): scrollbar chrome hidden in CSS for a cleaner
- * desktop look, recent matches expanded 3 → 5, and a link out to the team's
- * HLTV profile (the dossier's data source) added beneath the match list.
- *
- * #921: the "Last 5 matches" now refresh per stage on their own. The picks
- * page reads a live cache server-side and passes `liveStats` (recent[] pulled
- * live, roster/rank kept frozen) — preferred here over the committed snapshot,
- * which remains the fallback off-window / before the first crawl lands.
+ * #921: the "Last 5" refresh per stage on their own — the picks page passes
+ * `liveStats` (recent[] live, roster/rank frozen), preferred over the committed
+ * snapshot, which remains the fallback off-window / before the first crawl.
  */
-export function TeamStatsDrawer({ team, onClose, liveStats, liveAsOf }: Props) {
-  // Esc closes — modal convention; backdrop click also closes.
+export function TeamStatsDrawer({ team, onClose, liveStats, liveAsOf, record }: Props) {
+  // Esc closes — modal convention; scrim click also closes.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -51,146 +50,157 @@ export function TeamStatsDrawer({ team, onClose, liveStats, liveAsOf }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  // Scroll lock while the sheet is open, restored on close.
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
   // Prefer the live per-stage dossier; fall back to the committed frozen snapshot.
   const stats = liveStats ?? statsForPickid(team.pickid);
   const asOf = (liveStats && liveAsOf) || TEAM_STATS_AS_OF;
-
-  // #992 follow-up (Brandon: "where does the recent games section go now?"):
-  // the per-player roster rows made the dossier ~140px taller, and the panel's
-  // scrollbar chrome is hidden (#897) — so on short viewports "Last 5 matches"
-  // slipped below the fold with no cue it exists. Track whether more content sits
-  // below the visible edge and show a fade cue (.tsd-more-below::after) while it does.
-  const panelRef = useRef<HTMLDivElement>(null);
-  const [moreBelow, setMoreBelow] = useState(false);
-  useEffect(() => {
-    const el = panelRef.current;
-    if (!el) return;
-    const update = () =>
-      setMoreBelow(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
-    update();
-    el.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", update);
-    return () => {
-      el.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
-    };
-  }, [stats]);
+  const region = regionMetaForPickid(team.pickid);
+  const color = teamColor(team);
+  const cutout = playerCutout(team.pickid);
+  const ratings = (stats?.roster ?? []).map((p) => p.rating).filter((r): r is number => r != null);
+  const avgRating = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
 
   // Only ever rendered client-side (opened by a tap, so absent from SSR output);
   // bail if document is somehow unavailable rather than crash createPortal.
   if (typeof document === "undefined") return null;
 
   return createPortal(
-    <div
-      className="tsd-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`${team.name} statistics and standings`}
-      onClick={onClose}
-    >
-      <div
-        ref={panelRef}
-        className={`tsd-panel panel brk${moreBelow ? " tsd-more-below" : ""}`}
-        onClick={(e) => e.stopPropagation()}
+    <>
+      <div className="sgp-scrim" onClick={onClose} aria-hidden="true" />
+      <aside
+        className="sgp-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${team.name} statistics and standings`}
+        style={color ? ({ "--team": color } as CSSProperties) : undefined}
       >
-        <span className="br-tr" />
-        <span className="br-bl" />
-
-        <button className="tsd-close" type="button" aria-label="Close" onClick={onClose}>
-          <svg viewBox="0 0 24 24">
+        <button className="close" type="button" aria-label="Close" onClick={onClose} autoFocus>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
             <line x1="18" y1="6" x2="6" y2="18" />
             <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
 
-        <div className="tsd-head">
-          <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={48} />
-          <div className="tsd-head-text">
-            <span className="eyebrow-mono">TEAM DOSSIER</span>
-            <h3 className="tsd-name font-display">{team.name}</h3>
-          </div>
-          {stats?.worldRank != null && (
-            <div className="tsd-rank" title={`HLTV world ranking #${stats.worldRank}`}>
-              <span className="tsd-rank-num">#{stats.worldRank}</span>
-              <span className="tsd-rank-lbl">WORLD</span>
-            </div>
+        <div className="sgp-dh">
+          {cutout ? (
+            <Image src={cutout} alt="" fill sizes="400px" />
+          ) : (
+            <span className="big" aria-hidden="true">
+              {teamCode(team)}
+            </span>
           )}
+          <span className="logo">
+            <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={40} />
+          </span>
         </div>
 
-        {!stats ? (
-          <p className="tsd-empty">No stats on file for this team yet.</p>
-        ) : (
-          <>
-            <section className="tsd-sec">
-              <h4 className="tsd-sec-title">Roster</h4>
-              <ul className="tsd-roster">
-                {stats.roster.map((p) => (
-                  <li key={p.name} className="tsd-player">
-                    <a
-                      className="tsd-player-name"
-                      href={p.hltvUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {p.name}
-                      <svg className="tsd-player-ext" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M7 17 17 7M9 7h8v8" />
-                      </svg>
-                    </a>
-                    <span className={`tsd-player-pos pos-${p.position.toLowerCase()}`}>
-                      {p.position}
-                    </span>
-                    {p.rating != null && (
-                      <span className="tsd-player-rating" title="HLTV rating on this team">
-                        {p.rating.toFixed(2)}
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              <p className="tsd-roster-key">Click a name for their HLTV profile · rating = HLTV team average</p>
-            </section>
+        <div className="sgp-db">
+          <div className="eyebrow">
+            {stats?.worldRank != null ? (
+              <>
+                HLTV <b>#{stats.worldRank}</b>
+              </>
+            ) : (
+              "Team dossier"
+            )}
+            {region ? ` · ${region.label}` : ""}
+          </div>
+          <h2 className="display">{team.name}</h2>
 
-            <section className="tsd-sec">
-              <h4 className="tsd-sec-title">Last 5 matches</h4>
-              {stats.recent.length === 0 ? (
-                <p className="tsd-empty">No recent matches on file.</p>
-              ) : (
-                <ul className="tsd-matches">
-                  {stats.recent.map((m, i) => (
-                    <li
-                      key={`${m.date}-${i}`}
-                      className={`tsd-match ${m.result === "W" ? "win" : m.result === "L" ? "loss" : "tie"}`}
+          {!stats ? (
+            <p className="muted">No stats on file for this team yet.</p>
+          ) : (
+            <>
+              <div className="sgp-dstats">
+                <div>
+                  <span className="k">Last 5</span>
+                  {stats.recent.length > 0 ? (
+                    <span
+                      className="sgp-form"
+                      role="img"
+                      aria-label={`Last ${stats.recent.length}: ${stats.recent.map((m) => m.result).join(" ")}`}
                     >
-                      <span className="tsd-res">{m.result}</span>
-                      <span className="tsd-opp">vs {m.opponent}</span>
-                      <span className="tsd-score">{m.score}</span>
-                      <span className="tsd-date">{m.date}</span>
+                      {stats.recent.slice(0, 5).map((m, i) => (
+                        <i key={i} className={m.result === "L" ? "l" : m.result === "T" ? "t" : undefined} />
+                      ))}
+                    </span>
+                  ) : (
+                    <span className="v">—</span>
+                  )}
+                </div>
+                <div>
+                  <span className="k">Swiss record</span>
+                  <span className="v">{record ? `${record.wins}–${record.losses}` : "—"}</span>
+                </div>
+                <div>
+                  <span className="k">Avg rating</span>
+                  <span className="v">{avgRating != null ? avgRating.toFixed(2) : "—"}</span>
+                </div>
+              </div>
+
+              <section className="sgp-dsec">
+                <div className="eyebrow">Roster</div>
+                <ul className="sgp-roster">
+                  {stats.roster.map((p) => (
+                    <li key={p.name}>
+                      <a href={p.hltvUrl} target="_blank" rel="noopener noreferrer">
+                        {p.name}
+                      </a>
+                      <span className={`tag${p.position.toLowerCase() === "igl" ? " ok" : p.position.toLowerCase() === "awp" ? " warn" : ""}`}>
+                        {p.position}
+                      </span>
+                      <span className="rt" title="HLTV rating on this team">
+                        {p.rating != null ? p.rating.toFixed(2) : "—"}
+                      </span>
                     </li>
                   ))}
                 </ul>
+              </section>
+
+              <section className="sgp-dsec">
+                <div className="eyebrow">Last 5 matches</div>
+                {stats.recent.length === 0 ? (
+                  <p className="muted">No recent matches on file.</p>
+                ) : (
+                  <ul className="sgp-matches">
+                    {stats.recent.map((m, i) => (
+                      <li
+                        key={`${m.date}-${i}`}
+                        className={m.result === "W" ? "w" : m.result === "L" ? "l" : "t"}
+                      >
+                        <span className="r">{m.result}</span>
+                        <span className="o">vs {m.opponent}</span>
+                        <span className="sc">{m.score}</span>
+                        <span className="d">{m.date}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+
+              {stats.hltvUrl && (
+                <a className="btn-ghost" href={stats.hltvUrl} target="_blank" rel="noopener noreferrer">
+                  Full profile on HLTV
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M7 17 17 7M9 7h8v8" />
+                  </svg>
+                </a>
               )}
-            </section>
+            </>
+          )}
 
-            {stats.hltvUrl && (
-              <a
-                className="tsd-link"
-                href={stats.hltvUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Full profile on HLTV
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M7 17 17 7M9 7h8v8" />
-                </svg>
-              </a>
-            )}
-          </>
-        )}
-
-        <p className="tsd-foot">World ranking &amp; results via HLTV · snapshot {asOf}</p>
-      </div>
-    </div>,
+          <p className="sgp-dfoot">World ranking &amp; results via HLTV · snapshot {asOf}</p>
+        </div>
+      </aside>
+    </>,
     document.body,
   );
 }

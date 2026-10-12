@@ -8,6 +8,7 @@ import "./styles/sg-ranks.css";
 import "./styles/sg-notify.css";
 import "./styles/sg-people.css";
 import "./styles/sg-content.css";
+import "./styles/sg-bracket.css";
 import { PwaRegister } from "@/components/PwaRegister";
 import { HeatBackground } from "@/components/heat/HeatBackground";
 

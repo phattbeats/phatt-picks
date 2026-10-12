@@ -9,6 +9,7 @@ import Image from "next/image";
  * Pure server component: brand glyphs are inlined SVG (simple-icons paths), the
  * event lockup is the official PNG given a white treatment so it reads on the
  * dark theme. No client JS — every tile is just an external link, new-tab.
+ * Singapore skin: a hairline chapter; styles live in styles/sg-home.css.
  */
 
 type Platform = {
@@ -62,18 +63,12 @@ const PLATFORMS: Platform[] = [
 
 export function WatchNow() {
   return (
-    <section className="panel brk watch" aria-label="Watch the official streams">
-      <span className="br-tr" />
-      <span className="br-bl" />
-
-      <div className="watch-head">
+    <section className="chap watch" aria-label="Watch the official streams">
+      <div className="chap-h row2">
         <div>
-          <div className="panel-title" style={{ marginBottom: 4 }}>
-            Watch Live
-          </div>
-          <h2 className="font-display watch-title">Watch Now</h2>
-          <p className="watch-sub">
-            Catch every map on the official IEM Cologne Major 2026 broadcast.
+          <h2>Watch it live</h2>
+          <p>
+            Catch every map on the official <b>IEM Cologne Major 2026</b> broadcast.
           </p>
         </div>
         <Image
@@ -116,103 +111,6 @@ export function WatchNow() {
           </a>
         ))}
       </div>
-
-      <style>{`
-        .watch-head {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 18px;
-          flex-wrap: wrap;
-          margin-bottom: 18px;
-        }
-        .watch-title {
-          font-weight: 800;
-          font-size: clamp(28px, 4.5vw, 40px);
-          text-transform: uppercase;
-          line-height: 0.92;
-          letter-spacing: 0.01em;
-          color: var(--ink-hi);
-          margin: 0 0 6px;
-        }
-        .watch-sub {
-          font-size: 14px;
-          color: var(--ink-mid);
-          margin: 0;
-          max-width: 360px;
-          text-wrap: pretty;
-        }
-        .watch-logo {
-          height: 52px;
-          width: auto;
-          object-fit: contain;
-          /* Official lockup is black+blue; flatten to white so it reads on dark. */
-          filter: brightness(0) invert(1);
-          opacity: 0.92;
-          flex-shrink: 0;
-        }
-        .watch-grid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 10px;
-        }
-        @media (min-width: 640px) {
-          .watch-grid { grid-template-columns: repeat(3, 1fr); }
-        }
-        .watch-tile {
-          position: relative;
-          display: flex;
-          align-items: center;
-          gap: 13px;
-          padding: 15px 16px;
-          background: var(--surf-1);
-          border: 1px solid var(--hair-2);
-          border-radius: var(--r-sm);
-          text-decoration: none;
-          color: var(--ink-hi);
-          transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
-        }
-        .watch-tile:hover {
-          border-color: var(--brand);
-          background: var(--surf-2);
-          transform: translateY(-2px);
-        }
-        .watch-glyph {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 30px;
-          height: 30px;
-          color: var(--brand);
-          flex-shrink: 0;
-        }
-        .watch-meta {
-          display: flex;
-          flex-direction: column;
-          line-height: 1.15;
-          min-width: 0;
-        }
-        .watch-name {
-          font-weight: 700;
-          font-size: 15px;
-          text-transform: uppercase;
-          letter-spacing: 0.02em;
-        }
-        .watch-handle {
-          font-family: var(--font-mono);
-          font-size: 11px;
-          color: var(--ink-mid);
-        }
-        .watch-go {
-          width: 16px;
-          height: 16px;
-          margin-left: auto;
-          color: var(--ink-low);
-          flex-shrink: 0;
-          transition: color 0.15s ease;
-        }
-        .watch-tile:hover .watch-go { color: var(--brand); }
-      `}</style>
     </section>
   );
 }

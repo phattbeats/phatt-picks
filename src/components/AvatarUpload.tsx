@@ -54,70 +54,27 @@ export function AvatarUpload({
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+    <div className="nf-avup">
       <button
         type="button"
         onClick={() => editable && inputRef.current?.click()}
         disabled={!editable || busy}
         aria-label={editable ? "Change profile picture" : undefined}
-        style={{
-          position: "relative",
-          width: 56,
-          height: 56,
-          padding: 0,
-          border: "1px solid var(--hair-3)",
-          background: avatarUrl
-            ? "var(--surf-2)"
-            : "linear-gradient(135deg, var(--surf-3), var(--surf-2))",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          overflow: "hidden",
-          flexShrink: 0,
-          cursor: editable && !busy ? "pointer" : "default",
-          fontFamily: "var(--font-display)",
-          fontWeight: 800,
-          fontSize: 22,
-          color: "var(--ink-hi)",
-        }}
+        className={`nf-av${editable && !busy ? " editable" : ""}`}
       >
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <img src={avatarUrl} alt="" />
         ) : (
           <span>{initials}</span>
         )}
 
         {editable && (
-          <span
-            aria-hidden
-            style={{
-              position: "absolute",
-              bottom: 0,
-              right: 0,
-              width: 20,
-              height: 20,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "var(--heat)",
-              color: "var(--void)",
-              borderTopLeftRadius: 4,
-            }}
-          >
+          <span aria-hidden className="nf-av-cam">
             {busy ? (
-              <span
-                style={{
-                  width: 10,
-                  height: 10,
-                  border: "2px solid var(--void)",
-                  borderTopColor: "transparent",
-                  borderRadius: "50%",
-                  animation: "av-spin 0.7s linear infinite",
-                }}
-              />
+              <span className="nf-av-spin" />
             ) : (
-              <svg viewBox="0 0 24 24" width={11} height={11} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <svg viewBox="0 0 24 24" width={11} height={11} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                 <circle cx="12" cy="13" r="4" />
               </svg>
@@ -131,21 +88,7 @@ export function AvatarUpload({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={busy}
-          style={{
-            background: "transparent",
-            border: "none",
-            padding: 0,
-            cursor: busy ? "default" : "pointer",
-            fontFamily: "var(--font-mono)",
-            fontSize: 9,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            color: error
-              ? "var(--ember)"
-              : saved
-                ? "var(--tac-green, #22c55e)"
-                : "var(--ink-low)",
-          }}
+          className={`nf-av-act${error ? " err" : saved ? " ok" : ""}`}
         >
           {busy
             ? "Saving…"
@@ -164,10 +107,8 @@ export function AvatarUpload({
         type="file"
         accept="image/*"
         onChange={onPick}
-        style={{ display: "none" }}
+        hidden
       />
-
-      <style>{`@keyframes av-spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

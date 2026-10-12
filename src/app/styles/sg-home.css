@@ -1,1 +1,126 @@
-/* HOTLINE Singapore — home screens. */
+/* HOTLINE Singapore — home screens (prototype 01-home). */
+
+/* Page rhythm: editorial gaps without a second <main>. */
+.hm{display:flex;flex-direction:column;gap:64px;min-width:0}
+@media(min-width:1024px){.hm{gap:96px}}
+
+/* ── Hero: full-bleed photo, statement headline, live countdown ── */
+.hm-hero .in{max-width:none;display:grid;gap:22px}
+@media(min-width:1024px){.hm-hero .in{grid-template-columns:minmax(0,1fr) auto;align-items:end}}
+.hm-hero-main{display:grid;gap:16px;min-width:0}
+.hm-eyebrow{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.hm-hero .display{font-size:clamp(52px,10vw,132px);line-height:.84}
+.hm-hero p{max-width:520px}
+.hm-hero .cta{align-self:end}
+.hm-champ{display:flex;align-items:center;gap:18px;min-width:0}
+.hm-champ img{width:clamp(48px,8vw,72px);height:auto;aspect-ratio:1;object-fit:contain;flex:none}
+.hm-champ .display{overflow-wrap:anywhere}
+
+/* Countdown (StageCountdown) — tabular mono digits, amber hairline signal. */
+.sgcd{display:grid;gap:12px;justify-items:start}
+.sgcd-label{position:relative;padding-top:10px;font-family:var(--font-mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-mid)}
+.sgcd-label::before{content:'';position:absolute;top:0;left:0;width:32px;height:1px;background:var(--heat)}
+.sgcd-label b{color:var(--heat);font-weight:500}
+.sgcd-clock{display:flex;gap:clamp(14px,3vw,24px);align-items:baseline;flex-wrap:wrap}
+.sgcd-clock>div{display:grid;gap:4px}
+.sgcd-clock b{font-family:var(--font-mono);font-weight:500;font-variant-numeric:tabular-nums;font-size:clamp(40px,7vw,84px);letter-spacing:-.04em;line-height:.9;color:var(--ink-hi)}
+.sgcd-md .sgcd-clock b{font-size:clamp(28px,4.4vw,48px)}
+.sgcd-clock span{font-family:var(--font-mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-mid)}
+.sgcd-live{display:inline-flex;align-items:center;gap:12px;min-height:44px;font-family:var(--font-display);font-weight:800;font-size:clamp(28px,4vw,44px);text-transform:uppercase;line-height:1;color:var(--ink-hi)}
+.sgcd-live:hover{color:var(--heat)}
+
+/* ── Stage path ── */
+.hm-path{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--hair);border:1px solid var(--hair);border-radius:var(--r-md);overflow:hidden}
+@media(max-width:760px){.hm-path{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.hm-path-cell{background:var(--surf-1);padding:18px;display:grid;gap:10px;align-content:start;color:var(--ink-hi);text-decoration:none;position:relative;min-height:44px}
+.hm-path-cell:hover{background:var(--surf-2);color:var(--ink-hi)}
+.hm-path-cell.now::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--heat)}
+.hm-path-cell .d{font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-mid)}
+.hm-path-cell .t{font-family:var(--font-display);font-weight:800;font-size:26px;text-transform:uppercase;line-height:1}
+.hm-path-cell .s{font-family:var(--font-display);font-weight:900;font-size:40px;line-height:.85}
+.hm-path-cell .s small{font-family:var(--font-mono);font-weight:400;font-size:11px;color:var(--ink-low);margin-left:6px}
+.hm-path-cell .s.dim{color:var(--ink-low)}
+.hm-path-cell.done .s{color:var(--tac-green)}
+
+/* ── Your standing + the board ── */
+.hm-duo{display:grid;gap:12px}
+@media(min-width:1024px){.hm-duo{grid-template-columns:1fr 1fr;align-items:start}}
+.hm-card{padding:24px;display:grid;gap:16px;align-content:start;min-width:0}
+.hm-rank{display:flex;align-items:flex-end;gap:12px}
+.hm-rank .bignum{font-size:clamp(72px,9vw,120px)}
+.hm-ord{font-size:14px;color:var(--ink-mid);padding-bottom:10px;text-transform:uppercase;letter-spacing:.1em}
+.hm-card-copy{font-size:15px;color:var(--ink-mid);text-wrap:pretty;max-width:440px}
+.hm-card-copy b{color:var(--ink-hi);font-weight:500}
+.hm-meta{display:flex;flex-wrap:wrap;gap:6px 18px;font-family:var(--font-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mid);padding-top:14px;border-top:1px solid var(--hair)}
+.hm-meta b{color:var(--ink-hi);font-weight:500}
+a.hm-getin{color:var(--ink-hi);text-decoration:none;transition:border-color .18s var(--ease)}
+a.hm-getin:hover{border-color:var(--hair-3);color:var(--ink-hi)}
+.hm-getin .display{font-size:clamp(34px,5vw,52px)}
+.hm-go{color:var(--ink-hi)}
+.hm-board-head{padding-bottom:0;border:0}
+.hm-note{font-size:14px;color:var(--ink-mid);text-wrap:pretty}
+.hm-note b{color:var(--ink-hi);font-weight:500}
+.hm-note a{color:var(--ink-hi);text-decoration:underline;text-underline-offset:3px}
+.hm-mini{display:grid}
+.hm-mini a{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:52px;padding:10px 0;border-top:1px solid var(--hair);color:var(--ink-hi);text-decoration:none}
+.hm-mini a:hover .nm{color:var(--heat)}
+.hm-mini a.me{position:relative}
+.hm-mini a.me::before{content:'';position:absolute;left:-24px;top:10px;bottom:10px;width:2px;background:var(--heat)}
+.hm-mini .r{font-family:var(--font-mono);font-size:12px;color:var(--ink-mid);font-variant-numeric:tabular-nums}
+.hm-mini .n{display:flex;align-items:center;gap:10px;min-width:0}
+.hm-mini .av{width:28px;height:28px;background-size:cover;background-position:center;border:1px solid var(--hair)}
+.hm-mini .nm{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.hm-mini .you{font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-low);flex:none}
+.hm-mini .p{font-family:var(--font-display);font-weight:900;font-size:22px;font-variant-numeric:tabular-nums}
+.hm-prev{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:12px 0 0;border-top:1px solid var(--hair-2);font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-hi);text-decoration:none}
+.hm-prev:hover{color:var(--heat)}
+
+/* ── The field: photographic team row ── */
+.hm-field{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media(min-width:1024px){.hm-field{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.hm-field-card{position:relative;aspect-ratio:3/4;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--hair);display:flex;flex-direction:column;justify-content:flex-end;padding:16px;color:var(--ink-hi);text-decoration:none;background:radial-gradient(ellipse at 50% 90%,var(--c,var(--surf-2)),var(--surf-1) 70%)}
+.hm-field-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:bottom;filter:saturate(.85);transition:transform .5s var(--ease)}
+.hm-field-card:hover img{transform:scale(1.04)}
+.hm-field-card:hover{color:var(--ink-hi);border-color:var(--hair-2)}
+.hm-field-card::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,rgba(7,7,8,.95));pointer-events:none}
+.hm-field-card>span{position:relative;z-index:1}
+.hm-field-card .nm{font-family:var(--font-display);font-weight:900;font-size:clamp(24px,3vw,38px);text-transform:uppercase;line-height:.9;overflow-wrap:anywhere}
+.hm-field-card .pc{font-family:var(--font-mono);font-size:11px;color:var(--ink-mid);margin-top:6px}
+
+/* ── Latest: hairline wire list ── */
+.hm-wire{display:grid}
+.hm-wire a{display:grid;grid-template-columns:150px minmax(0,1fr);gap:18px;padding:16px 0;border-top:1px solid var(--hair);color:var(--ink-hi);text-decoration:none}
+.hm-wire .src{font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-low);padding-top:4px}
+.hm-wire .h{font-family:var(--font-display);font-weight:800;font-size:22px;text-transform:uppercase;line-height:1;text-wrap:balance}
+.hm-wire a:hover .h{color:var(--heat)}
+@media(max-width:760px){.hm-wire a{grid-template-columns:1fr;gap:6px}}
+
+/* ── Everything else: News / Info reach on mobile (desktop has them in the top nav) ── */
+.hm-more-list a{display:flex;align-items:baseline;justify-content:space-between;gap:16px;min-height:56px;padding:16px 0;color:var(--ink-hi);text-decoration:none}
+.hm-more-list a>span:first-child{font-family:var(--font-display);font-weight:800;font-size:22px;text-transform:uppercase;line-height:1}
+.hm-more-list a>span:last-child{font-size:13px;text-align:right}
+.hm-more-list a:hover>span:first-child{color:var(--heat)}
+@media(min-width:1024px){.hm-more{display:none}}
+
+/* ── Watch Now (WatchNow.tsx) ── */
+.watch-logo{height:44px;width:auto;object-fit:contain;filter:brightness(0) invert(1);opacity:.85;flex:none}
+.watch-grid{display:grid;grid-template-columns:1fr;gap:1px;background:var(--hair);border:1px solid var(--hair);border-radius:var(--r-md);overflow:hidden}
+@media(min-width:640px){.watch-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.watch-tile{display:flex;align-items:center;gap:14px;min-height:64px;padding:16px 18px;background:var(--surf-1);color:var(--ink-hi);text-decoration:none;transition:background .18s var(--ease)}
+.watch-tile:hover{background:var(--surf-2);color:var(--ink-hi)}
+.watch-glyph{display:flex;width:24px;height:24px;color:var(--brand);flex:none}
+.watch-meta{display:grid;gap:2px;min-width:0}
+.watch-name{font-family:var(--font-display);font-weight:800;font-size:20px;text-transform:uppercase;line-height:1}
+.watch-handle{font-family:var(--font-mono);font-size:11px;color:var(--ink-mid)}
+.watch-go{width:16px;height:16px;margin-left:auto;color:var(--ink-low);flex:none}
+.watch-tile:hover .watch-go{color:var(--ink-hi)}
+
+/* ── GameTime chip (picks / playoff schedule) ── */
+.game-time{display:flex;justify-content:center;gap:6px;font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-mid);font-variant-numeric:tabular-nums}
+.game-time.left{justify-content:flex-start}
+.game-time .sep{color:var(--ink-low)}
+
+@media(prefers-reduced-motion:reduce){
+  .hm-field-card img,a.hm-getin,.watch-tile{transition:none}
+  .hm-field-card:hover img{transform:none}
+}

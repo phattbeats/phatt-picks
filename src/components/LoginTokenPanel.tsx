@@ -41,82 +41,27 @@ export function LoginTokenPanel({ initialToken }: { initialToken: string | null 
 
   if (!token) {
     return (
-      <button
-        onClick={generate}
-        disabled={loading}
-        className="btn-ghost"
-        style={{ width: "100%", justifyContent: "center" }}
-      >
+      <button type="button" onClick={generate} disabled={loading} className="btn-ghost nf-btn-sm">
         {loading ? "Generating…" : "Generate login link"}
       </button>
     );
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <div
-        style={{
-          display: "flex",
-          gap: 8,
-          alignItems: "center",
-          background: "var(--surf-1)",
-          border: "1px solid var(--hair-2)",
-          padding: "8px 8px 8px 12px",
-        }}
-      >
+    <div className="nf-stack">
+      <div className="nf-inv">
         <input
           readOnly
+          className="nf-code"
+          aria-label="Your login link"
           value={loginUrl ?? ""}
           onFocus={(e) => e.currentTarget.select()}
-          style={{
-            flex: 1,
-            minWidth: 0,
-            background: "transparent",
-            border: "none",
-            color: "var(--ink-mid)",
-            fontSize: 11,
-            letterSpacing: "0.02em",
-            fontFamily: "var(--font-mono)",
-            outline: "none",
-          }}
         />
-        <button
-          onClick={copy}
-          style={{
-            flexShrink: 0,
-            background: copied ? "var(--tac-green)" : "transparent",
-            color: copied ? "var(--void)" : "var(--ink-hi)",
-            border: `1px solid ${copied ? "var(--tac-green)" : "var(--hair-3)"}`,
-            padding: "7px 14px",
-            fontFamily: "var(--font-mono)",
-            fontSize: 10,
-            fontWeight: 600,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            cursor: "pointer",
-            transition: "all 150ms var(--ease)",
-            minHeight: 32,
-          }}
-        >
+        <button type="button" onClick={copy} className={`btn-solid${copied ? " is-copied" : ""}`}>
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
-      <button
-        onClick={generate}
-        disabled={loading}
-        style={{
-          background: "none",
-          border: "none",
-          padding: 0,
-          fontFamily: "var(--font-mono)",
-          fontSize: 10,
-          letterSpacing: "0.12em",
-          textTransform: "uppercase",
-          color: "var(--ink-low)",
-          cursor: loading ? "default" : "pointer",
-          textAlign: "left",
-        }}
-      >
+      <button type="button" onClick={generate} disabled={loading} className="nf-textbtn">
         {loading ? "Regenerating…" : "↺ Regenerate link — invalidates the old one"}
       </button>
     </div>

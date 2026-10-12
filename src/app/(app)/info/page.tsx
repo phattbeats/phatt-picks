@@ -1,3 +1,5 @@
+/* eslint-disable @next/next/no-img-element -- static editorial photos from /public/wrapped. */
+
 import Link from "next/link";
 
 export const metadata = { title: "Info · HOTLINE" };
@@ -8,94 +10,78 @@ export const metadata = { title: "Info · HOTLINE" };
  * first-class page so "how does this work?" has somewhere obvious to land. On
  * desktop it's a top-nav tab; on mobile it's reached from your profile and the
  * settings page (the bottom nav stays at five tabs — see the ticket note).
+ * Singapore skin (prototype 19): a photo grid, the first two guides large.
  */
 
 type Guide = {
   href: string;
+  kicker: string;
   title: string;
   blurb: string;
+  img: string;
 };
 
 const GUIDES: Guide[] = [
   {
     href: "/how-to-play",
+    kicker: "Start here",
     title: "How it works",
-    blurb: "New to Pick'Em? The whole thing, in plain language — what it is and what you actually do.",
+    blurb: "The whole thing in five minutes — stages, Swiss, scoring and coins.",
+    img: "/wrapped/major-cover.jpg",
   },
   {
     href: "/faq",
+    kicker: "Quick answers",
     title: "FAQ",
-    blurb: "Scoring, Swiss buckets, the Viewer Pass, and the questions that come up most.",
+    blurb: "Scoring, Swiss buckets, the Viewer Pass, locks and coins.",
+    img: "/wrapped/major-thanks.jpg",
   },
   {
     href: "/help/auth-code",
-    title: "Steam sync & the auth code",
-    blurb: "How linking Steam works, and where to find the auth code when you need it.",
-  },
-  {
-    href: "/players",
-    title: "Player directory",
-    blurb: "Everyone playing this Major — tap through to any profile and their picks.",
+    kicker: "Two minutes",
+    title: "Steam sync",
+    blurb: "Link your in-game Pick'Em with an auth code.",
+    img: "/wrapped/major-champion.jpg",
   },
   {
     href: "/pwa",
+    kicker: "For alerts",
     title: "Install HOTLINE",
-    blurb: "Add it to your home screen so it opens like an app and notifications work.",
+    blurb: "Put it on your home screen so lock alerts reach you.",
+    img: "/wrapped/magixx-1v4.jpg",
+  },
+  {
+    href: "/players",
+    kicker: "Directory",
+    title: "The room",
+    blurb: "Everyone calling this Major — tap through to any profile and their picks.",
+    img: "/wrapped/major-nations.jpg",
   },
 ];
 
 export default function InfoPage() {
   return (
-    <>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <span className="eyebrow-mono">INFO</span>
-        <h1 className="font-display" style={{
-          fontWeight: 800,
-          fontSize: "clamp(28px, 5vw, 40px)",
-          textTransform: "uppercase",
-          lineHeight: 0.95,
-        }}>
-          Help &amp; guides
+    <div className="sgc-ed">
+      <div className="chap-h rise">
+        <span className="n">Help &amp; guides</span>
+        <h1>
+          Everything,
+          <br />
+          explained
         </h1>
-        <p style={{ color: "var(--ink-mid)", fontSize: 14, lineHeight: 1.6, margin: 0 }}>
-          Everything about how HOTLINE works — pick one to dig in.
-        </p>
+        <p>New to Pick&apos;Em, or just stuck? Pick one.</p>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <section className="sgc-gd rise d1" aria-label="Guides">
         {GUIDES.map((g) => (
-          <Link
-            key={g.href}
-            href={g.href}
-            className="brk"
-            style={{
-              position: "relative",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 14,
-              background: "var(--surf-1)",
-              border: "1px solid var(--hair-2)",
-              padding: "16px 18px",
-              textDecoration: "none",
-            }}
-          >
-            <span className="br-tr" />
-            <span className="br-bl" />
-            <span style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 0 }}>
-              <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 16, textTransform: "uppercase", letterSpacing: "0.02em", color: "var(--ink-hi)" }}>
-                {g.title}
-              </span>
-              <span style={{ fontSize: 13, lineHeight: 1.5, color: "var(--ink-mid)" }}>
-                {g.blurb}
-              </span>
-            </span>
-            <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--ink-mid)", flexShrink: 0 }} aria-hidden="true">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
+          <Link key={g.href} href={g.href} prefetch={false}>
+            <img src={g.img} alt="" loading="lazy" />
+            <span className="eyebrow">{g.kicker}</span>
+            <span className="t">{g.title}</span>
+            <p>{g.blurb}</p>
           </Link>
         ))}
-      </div>
-    </>
+      </section>
+    </div>
   );
 }

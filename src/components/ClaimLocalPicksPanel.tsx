@@ -61,81 +61,34 @@ export function ClaimLocalPicksPanel() {
   const working = status.kind === "working";
 
   return (
-    <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <label
-        htmlFor="claimToken"
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: 9,
-          letterSpacing: "0.16em",
-          textTransform: "uppercase",
-          color: "var(--ink-low)",
-        }}
-      >
-        Guest login link or token
-      </label>
-      <input
-        id="claimToken"
-        name="claimToken"
-        type="text"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder="Paste your guest login link or token"
-        autoComplete="off"
-        autoCapitalize="off"
-        spellCheck={false}
-        style={{
-          background: "var(--surf-2)",
-          border: "1px solid var(--hair-2)",
-          padding: "12px 14px",
-          color: "var(--ink-hi)",
-          fontSize: 14,
-          fontFamily: "var(--font-mono)",
-          minHeight: 44,
-          outline: "none",
-          borderRadius: "var(--r-sm)",
-        }}
-      />
-      <button
-        type="submit"
-        className="btn-ghost"
-        disabled={working || !value.trim()}
-        style={{ width: "100%", justifyContent: "center" }}
-      >
+    <form onSubmit={submit} className="nf-stack">
+      <div className="field">
+        <label htmlFor="claimToken">Guest login link or token</label>
+        <input
+          id="claimToken"
+          name="claimToken"
+          type="text"
+          className="input nf-input-sm"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="Paste your guest login link or token"
+          autoComplete="off"
+          autoCapitalize="off"
+          spellCheck={false}
+        />
+      </div>
+      <button type="submit" className="btn-ghost nf-btn-sm" disabled={working || !value.trim()}>
         {working ? "Bringing over…" : "Bring over my picks"}
       </button>
       {status.kind === "ok" && (
-        <p
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            fontFamily: "var(--font-mono)",
-            fontSize: 11,
-            letterSpacing: "0.04em",
-            color: "var(--tac-green, #22c55e)",
-            margin: 0,
-          }}
-        >
-          <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <p className="nf-ok" role="status">
+          <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <polyline points="20 6 9 17 4 12" />
           </svg>
           {status.msg}
         </p>
       )}
-      {status.kind === "err" && (
-        <p
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 11,
-            letterSpacing: "0.04em",
-            color: "var(--heat, #ef4444)",
-            margin: 0,
-          }}
-        >
-          {status.msg}
-        </p>
-      )}
+      {status.kind === "err" && <p className="nf-err" role="alert">{status.msg}</p>}
     </form>
   );
 }

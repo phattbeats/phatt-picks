@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ActionBar, type BarTone } from "@/components/sg/picks/ActionBar";
 
 interface Props {
   /** Pass a numeric sectionId for Swiss; pass `"playoff"` for the bracket. */
@@ -15,6 +16,14 @@ interface Props {
    */
   initiallySynced?: boolean;
   onSynced: () => void;
+  /**
+   * Swiss board (Singapore §3): render as the sticky action bar with this
+   * progress. The CTA stays disabled until every slot is filled, then reads
+   * "Lock in & sync". Omit for the inline card (playoff bracket picker).
+   */
+  progress?: { filled: number; total: number };
+  /** Per-slot autosave status from the board (saving / failed) — wins over the sync state. */
+  localStatus?: { text: string; tone: BarTone } | null;
 }
 
 type WriteSkip = "write-disabled" | "no-steam-id" | "no-auth-code" | "no-picks";
@@ -85,7 +94,21 @@ function describe(r: WriteResult | null, unsaved: boolean, initiallySynced: bool
   return { pill: "Saved locally", pillTone: "info" };
 }
 
-export function LockInStage({ sectionId, unsavedSinceSync, initiallySynced = false, onSynced }: Props) {
+const TONE_CLASS: Record<UIState["pillTone"], BarTone> = {
+  ok: "ok",
+  warn: "warn",
+  error: "err",
+  info: "info",
+};
+
+export function LockInStage({
+  sectionId,
+  unsavedSinceSync,
+  initiallySynced = false,
+  onSynced,
+  progress,
+  localStatus,
+}: Props) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [result, setResult] = useState<WriteResult | null>(null);
 
@@ -116,74 +139,78 @@ export function LockInStage({ sectionId, unsavedSinceSync, initiallySynced = fal
   };
 
   const state = describe(result, unsavedSinceSync, initiallySynced);
-  const toneColor: Record<UIState["pillTone"], string> = {
-    ok: "var(--correct, #22c55e)",
-    warn: "var(--accent)",
-    error: "var(--accent)",
-    info: "var(--text-mid)",
-  };
-  // Green once everything the player has picked is on Steam; yellow (the accent
-  // call-to-action) the moment there are local changes still to push. #1214.
+  // Green once everything the player has picked is on Steam; amber CTA the
+  // moment there are local changes still to push. #1214.
   const isSynced = state.pillTone === "ok";
-  const label =
-    phase === "syncing"
-      ? "Locking in…"
-      : isSynced
-        ? sectionId === "playoff"
-          ? "Playoffs Synced ✓"
-          : "Synced to Steam ✓"
-        : sectionId === "playoff"
-          ? "Lock In Playoffs to Steam"
-          : "Lock In to Steam";
+  const syncing = phase === "syncing";
+
+  if (progress) {
+    const { filled, total } = progress;
+    const ready = filled >= total;
+    // A sync attempt that came back skipped / degraded / failed keeps its
+    // explanatory line; otherwise the bar speaks in board terms.
+    const failedSync = !!result && !(result.ok && !result.degraded && !result.escalate);
+    let text: string;
+    let tone: BarTone;
+    if (syncing) {
+      text = "Syncing to Steam…";
+      tone = "info";
+    } else if (localStatus) {
+      text = localStatus.text;
+      tone = localStatus.tone;
+    } else if (failedSync) {
+      text = state.pill;
+      tone = TONE_CLASS[state.pillTone];
+    } else if (isSynced) {
+      text = `✓ ${state.pill}`;
+      tone = "ok";
+    } else {
+      text = ready ? "All calls made" : "Saved · local";
+      tone = "info";
+    }
+
+    const cta = syncing ? (
+      <button type="button" className="btn-heat" disabled aria-busy="true">
+        Locking in…
+      </button>
+    ) : isSynced ? (
+      <button type="button" className="btn-ghost" onClick={onClick} disabled={!ready}>
+        Synced ✓
+      </button>
+    ) : ready ? (
+      <button type="button" className="btn-heat" onClick={onClick}>
+        Lock in &amp; sync
+      </button>
+    ) : (
+      <button type="button" className="btn-ghost" disabled>
+        {total - filled} to go
+      </button>
+    );
+
+    return <ActionBar filled={filled} total={total} state={text} tone={tone} cta={cta} />;
+  }
+
+  const label = syncing
+    ? "Locking in…"
+    : isSynced
+      ? sectionId === "playoff"
+        ? "Playoffs Synced ✓"
+        : "Synced to Steam ✓"
+      : sectionId === "playoff"
+        ? "Lock In Playoffs to Steam"
+        : "Lock In to Steam";
 
   return (
-    <div
-      style={{
-        background: "var(--bg1)",
-        border: "1px solid var(--bg3)",
-        borderRadius: "var(--radius-lg)",
-        padding: "var(--space-4)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-3)",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-3)" }}>
-        <span
-          style={{
-            fontFamily: "'Rajdhani', sans-serif",
-            fontSize: "0.6875rem",
-            fontWeight: 700,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            color: toneColor[state.pillTone],
-          }}
-        >
-          {state.pill}
-        </span>
-      </div>
+    <div className="sgp-lockcard">
+      <span className={`s ${TONE_CLASS[state.pillTone]}`} aria-live="polite">
+        {state.pill}
+      </span>
       <button
         type="button"
         onClick={onClick}
-        disabled={phase === "syncing"}
-        style={{
-          background: isSynced ? "var(--tac-green)" : "var(--accent)",
-          color: isSynced ? "var(--void)" : "#fff",
-          borderRadius: "var(--radius-md)",
-          padding: "12px",
-          border: "none",
-          cursor: phase === "syncing" ? "wait" : "pointer",
-          textAlign: "center",
-          fontFamily: "'Rajdhani', sans-serif",
-          fontWeight: 700,
-          fontSize: "1rem",
-          letterSpacing: "0.05em",
-          textTransform: "uppercase",
-          opacity: phase === "syncing" ? 0.75 : 1,
-          transition: "background 250ms var(--ease), color 250ms var(--ease)",
-          width: "100%",
-          minHeight: 44,
-        }}
+        disabled={syncing}
+        aria-busy={syncing || undefined}
+        className={isSynced ? "btn-ghost" : "btn-heat"}
       >
         {label}
       </button>

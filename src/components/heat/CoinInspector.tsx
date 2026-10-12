@@ -44,14 +44,17 @@ export function CoinInspector({
     if (el) el.style.transform = `rotateX(${rot.current.x}deg) rotateY(${rot.current.y}deg)`;
   }, []);
 
-  // Animation loop: idle auto-spin, or coast on released velocity.
+  // Animation loop: idle auto-spin, or coast on released velocity. Under
+  // prefers-reduced-motion the idle spin stands down; drag + coast still work.
   useEffect(() => {
+    const reduced =
+      typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     const tick = () => {
       if (!dragging.current) {
         if (Math.abs(vel.current) > 0.05) {
           rot.current.y += vel.current;
           vel.current *= 0.95; // friction
-        } else {
+        } else if (!reduced) {
           rot.current.y += 0.25; // gentle idle spin
         }
         apply();
@@ -150,13 +153,13 @@ export function CoinInspector({
 
         <div className="coin-inspect-meta">
           <span className={`coin-collectible-tier ${coin.tier}`}>{coin.tier}</span>
-          <span className="coin-inspect-name">{coin.name}</span>
+          <span className="coin-inspect-name">{coin.name.replace(/\s+CS2 Major Championship$/i, "")}</span>
           {coin.finish != null && (
             <span className="coin-inspect-finish">
               Finished {coin.finish} of {coin.fieldSize}
             </span>
           )}
-          <span className="coin-inspect-hint">drag to rotate</span>
+          <span className="coin-inspect-hint">Drag to rotate</span>
         </div>
       </div>
     </div>
@@ -168,10 +171,10 @@ export function CoinInspector({
 }
 
 /**
- * Convenience: a shelf thumbnail that opens the inspector on tap. Carries a slow
- * sheen sweep + a faint sparkle ("ooh shiny", dialed back) — staggered per coin
- * via `delay` so a shelf glints organically, not in unison. Pure transform/
- * opacity animation (no blur/backdrop-filter) and off under reduced-motion.
+ * Convenience: a shelf thumbnail that opens the inspector on tap. Singapore
+ * skin: the coin sits still (no sheen loop) and lifts a hair on hover; `delay`
+ * staggers its one-shot strike-in so a shelf lands coin by coin. Transform/
+ * opacity only (no blur/backdrop-filter, #1269), off under reduced-motion.
  */
 export function InspectableCoin({ coin, size = 112, delay = 0 }: { coin: ChallengeCoin; size?: number; delay?: number }) {
   const [open, setOpen] = useState(false);

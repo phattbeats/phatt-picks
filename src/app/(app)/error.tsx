@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- static decorative photo from /public/wrapped. */
+
 /**
  * Route-segment error boundary for the main app pages (#860 review).
  *
@@ -10,6 +12,7 @@
  * would surface Next's default full-page 500. This degrades it to an honest,
  * retryable card inside the shell instead. Errors in the (app) layout itself are
  * not caught here (a higher boundary would be needed) — this covers page bodies.
+ * Singapore skin: the 22-states photo card.
  */
 export default function AppError({
   reset,
@@ -18,42 +21,21 @@ export default function AppError({
   reset: () => void;
 }) {
   return (
-    <section className="panel brk" style={{ padding: "44px 24px", textAlign: "center" }}>
-      <span className="br-tr" />
-      <span className="br-bl" />
-      <div style={{
-        fontFamily: "var(--font-mono)",
-        fontSize: 9,
-        letterSpacing: "0.18em",
-        textTransform: "uppercase",
-        color: "var(--heat)",
-        marginBottom: 14,
-      }}>
-        Signal dropped
+    <section className="sgc-state" role="alert">
+      <img src="/wrapped/cologne-player.jpg" alt="" />
+      <div>
+        <span className="tag crit">Signal dropped</span>
+        <h1 className="display h2">Temporarily unavailable</h1>
+        <p>
+          Couldn&apos;t load this view just now — usually a brief hiccup. <b>Your picks are safe.</b>{" "}
+          Try again in a moment.
+        </p>
+        <div className="acts">
+          <button type="button" onClick={reset} className="btn-solid">
+            Retry
+          </button>
+        </div>
       </div>
-      <p className="font-display" style={{
-        fontWeight: 800,
-        fontSize: 24,
-        color: "var(--ink-hi)",
-        textTransform: "uppercase",
-        margin: "0 0 8px",
-        letterSpacing: "0.01em",
-      }}>
-        Temporarily unavailable
-      </p>
-      <p style={{
-        color: "var(--ink-mid)",
-        fontSize: 14,
-        maxWidth: 320,
-        margin: "0 auto 18px",
-        lineHeight: 1.55,
-      }}>
-        Couldn&apos;t load this view just now — usually a brief hiccup. Your picks
-        are safe. Try again in a moment.
-      </p>
-      <button type="button" onClick={reset} className="btn-heat">
-        Retry
-      </button>
     </section>
   );
 }

@@ -6,13 +6,17 @@ import { visibleCoinTier } from "@/lib/coin-core";
 import { getSession } from "@/lib/session";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { UserDirectory, type DirRow } from "@/components/heat/UserDirectory";
-import { currentEventId } from "@/lib/events-core";
+import { currentEvent, previousMajor } from "@/lib/events-core";
+import { majorFinishesAndCoins, majorShortName, ordSuffix } from "@/components/sg/people/people-data";
 
 export const metadata = { title: "Directory · HOTLINE" };
 
 export default async function DirectoryPage() {
   // Per-request active event (#1046) — follows the clock across Majors, no redeploy.
-  const EVENT_ID = currentEventId();
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now();
+  const event = currentEvent(nowMs);
+  const EVENT_ID = event.eventId;
   const layout = getCommittedLayout();
   const session = await getSession();
   await refreshOutcomesOnRead(EVENT_ID); // live driver (#866) — shared 30s claim
@@ -25,6 +29,12 @@ export default async function DirectoryPage() {
     }),
     prisma.stageOutcome.findMany({ where: { eventId: EVENT_ID } }),
   ]);
+
+  // The last concluded Major (Cologne): each player's finish there and the
+  // challenge coin it minted — read-only, same maths as the profile shelf.
+  const prev = previousMajor(nowMs);
+  const prevField = prev ? await majorFinishesAndCoins(prev, nowMs) : null;
+  const prevName = prev ? majorShortName(prev).replace(/^IEM\s+/, "").replace(/\s+\d{4}$/, "") : "";
 
   const outcomeMap: OutcomeMap = {};
   for (const o of outcomes) {
@@ -42,56 +52,66 @@ export default async function DirectoryPage() {
   }
 
   const rows: DirRow[] = players
-    .map((p) => ({
-      playerId: p.id,
-      displayName: p.displayName,
-      avatarUrl: p.avatarUrl,
-      isLocal: p.isLocal,
-      synced: p.synced,
-      coinTier: visibleCoinTier(p),
-      score: scorePlayer(layout, pickMap[p.id] ?? {}, outcomeMap).total,
-      isSelf: session?.playerId === p.id,
-      rank: 0,
-    }))
+    .map((p) => {
+      const finish = prevField?.finishById.get(p.id) ?? null;
+      const coin = prevField?.coinById.get(p.id) ?? null;
+      return {
+        playerId: p.id,
+        displayName: p.displayName,
+        avatarUrl: p.avatarUrl,
+        isLocal: p.isLocal,
+        synced: p.synced,
+        coinTier: visibleCoinTier(p),
+        score: scorePlayer(layout, pickMap[p.id] ?? {}, outcomeMap).total,
+        isSelf: session?.playerId === p.id,
+        rank: 0,
+        lastMajor: finish != null ? `${prevName} ${finish}${ordSuffix(finish)}` : null,
+        // Coin thumbnails only on Steam-synced players (never local ones).
+        challengeCoin: coin && p.synced && !p.isLocal ? coin : null,
+      };
+    })
     .sort((a, b) => b.score - a.score || a.displayName.localeCompare(b.displayName))
     .map((r, i) => ({ ...r, rank: i + 1 }));
 
-  return (
-    <>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16 }}>
-          <span className="eyebrow-mono">ROSTER</span>
-          <Link href="/leaderboard" style={{
-            fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.14em",
-            textTransform: "uppercase", color: "var(--ink-mid)", textDecoration: "none",
-          }}>
-            Podium →
-          </Link>
-        </div>
-        <h1 className="font-display" style={{
-          fontWeight: 800,
-          fontSize: "clamp(28px, 5vw, 40px)",
-          textTransform: "uppercase",
-          lineHeight: 0.95,
-        }}>
-          Directory
-        </h1>
-        <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: 0 }}>
-          {rows.length} player{rows.length !== 1 ? "s" : ""} · tap anyone to view picks & compare
-        </p>
-      </div>
+  const synced = rows.filter((r) => r.synced && !r.isLocal).length;
 
-      {rows.length === 0 ? (
-        <div className="panel brk" style={{ textAlign: "center", padding: "40px 24px" }}>
-          <span className="br-tr" />
-          <span className="br-bl" />
-          <p style={{ color: "var(--ink-mid)", fontSize: 14, margin: 0 }}>
-            No players yet. <Link href="/login/auth" style={{ color: "var(--heat)" }}>Be the first.</Link>
+  return (
+    <div className="pp-page">
+      <section className="bleed short">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/wrapped/major-thanks.jpg" alt="" />
+        <span className="credit">Photo · HLTV</span>
+        <div className="in">
+          <span className="eyebrow rise">
+            {majorShortName(event)} · <b>{rows.length} player{rows.length !== 1 ? "s" : ""}</b>
+          </span>
+          <h1 className="display rise d1">The room</h1>
+          <p className="rise d2">
+            Everyone calling this Major. <b>{synced} Steam-synced.</b> Tap anyone to see their picks.
           </p>
         </div>
+      </section>
+
+      {rows.length === 0 ? (
+        <section className="chap">
+          <div className="chap-h">
+            <h2>Nobody here yet</h2>
+            <p>
+              The room fills as players join. <Link href="/login" prefetch={false}>Be the first.</Link>
+            </p>
+          </div>
+        </section>
       ) : (
-        <UserDirectory rows={rows} signedIn={!!session} />
+        <section className="chap">
+          <div className="chap-h row2">
+            <div>
+              <h2>Every player</h2>
+            </div>
+            <Link href="/leaderboard" prefetch={false} className="eyebrow">Leaderboard →</Link>
+          </div>
+          <UserDirectory rows={rows} signedIn={!!session} />
+        </section>
       )}
-    </>
+    </div>
   );
 }

@@ -34,28 +34,19 @@ function fmtDuration(ms: number): string {
   return `${Math.floor(s / 60)}m ${s % 60}s`;
 }
 
-const CARD: React.CSSProperties = {
-  border: "1px solid rgba(255,255,255,.12)",
-  borderRadius: 10,
-  padding: ".75rem 1rem",
-  marginBottom: "1rem",
-};
-
 function Breakdown({ title, data }: { title: string; data: Row[] }) {
   const max = data.reduce((m, r) => Math.max(m, r.count), 0) || 1;
   return (
-    <div style={CARD}>
-      <h2 style={{ fontSize: ".95rem", margin: "0 0 .5rem" }}>{title}</h2>
+    <div className="sgc-bdc">
+      <h3>{title}</h3>
       {data.length === 0 ? (
-        <p style={{ opacity: 0.5, margin: 0, fontSize: ".85rem" }}>No data yet.</p>
+        <p className="none">No data yet.</p>
       ) : (
         data.slice(0, 12).map((r) => (
-          <div key={r.key} style={{ display: "flex", alignItems: "center", gap: ".5rem", margin: ".2rem 0", fontSize: ".88rem" }}>
-            <span style={{ width: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.key}</span>
-            <span style={{ flex: 1, height: 8, background: "rgba(255,255,255,.08)", borderRadius: 4, overflow: "hidden" }}>
-              <span style={{ display: "block", height: "100%", width: `${(r.count / max) * 100}%`, background: "rgba(255,180,80,.7)" }} />
-            </span>
-            <span style={{ width: 48, textAlign: "right", opacity: 0.8 }}>{r.count.toLocaleString()}</span>
+          <div key={r.key} className="sgc-bd">
+            <span className="k" title={r.key}>{r.key}</span>
+            <span className="b"><i style={{ width: `${(r.count / max) * 100}%` }} /></span>
+            <span className="v">{r.count.toLocaleString()}</span>
           </div>
         ))
       )}
@@ -142,115 +133,143 @@ export default async function AnalyticsPage({
   const fmtDay = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : "—");
 
   return (
-    <div style={{ maxWidth: 880, margin: "0 auto", padding: "1rem" }}>
-      <h1 style={{ margin: "0 0 .25rem" }}>Route traffic</h1>
-      <p style={{ opacity: 0.7, margin: "0 0 1rem", fontSize: ".9rem" }}>
-        Anonymous, cookieless, self-hosted in this app. No PII — path + coarse
-        device/browser/OS + country (no IP) + external referrer. Honors Do-Not-Track.
-        Visitors/bounce/sessions use a daily-rotating id, so a visit crossing
-        midnight (UTC) counts as two.
-      </p>
-
-      {truncated && (
-        <p style={{ margin: "0 0 1rem", padding: ".5rem .75rem", borderRadius: 8, background: "rgba(255,180,80,.12)", border: "1px solid rgba(255,180,80,.4)", fontSize: ".85rem" }}>
-          Over 50,000 pageviews in this range — visitor, bounce, session and
-          entry/exit figures are computed on the most recent sample and are
-          approximate. (View counts and breakdowns are exact.)
+    <div className="sgc-ed sgc-admin">
+      <div className="chap-h">
+        <span className="n">Owner only</span>
+        <h1>Route traffic</h1>
+        <p className="note">
+          Anonymous, cookieless, self-hosted in this app. No PII — path + coarse
+          device/browser/OS + country (no IP) + external referrer. Honors Do-Not-Track.
+          Visitors/bounce/sessions use a daily-rotating id, so a visit crossing
+          midnight (UTC) counts as two.
         </p>
-      )}
-
-      <div style={{ display: "flex", gap: ".5rem", marginBottom: "1rem" }}>
-        {RANGES.map((r) => (
-          <Link key={r.key} href={`/admin/analytics?range=${r.key}`} style={{ padding: ".3rem .7rem", borderRadius: 8, border: "1px solid rgba(255,255,255,.18)", textDecoration: "none", fontWeight: r.key === sel.key ? 700 : 400, background: r.key === sel.key ? "rgba(255,255,255,.12)" : "transparent" }}>
-            {r.label}
-          </Link>
-        ))}
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", marginBottom: "1rem" }}>
-        {[
-          { k: "Views", v: total.toLocaleString() },
-          { k: "Visitors", v: visitors.toLocaleString() },
-          { k: "Bounce", v: `${bounceRate}%` },
-          { k: "Avg. session", v: fmtDuration(avgDuration) },
-        ].map((s) => (
-          <div key={s.k} style={{ ...CARD, marginBottom: 0, minWidth: 120, flex: "1 1 120px", textAlign: "center" }}>
-            <div style={{ fontSize: "1.4rem", fontWeight: 700 }}>{s.v}</div>
-            <div style={{ opacity: 0.65, fontSize: ".8rem" }}>{s.k}</div>
+      <div className="top">
+        <nav className="tabs" aria-label="Range">
+          {RANGES.map((r) => (
+            <Link
+              key={r.key}
+              href={`/admin/analytics?range=${r.key}`}
+              className={r.key === sel.key ? "on" : undefined}
+              aria-current={r.key === sel.key ? "page" : undefined}
+            >
+              {r.label}
+            </Link>
+          ))}
+        </nav>
+
+        {truncated && (
+          <div className="sgc-warn" role="status">
+            <span className="tag warn">Sampled</span>
+            <span>
+              Over 50,000 pageviews in this range — visitor, bounce, session and
+              entry/exit figures are computed on the most recent sample and are
+              approximate. (View counts and breakdowns are exact.)
+            </span>
           </div>
-        ))}
-      </div>
-
-      <div style={CARD}>
-        <h2 style={{ fontSize: ".95rem", margin: "0 0 .5rem" }}>Routes</h2>
-        {total === 0 ? (
-          <p style={{ opacity: 0.6, margin: 0 }}>No pageviews recorded yet for this range.</p>
-        ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".9rem" }}>
-            <thead>
-              <tr style={{ textAlign: "left", borderBottom: "1px solid rgba(255,255,255,.2)" }}>
-                <th style={{ padding: ".35rem .4rem" }}>Route</th>
-                <th style={{ padding: ".35rem .4rem", textAlign: "right" }}>Views</th>
-                <th style={{ padding: ".35rem .4rem", textAlign: "right" }}>Share</th>
-                <th style={{ padding: ".35rem .4rem", textAlign: "right" }}>Last seen</th>
-              </tr>
-            </thead>
-            <tbody>
-              {byPath.slice(0, 100).map((r) => (
-                <tr key={r.path} style={{ borderBottom: "1px solid rgba(255,255,255,.07)" }}>
-                  <td style={{ padding: ".35rem .4rem", fontFamily: "monospace" }}>{r.path}</td>
-                  <td style={{ padding: ".35rem .4rem", textAlign: "right" }}>{r._count._all.toLocaleString()}</td>
-                  <td style={{ padding: ".35rem .4rem", textAlign: "right", opacity: 0.7 }}>{pct(r._count._all)}</td>
-                  <td style={{ padding: ".35rem .4rem", textAlign: "right", opacity: 0.7 }}>{fmtDay(r._max.createdAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         )}
-      </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: "1rem" }}>
-        <Breakdown title="Device" data={rows(byDevice, (g) => g.device, (g) => g._count._all)} />
-        <Breakdown title="Browser" data={rows(byBrowser, (g) => g.browser, (g) => g._count._all)} />
-        <Breakdown title="OS" data={rows(byOs, (g) => g.os, (g) => g._count._all)} />
-        <Breakdown title="Country" data={rows(byCountry, (g) => g.country, (g) => g._count._all)} />
-        <Breakdown title="Top referrers" data={rows(byReferrer, (g) => g.referrer, (g) => g._count._all)} />
-        <Breakdown title="Entry pages" data={entries} />
-        <Breakdown title="Exit pages" data={exits} />
-      </div>
-
-      <div style={CARD}>
-        <h2 style={{ fontSize: ".95rem", margin: "0 0 .5rem" }}>In-app events</h2>
-        {byEvent.length === 0 ? (
-          <p style={{ opacity: 0.6, margin: 0, fontSize: ".85rem" }}>
-            No events yet — disclosure opens (FAQ/settings) and scroll depth show up here.
-          </p>
-        ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem" }}>
-            <tbody>
-              {byEvent.map((e, i) => (
-                <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,.07)" }}>
-                  <td style={{ padding: ".3rem .4rem", fontFamily: "monospace" }}>{e.event}</td>
-                  <td style={{ padding: ".3rem .4rem", opacity: 0.8 }}>{e.label ?? ""}</td>
-                  <td style={{ padding: ".3rem .4rem", textAlign: "right" }}>{e._count._all.toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      <div style={CARD}>
-        <h2 style={{ fontSize: ".95rem", margin: "0 0 .5rem" }}>
-          Product metrics <span style={{ opacity: 0.5, fontWeight: 400 }}>(from existing data, no tracking)</span>
-        </h2>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "1.25rem", fontSize: ".9rem" }}>
-          <span><strong>{totalPlayers.toLocaleString()}</strong> players ({steamPlayers} Steam-linked)</span>
-          <span><strong>{newSignups.toLocaleString()}</strong> new ({sel.label.toLowerCase()})</span>
-          <span><strong>{playersWithPicks.toLocaleString()}</strong> made picks</span>
-          <span><strong>{reactionsCount.toLocaleString()}</strong> reactions</span>
+        <div className="cells">
+          {[
+            { k: "Views", v: total.toLocaleString() },
+            { k: "Visitors", v: visitors.toLocaleString() },
+            { k: "Bounce", v: `${bounceRate}%` },
+            { k: "Avg. session", v: fmtDuration(avgDuration) },
+          ].map((s) => (
+            <div key={s.k}>
+              <span className="k">{s.k}</span>
+              <span className="v">{s.v}</span>
+            </div>
+          ))}
         </div>
       </div>
+
+      <section className="chap">
+        <div className="chap-h"><h2>Routes</h2></div>
+        <div className="sgc-tw">
+          {total === 0 ? (
+            <p className="sgc-empty">No pageviews recorded yet for this range.</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Route</th>
+                  <th className="r">Views</th>
+                  <th className="r">Share</th>
+                  <th className="r">Last seen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {byPath.slice(0, 100).map((r) => (
+                  <tr key={r.path}>
+                    <td className="m">{r.path}</td>
+                    <td className="r m">{r._count._all.toLocaleString()}</td>
+                    <td className="r d">{pct(r._count._all)}</td>
+                    <td className="r d">{fmtDay(r._max.createdAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </section>
+
+      <section className="chap">
+        <div className="chap-h"><h2>Breakdowns</h2></div>
+        <div className="sgc-bds">
+          <Breakdown title="Device" data={rows(byDevice, (g) => g.device, (g) => g._count._all)} />
+          <Breakdown title="Browser" data={rows(byBrowser, (g) => g.browser, (g) => g._count._all)} />
+          <Breakdown title="OS" data={rows(byOs, (g) => g.os, (g) => g._count._all)} />
+          <Breakdown title="Country" data={rows(byCountry, (g) => g.country, (g) => g._count._all)} />
+          <Breakdown title="Top referrers" data={rows(byReferrer, (g) => g.referrer, (g) => g._count._all)} />
+          <Breakdown title="Entry pages" data={entries} />
+          <Breakdown title="Exit pages" data={exits} />
+        </div>
+      </section>
+
+      <section className="chap">
+        <div className="chap-h"><h2>In-app events</h2></div>
+        <div className="sgc-tw">
+          {byEvent.length === 0 ? (
+            <p className="sgc-empty">
+              No events yet — disclosure opens (FAQ/settings) and scroll depth show up here.
+            </p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Event</th>
+                  <th>Label</th>
+                  <th className="r">Count</th>
+                </tr>
+              </thead>
+              <tbody>
+                {byEvent.map((e, i) => (
+                  <tr key={i}>
+                    <td className="m">{e.event}</td>
+                    <td className="d">{e.label ?? ""}</td>
+                    <td className="r m">{e._count._all.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </section>
+
+      <section className="chap">
+        <div className="chap-h">
+          <h2>Product</h2>
+          <p>From existing data, no tracking.</p>
+        </div>
+        <div className="sgc-pm">
+          <span><b>{totalPlayers.toLocaleString()}</b>players ({steamPlayers} Steam-linked)</span>
+          <span><b>{newSignups.toLocaleString()}</b>new · {sel.label.toLowerCase()}</span>
+          <span><b>{playersWithPicks.toLocaleString()}</b>made picks</span>
+          <span><b>{reactionsCount.toLocaleString()}</b>reactions</span>
+        </div>
+      </section>
     </div>
   );
 }

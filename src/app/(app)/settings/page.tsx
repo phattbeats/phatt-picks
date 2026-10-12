@@ -39,275 +39,221 @@ export default async function SettingsPage() {
   const notifPrefs = parseNotifPrefs(playerRow?.notifPrefs);
 
   return (
-    <>
-      {/* Header — a quiet way back to the profile the gear came from. */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <Link href={`/players/${session.playerId}`} style={backLink}>
-          ← Your profile
-        </Link>
-        <span className="eyebrow-mono">SETTINGS</span>
+    <div className="sg-page nf-set">
+      <div className="chap-h rise">
+        <span className="n">
+          <Link href={`/players/${session.playerId}`} prefetch={false} className="nf-back">
+            ← Profile
+          </Link>
+        </span>
+        <h1 className="nf-title">Settings</h1>
       </div>
 
       {/* Identity */}
-      <section className="panel brk">
-        <span className="br-tr" />
-        <span className="br-bl" />
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <AvatarUpload
-            initials={initials}
-            initialAvatarUrl={playerRow?.avatarUrl ?? null}
-            editable={!connected}
-          />
-          <div style={{ minWidth: 0 }}>
-            <p className="font-display" style={{
-              fontWeight: 800,
-              fontSize: 22,
-              color: "var(--ink-hi)",
-              textTransform: "uppercase",
-              letterSpacing: "0.01em",
-              margin: 0,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}>
-              {session.displayName}
-            </p>
-            <p style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: 10,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-              color: connected ? "var(--heat)" : "var(--ink-mid)",
-              margin: "4px 0 0",
-            }}>
-              {connected ? "Steam-synced player" : "Local player"}
-            </p>
-          </div>
-        </div>
-        {!connected && (
-          <>
-            {/* #1213: a local player has no Steam identity to push to —
-                /api/auth/steam would sign them in as a SEPARATE Steam account
-                and strand the picks they made here. So Steam sync is shown
-                disabled, not as an active CTA. Reassurance lives below. */}
-            <button
-              type="button"
-              disabled
-              aria-disabled="true"
-              className="btn-ghost"
-              title="Steam sync is only available on Steam-linked accounts."
-              style={{
-                marginTop: 14,
-                justifyContent: "center",
-                width: "100%",
-                opacity: 0.45,
-                cursor: "not-allowed",
-              }}
-            >
-              Steam sync — Steam accounts only
-            </button>
-            <p style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontFamily: "var(--font-mono)",
-              fontSize: 11,
-              letterSpacing: "0.06em",
-              color: "var(--tac-green, #22c55e)",
-              margin: "10px 0 0",
-            }}>
-              <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <section className="who rise d1">
+        <AvatarUpload
+          initials={initials}
+          initialAvatarUrl={playerRow?.avatarUrl ?? null}
+          editable={!connected}
+        />
+        <div className="who-id">
+          <span className="nm">{session.displayName}</span>
+          {connected ? <span className="tag ok">Steam-synced</span> : <span className="tag">Local player</span>}
+          {!connected && (
+            <span className="nf-ok">
+              <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
               Saved — your picks are recorded automatically. No Steam needed.
-            </p>
-          </>
-        )}
-      </section>
-
-      {/* Notifications */}
-      <section className="panel brk">
-        <span className="br-tr" />
-        <span className="br-bl" />
-        <div className="panel-title">Notifications</div>
-        <NotifPrefsPanel
-          initialPrefs={notifPrefs}
-          hasPushSubscription={hasPushSubscription}
-        />
-        <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--hair)" }}>
-          <div style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 9,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            color: "var(--heat)",
-            marginBottom: 10,
-          }}>
-            Push reminders
-          </div>
-          <PushToggle />
-        </div>
-      </section>
-
-      {/* Invite */}
-      <section className="panel brk">
-        <span className="br-tr" />
-        <span className="br-bl" />
-        <div className="panel-title">Invite friends</div>
-        <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "0 0 12px" }}>
-          Send this link. They land on a one-tap join page — no account hunting.
-        </p>
-        <InviteLink />
-
-        {(referrals.count > 0 || referrals.invitedByName) && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              justifyContent: "space-between",
-              gap: 12,
-              marginTop: 14,
-              paddingTop: 12,
-              borderTop: "1px solid var(--hair)",
-            }}
-          >
-            <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-              <span className="foil font-display" style={{ fontWeight: 800, fontSize: 22, lineHeight: 1 }}>
-                {referrals.count}
-              </span>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--ink-low)" }}>
-                {referrals.count === 1 ? "player joined" : "players joined"} through you
-              </span>
             </span>
-            {referrals.invitedByName && (
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-low)", textAlign: "right", minWidth: 0 }}>
-                Invited by{" "}
-                <span style={{ color: "var(--ink-mid)" }}>{referrals.invitedByName}</span>
-              </span>
-            )}
-          </div>
+          )}
+        </div>
+        {!connected && (
+          // #1213: a local player has no Steam identity to push to —
+          // /api/auth/steam would sign them in as a SEPARATE Steam account and
+          // strand the picks they made here. So Steam sync is shown disabled,
+          // not as an active CTA.
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            className="btn-ghost nf-btn-sm who-steam"
+            title="Steam sync is only available on Steam-linked accounts."
+          >
+            Steam sync — Steam accounts only
+          </button>
         )}
       </section>
 
-      {/* Account & devices — second-tier controls, folded away so the page opens
-          calm. Cross-device login / claim guest picks / install live here. */}
-      <details className="settings-fold brk">
-        <span className="br-tr" />
-        <span className="br-bl" />
-        <summary>
-          <span>Account &amp; devices</span>
-          <span className="settings-fold-hint">Login link · install · {connected ? "guest picks" : "another device"}</span>
-        </summary>
-        <div className="settings-fold-body">
-          {/* Cross-device login — local players only */}
-          {!connected && (
-            <div>
-              <div className="panel-title">[ Login from another device ]</div>
-              <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "0 0 12px", lineHeight: 1.55 }}>
-                Copy this link and open it on any browser to sign in as you — no password needed.
-              </p>
-              <LoginTokenPanel initialToken={playerRow?.loginToken ?? null} />
-            </div>
-          )}
+      <div className="lay rise d2">
+        <nav className="toc" aria-label="Settings sections">
+          <a href="#alerts">Alerts</a>
+          <a href="#invite">Invite</a>
+          <a href="#account">Account &amp; devices</a>
+          <a href="#session">Session</a>
+          {owner && <a href="#admin">Admin</a>}
+        </nav>
 
-          {/* Bring over guest picks — Steam players only (#1232). */}
-          {connected && (
-            <div>
-              <div className="panel-title">[ Bring over guest picks ]</div>
-              <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "0 0 12px", lineHeight: 1.55 }}>
-                Made picks as a guest before signing in with Steam? Paste that guest
-                login link to move those picks onto this Steam account. Picks already
-                set here are kept.
-              </p>
-              <ClaimLocalPicksPanel />
+        <div className="secs">
+          {/* Alerts */}
+          <section className="sec" id="alerts">
+            <div className="chap-h">
+              <h2>When to ping you</h2>
+              <p>Choose what lands in your feed and what reaches this device as a push.</p>
             </div>
-          )}
+            <NotifPrefsPanel initialPrefs={notifPrefs} hasPushSubscription={hasPushSubscription} />
+            <div className="sec-sub">
+              <span className="eyebrow">This device</span>
+              <PushToggle />
+            </div>
+          </section>
 
-          {/* Install */}
-          <div>
-            <div className="panel-title">Install the app</div>
-            <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: 0, lineHeight: 1.55 }}>
-              <strong style={{ color: "var(--ink-hi)" }}>iPhone:</strong> tap Share → Add to Home Screen, then open HOTLINE from the new icon. Required before notifications work on iOS.
-              <br />
-              <strong style={{ color: "var(--ink-hi)" }}>Android / desktop:</strong> use your browser&apos;s &ldquo;Install app&rdquo; / &ldquo;Add to Home screen&rdquo; option.
-            </p>
-          </div>
+          {/* Invite */}
+          <section className="sec" id="invite">
+            <div className="chap-h">
+              <h2>Bring the group</h2>
+              <p>
+                Friends land on a one-tap join page — no account hunting.
+                {referrals.count > 0 && (
+                  <>
+                    {" "}
+                    <b>
+                      {referrals.count} {referrals.count === 1 ? "player has" : "players have"}
+                    </b>{" "}
+                    joined through you.
+                  </>
+                )}
+              </p>
+            </div>
+            <InviteLink />
+            {referrals.invitedByName && (
+              <p className="nf-meta">
+                Invited by <b>{referrals.invitedByName}</b>
+              </p>
+            )}
+          </section>
+
+          {/* Account & devices — second-tier controls, folded away so the page
+              opens calm. Cross-device login / claim guest picks / install. */}
+          <section className="sec" id="account">
+            <details className="settings-fold">
+              <summary>
+                <span className="settings-fold-t">Account &amp; devices</span>
+                <span className="settings-fold-hint">
+                  Login link · install · {connected ? "guest picks" : "another device"}
+                </span>
+              </summary>
+              <div className="settings-fold-body">
+                {/* Cross-device login — local players only */}
+                {!connected && (
+                  <div className="fold-item">
+                    <div className="t">Sign in on another device</div>
+                    <div className="s">
+                      Open this link in any browser to sign in as you — no password needed.
+                    </div>
+                    <LoginTokenPanel initialToken={playerRow?.loginToken ?? null} />
+                  </div>
+                )}
+
+                {/* Bring over guest picks — Steam players only (#1232). */}
+                {connected && (
+                  <div className="fold-item">
+                    <div className="t">Bring guest picks over</div>
+                    <div className="s">
+                      Made picks as a guest before signing in with Steam? Paste that guest login link to
+                      move them onto this account. Picks already set here are kept.
+                    </div>
+                    <ClaimLocalPicksPanel />
+                  </div>
+                )}
+
+                {/* Install */}
+                <div className="fold-item">
+                  <div className="row fold-row">
+                    <div>
+                      <div className="t">Install to home screen</div>
+                      <div className="s">Required for alerts on iPhone.</div>
+                    </div>
+                    <Link href="/pwa" prefetch={false} className="btn-ghost nf-btn-sm">
+                      Install
+                    </Link>
+                  </div>
+                  <p className="s">
+                    <b>iPhone:</b> tap Share → Add to Home Screen, then open HOTLINE from the new icon.{" "}
+                    <b>Android / desktop:</b> use your browser&apos;s &ldquo;Install app&rdquo; option.
+                  </p>
+                </div>
+              </div>
+            </details>
+          </section>
+
+          {/* Session — help link + sign out, always one tap away. */}
+          <section className="sec" id="session">
+            <div className="chap-h">
+              <h2>Session</h2>
+            </div>
+            <div className="list">
+              {/* Help & guides live on their own INFO page (#1283). */}
+              <div className="row">
+                <div>
+                  <div className="t">Help &amp; guides</div>
+                  <div className="s">How it works · FAQ · scoring</div>
+                </div>
+                <Link href="/info" prefetch={false} className="btn-ghost nf-btn-sm">
+                  Open
+                </Link>
+              </div>
+              <div className="row">
+                <div>
+                  <div className="t">Sign out</div>
+                  <div className="s">Picks stay saved to your account</div>
+                </div>
+                {/* POST so a cross-site GET can't force a logout (#1045 CSRF). */}
+                <form action="/api/auth/logout" method="post">
+                  <button type="submit" className="btn-ghost nf-btn-sm nf-danger">
+                    Sign out
+                  </button>
+                </form>
+              </div>
+            </div>
+          </section>
+
+          {owner && <AdminLocalPlayers />}
         </div>
-      </details>
-
-      {/* Help & guides moved to their own INFO page (#1283) — a desktop nav
-          tab, and reachable here on mobile. Your Majors moved to your profile. */}
-      <Link href="/info" className="settings-fold brk" style={{ display: "block", textDecoration: "none" }}>
-        <span className="br-tr" />
-        <span className="br-bl" />
-        <span className="settings-fold-summary-static">
-          <span>Help &amp; guides</span>
-          <span className="settings-fold-hint">How it works · FAQ · scoring →</span>
-        </span>
-      </Link>
-
-      {owner && <AdminLocalPlayers />}
-
-      {/* Sign out — always one tap away. POST so a cross-site GET can't force a
-          logout (#1045 CSRF). */}
-      <form action="/api/auth/logout" method="post" style={{ margin: "4px 0 0" }}>
-        <button type="submit" className="btn-ghost" style={{ width: "100%", justifyContent: "center", color: "var(--ink-mid)" }}>
-          Sign out
-        </button>
-      </form>
-    </>
+      </div>
+    </div>
   );
 }
 
-const backLink: React.CSSProperties = {
-  fontFamily: "var(--font-mono)",
-  fontSize: 11,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: "var(--ink-mid)",
-  textDecoration: "none",
-};
-
 function SignedOutSettings() {
   return (
-    <>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <span className="eyebrow-mono">SETTINGS</span>
-        <h1 className="font-display" style={{
-          fontWeight: 800,
-          fontSize: "clamp(28px, 5vw, 40px)",
-          textTransform: "uppercase",
-          lineHeight: 0.95,
-        }}>
-          Sign in
-        </h1>
+    <div className="sg-page nf-set">
+      <div className="chap-h rise">
+        <span className="n">Settings</span>
+        <h1 className="nf-title">Sign in</h1>
+        <p>Your session has ended. Sign in again to manage your alerts, invites and picks.</p>
       </div>
 
-      <section className="panel brk">
-        <span className="br-tr" />
-        <span className="br-bl" />
-        <div className="panel-title">Session expired</div>
-        <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: "0 0 16px", lineHeight: 1.55 }}>
-          Sign in again to manage your account and picks.
-        </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <a href="/api/auth/steam" className="btn-heat" style={{ width: "100%" }}>
-            Connect with Steam
-          </a>
-          <a href="/api/auth/local" className="btn-ghost" style={{ width: "100%", justifyContent: "center" }}>
-            Play locally
-          </a>
-        </div>
+      <section className="nf-signin rise d1">
+        <a href="/api/auth/steam" className="btn-solid">
+          Connect with Steam
+        </a>
+        <a href="/api/auth/local" className="btn-ghost">
+          Play locally
+        </a>
       </section>
 
-      <Link href="/info" className="settings-fold brk" style={{ display: "block", textDecoration: "none" }}>
-        <span className="br-tr" />
-        <span className="br-bl" />
-        <span className="settings-fold-summary-static">
-          <span>Help &amp; guides</span>
-          <span className="settings-fold-hint">How it works · FAQ →</span>
-        </span>
-      </Link>
-    </>
+      <div className="list rise d2">
+        <div className="row">
+          <div>
+            <div className="t">Help &amp; guides</div>
+            <div className="s">How it works · FAQ</div>
+          </div>
+          <Link href="/info" prefetch={false} className="btn-ghost nf-btn-sm">
+            Open
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }

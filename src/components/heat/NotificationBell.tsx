@@ -20,6 +20,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { NotifGlyph } from "./NotifGlyph";
 
 /** App-badge API (Badging API) — not yet in the default DOM lib typings. */
 type BadgeNavigator = Navigator & {
@@ -33,7 +34,7 @@ const TITLE_PREFIX_RE = /^\(\d+\)\s+/;
 interface NotifStamp { id: string; glyph: string; label: string; kind: "props" | "heat"; count: number }
 interface NotifEntry {
   id: string;
-  kind: "reaction" | "stage" | "recap" | "announcement";
+  kind: "reaction" | "stage" | "recap" | "announcement" | "coin";
   icon: string;
   title: string;
   body: string;
@@ -53,6 +54,7 @@ interface FeedPayload {
 
 interface ToastItem {
   id: string;
+  kind: NotifEntry["kind"];
   icon: string;
   title: string;
   href: string;
@@ -62,6 +64,14 @@ interface ToastItem {
 const FALLBACK_POLL_MS = 45_000;
 const TOAST_TTL_MS = 5_000;
 const MAX_TOASTS = 3;
+
+const TOAST_KIND_LABEL: Record<string, string> = {
+  stage: "Stage lock",
+  recap: "Recap",
+  reaction: "Reaction",
+  announcement: "Broadcast",
+  coin: "Coin minted",
+};
 
 function timeAgo(ms: number): string {
   const s = Math.max(0, Math.floor((Date.now() - ms) / 1000));
@@ -137,6 +147,7 @@ export function NotificationBell() {
           const alive = prev.filter((t) => t.dismissAt > now);
           const fresh = arrivals.slice(0, MAX_TOASTS).map((it) => ({
             id: it.id,
+            kind: it.kind,
             icon: it.icon,
             title: it.title,
             href: it.href,
@@ -326,12 +337,12 @@ export function NotificationBell() {
     <div className="notifbell" ref={rootRef}>
       <button
         type="button"
-        className="notifbell-btn"
+        className={`notifbell-btn${unread > 0 ? " has-unread" : ""}`}
         onClick={toggle}
         aria-label={unread > 0 ? `Notifications — ${unread} new` : "Notifications"}
         aria-expanded={open}
       >
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
           <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
@@ -341,21 +352,27 @@ export function NotificationBell() {
       {open && (
         <div className="notifbell-panel" role="menu">
           <div className="notifbell-head">
-            <span>NOTIFICATIONS</span>
+            <span className="eyebrow">
+              Inbox{unread > 0 && <> · <b>{unread} new</b></>}
+            </span>
             {total > 0 && (
               <Link
                 href="/notifications"
+                prefetch={false}
                 className="notifbell-seeall"
                 onClick={() => setOpen(false)}
               >
-                See all ({total})
+                See all ({total}) →
               </Link>
             )}
           </div>
           {!loaded ? (
             <div className="notifbell-empty">Loading…</div>
           ) : items.length === 0 ? (
-            <div className="notifbell-empty">You&apos;re all caught up.</div>
+            <div className="notifbell-empty">
+              <span className="notifbell-empty-t">All caught up</span>
+              <span>Stage locks, recaps and reactions land here.</span>
+            </div>
           ) : (
             <>
               <ul className="notifbell-list">
@@ -363,31 +380,34 @@ export function NotificationBell() {
                   <li
                     key={it.id}
                     data-entry-id={it.id}
-                    className={`notifbell-item${it.isNew ? " fresh" : ""}`}
+                    className={`notifbell-item k-${it.kind}${it.isNew ? " fresh" : ""}`}
                   >
                     <Link
                       href={it.href}
+                      prefetch={false}
                       className="notifbell-link"
                       onClick={() => setOpen(false)}
                     >
-                      <span className={`notifbell-icon ${it.kind}`} aria-hidden="true">{it.icon}</span>
+                      <NotifGlyph kind={it.kind} id={it.id} title={it.title} size="sm" />
                       <span className="notifbell-text">
-                        <span className="notifbell-title">{it.title}</span>
+                        <span className="notifbell-title">
+                          {it.isNew && <span className="notifbell-dot" aria-label="new" />}
+                          {it.title}
+                        </span>
                         {it.kind === "reaction" && it.stamps ? (
-                          <span className="notifbell-stamps">
+                          <span className="nf-stamps">
                             {it.stamps.map((s) => (
-                              <span key={s.id} className={`notifbell-stamp ${s.kind}`}>
+                              <span key={s.id} className={`nf-stamp ${s.kind}`} title={s.label}>
                                 <span aria-hidden="true">{s.glyph}</span>
-                                <span className="notifbell-ct">{s.count}</span>
+                                <span className="ct">{s.count}</span>
                               </span>
                             ))}
                           </span>
                         ) : (
                           <span className="notifbell-body">{it.body}</span>
                         )}
-                        <span className="notifbell-meta">{timeAgo(it.atMs)}</span>
                       </span>
-                      {it.isNew && <span className="notifbell-dot" aria-label="new" />}
+                      <span className="notifbell-meta">{timeAgo(it.atMs)}</span>
                     </Link>
                   </li>
                 ))}
@@ -419,11 +439,14 @@ export function NotificationBell() {
             <a
               key={t.id}
               href={t.href}
-              className="notiftoast"
+              className={`notiftoast k-${t.kind}`}
               onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
             >
-              <span className="notiftoast-icon" aria-hidden="true">{t.icon}</span>
-              <span className="notiftoast-msg">{t.title}</span>
+              <NotifGlyph kind={t.kind} id={t.id} title={t.title} size="sm" />
+              <span className="notiftoast-text">
+                <span className="notiftoast-k">New · {TOAST_KIND_LABEL[t.kind] ?? "Alert"}</span>
+                <span className="notiftoast-msg">{t.title}</span>
+              </span>
               <button
                 type="button"
                 className="notiftoast-close"
@@ -433,7 +456,11 @@ export function NotificationBell() {
                   e.stopPropagation();
                   setToasts((prev) => prev.filter((x) => x.id !== t.id));
                 }}
-              >×</button>
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </button>
             </a>
           ))}
         </div>

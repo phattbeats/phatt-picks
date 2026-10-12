@@ -77,24 +77,6 @@ type State =
   | "idle" // supported, not subscribed
   | "subscribed";
 
-const btn: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "var(--space-2)",
-  borderRadius: "var(--radius-md)",
-  padding: "12px var(--space-4)",
-  fontFamily: "'Rajdhani', sans-serif",
-  fontWeight: 700,
-  fontSize: "0.9375rem",
-  letterSpacing: "0.05em",
-  textTransform: "uppercase",
-  minHeight: 44,
-  cursor: "pointer",
-  border: "none",
-  width: "100%",
-};
-
 export function PushToggle() {
   const [state, setState] = useState<State>("loading");
   const [vapidKey, setVapidKey] = useState<string | null>(null);
@@ -287,66 +269,80 @@ export function PushToggle() {
     }
   }
 
-  if (state === "loading") {
-    return <p style={{ color: "var(--text-low)", fontSize: "0.8125rem" }}>Checking notifications…</p>;
-  }
-  if (state === "unsupported") {
+  // ── Render: one settings row ("Push to this device") + a status line. ──
+  const iosHint = isIos && !isStandalone;
+
+  if (state === "loading" || state === "unsupported" || state === "unconfigured" || state === "blocked") {
+    const sub =
+      state === "loading"
+        ? "Checking notifications…"
+        : state === "unsupported"
+          ? `This browser can't do push reminders.${iosHint ? " On iPhone/iPad, add HOTLINE to your Home Screen first, then open it from that icon." : ""}`
+          : state === "unconfigured"
+            ? "Push reminders aren't set up on the server yet."
+            : "Notifications are blocked. Enable them for this site in your browser settings, then reload.";
+    const tag =
+      state === "loading" ? null : state === "blocked" ? (
+        <span className="tag crit">Blocked</span>
+      ) : (
+        <span className="tag">Unavailable</span>
+      );
     return (
-      <p style={{ color: "var(--text-low)", fontSize: "0.8125rem" }}>
-        This browser can&apos;t do push reminders.
-        {isIos && !isStandalone && " On iPhone/iPad, add HOTLINE to your Home Screen first, then open it from that icon."}
-      </p>
-    );
-  }
-  if (state === "unconfigured") {
-    return (
-      <p style={{ color: "var(--text-low)", fontSize: "0.8125rem" }}>
-        Push reminders aren&apos;t set up on the server yet.
-      </p>
-    );
-  }
-  if (state === "blocked") {
-    return (
-      <p style={{ color: "var(--closing-soon)", fontSize: "0.8125rem" }}>
-        Notifications are blocked. Enable them for this site in your browser settings, then reload.
-      </p>
+      <div className="push-opt">
+        <div className="row">
+          <div>
+            <div className="t">Push to this device</div>
+            <div className={`s${state === "blocked" ? " warn" : ""}`}>{sub}</div>
+          </div>
+          {tag}
+        </div>
+      </div>
     );
   }
 
+  const subscribed = state === "subscribed";
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-      {isIos && !isStandalone && (
-        <p style={{ color: "var(--closing-soon)", fontSize: "0.8125rem", margin: 0 }}>
+    <div className="push-opt">
+      <div className="row">
+        <div>
+          <div className="t">Push to this device</div>
+          <div className="s">
+            {busy
+              ? subscribed
+                ? "Working…"
+                : "Enabling…"
+              : subscribed
+                ? "On — alerts reach this device even when HOTLINE is closed."
+                : "Off — turn on for lock reminders on your lock screen."}
+          </div>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={subscribed}
+          aria-label={subscribed ? "Turn off reminders" : "Enable pre-lock reminders"}
+          disabled={busy}
+          className={`sw nf-sw${subscribed ? " on" : ""}`}
+          onClick={subscribed ? unsubscribe : subscribe}
+        />
+      </div>
+      {iosHint && (
+        <p className="push-opt-note warn">
           iPhone/iPad: add to Home Screen and open from that icon first, or reminders won&apos;t arrive.
         </p>
       )}
-      {state === "idle" ? (
-        <button
-          onClick={subscribe}
-          disabled={busy}
-          style={{ ...btn, background: "var(--accent)", color: "#fff", opacity: busy ? 0.6 : 1 }}
-        >
-          {busy ? "Enabling…" : "Enable pre-lock reminders"}
-        </button>
-      ) : (
-        <>
-          <button
-            onClick={sendTest}
-            disabled={busy}
-            style={{ ...btn, background: "var(--bg2)", border: "1px solid var(--info)", color: "var(--info)", opacity: busy ? 0.6 : 1 }}
-          >
-            {busy ? "Working…" : "Send a test reminder"}
+      {subscribed && (
+        <div className="row">
+          <div>
+            <div className="t">Test push</div>
+            <div className="s">Fire one at this device to check it lands.</div>
+          </div>
+          <button type="button" className="btn-ghost nf-btn-sm" onClick={sendTest} disabled={busy} aria-label="Send a test reminder">
+            {busy ? "Working…" : "Send test"}
           </button>
-          <button
-            onClick={unsubscribe}
-            disabled={busy}
-            style={{ ...btn, background: "transparent", border: "1px solid var(--bg3)", color: "var(--text-mid)", opacity: busy ? 0.6 : 1 }}
-          >
-            Turn off reminders
-          </button>
-        </>
+        </div>
       )}
-      {note && <p style={{ color: "var(--text-mid)", fontSize: "0.8125rem", margin: 0 }}>{note}</p>}
+      {note && <p className="push-opt-note" role="status">{note}</p>}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { useState } from "react";
  * Paste-and-save form for the Valve Game Authentication Code. Posts to
  * /api/auth/steam/authcode (M2), which encrypts it at rest. Only rendered for
  * signed-in Steam players; validates the 4-5-4 shape before sending.
+ * Styled by `.sg-authform` in sg-auth.css.
  */
 
 const AUTH_CODE_RE = /^[A-Z0-9]{4}-[A-Z0-9]{5}-[A-Z0-9]{4}$/;
@@ -70,75 +71,39 @@ export function AuthCodeForm({ initiallySet }: { initiallySet: boolean }) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+    <div className="sg-authform">
       {saved && (
-        <p style={{ color: "var(--correct)", fontSize: "0.8125rem", margin: 0 }}>
-          ✓ An auth code is on file. You can replace it below.
-        </p>
+        <p className="saved">✓ An auth code is on file. You can replace it below.</p>
       )}
-      <input
-        value={value}
-        onChange={(e) => setValue(e.target.value.toUpperCase())}
-        placeholder="ABCD-12345-WXYZ"
-        autoCapitalize="characters"
-        autoCorrect="off"
-        spellCheck={false}
-        style={{
-          background: "var(--bg2)",
-          border: `1px solid ${value && !valid ? "var(--accent)" : "var(--bg3)"}`,
-          borderRadius: "var(--radius-md)",
-          padding: "12px var(--space-3)",
-          color: "var(--text-hi)",
-          fontFamily: "monospace",
-          fontSize: "1rem",
-          letterSpacing: "0.1em",
-          textAlign: "center",
-          minHeight: 44,
-        }}
-      />
-      <button
-        onClick={save}
-        disabled={!valid || busy}
-        style={{
-          background: valid ? "var(--accent)" : "var(--bg3)",
-          color: valid ? "#fff" : "var(--text-low)",
-          border: "none",
-          borderRadius: "var(--radius-md)",
-          padding: "12px",
-          fontFamily: "'Rajdhani', sans-serif",
-          fontWeight: 700,
-          fontSize: "0.9375rem",
-          letterSpacing: "0.05em",
-          textTransform: "uppercase",
-          cursor: valid && !busy ? "pointer" : "default",
-          minHeight: 44,
-        }}
-      >
+      <div className="field">
+        <label htmlFor="authCode">Paste your code</label>
+        <input
+          id="authCode"
+          className={`input code${value && !valid ? " is-bad" : ""}`}
+          value={value}
+          onChange={(e) => setValue(e.target.value.toUpperCase())}
+          placeholder="XXXX-XXXXX-XXXX"
+          autoComplete="off"
+          autoCapitalize="characters"
+          autoCorrect="off"
+          spellCheck={false}
+          aria-invalid={Boolean(value && !valid)}
+        />
+      </div>
+      <span className="hint">Format 4–5–4, with dashes</span>
+      <button type="button" className="btn-solid" onClick={save} disabled={!valid || busy}>
         {busy ? "Saving…" : saved ? "Replace code" : "Save code"}
       </button>
       {saved && (
-        <button
-          onClick={remove}
-          disabled={busy}
-          style={{
-            background: "transparent",
-            border: "1px solid var(--bg3)",
-            color: "var(--text-mid)",
-            borderRadius: "var(--radius-md)",
-            padding: "10px",
-            fontFamily: "'Rajdhani', sans-serif",
-            fontWeight: 600,
-            fontSize: "0.8125rem",
-            letterSpacing: "0.05em",
-            textTransform: "uppercase",
-            cursor: "pointer",
-            minHeight: 44,
-          }}
-        >
+        <button type="button" className="btn-ghost" onClick={remove} disabled={busy}>
           Remove code
         </button>
       )}
-      {msg && <p style={{ color: "var(--text-mid)", fontSize: "0.8125rem", margin: 0 }}>{msg}</p>}
+      {msg && (
+        <p className="msg" role="status">
+          {msg}
+        </p>
+      )}
     </div>
   );
 }

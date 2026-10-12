@@ -1,22 +1,73 @@
 import Link from "next/link";
-import { getCommittedLayout } from "@/lib/layout";
+import { getCommittedLayout, type TeamDef } from "@/lib/layout";
 import { prisma } from "@/lib/db";
 import { isStagePickable, selectCurrentStageIndex } from "@/lib/stage-gate-core";
 import { isPlayoffSection } from "@/lib/playoff-bracket-core";
 import { getSession } from "@/lib/session";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
-import { HeatMark } from "@/components/heat/HeatMark";
-import { LockCountdown } from "@/components/heat/LockCountdown";
 import { lockTimeForSection, isLockTimePassed } from "@/lib/lock-schedule-core";
-import { WireFeed } from "@/components/heat/WireFeed";
 import { getWireItems } from "@/lib/news";
+import { safeHttpUrl, timeAgo, type WireItem } from "@/lib/news-core";
 import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { WatchNow } from "@/components/watch/WatchNow";
-import { currentEventId, getEventConfig, nextUpcomingEvent } from "@/lib/events-core";
+import {
+  currentEventId,
+  getEventConfig,
+  nextUpcomingEvent,
+  previousMajor,
+  stageOneStartFor,
+  type EventConfig,
+} from "@/lib/events-core";
 import { majorChampion, majorWrappedStageKey, type MajorChampion } from "@/lib/stage-wrapped-launch";
+import { statsForPickid, TEAM_STATS_AS_OF } from "@/lib/team-stats-core";
 import { StageWrappedReplay } from "@/components/heat/StageWrappedReplay";
+import { StageCountdown } from "@/components/sg/home/StageCountdown";
 
 export const dynamic = "force-dynamic";
+
+/** Event display name without the "CS2 … Major Championship" boilerplate. */
+function shortEventName(name: string): string {
+  return name.replace(/\s*CS2\s*/g, " ").replace(/\s*Major Championship\s*$/i, "").trim();
+}
+
+/** The host city, derived from the registry name ("PGL Major Singapore 2026" → "Singapore"). */
+function eventCity(name: string): string {
+  return name
+    .replace(/\b(CS2|PGL|IEM|ESL|BLAST|Major|Championship|\d{4})\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Venue time zone per event, so "Opens 25 Nov" reads in local venue time. */
+const VENUE_TZ: Record<string, string> = {
+  "pgl-singapore-2026": "Asia/Singapore",
+  "iem-cologne-2026": "Europe/Berlin",
+};
+
+function venueDay(iso: string, event: EventConfig | null): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    timeZone: (event && VENUE_TZ[event.slug]) || "UTC",
+  }).format(new Date(iso));
+}
+
+/**
+ * Field-row photography (/public/wrapped). Presentation only: the row shows
+ * whichever of these teams are in the committed layout, ordered by HLTV rank.
+ */
+const FIELD_PHOTOS: Record<string, { src: string; tint: string }> = {
+  Falcons: { src: "/wrapped/player-139.webp", tint: "#0d3b2e" },
+  Vitality: { src: "/wrapped/player-89.webp", tint: "#3a2a00" },
+  "Team Spirit": { src: "/wrapped/player-81.webp", tint: "#1c1c1c" },
+  "G2 Esports": { src: "/wrapped/player-59.webp", tint: "#2a2a2a" },
+  FURIA: { src: "/wrapped/player-85.webp", tint: "#141414" },
+  Aurora: { src: "/wrapped/player-134.webp", tint: "#0c2a3a" },
+  BetBoom: { src: "/wrapped/player-137.webp", tint: "#3a1a00" },
+  "9z Team": { src: "/wrapped/player-112.webp", tint: "#2a0a3a" },
+};
+
+const PHOTO_CREDIT = "IEM Cologne 2026 · HLTV";
 
 export default async function DashboardPage() {
   // Resolve the active event PER REQUEST (#1046): this RSC is force-dynamic, so
@@ -53,8 +104,9 @@ export default async function DashboardPage() {
   ]);
 
   const wireItems = wireItemsAll;
-  // Per-request server timestamp for relative "x ago" stamps — this is a
-  // force-dynamic RSC that renders once per request, so Date.now is intentional.
+  // Per-request server timestamp for relative "x ago" stamps and the countdown's
+  // first render — this is a force-dynamic RSC that renders once per request,
+  // so Date.now is intentional.
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
 
@@ -82,18 +134,13 @@ export default async function DashboardPage() {
   const active = stageStatuses[activeIdx];
 
   // The three single-elim sections (108/109/110) read as ONE "Playoffs" stage on
-  // the hero, the same way the picks page consolidates them (#1007). Once Stage
-  // III is over and Valve seeds the bracket, selectCurrentStageIndex promotes a
-  // playoff section to "current" and the hero transitions from Stage III to
-  // Playoffs — with bracket-appropriate copy, not Swiss 3-0/0-3 language.
+  // the hero, the same way the picks page consolidates them (#1007).
   const activePlayoff = isPlayoffSection(active.section.sectionid);
   const activeLabel = activePlayoff ? "Playoffs" : active.section.name.split(" | ")[0];
-  const activeNumber = activeIdx + 1;
 
   // How many of the active section's slots the signed-in player has already
-  // locked. Without this the briefing always reads "you haven't called your
-  // picks yet" even after a full lock-in (#883). Count distinct filled
-  // slots so a re-saved pick can't inflate the tally past the slot count.
+  // locked (#883). Count distinct filled slots so a re-saved pick can't inflate
+  // the tally past the slot count.
   const activeSlotCount = active.section.groups.reduce(
     (acc, g) => acc + g.picks.length,
     0,
@@ -128,18 +175,21 @@ export default async function DashboardPage() {
   const standings = allPlayers
     .map((p) => {
       const score = scorePlayer(layout, playerPickMap[p.id] ?? {}, outcomeMap);
+      const isSelf = session?.playerId === p.id;
       return {
         playerId: p.id,
         displayName: p.displayName,
         avatarUrl: p.avatarUrl,
         score: score.total,
-        isSelf: session?.playerId === p.id,
+        bySection: score.bySection,
+        isSelf,
       };
     })
     .sort((a, b) => b.score - a.score || a.displayName.localeCompare(b.displayName));
 
   const selfIdx = standings.findIndex((r) => r.isSelf);
   const selfRow = selfIdx >= 0 ? standings[selfIdx] : null;
+  const selfBySection = selfRow?.bySection ?? [];
   const leader = standings[0];
 
   // Show top 4, but if "you" sit further down, swap them in at position 4 so
@@ -150,160 +200,285 @@ export default async function DashboardPage() {
   }
 
   const eventStarted = resolvedRows.length > 0;
+  // Before anything scores, every player sits at 0 — ranks would be alphabetical
+  // noise, so the standing card and board say so honestly.
+  const boardLevel = !eventStarted && standings.every((r) => r.score === 0);
   // Once the Grand Final crowns a champion the Major is DONE — the eyebrow stops
-  // saying "Live now" (which it would otherwise say forever, since outcomes stay
-  // resolved) and the hero becomes a send-off (#1274: "the homepage needs
-  // updated").
+  // saying "Live now" and the hero becomes a send-off (#1274).
   const eventLabel = champion ? "Major complete" : eventStarted ? "Live now" : "Pre-event";
   // Re-open the actual Major Wrapped deck (the app-wide launcher mounted in the
-  // layout) via the replay bus — NOT a /reveal/<GF>?wrapped=1 link, which only
-  // force-opens that one section's own wrap ("Grand Final — nothing to wrap
-  // yet") instead of the cinematic recap (#1274).
+  // layout) via the replay bus — NOT a /reveal/<GF>?wrapped=1 link (#1274).
   const wrappedStageKey = majorWrappedStageKey(EVENT_ID);
 
+  const eventName = shortEventName(event?.name ?? layout.name);
+  const city = eventCity(event?.name ?? layout.name);
+  // Singapore Stage I — from the registry, never hardcoded.
+  const stageOneIso = event ? stageOneStartFor(event) : null;
+  const preStage = !champion && !eventStarted && !!stageOneIso && Date.parse(stageOneIso) > now;
+  const stageOneDay = stageOneIso ? venueDay(stageOneIso, event) : null;
+
+  const prev = previousMajor(now);
+  const prevLink = prev
+    ? { href: `/leaderboard?major=${prev.slug}`, label: `Final standings · ${shortEventName(prev.name)}` }
+    : null;
+
+  const pickHref = `/picks?section=${active.section.sectionid}`;
+  const pickCta = active.pick.pickable
+    ? session
+      ? selfPickComplete
+        ? "Edit Picks"
+        : selfFilledSlots > 0
+          ? "Finish Picks"
+          : "Make Picks"
+      : "Make Picks"
+    : active.pick.reason === "locked-time-passed" && session
+      ? "Check Your Picks"
+      : "View Stage";
+  const lockAt = active.pick.pickable
+    ? lockTimeForSection(active.section.sectionid, event?.lockSchedule)
+    : null;
+
+  // Stage path (prototype "One down, three to go"): each Swiss stage, plus the
+  // playoff sections folded into one "Playoffs" cell.
+  const resolvedBySection = new Map<number, number>();
+  for (const r of resolvedRows) resolvedBySection.set(r.sectionId, (resolvedBySection.get(r.sectionId) ?? 0) + 1);
+  type PathCell = {
+    key: string;
+    title: string;
+    href: string;
+    sectionIds: number[];
+    state: "done" | "now" | "next";
+    status: string;
+  };
+  const pathCells: PathCell[] = [];
+  stageStatuses.forEach((s, i) => {
+    const playoff = isPlayoffSection(s.section.sectionid);
+    const isActive = i === activeIdx;
+    const scored = (resolvedBySection.get(s.section.sectionid) ?? 0) > 0;
+    const status = s.pick.pickable
+      ? "open"
+      : s.pick.reason === "locked-time-passed" || s.pick.reason === "locked-by-valve"
+        ? "locked"
+        : "not seeded";
+    if (playoff) {
+      const existing = pathCells.find((c) => c.key === "playoffs");
+      if (existing) {
+        existing.sectionIds.push(s.section.sectionid);
+        if (isActive) existing.state = "now";
+        if (scored && existing.state === "next") existing.state = "done";
+        return;
+      }
+      pathCells.push({
+        key: "playoffs",
+        title: "Playoffs",
+        href: `/picks?section=${s.section.sectionid}`,
+        sectionIds: [s.section.sectionid],
+        state: isActive ? "now" : scored ? "done" : "next",
+        status,
+      });
+      return;
+    }
+    pathCells.push({
+      key: String(s.section.sectionid),
+      title: s.section.name.split(" | ")[0],
+      href: `/picks?section=${s.section.sectionid}`,
+      sectionIds: [s.section.sectionid],
+      state: isActive ? "now" : scored ? "done" : "next",
+      status,
+    });
+  });
+  const sectionMax = (id: number) =>
+    layout.sections
+      .find((s) => s.sectionid === id)
+      ?.groups.reduce((a, g) => a + g.picks.length * g.points_per_pick, 0) ?? 0;
+  const cellPoints = (ids: number[]) =>
+    selfBySection.filter((b) => ids.includes(b.sectionId)).reduce((a, b) => a + b.points, 0);
+  const cellMax = (ids: number[]) => ids.reduce((a, id) => a + sectionMax(id), 0);
+  const cellScored = (ids: number[]) => ids.some((id) => (resolvedBySection.get(id) ?? 0) > 0);
+  const scoredCount = pathCells.filter((c) => cellScored(c.sectionIds)).length;
+  const NUM = ["Zero", "One", "Two", "Three", "Four", "Five", "Six"];
+  const pathHeadline =
+    champion || scoredCount === pathCells.length
+      ? "Every stage called"
+      : scoredCount === 0
+        ? `${NUM[pathCells.length] ?? pathCells.length} stages, one run`
+        : `${NUM[scoredCount] ?? scoredCount} down, ${(NUM[pathCells.length - scoredCount] ?? pathCells.length - scoredCount).toLowerCase()} to go`;
+
+  // Field row: photographed teams present in the committed layout, by HLTV rank.
+  const fieldTeams = layout.teams
+    .filter((t) => FIELD_PHOTOS[t.name])
+    .map((t) => ({ team: t, rank: statsForPickid(t.pickid)?.worldRank ?? null }))
+    .sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999))
+    .slice(0, 4);
+  const statsAsOf = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).format(
+    new Date(`${TEAM_STATS_AS_OF}T00:00:00Z`),
+  );
+
   return (
-    <>
-      {/* Eyebrow */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span className="eyebrow">
-          {layout.name.replace("CS2 ", "").replace("Major | ", " · ")} · <b>{eventLabel}</b>
-        </span>
-      </div>
-
-      {/* Stage briefing — or, once a champion is crowned, the Major send-off. */}
+    <div className="hm">
+      {/* Hero — stage briefing (with the Stage I countdown pre-event), or the
+          Major send-off once a champion is crowned. */}
       {champion ? (
-        <ConcludedHero champion={champion} wrappedStageKey={wrappedStageKey} next={nextUpcomingEvent(now)} now={now} />
+        <ConcludedHero
+          champion={champion}
+          eventName={eventName}
+          wrappedStageKey={wrappedStageKey}
+          next={nextUpcomingEvent(now)}
+          now={now}
+        />
       ) : (
-      <section className="brk" style={{
-        position: "relative",
-        background: "var(--surf-1)",
-        border: "1px solid var(--hair-2)",
-        padding: "26px 28px 28px",
-        overflow: "hidden",
-      }}>
-        <span className="br-tr" />
-        <span className="br-bl" />
-        <div style={{
-          position: "absolute",
-          right: -20,
-          top: "50%",
-          transform: "translateY(-50%)",
-          width: 240,
-          height: 240,
-          opacity: 0.05,
-          pointerEvents: "none",
-        }}>
-          <HeatMark size={240} />
-        </div>
-        <div style={{ position: "relative", zIndex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-            <span className="eyebrow-mono">
-              {activePlayoff ? "PLAYOFFS" : `STAGE ${String(activeNumber).padStart(2, "0")}`}
-            </span>
-            <StageStatusTag pickability={active.pick} />
-          </div>
-          <h1 className="font-display" style={{
-            fontWeight: 800,
-            fontSize: "clamp(34px, 5vw, 48px)",
-            textTransform: "uppercase",
-            lineHeight: 0.92,
-            marginBottom: 14,
-          }}>
-            {activeLabel}
-          </h1>
-          <StageBody
-            pickability={active.pick}
-            sectionName={activeLabel}
-            signedIn={!!session}
-            filledSlots={selfFilledSlots}
-            totalSlots={activeSlotCount}
-            isPlayoff={activePlayoff}
-          />
-          {active.pick.pickable && (
-            <div style={{ marginTop: 16 }}>
-              <LockCountdown lockAt={lockTimeForSection(active.section.sectionid, event?.lockSchedule)} />
-            </div>
-          )}
-          <div style={{
-            display: "flex",
-            gap: 12,
-            flexWrap: "wrap",
-            alignItems: "center",
-            marginTop: 18,
-          }}>
-            {active.pick.pickable ? (
-              <Link
-                href={`/picks?section=${active.section.sectionid}`}
-                className="btn-heat"
-                prefetch={false}
-              >
-                {session
-                  ? selfPickComplete
-                    ? "Edit Picks"
-                    : selfFilledSlots > 0
-                      ? "Finish Picks"
-                      : "Make Picks"
-                  : "Make Picks"}
-                <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </Link>
-            ) : (
-              <Link
-                href={`/picks?section=${active.section.sectionid}`}
-                className="btn-heat"
-                prefetch={false}
-              >
-                {active.pick.reason === "locked-time-passed" && session
-                  ? "Check Your Picks"
-                  : "View Stage"}
-                <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </Link>
-            )}
-            <Link href="/leaderboard" className="btn-ghost" prefetch={false}>View Ranks</Link>
-          </div>
-        </div>
-      </section>
-      )}
-
-      {/* Stats + Leaderboard cols */}
-      <div className="dash-cols">
-        {session ? (
-          <div className="stat-row">
-            <div className="stat brk">
-              <span className="br-tr" />
-              <span className="br-bl" />
-              <div className="lbl">YOUR RANK</div>
-              <div className="val">
-                {selfIdx >= 0 ? (
+        <section className="bleed tall hm-hero">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/wrapped/major-cover.jpg" alt="" />
+          <span className="credit">Photo · {PHOTO_CREDIT}</span>
+          <div className="in">
+            <div className="hm-hero-main">
+              <span className="eyebrow rise hm-eyebrow">
+                {eventStarted ? <span className="live">{eventLabel}</span> : <span>{eventName} · <b>{eventLabel}</b></span>}
+                <span>
+                  {activePlayoff ? "Playoffs" : `Stage ${String(activeIdx + 1).padStart(2, "0")}`}
+                </span>
+                <StageStatusTag pickability={active.pick} />
+              </span>
+              <h1 className="display rise d1">
+                {preStage ? (
                   <>
-                    {selfIdx + 1}
-                    <small>{ordSuffix(selfIdx + 1)}</small>
+                    Stage I
+                    <br />
+                    opens in
                   </>
                 ) : (
-                  "—"
+                  activeLabel
                 )}
-              </div>
-              <div className={
-                "sub" +
-                (selfRow && leader && selfRow.score < leader.score ? " warn" : "")
-              }>
-                {selfRow && leader
-                  ? selfIdx === 0
-                    ? "Leading the board"
-                    : `${leader.score - selfRow.score} from the leader`
-                  : "No picks scored yet"}
-              </div>
+              </h1>
+              {preStage && stageOneIso ? (
+                <div className="rise d2">
+                  <StageCountdown
+                    target={stageOneIso}
+                    serverNow={now}
+                    label={
+                      <>
+                        Stage I · <b>Opens {stageOneDay}</b> · {city}
+                      </>
+                    }
+                    live={{ href: "/picks", text: "Stage I is live" }}
+                  />
+                </div>
+              ) : lockAt ? (
+                <div className="rise d2">
+                  <StageCountdown
+                    target={lockAt}
+                    serverNow={now}
+                    size="md"
+                    label={
+                      <>
+                        {activeLabel} · <b>until picks lock</b>
+                      </>
+                    }
+                  />
+                </div>
+              ) : null}
+              <StageBody
+                pickability={active.pick}
+                sectionName={activeLabel}
+                signedIn={!!session}
+                filledSlots={selfFilledSlots}
+                totalSlots={activeSlotCount}
+                isPlayoff={activePlayoff}
+              />
             </div>
-            <div className="stat brk">
-              <span className="br-tr" />
-              <span className="br-bl" />
-              <div className="lbl">POINTS</div>
-              <div className="val foil">{selfRow?.score ?? 0}</div>
-              <div className="sub">
-                of {maxPoints} ·{" "}
+            <div className="cta rise d3">
+              <Link href={pickHref} className="btn-solid" prefetch={false}>
+                {pickCta}
+              </Link>
+              <Link href="/leaderboard" className="btn-ghost" prefetch={false}>
+                View Ranks
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Stage path */}
+      <section className="chap">
+        <div className="chap-h">
+          <h2>{pathHeadline}</h2>
+          <p>
+            {selfRow && !boardLevel ? (
+              <>
+                You have <b>{selfRow.score} of {maxPoints} points</b> banked.
+              </>
+            ) : (
+              <>
+                <b>{maxPoints} points</b> on the table across the Major
+                {preStage && stageOneDay ? <>, from <b>{stageOneDay}</b></> : null}.
+              </>
+            )}
+          </p>
+        </div>
+        <div className="hm-path">
+          {pathCells.map((c) => {
+            const scored = cellScored(c.sectionIds);
+            const state = scored && c.state !== "now" ? "done" : c.state;
+            const isActiveCell = c.sectionIds.includes(active.section.sectionid);
+            return (
+              <Link key={c.key} href={c.href} prefetch={false} className={`hm-path-cell ${state}`}>
+                <span className="d">
+                  {c.title} · {scored ? "scored" : c.status}
+                </span>
+                <span className="t">{c.title}</span>
+                {scored && session ? (
+                  <span className="s">
+                    {cellPoints(c.sectionIds)}
+                    <small>/{cellMax(c.sectionIds)}</small>
+                  </span>
+                ) : isActiveCell && session && !activePlayoff ? (
+                  <span className="s">
+                    {selfFilledSlots}
+                    <small>/{activeSlotCount} made</small>
+                  </span>
+                ) : (
+                  <span className="s dim">—</span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Your standing + the board */}
+      <section className="hm-duo">
+        {session ? (
+          <div className="card hm-card">
+            <span className="eyebrow">Your standing</span>
+            <div className="hm-rank">
+              <span className="bignum">
+                {boardLevel || selfIdx < 0 ? "—" : String(selfIdx + 1).padStart(2, "0")}
+              </span>
+              {!boardLevel && selfIdx >= 0 && <span className="mono hm-ord">{ordSuffix(selfIdx + 1)}</span>}
+            </div>
+            <p className="hm-card-copy">
+              {boardLevel ? (
+                <>
+                  Everyone starts level at <b>0</b>. Your rank moves the moment {preStage ? "Stage I" : activeLabel} scores.
+                </>
+              ) : selfRow && leader ? (
+                selfIdx === 0 ? (
+                  <b>Leading the board.</b>
+                ) : (
+                  <>
+                    <b>{leader.score - selfRow.score}</b> from the leader.
+                  </>
+                )
+              ) : (
+                "No picks scored yet."
+              )}
+            </p>
+            <div className="hm-meta">
+              <span>
+                Points <b>{selfRow?.score ?? 0}</b> of {maxPoints}
+              </span>
+              <span>
                 {champion
                   ? "final"
                   : `${activeLabel} ${
@@ -313,246 +488,216 @@ export default async function DashboardPage() {
                           ? "live"
                           : "pending"
                     }`}
-              </div>
+              </span>
             </div>
+            <Link className="eyebrow" href={`/players/${encodeURIComponent(session.playerId)}`} prefetch={false}>
+              Your profile →
+            </Link>
           </div>
         ) : (
-          <Link href="/login/auth" className="panel brk" prefetch={false} style={{
-            display: "block",
-            textDecoration: "none",
-            color: "inherit",
-            background: "rgba(240,163,0,0.04)",
-            borderColor: "var(--hair-3)",
-          }}>
-            <span className="br-tr" />
-            <span className="br-bl" />
-            <div className="panel-title">Get In</div>
-            <h2 className="font-display" style={{
-              fontWeight: 800,
-              fontSize: 24,
-              textTransform: "uppercase",
-              color: "var(--ink-hi)",
-              margin: "0 0 8px",
-            }}>
-              Connect Steam
-            </h2>
-            <p style={{ color: "var(--ink-mid)", fontSize: 14, margin: 0 }}>
-              Sync your Valve picks, save locally, and climb the board.
-            </p>
+          <Link href="/login" className="card hm-card hm-getin" prefetch={false}>
+            <span className="eyebrow">Get in</span>
+            <h2 className="display">Connect Steam</h2>
+            <p className="hm-card-copy">Sync your Valve picks, save locally, and climb the board.</p>
+            <span className="eyebrow hm-go">Sign in →</span>
           </Link>
         )}
 
-        <div className="panel brk">
-          <span className="br-tr" />
-          <span className="br-bl" />
-          <div className="panel-title">
-            Leaderboard · Top 4
-            <Link href="/leaderboard" className="link" prefetch={false}>Full board →</Link>
+        <div className="card hm-card">
+          <div className="sect-head hm-board-head">
+            <span className="eyebrow">The board · Top 4</span>
+            <Link href="/leaderboard" prefetch={false}>
+              All ranks
+            </Link>
           </div>
-          {top.length === 0 ? (
-            <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: 0 }}>
-              No players yet. Be the first.
+          {boardLevel && top.length > 0 && (
+            <p className="hm-note">
+              Live board for {eventName}. <b>Everyone is level at 0</b> until {preStage ? "Stage I" : activeLabel} scores.
             </p>
+          )}
+          {top.length === 0 ? (
+            <p className="hm-note">No players yet. Be the first.</p>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            <div className="hm-mini">
               {top.map((row, idx) => {
-                const rank = selfRow && row.isSelf && selfIdx >= 0
-                  ? selfIdx + 1
-                  : idx + 1;
-                return <LeaderRow key={row.playerId} rank={rank} row={row} />;
+                const rank = selfRow && row.isSelf && selfIdx >= 0 ? selfIdx + 1 : idx + 1;
+                return <LeaderRow key={row.playerId} rank={rank} row={row} level={boardLevel} />;
               })}
             </div>
           )}
+          {prevLink && (
+            <Link href={prevLink.href} prefetch={false} className="hm-prev">
+              <span>{prevLink.label}</span>
+              <span aria-hidden="true">→</span>
+            </Link>
+          )}
         </div>
-      </div>
+      </section>
 
-      {/* Wire panel */}
-      <section className="panel brk">
-        <span className="br-tr" />
-        <span className="br-bl" />
-        <div className="panel-title">
-          Wire
-          <Link href="/news" className="link" prefetch={false}>All news →</Link>
+      {/* The field — photographic team row */}
+      {fieldTeams.length > 0 && (
+        <section className="chap">
+          <div className="chap-h row2">
+            <div>
+              <h2>The contenders</h2>
+              <p>
+                Ranked by HLTV as of <b>{statsAsOf}</b>. {city}&apos;s field is set when Valve seeds Stage I.
+              </p>
+            </div>
+            <Link className="eyebrow" href="/picks" prefetch={false}>
+              Open Pick&apos;Em →
+            </Link>
+          </div>
+          <div className="hm-field">
+            {fieldTeams.map(({ team, rank }) => (
+              <FieldCard key={team.pickid} team={team} rank={rank} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Latest — the wire */}
+      <section className="chap">
+        <div className="chap-h row2">
+          <div>
+            <h2>Latest</h2>
+          </div>
+          <Link className="eyebrow" href="/news" prefetch={false}>
+            All news →
+          </Link>
         </div>
         {wireItems.length > 0 ? (
-          <WireFeed items={wireItems} now={now} variant="compact" />
-        ) : (
-          <div style={{ color: "var(--ink-mid)", fontSize: 13 }}>
-            The wire is quiet. Headlines drop on{" "}
-            <Link href="/news" style={{ color: "var(--heat)" }} prefetch={false}>News</Link>.
+          <div className="hm-wire">
+            {wireItems.map((it) => (
+              <WireLine key={it.externalId} item={it} now={now} />
+            ))}
           </div>
+        ) : (
+          <p className="hm-note">
+            The wire is quiet. Headlines drop on{" "}
+            <Link href="/news" prefetch={false}>
+              News
+            </Link>
+            .
+          </p>
         )}
       </section>
 
-      {/* Watch the official streams (#942) — sits below everything else */}
-      <WatchNow />
+      {/* News + Info are reached from Home on mobile (bottom nav carries five tabs). */}
+      <section className="chap hm-more">
+        <div className="chap-h">
+          <h2>Everything else</h2>
+        </div>
+        <nav className="hair-list hm-more-list" aria-label="More">
+          <Link href="/news" prefetch={false}>
+            <span>News</span>
+            <span className="muted">Headlines from the scene</span>
+          </Link>
+          <Link href="/info" prefetch={false}>
+            <span>Info</span>
+            <span className="muted">Rules, scoring and the app</span>
+          </Link>
+          <Link href="/how-to-play" prefetch={false}>
+            <span>How to play</span>
+            <span className="muted">Four stages in two minutes</span>
+          </Link>
+          <Link href="/faq" prefetch={false}>
+            <span>FAQ</span>
+            <span className="muted">Answers, fast</span>
+          </Link>
+        </nav>
+      </section>
 
-      <style>{`
-        .dash-cols { display: grid; grid-template-columns: 1fr; gap: 14px; }
-        .stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        @media (min-width: 1024px) {
-          .dash-cols { grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
-        }
-      `}</style>
-    </>
+      {/* Watch the official streams — the channel list is ESL's (IEM Cologne),
+          so it only renders while that's the event being served. Re-point
+          WatchNow at the broadcaster's channels before showing it for others. */}
+      {event?.slug === "iem-cologne-2026" && <WatchNow />}
+    </div>
   );
 }
 
 /**
- * The dashboard hero AFTER the Major is decided (#1274) — replaces the stage
- * briefing the moment the Grand Final crowns a champion. Same broadcast shell as
- * the briefing (keyline corners + faint HeatMark), but it names the champion and
- * points everyone at the Wrapped recap and the final board instead of a now-dead
- * "picks are locked, watch the live bracket" call.
+ * The dashboard hero AFTER the Major is decided (#1274) — names the champion
+ * and points everyone at the Wrapped recap and the final board, plus a real
+ * countdown to the next Major's Stage I (#1328).
  */
 function ConcludedHero({
   champion,
+  eventName,
   wrappedStageKey,
   next,
   now,
 }: {
   champion: MajorChampion;
+  eventName: string;
   wrappedStageKey: string;
-  /** The next Major on the registry's clock (#1328), or null if none is
-   *  staged yet — keeps the off-season home alive with a real countdown. */
+  /** The next Major on the registry's clock (#1328), or null if none is staged. */
   next: ReturnType<typeof nextUpcomingEvent>;
-  /** Caller's per-request timestamp — reused here so this stays pure (no
-   *  second Date.now() call in a server component render). */
+  /** Caller's per-request timestamp (keeps this render pure). */
   now: number;
 }) {
-  const daysOut = next
-    ? Math.max(0, Math.ceil((Date.parse(next.dates.start) - now) / (24 * 60 * 60 * 1000)))
-    : null;
+  const nextStart = next ? stageOneStartFor(next) : null;
   return (
-    <section className="brk" style={{
-      position: "relative",
-      background: "var(--surf-1)",
-      border: "1px solid var(--hair-2)",
-      padding: "26px 28px 28px",
-      overflow: "hidden",
-    }}>
-      <span className="br-tr" />
-      <span className="br-bl" />
-      <div style={{
-        position: "absolute",
-        right: -20,
-        top: "50%",
-        transform: "translateY(-50%)",
-        width: 240,
-        height: 240,
-        opacity: 0.05,
-        pointerEvents: "none",
-      }}>
-        <HeatMark size={240} />
-      </div>
-      <div style={{ position: "relative", zIndex: 1 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-          <span className="eyebrow-mono">CHAMPIONS</span>
-          <span className="live-tag" style={{ color: "var(--ink-mid)", borderColor: "var(--hair-2)", background: "var(--surf-2)" }}>
-            That&apos;s a wrap
+    <section className="bleed tall hm-hero">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/wrapped/major-champion.jpg" alt="" />
+      <span className="credit">Photo · {PHOTO_CREDIT}</span>
+      <div className="in">
+        <div className="hm-hero-main">
+          <span className="eyebrow rise hm-eyebrow">
+            <span>
+              {eventName} · <b>Champions</b>
+            </span>
+            <span className="tag">That&apos;s a wrap</span>
           </span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 14 }}>
-          {champion.logoSrc && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={champion.logoSrc}
-              alt=""
-              width={64}
-              height={64}
-              style={{ objectFit: "contain", filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.5))", flexShrink: 0 }}
-            />
-          )}
-          <h1 className="font-display" style={{
-            fontWeight: 800,
-            fontSize: "clamp(34px, 5vw, 48px)",
-            textTransform: "uppercase",
-            lineHeight: 0.92,
-            margin: 0,
-          }}>
-            {champion.name}
-          </h1>
-        </div>
-        <p style={{ fontSize: 14, color: "var(--ink-mid)", margin: 0, maxWidth: 460, textWrap: "pretty" }}>
-          {champion.name} are your IEM Cologne Major 2026 champions. Thirty-two
-          walked in; one walks out with the trophy. Thanks for calling it with us
-          all Major long — the recap below has the whole run.
-        </p>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 18 }}>
-          <StageWrappedReplay stageKey={wrappedStageKey} label="Watch the Wrapped recap" className="btn-heat">
-            <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          </StageWrappedReplay>
-          <Link href="/leaderboard" className="btn-ghost" prefetch={false}>Final Ranks</Link>
-        </div>
-        {next && daysOut !== null && (
-          <div style={{
-            marginTop: 20,
-            paddingTop: 18,
-            borderTop: "1px solid var(--hair-2)",
-            display: "flex",
-            alignItems: "center",
-            gap: 16,
-            flexWrap: "wrap",
-          }}>
-            <div>
-              <div style={{
-                fontFamily: "var(--font-mono)",
-                fontWeight: 700,
-                fontSize: "clamp(24px, 4vw, 32px)",
-                lineHeight: 1,
-                color: "var(--ink-hi)",
-                fontVariantNumeric: "tabular-nums",
-              }}>
-                {daysOut}
-                <span style={{ fontSize: 12, fontWeight: 600, marginLeft: 6, color: "var(--ink-low)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                  days
-                </span>
-              </div>
-              <div style={{ fontSize: 12, color: "var(--ink-mid)", marginTop: 2 }}>
-                until {next.name.replace("CS2 ", "")}
-              </div>
-            </div>
-            <Link href="/majors" className="btn-ghost" prefetch={false} style={{ marginLeft: "auto" }}>
-              Cologne story + your coins →
-            </Link>
+          <div className="hm-champ rise d1">
+            {champion.logoSrc && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={champion.logoSrc} alt="" width={72} height={72} />
+            )}
+            <h1 className="display">{champion.name}</h1>
           </div>
-        )}
+          <p className="rise d2">
+            <b>{champion.name}</b> are your {eventName} champions. Thanks for calling it with us all Major long — the
+            recap has the whole run.
+          </p>
+          {next && nextStart && (
+            <div className="rise d2">
+              <StageCountdown
+                target={nextStart}
+                serverNow={now}
+                size="md"
+                label={
+                  <>
+                    Next · <b>{shortEventName(next.name)}</b> · Stage I
+                  </>
+                }
+                live={{ href: "/picks", text: "Stage I is live" }}
+              />
+            </div>
+          )}
+        </div>
+        <div className="cta rise d3">
+          <StageWrappedReplay stageKey={wrappedStageKey} label="Watch the Wrapped recap" className="btn-solid" />
+          <Link href="/leaderboard" className="btn-ghost" prefetch={false}>
+            Final Ranks
+          </Link>
+          {next && (
+            <Link href="/majors" className="btn-ghost" prefetch={false}>
+              {eventCity(eventName)} story + your coins
+            </Link>
+          )}
+        </div>
       </div>
     </section>
   );
 }
 
-function StageStatusTag({
-  pickability,
-}: {
-  pickability: ReturnType<typeof isStagePickable>;
-}) {
-  if (pickability.pickable) {
-    return <span className="live-tag">Picks Open</span>;
-  }
-  if (pickability.reason === "locked-time-passed") {
-    return (
-      <span className="live-tag" style={{ color: "var(--ink-mid)", borderColor: "var(--hair-2)", background: "var(--surf-2)" }}>
-        Underway · Locked
-      </span>
-    );
-  }
-  if (pickability.reason === "locked-by-valve") {
-    return (
-      <span className="live-tag" style={{ color: "var(--ink-mid)", borderColor: "var(--hair-2)", background: "var(--surf-2)" }}>
-        Locked by Valve
-      </span>
-    );
-  }
-  if (pickability.reason === "teams-not-set") {
-    return (
-      <span className="live-tag" style={{ color: "var(--ink-mid)", borderColor: "var(--hair-2)", background: "var(--surf-2)" }}>
-        Teams not set
-      </span>
-    );
-  }
+function StageStatusTag({ pickability }: { pickability: ReturnType<typeof isStagePickable> }) {
+  if (pickability.pickable) return <span className="tag warn">Picks Open</span>;
+  if (pickability.reason === "locked-time-passed") return <span className="tag">Underway · Locked</span>;
+  if (pickability.reason === "locked-by-valve") return <span className="tag">Locked by Valve</span>;
+  if (pickability.reason === "teams-not-set") return <span className="tag">Teams not set</span>;
   return null;
 }
 
@@ -575,15 +720,10 @@ function StageBody({
 }) {
   const complete = totalSlots > 0 && filledSlots >= totalSlots;
   // Playoffs are one single-elim bracket (QF→SF→GF), not a Swiss board — so the
-  // open/seeding copy speaks "bracket calls" and "the quarterfinals begin", never
-  // "who goes 3-0". The underway/locked copy is shared (it already reads right
-  // with sectionName "Playoffs").
+  // open/seeding copy speaks "bracket calls", never "who goes 3-0".
   const text = pickability.pickable
     ? isPlayoff
-      ? // The dashboard only counts the active section's slots (the QF), not the
-        // whole QF→SF→GF bracket, so the playoff copy doesn't cite a slot tally —
-        // it points at the bracket; the picks page shows real per-call progress.
-        signedIn
+      ? signedIn
         ? `The playoff bracket is open. Call it from the quarterfinals to the Grand Final — pick your champion before the quarters begin.`
         : `The playoff bracket is open. Sign in to call the quarterfinals through the Grand Final before it locks.`
       : signedIn
@@ -592,7 +732,7 @@ function StageBody({
           : filledSlots > 0
             ? `${filledSlots} of ${totalSlots} ${sectionName} slots locked. Finish the rest — who goes 3‑0, who crashes 0‑3, your advancing eight — before the window shuts.`
             : `You haven't called your ${sectionName} picks yet. Lock who goes 3‑0, who crashes 0‑3, and your advancing eight before the window shuts.`
-      : `Pick window is open. Sign in to lock your ${sectionName} picks before the window shuts.`
+        : `Pick window is open. Sign in to lock your ${sectionName} picks before the window shuts.`
     : pickability.reason === "teams-not-set"
       ? isPlayoff
         ? `The eight are still being seeded. The playoff bracket opens automatically once Valve sets the matchups.`
@@ -605,81 +745,75 @@ function StageBody({
           ? `Valve has closed the pick window for ${sectionName}. Watch the wire for results.`
           : "This stage isn't available.";
 
-  return (
-    <p style={{
-      fontSize: 14,
-      color: "var(--ink-mid)",
-      margin: 0,
-      maxWidth: 440,
-      textWrap: "pretty",
-    }}>
-      {text}
-    </p>
-  );
+  return <p className="rise d2">{text}</p>;
 }
 
 function LeaderRow({
   rank,
   row,
+  level,
 }: {
   rank: number;
   row: { playerId: string; displayName: string; avatarUrl: string | null; score: number; isSelf: boolean };
+  /** Everyone is tied at 0 — show "—" instead of an alphabetical rank. */
+  level: boolean;
 }) {
   return (
     <Link
       href={`/players/${encodeURIComponent(row.playerId)}`}
       prefetch={false}
-      style={{
-        display: "grid",
-        gridTemplateColumns: "24px 34px 1fr auto",
-        gap: 11,
-        alignItems: "center",
-        padding: "10px 13px",
-        background: row.isSelf ? "rgba(240,163,0,0.07)" : "var(--surf-1)",
-        border: row.isSelf ? "1px solid var(--hair-3)" : "1px solid var(--hair)",
-        textDecoration: "none",
-        color: "inherit",
-      }}
+      className={row.isSelf ? "me" : undefined}
     >
-      <span style={{
-        fontFamily: "var(--font-mono)",
-        fontSize: 12,
-        color: "var(--heat)",
-      }}>
-        {String(rank).padStart(2, "0")}
+      <span className="r">{level ? "—" : String(rank).padStart(2, "0")}</span>
+      <span className="n">
+        <span
+          className="av"
+          style={row.avatarUrl ? { backgroundImage: `url(${JSON.stringify(row.avatarUrl)})` } : undefined}
+          aria-hidden="true"
+        />
+        <span className="nm">{row.displayName}</span>
+        {row.isSelf && <span className="you">You</span>}
       </span>
-      <span style={{
-        width: 34,
-        height: 34,
-        borderRadius: "var(--r-sm)",
-        background: row.avatarUrl
-          ? `center/cover no-repeat url(${JSON.stringify(row.avatarUrl)})`
-          : "linear-gradient(135deg, var(--surf-3), var(--surf-2))",
-        border: "1px solid var(--hair)",
-      }} />
-      <span style={{ fontSize: 13, fontWeight: 500 }}>
-        {row.displayName}
-        {row.isSelf && (
-          <span style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 8,
-            letterSpacing: "0.1em",
-            color: "var(--ink-low)",
-            marginLeft: 7,
-            textTransform: "uppercase",
-          }}>
-            · you
-          </span>
-        )}
+      <span className="p">{row.score}</span>
+    </Link>
+  );
+}
+
+function FieldCard({ team, rank }: { team: TeamDef; rank: number | null }) {
+  const photo = FIELD_PHOTOS[team.name];
+  return (
+    <Link
+      href="/picks"
+      prefetch={false}
+      className="hm-field-card"
+      style={{ ["--c" as string]: photo.tint }}
+      aria-label={`${team.name}${rank ? `, HLTV world #${rank}` : ""}`}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={photo.src} alt="" loading="lazy" />
+      <span className="nm">{team.name.replace(/^Team /, "").replace(/ (Esports|Team)$/, "")}</span>
+      <span className="pc">{rank ? `HLTV world #${rank}` : "Unranked"}</span>
+    </Link>
+  );
+}
+
+function WireLine({ item, now }: { item: WireItem; now: number }) {
+  const href = safeHttpUrl(item.sourceUrl);
+  const inner = (
+    <>
+      <span className="src">
+        {item.source} · {timeAgo(item.publishedAt, now)}
       </span>
-      <span style={{
-        fontFamily: "var(--font-mono)",
-        fontWeight: 600,
-        fontSize: 16,
-        color: "var(--ink-hi)",
-      }}>
-        {row.score}
-      </span>
+      <span className="h">{item.headline}</span>
+    </>
+  );
+  return href ? (
+    <a href={href} target="_blank" rel="noopener noreferrer">
+      {inner}
+    </a>
+  ) : (
+    <Link href="/news" prefetch={false}>
+      {inner}
     </Link>
   );
 }

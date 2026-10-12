@@ -3,9 +3,10 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { type NotifEntry } from "@/lib/notifications-core";
 import { buildPlayerFeed } from "@/lib/notifications-feed";
+import { NotifGlyph } from "@/components/heat/NotifGlyph";
 import { InboxControls } from "./InboxControls";
 
-export const metadata = { title: "Notifications · HOTLINE" };
+export const metadata = { title: "Inbox · HOTLINE" };
 export const dynamic = "force-dynamic";
 
 const INBOX_PAGE_SIZE = 30;
@@ -18,6 +19,10 @@ const INBOX_HARD_CAP = 200;
  * page-size pagination via ?page=N and an All/Unread tab driven by the
  * per-entry NotificationRead table. Mark-all-read and click-to-mark-read
  * route through the client component (InboxControls).
+ *
+ * Singapore skin (prototype 16): a "Needs you" lead panel surfaces the first
+ * unread stage-lock entry; every row is a hairline list item with a kind glyph
+ * (the coin-earned row shows the struck coin) and an amber unread dot.
  */
 export default async function NotificationsPage({
   searchParams,
@@ -49,57 +54,57 @@ export default async function NotificationsPage({
 
   const groups = groupByTime(pageItems, all.generatedAtMs);
 
+  // The lead: the first unread stage-lock entry, if any — the one thing in the
+  // feed that needs action before a clock runs out.
+  const lead = page === 1 ? all.items.find((i) => i.isNew && i.kind === "stage") : undefined;
+
   // The client component handles per-item click and Mark-all-read, and toggles
   // the All/Unread tab.
 
   return (
-    <>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <span className="eyebrow-mono">YOUR FEED</span>
-        <h1
-          className="font-display"
-          style={{
-            fontWeight: 800,
-            fontSize: "clamp(28px, 5vw, 40px)",
-            textTransform: "uppercase",
-            lineHeight: 0.95,
-          }}
-        >
-          Notifications
-        </h1>
-        <p
-          style={{
-            color: "var(--ink-mid)",
-            fontSize: 13,
-            margin: "4px 0 0",
-            lineHeight: 1.5,
-          }}
-        >
-          Reactions on your picks, upcoming stage locks, your latest recap, and
-          the occasional broadcast. Everything older than 14 days falls off
-          (no backfill of stale recaps).
-        </p>
+    <div className="sg-page nf-page">
+      <div className="chap-h row2 rise">
+        <div>
+          <span className="n">
+            Inbox{all.unread > 0 ? ` · ${all.unread} unread` : " · all read"}
+          </span>
+          <h1 className="nf-title">Your feed</h1>
+          <p>
+            Stage locks, recaps, reactions on your picks and the occasional broadcast.
+            Anything older than <b>14 days</b> falls off.
+          </p>
+        </div>
+        <Link href="/settings#alerts" className="eyebrow" prefetch={false}>
+          Alert settings →
+        </Link>
       </div>
 
-      <InboxControls
-        filter={filter}
-        unread={all.unread}
-        page={page}
-      />
+      {lead && (
+        <section className="nf-lead rise d1">
+          <div className="nf-lead-ph photo">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/wrapped/magixx-1v4.jpg" alt="" loading="lazy" decoding="async" />
+            <span className="credit">IEM Cologne Major 2026 · HLTV</span>
+          </div>
+          <div className="nf-lead-b">
+            <span className="live">Needs you</span>
+            <span className="nf-lead-t">{lead.title}</span>
+            <p className="muted">{lead.body}</p>
+            <Link href={lead.href} className="btn-solid nf-lead-cta" prefetch={false}>
+              Make picks
+            </Link>
+          </div>
+        </section>
+      )}
+
+      <InboxControls filter={filter} unread={all.unread} page={page} />
 
       {total === 0 ? (
-        <EmptyInbox />
+        <EmptyInbox filter={filter} />
       ) : (
         <div className="inbox-wrap" data-page={page} data-total={total} data-pagecount={pageCount}>
           <div className="inbox-meta">
-            <span className="inbox-count">
-              Showing <strong>{start + 1}</strong>–<strong>{Math.min(start + INBOX_PAGE_SIZE, total)}</strong> of <strong>{total}</strong>
-            </span>
-            {all.unread > 0 && (
-              <span className="inbox-unread">
-                {all.unread} new
-              </span>
-            )}
+            Showing <b>{start + 1}</b>–<b>{Math.min(start + INBOX_PAGE_SIZE, total)}</b> of <b>{total}</b>
           </div>
 
           {groups.map((g) => (
@@ -116,41 +121,55 @@ export default async function NotificationsPage({
           <Pagination page={page} pageCount={pageCount} filter={filter} />
         </div>
       )}
-    </>
+    </div>
   );
 }
 
 // ── ROW COMPONENT ─────────────────────────────────────────────────────────────
 
+const GO_LABEL: Record<string, string> = {
+  stage: "Make picks",
+  recap: "Open recap",
+  coin: "Inspect",
+  reaction: "View picks",
+  announcement: "Open",
+};
+
 function InboxRow({ item, now }: { item: NotifEntry; now: number }) {
   return (
-    <li className={`inbox-row${item.isNew ? " fresh" : ""}`} data-entry-id={item.id}>
-      <Link href={item.href} className="inbox-link" data-mark-on-click={item.isNew ? "true" : undefined}>
-        <span className={`inbox-icon ${item.kind}`} aria-hidden="true">
-          {item.icon}
-        </span>
+    <li className={`inbox-row k-${item.kind}${item.isNew ? " fresh" : ""}`} data-entry-id={item.id}>
+      <Link
+        href={item.href}
+        className="inbox-link"
+        prefetch={false}
+        data-mark-on-click={item.isNew ? "true" : undefined}
+      >
+        <NotifGlyph kind={item.kind} id={item.id} title={item.title} size="lg" />
         <span className="inbox-text">
-          <span className="inbox-title">{item.title}</span>
+          <span className="inbox-title">
+            {item.isNew && <span className="inbox-dot" aria-label="new" />}
+            {item.title}
+          </span>
           {item.kind === "reaction" && item.stamps ? (
-            <span className="inbox-stamps">
+            <span className="nf-stamps">
               {item.stamps.map((s) => (
-                <span key={s.id} className={`inbox-stamp ${s.kind}`}>
+                <span key={s.id} className={`nf-stamp ${s.kind}`} title={s.label}>
                   <span aria-hidden="true">{s.glyph}</span>
-                  <span className="inbox-ct">{s.count}</span>
+                  <span className="ct">{s.count}</span>
                 </span>
               ))}
             </span>
           ) : (
             <span className="inbox-body">{item.body}</span>
           )}
-          <span className="inbox-meta-line">
-            <span className="inbox-when">{timeAgo(item.atMs, now)}</span>
-            {item.readAt != null && (
-              <span className="inbox-read">read {timeAgo(item.readAt, now)}</span>
-            )}
-          </span>
+          {item.readAt != null && (
+            <span className="inbox-read">Read {timeAgo(item.readAt, now)}</span>
+          )}
         </span>
-        {item.isNew && <span className="inbox-dot" aria-label="new" />}
+        <span className="inbox-r">
+          <span className="inbox-when">{whenLabel(item.atMs, now)}</span>
+          <span className="inbox-go">{GO_LABEL[item.kind] ?? "Open"} →</span>
+        </span>
       </Link>
     </li>
   );
@@ -167,27 +186,21 @@ function Pagination({ page, pageCount, filter }: { page: number; pageCount: numb
   return (
     <nav className="inbox-pager" aria-label="Notifications pages">
       {prev != null ? (
-        <Link href={hrefFor(prev)} className="inbox-pager-link prev" rel="prev">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-          Newer
+        <Link href={hrefFor(prev)} className="inbox-pager-link prev" rel="prev" prefetch={false}>
+          ← Newer
         </Link>
       ) : (
-        <span className="inbox-pager-link prev disabled" aria-disabled="true">Newer</span>
+        <span className="inbox-pager-link prev disabled" aria-disabled="true">← Newer</span>
       )}
       <span className="inbox-pager-of">
         Page {page} of {pageCount}
       </span>
       {next != null ? (
-        <Link href={hrefFor(next)} className="inbox-pager-link next" rel="next">
-          Older
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
+        <Link href={hrefFor(next)} className="inbox-pager-link next" rel="next" prefetch={false}>
+          Older →
         </Link>
       ) : (
-        <span className="inbox-pager-link next disabled" aria-disabled="true">Older</span>
+        <span className="inbox-pager-link next disabled" aria-disabled="true">Older →</span>
       )}
     </nav>
   );
@@ -195,51 +208,18 @@ function Pagination({ page, pageCount, filter }: { page: number; pageCount: numb
 
 // ── EMPTY STATE ───────────────────────────────────────────────────────────────
 
-function EmptyInbox() {
+function EmptyInbox({ filter }: { filter: "all" | "unread" }) {
   return (
-    <section className="panel brk" style={{ padding: "44px 24px", textAlign: "center" }}>
-      <span className="br-tr" />
-      <span className="br-bl" />
-      <div
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: 9,
-          letterSpacing: "0.18em",
-          textTransform: "uppercase",
-          color: "var(--heat)",
-          marginBottom: 14,
-        }}
-      >
-        You&apos;re all caught up
-      </div>
-      <p
-        className="font-display"
-        style={{
-          fontWeight: 800,
-          fontSize: 24,
-          color: "var(--ink-hi)",
-          textTransform: "uppercase",
-          margin: "0 0 8px",
-        }}
-      >
-        No notifications
+    <section className="nf-empty">
+      <span className="eyebrow">
+        <b>All caught up</b>
+      </span>
+      <p className="nf-empty-t">{filter === "unread" ? "Nothing unread" : "Nothing new"}</p>
+      <p className="muted">
+        Stage locks, recaps, reactions on your picks and broadcasts land here the moment they happen.
       </p>
-      <p
-        style={{
-          color: "var(--ink-mid)",
-          fontSize: 14,
-          maxWidth: 320,
-          margin: "0 auto 18px",
-          lineHeight: 1.55,
-        }}
-      >
-        New reactions on your picks, upcoming stage locks, and the broadcast channel will all land here.
-      </p>
-      <Link href="/picks" className="btn-heat">
-        Go make your picks
-        <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="9 18 15 12 9 6" />
-        </svg>
+      <Link href="/picks" className="btn-solid" prefetch={false}>
+        Make your picks
       </Link>
     </section>
   );
@@ -257,6 +237,19 @@ function timeAgo(ms: number, now: number): string {
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
+}
+
+/** Compact right-column stamp: "now" / "12m" / "4h" / "Tue" / "21 Jun". */
+function whenLabel(ms: number, now: number): string {
+  const s = Math.max(0, Math.floor((now - ms) / 1000));
+  if (s < 60) return "now";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  const d = new Date(ms);
+  if (now - ms < 6 * DAY_MS) return d.toLocaleDateString("en-GB", { weekday: "short" });
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
 interface TimeGroup {

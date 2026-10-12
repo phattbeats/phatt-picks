@@ -17,8 +17,22 @@ import { StageWrappedAnnounce } from "@/components/heat/StageWrapped";
  * deck opens deferred-to-idle, once per viewer, behind an error boundary, with
  * no GPU blur and mobile-fit — the freeze classes #1269 hit are all closed.
  */
-export async function StageWrappedGate({ playerId }: { playerId: string | null }) {
-  const majorDeck = await prepareMajorWrappedAutoDeck(currentEventId(), playerId);
+export async function StageWrappedGate({
+  playerId,
+  eventId,
+  autoOpen = true,
+  forceOpen = false,
+}: {
+  playerId: string | null;
+  /** Which Major's deck — defaults to the live one (the app-wide launcher). A
+   *  previous Major's reveal passes its own id to keep its Wrapped watchable. */
+  eventId?: number;
+  /** The app-wide launcher auto-opens once; a per-page mount is replay-only. */
+  autoOpen?: boolean;
+  /** Open once on mount (the `?wrapped=1` deep link). */
+  forceOpen?: boolean;
+}) {
+  const majorDeck = await prepareMajorWrappedAutoDeck(eventId ?? currentEventId(), playerId);
   if (!majorDeck || majorDeck.slides.length === 0) return null;
   return (
     <StageWrappedAnnounce
@@ -28,7 +42,8 @@ export async function StageWrappedGate({ playerId }: { playerId: string | null }
       slides={majorDeck.slides}
       title={majorDeck.title}
       resolved
-      autoOpen
+      autoOpen={autoOpen}
+      forceOpen={forceOpen}
     />
   );
 }

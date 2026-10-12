@@ -4,290 +4,204 @@
  *
  * Every Major the signed-in player has played (a distinct eventId in their Pick
  * rows that the registry knows about), newest first, with their score, their
- * finish among the field, and a link into that event's full profile.
+ * finish among the field, the coin it minted, and links into that event's
+ * read-only profile view and its final standings. The live Major leads as an
+ * "in play" card.
  *
  * Data is already persisted per eventId, so this is a read view — no schema, no
  * crawl. Scoring reuses the leaderboard's exact maths (scorePlayer + the score-
  * desc / name tiebreak) so a Major's "finish" here matches its leaderboard rank.
  *
- * Per-event layout: today only the live event's layout fixture is loadable
- * (getCommittedLayout), and every persisted pick belongs to it, so every row
- * scores correctly. When the cutover lands per-event layout fixtures, swap the
- * `layoutFor` lookup; rows whose layout can't be loaded degrade honestly to an
- * unscored entry (— / no finish) rather than mis-scoring against the wrong
- * fixture.
+ * Per-event layout: only a Major whose layout fixture is loadable scores; rows
+ * whose layout can't be loaded degrade honestly to an unscored entry (— / no
+ * finish) rather than mis-scoring against the wrong fixture.
  */
 
 import Link from "next/link";
-import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import { getCommittedLayout, type Layout } from "@/lib/layout";
-import { scorePlayer, type OutcomeMap, type PlayerPickMap } from "@/lib/scoring";
-import { getEventConfig } from "@/lib/events-core";
-import {
-  buildMajorsHistory,
-  computeFinish,
-  isEventArchived,
-  type MajorHistoryRow,
-} from "@/lib/majors-core";
+import { currentEvent, stageOneStartFor } from "@/lib/events-core";
+import { resolveEffectiveStatus } from "@/lib/event-lifecycle-core";
+import { isEventArchived } from "@/lib/majors-core";
 import { getPlayerChallengeCoins } from "@/lib/challenge-coins";
 import { InspectableCoin } from "@/components/heat/CoinInspector";
 import type { ChallengeCoin } from "@/lib/challenge-coin-core";
-
-function ordSuffix(n: number): string {
-  const v = n % 100;
-  if (v >= 11 && v <= 13) return "th";
-  switch (n % 10) {
-    case 1: return "st";
-    case 2: return "nd";
-    case 3: return "rd";
-    default: return "th";
-  }
-}
-
-function statusChip(status: MajorHistoryRow["status"]) {
-  const map = {
-    live: { label: "Live", color: "var(--heat)", bg: "rgba(240,163,0,0.12)" },
-    archived: { label: "Final", color: "var(--ink-mid)", bg: "var(--surf-2)" },
-    upcoming: { label: "Upcoming", color: "var(--ink-mid)", bg: "var(--surf-2)" },
-  } as const;
-  const s = map[status];
-  return (
-    <span style={{
-      padding: "2px 8px",
-      background: s.bg,
-      border: "1px solid var(--hair-2)",
-      fontFamily: "var(--font-mono)",
-      fontSize: 9,
-      fontWeight: 600,
-      letterSpacing: "0.12em",
-      textTransform: "uppercase",
-      color: s.color,
-    }}>
-      {s.label}
-    </span>
-  );
-}
+import {
+  dayMonth,
+  majorPhoto,
+  majorShortName,
+  monthYear,
+  ordSuffix,
+  playerMajorsHistory,
+} from "@/components/sg/people/people-data";
 
 export default async function MajorsPage() {
   const session = await getSession();
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now();
+  const live = currentEvent(nowMs);
+  const liveStatus = resolveEffectiveStatus(live, nowMs);
+  const liveName = majorShortName(live);
+
+  const hero = (eyebrow: React.ReactNode) => (
+    <section className="bleed short">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/wrapped/cologne-arena.jpg" alt="" />
+      <span className="credit">Photo · Wikimedia Commons</span>
+      <div className="in">
+        <span className="eyebrow rise">{eyebrow}</span>
+        <h1 className="display rise d1">Your Majors</h1>
+      </div>
+    </section>
+  );
 
   if (!session) {
     return (
-      <>
-        <span className="eyebrow-mono">YOUR MAJORS</span>
-        <div className="panel brk" style={{ textAlign: "center", padding: "48px 24px", marginTop: 12 }}>
-          <span className="br-tr" />
-          <span className="br-bl" />
-          <p className="font-display" style={{ fontWeight: 700, fontSize: 22, color: "var(--ink-hi)", textTransform: "uppercase", margin: "0 0 6px" }}>
-            Sign in to look back
-          </p>
-          <p style={{ color: "var(--ink-mid)", fontSize: 14, margin: 0 }}>
-            Your Majors history follows your account —{" "}
-            <Link href="/login/auth" style={{ color: "var(--heat)" }}>sign in</Link>{" "}
-            or{" "}
-            <Link href="/login/local" style={{ color: "var(--ink-mid)" }}>play locally</Link>.
-          </p>
-        </div>
-      </>
+      <div className="pp-page">
+        {hero(<>Your record · <b>every Major</b></>)}
+        <section className="chap">
+          <div className="chap-h">
+            <h2>Sign in to look back</h2>
+            <p>
+              Your Majors history follows your account.{" "}
+              <Link href="/login" prefetch={false}>Sign in</Link> or{" "}
+              <Link href="/login/local" prefetch={false}>play locally</Link>.
+            </p>
+          </div>
+        </section>
+      </div>
     );
   }
 
-  // Which Majors has this player played? (distinct events in their picks.)
-  const playedRows = await prisma.pick.findMany({
-    where: { playerId: session.playerId },
-    distinct: ["eventId"],
-    select: { eventId: true },
-  });
-  const eventIds = playedRows.map((r) => r.eventId);
-
-  const committed = getCommittedLayout();
-  /** The layout fixture that describes a given event, or null if not loadable. */
-  const layoutFor = (eventId: number): Layout | null =>
-    committed.event === eventId ? committed : null;
-
-  const rows: MajorHistoryRow[] = [];
-  for (const eventId of eventIds) {
-    const cfg = getEventConfig(eventId);
-    if (!cfg) continue; // an event the registry doesn't know — no name/status to show
-
-    const layout = layoutFor(eventId);
-
-    // The whole field for this event: score everyone, rank, then read off finish.
-    const allPicks = await prisma.pick.findMany({
-      where: { eventId },
-      include: { player: { select: { displayName: true } } },
-    });
-    const outcomes = await prisma.stageOutcome.findMany({ where: { eventId } });
-
-    const outcomeMap: OutcomeMap = {};
-    for (const o of outcomes) {
-      outcomeMap[o.sectionId] ??= {};
-      outcomeMap[o.sectionId][o.groupId] ??= {};
-      outcomeMap[o.sectionId][o.groupId][o.slotIndex] = o.winnerPickId;
-    }
-
-    const pickMap: PlayerPickMap = {};
-    const nameById: Record<string, string> = {};
-    let myPickCount = 0;
-    for (const p of allPicks) {
-      pickMap[p.playerId] ??= {};
-      pickMap[p.playerId][p.sectionId] ??= {};
-      pickMap[p.playerId][p.sectionId][p.groupId] ??= {};
-      pickMap[p.playerId][p.sectionId][p.groupId][p.slotIndex] = p.pickId;
-      nameById[p.playerId] = p.player.displayName;
-      if (p.playerId === session.playerId && p.pickId !== 0) myPickCount++;
-    }
-
-    const playerIds = Object.keys(pickMap);
-    const scoreById: Record<string, number> = {};
-    for (const pid of playerIds) {
-      scoreById[pid] = layout ? scorePlayer(layout, pickMap[pid], outcomeMap).total : 0;
-    }
-    // Same ordering as the leaderboard: score desc, then displayName asc.
-    const ranked = [...playerIds].sort(
-      (a, b) => scoreById[b] - scoreById[a] || (nameById[a] ?? "").localeCompare(nameById[b] ?? ""),
-    );
-
-    rows.push({
-      eventId,
-      slug: cfg.slug,
-      name: cfg.name,
-      status: cfg.status,
-      start: cfg.dates.start,
-      scored: layout != null,
-      score: layout ? scoreById[session.playerId] ?? 0 : 0,
-      finish: layout ? computeFinish(session.playerId, ranked) : null,
-      fieldSize: playerIds.length,
-      pickCount: myPickCount,
-    });
-  }
-
-  const history = buildMajorsHistory(rows);
+  const history = await playerMajorsHistory(session.playerId, nowMs);
 
   // Challenge coins (#1278) the signed-in player has earned, indexed by event
   // so each concluded Major's row can show its inspectable, drag-to-rotate coin.
-  const coins = await getPlayerChallengeCoins(session.playerId);
+  const coins = await getPlayerChallengeCoins(session.playerId, nowMs);
   const coinByEvent = new Map<number, ChallengeCoin>(coins.map((c) => [c.eventId, c]));
 
-  return (
-    <>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <span className="eyebrow-mono">YOUR MAJORS</span>
-        <h1 className="font-display" style={{
-          fontWeight: 800,
-          fontSize: "clamp(28px, 5vw, 40px)",
-          textTransform: "uppercase",
-          lineHeight: 0.95,
-          margin: 0,
-        }}>
-          Look back at your picks
-        </h1>
-        <p style={{ color: "var(--ink-mid)", fontSize: 13, margin: 0 }}>
-          {history.length === 0
-            ? "Every Major you play shows up here."
-            : `${history.length} Major${history.length !== 1 ? "s" : ""} played · your score and finish in each.`}
-        </p>
-      </div>
+  const selfHref = `/players/${encodeURIComponent(session.playerId)}`;
+  const liveRow = history.find((h) => h.eventId === live.eventId) ?? null;
+  const showLive = !isEventArchived(liveStatus);
+  const rows = showLive ? history.filter((h) => h.eventId !== live.eventId) : history;
+  const stageOne = stageOneStartFor(live);
+  const livePhoto = majorPhoto(live.slug);
 
-      {history.length === 0 ? (
-        <div className="panel brk" style={{ textAlign: "center", padding: "48px 24px", marginTop: 12 }}>
-          <span className="br-tr" />
-          <span className="br-bl" />
-          <p className="font-display" style={{ fontWeight: 700, fontSize: 20, color: "var(--ink-hi)", textTransform: "uppercase", margin: "0 0 6px" }}>
-            No Majors yet
-          </p>
-          <p style={{ color: "var(--ink-mid)", fontSize: 14, margin: 0 }}>
-            Make your{" "}
-            <Link href="/picks" style={{ color: "var(--heat)" }}>picks</Link>{" "}
-            for the live Major and they&apos;ll land here.
-          </p>
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
-          {history.map((row, i) => {
-            const coin = coinByEvent.get(row.eventId);
-            return (
-            <div
-              key={row.eventId}
-              style={{
-                display: "flex",
-                alignItems: "stretch",
-                gap: 0,
-                background: "var(--surf-1)",
-                border: "1px solid var(--hair)",
-              }}
-            >
-            <Link
-              href={`/players/${encodeURIComponent(session.playerId)}?event=${row.eventId}`}
-              className={isEventArchived(row.status) ? "" : "brk"}
-              style={{
-                flex: 1,
-                minWidth: 0,
-                display: "grid",
-                gridTemplateColumns: "1fr auto",
-                gap: 12,
-                alignItems: "center",
-                padding: "16px",
-                textDecoration: "none",
-                color: "inherit",
-              }}
-            >
-              <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontWeight: 600, fontSize: 15, color: "var(--ink-hi)" }}>
-                    {row.name}
-                  </span>
-                  {statusChip(row.status)}
-                </div>
-                <span style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 11,
-                  letterSpacing: "0.08em",
-                  color: "var(--ink-mid)",
-                }}>
-                  {/* #1046: when the layout fixture isn't loadable the score is
-                      not a genuine 0 — say so explicitly rather than imply a result. */}
-                  {!row.scored
-                    ? "Score unavailable"
-                    : row.finish !== null
-                      ? `${row.finish}${ordSuffix(row.finish)} of ${row.fieldSize}`
-                      : "Not scored"}
-                  {row.pickCount > 0 && ` · ${row.pickCount} picks`}
-                </span>
-              </div>
-              <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-                <span style={{
-                  fontFamily: "var(--font-mono)",
-                  fontWeight: 600,
-                  fontSize: 24,
-                  color: row.scored && row.score > 0 ? "var(--ink-hi)" : "var(--ink-low)",
-                  lineHeight: 1,
-                }}>
-                  {row.scored ? row.score : "—"}
-                </span>
-                <span style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 9,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                  color: "var(--ink-low)",
-                }}>
-                  {row.scored ? "pts" : "n/a"}
-                </span>
-              </div>
-            </Link>
-            {coin && (
-              <div className="major-row-coin">
-                <InspectableCoin coin={coin} size={60} delay={i * 1.1} />
-                <span className={`coin-collectible-tier ${coin.tier}`}>{coin.tier}</span>
-              </div>
-            )}
-            </div>
-            );
-          })}
-        </div>
+  return (
+    <div className="pp-page">
+      {hero(
+        <>
+          Your record · <b>{history.length} Major{history.length !== 1 ? "s" : ""}</b>
+        </>,
       )}
-    </>
+
+      {showLive && (
+        <section className="chap">
+          <div className="chap-h">
+            <h2>In play now</h2>
+          </div>
+          <Link className="pp-livecard" href={liveRow ? selfHref : "/picks"} prefetch={false}>
+            <span className="pp-livecard-ph">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={livePhoto.src} alt="" loading="lazy" />
+            </span>
+            <span className="pp-livecard-b">
+              {liveStatus === "live" ? (
+                <span className="live">Live</span>
+              ) : (
+                <span className="eyebrow">
+                  Up next{stageOne ? <> · Stage I <b>{dayMonth(stageOne, live.slug.includes("singapore") ? "Asia/Singapore" : undefined)}</b></> : null}
+                </span>
+              )}
+              <span className="pp-livecard-nm">{liveName}</span>
+              <span className="cells" style={{ ["--n" as string]: 3 } as React.CSSProperties}>
+                <span>
+                  <span className="k">Finish</span>
+                  <span className="v">{liveRow?.finish != null ? String(liveRow.finish).padStart(2, "0") : "—"}</span>
+                </span>
+                <span>
+                  <span className="k">Points</span>
+                  <span className="v">{liveRow?.scored ? liveRow.score : "—"}</span>
+                </span>
+                <span>
+                  <span className="k">Picks</span>
+                  <span className="v">{liveRow?.pickCount ?? 0}</span>
+                </span>
+              </span>
+              <span className="eyebrow">{liveRow ? "Your profile →" : "Make your picks →"}</span>
+            </span>
+          </Link>
+        </section>
+      )}
+
+      <section className="chap">
+        <div className="chap-h">
+          <h2>{rows.length === 0 ? "No Majors yet" : "Finished"}</h2>
+          {rows.length === 0 ? (
+            <p>
+              Make your <Link href="/picks" prefetch={false}>picks</Link> for {liveName} and it lands here
+              once the Grand Final is played.
+            </p>
+          ) : (
+            <p>
+              Each one minted a coin. <b>Where you finished decided the metal.</b>
+            </p>
+          )}
+        </div>
+
+        {rows.length > 0 && (
+          <div className="pp-arc">
+            {rows.map((row, i) => {
+              const coin = coinByEvent.get(row.eventId);
+              const photo = majorPhoto(row.slug);
+              const archived = isEventArchived(row.status);
+              const majorQ = `?major=${encodeURIComponent(row.slug)}`;
+              return (
+                <div key={row.eventId} className="pp-mj">
+                  <Link
+                    className="pp-mj-main"
+                    href={`${selfHref}${majorQ}`}
+                    prefetch={false}
+                  >
+                    <span className="pp-mj-ph">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={photo.src} alt="" loading="lazy" />
+                    </span>
+                    <span className="pp-mj-txt">
+                      <span className="eyebrow">
+                        {monthYear(row.start)} · {archived ? "Final" : row.status === "live" ? <b>Live</b> : "Upcoming"}
+                      </span>
+                      <span className="pp-mj-nm">{majorShortName(row)}</span>
+                      <span className="pp-mj-f">
+                        {/* #1046: when the layout fixture isn't loadable the score is
+                            not a genuine 0 — say so explicitly rather than imply a result. */}
+                        {!row.scored
+                          ? "Score unavailable"
+                          : row.finish !== null
+                            ? `${row.finish}${ordSuffix(row.finish)} of ${row.fieldSize}`
+                            : "Not scored"}
+                        {row.scored && ` · ${row.score} pts`}
+                        {row.pickCount > 0 && ` · ${row.pickCount} picks`}
+                      </span>
+                    </span>
+                  </Link>
+                  {coin && (
+                    <div className="pp-mj-coin">
+                      <InspectableCoin coin={coin} size={88} delay={i * 1.1} />
+                      <span className={`coin-collectible-tier ${coin.tier}`}>{coin.tier}</span>
+                    </div>
+                  )}
+                  <div className="pp-mj-links">
+                    <Link className="eyebrow" href={`${selfHref}${majorQ}`} prefetch={false}>Your picks →</Link>
+                    {archived && (
+                      <Link className="eyebrow" href={`/leaderboard${majorQ}`} prefetch={false}>Final standings →</Link>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    </div>
   );
 }

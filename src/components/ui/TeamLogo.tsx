@@ -14,20 +14,8 @@ interface TeamLogoProps {
 function Monogram({ label, teamName, size }: { label: string; teamName: string; size: number }) {
   return (
     <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: "50%",
-        background: "var(--bg3)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "'Rajdhani', sans-serif",
-        fontWeight: 700,
-        fontSize: size * 0.36,
-        color: "var(--text-mid)",
-        flexShrink: 0,
-      }}
+      className="team-mono"
+      style={{ width: size, height: size, fontSize: Math.max(10, Math.round(size * 0.36)) }}
       aria-label={teamName}
       title={teamName}
     >
@@ -56,7 +44,7 @@ export function TeamLogo({ tiers, teamName, size = 32 }: TeamLogoProps) {
       title={teamName}
       width={size}
       height={size}
-      style={{ borderRadius: 4, objectFit: "contain", flexShrink: 0 }}
+      style={{ borderRadius: "var(--r-md)", objectFit: "contain", flexShrink: 0 }}
       onError={() => setIndex((i) => i + 1)}
       unoptimized
     />

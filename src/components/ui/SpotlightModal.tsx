@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
 import type { TeamDef } from "@/lib/layout";
+import { teamHref } from "@/components/sg/teams/team-assets";
 import { statsForPickid, TEAM_STATS_AS_OF, type TeamStats } from "@/lib/team-stats-core";
 import {
   spotlightForPickid,
@@ -148,9 +150,9 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
           </div>
           <div className="spot-hero-text">
             {spot && (
-              <span className="eyebrow-mono spot-eyebrow">{spot.narrative.tag}</span>
+              <span className="eyebrow spot-eyebrow">{spot.narrative.tag}</span>
             )}
-            <h3 className="spot-name font-display">{team.name}</h3>
+            <h3 className="spot-name display">{team.name}</h3>
             {spot && <p className="spot-seed">{spot.narrative.seedLine}</p>}
           </div>
           {stats?.worldRank != null && (
@@ -329,14 +331,19 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
           <p className="tsd-empty">No spotlight on file for this team yet.</p>
         )}
 
-        {stats?.hltvUrl && (
-          <a className="tsd-link" href={stats.hltvUrl} target="_blank" rel="noopener noreferrer">
-            HLTV profile
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M7 17 17 7M9 7h8v8" />
-            </svg>
-          </a>
-        )}
+        <div className="spot-links">
+          <Link className="btn btn-solid spot-team-link" href={teamHref(team)} prefetch={false}>
+            Team page
+          </Link>
+          {stats?.hltvUrl && (
+            <a className="tsd-link" href={stats.hltvUrl} target="_blank" rel="noopener noreferrer">
+              HLTV profile
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 17 17 7M9 7h8v8" />
+              </svg>
+            </a>
+          )}
+        </div>
 
         <p className="tsd-foot">Stats via HLTV · {asOf}</p>
       </div>
