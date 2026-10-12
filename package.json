@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "prepare": "npm run hooks:install",
-    "hooks:install": "git config core.hooksPath .githooks",
+    "hooks:install": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
