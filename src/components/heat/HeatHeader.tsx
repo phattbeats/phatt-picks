@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HeatMark, HeatWordmark } from "./HeatMark";
+import { HotlineLockup } from "./HeatMark";
 import { NotificationBell } from "./NotificationBell";
 
 const NAV_LINKS = [
@@ -34,8 +34,7 @@ export function HeatHeader({ topbar, profileHref = "/profile" }: { topbar: Topba
       <nav className="topnav">
         <div className="topnav-inner">
           <Link href="/" className="brand" aria-label="HOTLINE — home">
-            <HeatMark size={30} />
-            <HeatWordmark size={20} />
+            <HotlineLockup height={24} />
           </Link>
           <div className="navlinks">
             {NAV_LINKS.map((item) => (
@@ -58,8 +57,7 @@ export function HeatHeader({ topbar, profileHref = "/profile" }: { topbar: Topba
       {/* Mobile */}
       <header className="apphead">
         <Link href="/" className="brand" aria-label="HOTLINE — home">
-          <HeatMark size={26} />
-          <HeatWordmark size={18} />
+          <HotlineLockup height={22} />
         </Link>
         <div className="apphead-you">
           {topbar.kind !== "anonymous" && <NotificationBell />}
@@ -99,7 +97,7 @@ function YouChip({
       ) : topbar.kind === "initials" ? (
         <span style={{ color: "var(--ink-hi)" }}>{topbar.initials}</span>
       ) : (
-        <span style={{ color: "var(--heat)", fontWeight: 700 }}>◎</span>
+        <span style={{ color: "var(--ink-mid)" }}>IN</span>
       )}
     </Link>
   );

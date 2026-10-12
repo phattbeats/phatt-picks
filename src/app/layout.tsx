@@ -1,11 +1,19 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./styles/sg.css";
+import "./styles/sg-auth.css";
+import "./styles/sg-home.css";
+import "./styles/sg-picks.css";
+import "./styles/sg-ranks.css";
+import "./styles/sg-notify.css";
+import "./styles/sg-people.css";
+import "./styles/sg-content.css";
 import { PwaRegister } from "@/components/PwaRegister";
 import { HeatBackground } from "@/components/heat/HeatBackground";
 
 export const metadata: Metadata = {
   title: "HOTLINE",
-  description: "CS2 Major Pick'Em companion for IEM Cologne 2026",
+  description: "CS2 Major Pick'Em companion — PGL Major Singapore 2026",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -13,7 +21,7 @@ export const metadata: Metadata = {
     title: "HOTLINE",
   },
   icons: {
-    icon: "/icon-192.png",
+    icon: [{ url: "/favicon.ico", sizes: "any" }, { url: "/icon-192.png", type: "image/png", sizes: "192x192" }],
     apple: "/apple-touch-icon.png",
   },
 };
@@ -22,7 +30,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0a0805",
+  themeColor: "#070708",
 };
 
 /**

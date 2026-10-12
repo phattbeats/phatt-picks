@@ -53,6 +53,7 @@ import {
 import { isSwissSection } from "./swiss-bucket-core";
 import {
   isEffectivelyLive,
+  resolveEffectiveStatus,
   selectCurrentEvent,
   type EventStatus,
 } from "./event-lifecycle-core";
@@ -88,6 +89,12 @@ export interface EventConfig {
   status: EventStatus;
   /** Inclusive UTC span over which the whole event is played. */
   dates: { start: string; end: string };
+  /**
+   * When Stage I begins (UTC ISO), for the home countdown before the stage's
+   * lock schedule is published. Once `lockSchedule` carries Stage I, that
+   * precise first-match instant wins — see `stageOneStartFor`.
+   */
+  stageOneStart?: string;
 
   /** sectionId -> display name ("Stage I", "Quarterfinals", ...). */
   sectionNames: Readonly<Record<number, string>>;
@@ -234,6 +241,10 @@ const SINGAPORE_2026: EventConfig = {
   // ceiling (mirrors Cologne's reasoning). Refine both dates when stage day-
   // splits publish.
   dates: { start: "2026-11-25T00:00:00Z", end: "2026-12-15T23:59:59Z" },
+  // Stage I opens 25 Nov in Singapore. PGL hasn't published match times yet, so
+  // this is the start of that day in SGT (UTC+8). Replace with the first
+  // match's instant (or fill lockSchedule) once the schedule is out.
+  stageOneStart: "2026-11-24T16:00:00Z",
   sectionNames: {},
   lockSchedule: {},
   matchWindows: {},
@@ -314,6 +325,41 @@ export function nextUpcomingEvent(nowMs: number = Date.now()): EventConfig | nul
     .filter((t) => Number.isFinite(t.start) && t.start > nowMs)
     .sort((a, b) => a.start - b.start || a.e.eventId - b.e.eventId);
   return upcoming[0]?.e ?? null;
+}
+
+/**
+ * When the event's Stage I starts: the earliest Swiss lock in its published
+ * lock schedule (the first match), else the registry's `stageOneStart`, else
+ * the event's `dates.start`. Null only if none of those parse.
+ */
+export function stageOneStartFor(event: EventConfig): string | null {
+  const swissLocks = Object.entries(event.lockSchedule)
+    .filter(([id]) => isSwissSection(Number(id)))
+    .map(([, iso]) => iso)
+    .filter((iso) => Number.isFinite(Date.parse(iso)))
+    .sort((a, b) => Date.parse(a) - Date.parse(b));
+  const candidates = [swissLocks[0], event.stageOneStart, event.dates.start];
+  return candidates.find((iso): iso is string => !!iso && Number.isFinite(Date.parse(iso))) ?? null;
+}
+
+/**
+ * The last concluded Major — the most recently ended event whose clock-derived
+ * status is `archived`, excluding whatever `currentEvent` is serving. Drives the
+ * "final standings" link off the live leaderboard once the next Major takes
+ * over. Null when nothing has concluded yet.
+ */
+export function previousMajor(nowMs: number = Date.now()): EventConfig | null {
+  const current = currentEvent(nowMs).eventId;
+  return (
+    Object.values(EVENTS)
+      .filter((e) => e.eventId !== current && resolveEffectiveStatus(e, nowMs) === "archived")
+      .sort((a, b) => Date.parse(b.dates.end) - Date.parse(a.dates.end))[0] ?? null
+  );
+}
+
+/** Look up a registered event by its url slug. */
+export function getEventBySlug(slug: string): EventConfig | null {
+  return Object.values(EVENTS).find((e) => e.slug === slug) ?? null;
 }
 
 /**

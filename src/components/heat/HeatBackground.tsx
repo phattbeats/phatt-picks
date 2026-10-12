@@ -1,11 +1,4 @@
-/** Atmosphere layers used app-wide: heat blobs, map grid, scanlines, vignette. */
+/** App-wide atmosphere: a single fixed radial vignette (Singapore). */
 export function HeatBackground() {
-  return (
-    <>
-      <div className="heat-bg" aria-hidden />
-      <div className="map-grid" aria-hidden />
-      <div className="scanlines" aria-hidden />
-      <div className="vignette" aria-hidden />
-    </>
-  );
+  return <div className="vignette" aria-hidden />;
 }

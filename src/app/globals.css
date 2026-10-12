@@ -1,27 +1,30 @@
 @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Geist:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
-/* HEAT design system — see HEAT mockups (HOTLINE redesign, #855). */
+/* HOTLINE design system — Singapore edition. Neutral carbon, photography
+   carries the page, amber survives only as a hairline signal (active tab,
+   armed slot, countdown, eyebrow <b>). Token names are unchanged from HEAT so
+   every screen inherits the new surface without a per-file rewrite. */
 :root {
-  --void:#0a0805;
-  --base:#14110c;
-  --surf-1:#1c1812;
-  --surf-2:#28221a;
-  --surf-3:#35291f;
+  --void:#070708;
+  --base:#0c0c0e;
+  --surf-1:#121214;
+  --surf-2:#19191c;
+  --surf-3:#222226;
 
-  --hair:rgba(240,175,80,0.07);
-  --hair-2:rgba(240,175,80,0.18);
-  --hair-3:rgba(240,175,80,0.35);
+  --hair:rgba(255,255,255,0.06);
+  --hair-2:rgba(255,255,255,0.12);
+  --hair-3:rgba(255,255,255,0.24);
 
-  --ink-hi:#f5ead4;
-  --ink-mid:#a89b80;
-  --ink-low:#9b8e72;
-  --dim:#5a4f3d;   /* was --ink-low; retired as text color (#991, fails AA). Decorative/semantic-dim only. */
+  --ink-hi:#f2f1ec;
+  --ink-mid:#9b9a94;
+  --ink-low:#8a8984;   /* text-safe low ink (AA on --surf-1) */
+  --dim:#5c5b57;       /* decorative only — fails AA as text */
 
   --heat:#f0a300;
   --heat-hot:#ff7a1a;
   --heat-deep:#b56a00;
-  --heat-glow:rgba(240,163,0,0.35);
+  --heat-glow:rgba(240,163,0,0.25);
   --ember:#d8351c;
   --tac-green:#9bd23c;
 
@@ -90,34 +93,14 @@ body {
   position: relative;
 }
 
-/* ── ATMOSPHERE LAYERS ─────────────────────────────────────────────────── */
-.heat-bg {
-  position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
-}
-.heat-bg::before, .heat-bg::after {
-  /* #1269: the ambient glow used `filter: blur(140px)` on a 70vw×70vw fixed
-     layer — a giant blurred compositor texture that real-GPU Chrome re-rasters
-     whenever any animation runs, costing GPU memory + raster CPU that JS-heap
-     profiling never sees. A radial-gradient is already smooth, so the soft glow
-     comes from the gradient falloff alone, with no blur layer. */
-  content: ''; position: absolute; border-radius: 50%;
-}
-/* #1007 polish: calmer backdrop. Keep ONE soft ambient glow; retire the
-   second drifting blob, the tactical grid, and the scanlines so the content
-   reads clean instead of through a CS 1.6 HUD filter. */
-.heat-bg::before {
-  width: 70vw; height: 70vw; left: -25vw; bottom: -30vw;
-  background: radial-gradient(circle, var(--heat) 0%, transparent 60%);
-  opacity: .08;
-}
-.heat-bg::after { display: none; }
-
-.map-grid { display: none; }
-.scanlines { display: none; }
-
+/* ── ATMOSPHERE ────────────────────────────────────────────────────────── */
+/* Singapore: the blooms, tactical grid and scanlines are retired. One fixed
+   radial vignette is the only atmosphere — static, no blur, no animation, so
+   it costs nothing on low-end Android (#1269). */
+.heat-bg, .map-grid, .scanlines { display: none; }
 .vignette {
-  position: fixed; inset: 0; z-index: 2; pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 65%, rgba(10,8,5,0.45) 100%);
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 30%, transparent 55%, rgba(0,0,0,0.55) 100%);
 }
 
 /* ── KEYFRAMES ─────────────────────────────────────────────────────────── */
@@ -227,96 +210,39 @@ body {
 }
 .panel-title .link:hover { color: var(--heat); }
 
-/* Buttons */
-.btn-heat {
+/* Buttons — Singapore: flat, 2px radius, no glow or 3D lip.
+   .btn-solid (off-white on black) is the primary action everywhere.
+   .btn-heat is reserved for exactly one action: Lock in & sync. */
+.btn-solid, .btn-heat, .btn-ghost {
   position: relative;
   display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-  padding: 14px 28px;
+  min-height: 48px;
+  padding: 0 26px;
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 15px;
+  font-size: 16px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--void);
-  background: var(--heat);
-  border: 1.5px solid var(--heat-deep);
   border-radius: var(--r-sm);
+  border: 1px solid transparent;
   cursor: pointer;
-  isolation: isolate;
-  overflow: hidden;
   text-decoration: none;
-  transition: transform 250ms var(--ease), box-shadow 250ms var(--ease), background 250ms var(--ease);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.4),
-    inset 0 -2px 0 rgba(0,0,0,0.2),
-    0 4px 0 var(--heat-deep),
-    0 6px 18px rgba(240,163,0,0.35);
-  clip-path: polygon(
-    0 6px, 6px 0,
-    calc(100% - 6px) 0, 100% 6px,
-    100% calc(100% - 6px), calc(100% - 6px) 100%,
-    6px 100%, 0 calc(100% - 6px));
+  transition: background 180ms var(--ease), border-color 180ms var(--ease), color 180ms var(--ease), opacity 180ms var(--ease);
 }
-.btn-heat:hover:not(:disabled) {
-  background: var(--heat-hot);
-  transform: translateY(-1px);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.4),
-    inset 0 -2px 0 rgba(0,0,0,0.2),
-    0 5px 0 var(--heat-deep),
-    0 8px 22px rgba(240,163,0,0.5);
-}
-.btn-heat:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.3),
-    inset 0 -1px 0 rgba(0,0,0,0.2),
-    0 2px 0 var(--heat-deep),
-    0 3px 8px rgba(240,163,0,0.25);
-}
-.btn-heat:disabled {
-  opacity: 0.4; cursor: not-allowed;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.2),
-    0 2px 0 var(--heat-deep);
-}
-.btn-heat::after {
-  content: ''; position: absolute; inset: 0;
-  background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.55) 50%, transparent 70%);
-  transform: translateX(-120%);
-  transition: transform 700ms var(--ease);
-  pointer-events: none;
-}
-.btn-heat:hover:not(:disabled)::after { transform: translateX(120%); }
+.btn-solid { background: var(--ink-hi); color: var(--void); }
+.btn-solid:hover:not(:disabled) { background: #fff; color: var(--void); }
+.btn-heat { background: var(--heat); color: var(--void); border-color: var(--heat-deep); }
+.btn-heat:hover:not(:disabled) { background: #ffb520; color: var(--void); }
+.btn-solid:disabled, .btn-heat:disabled { opacity: 0.35; cursor: not-allowed; }
 .btn-heat.locked-state {
   background: var(--tac-green);
   border-color: rgba(155,210,60,0.6);
   animation: lock-pulse 1s ease-in-out 3;
 }
-.btn-heat svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 3; }
-
-.btn-ghost {
-  display: inline-flex; align-items: center; justify-content: center;
-  gap: 8px;
-  padding: 13px 22px;
-  background: transparent;
-  border: 1px solid var(--hair-3);
-  color: var(--ink-hi);
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  cursor: pointer;
-  text-decoration: none;
-  transition: all 200ms var(--ease);
-  border-radius: var(--r-sm);
-}
-.btn-ghost:hover {
-  border-color: var(--heat);
-  color: var(--heat);
-  background: rgba(240,163,0,0.04);
-}
+.btn-heat svg, .btn-solid svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 3; }
+.btn-ghost { background: transparent; color: var(--ink-hi); border-color: var(--hair-3); }
+.btn-ghost:hover { border-color: var(--ink-hi); color: var(--ink-hi); }
+.btn-solid:focus-visible, .btn-heat:focus-visible, .btn-ghost:focus-visible { outline: 2px solid var(--heat); outline-offset: 2px; }
 
 /* Stat tile */
 .stat {
@@ -352,51 +278,38 @@ body {
 .stat .sub.warn { color: var(--ember); }
 .stat .sub.good { color: var(--tac-green); }
 
-/* Wordmark */
-.wordmark {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 20px;
-  text-transform: uppercase;
-  letter-spacing: -0.018em;
-  white-space: nowrap;
-  line-height: 1;
-}
-/* Keep .lj inline (NOT inline-block): an inline-block descendant breaks out of
-   the parent .foil's `background-clip: text` paint, so the L inherits
-   `color: transparent` with no gradient behind it and goes invisible on iOS
-   WebKit (renders as "HOT INE"). Inline keeps the L in the clipped text flow;
-   negative margin still kerns it tight to "HOT". */
-.wordmark .lj { margin-left: -0.045em; }
-
-/* Reticle mark */
-.mark svg { width: 100%; height: 100%; overflow: visible; display: block; }
-.mark .stroke { fill: none; stroke: var(--heat); stroke-linecap: square; stroke-linejoin: miter; }
-.mark .dot { fill: var(--heat); }
+/* Brand — the official HOTLINE lockup (ticket-H + wordmark) ships as images in
+   /public/brand and is never re-typeset. The reticle and the Big Shoulders
+   text wordmark are retired. */
+.lockup { display: block; height: 24px; width: auto; }
+.brand-symbol { display: block; width: auto; }
 
 /* ── APP CHROME ────────────────────────────────────────────────────────── */
 .topnav {
   display: none;
-  position: relative;
-  z-index: 5;
-  border-bottom: 1px solid var(--hair-2);
+  position: sticky; top: 0;
+  z-index: 40;
+  background: rgba(7,7,8,0.94);
+  border-bottom: 1px solid var(--hair);
 }
 .topnav-inner {
-  max-width: 1440px;
+  max-width: 1240px;
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 32px;
+  gap: 24px;
+  padding: 14px 32px;
 }
-.topnav .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; color: var(--ink-hi); }
-.topnav .brand .mark { width: 30px; height: 30px; filter: drop-shadow(0 0 8px var(--heat-glow)); }
-.navlinks { display: flex; gap: 26px; align-items: center; }
+.brand { position: relative; display: flex; align-items: center; text-decoration: none; color: var(--ink-hi); }
+.brand::after { content: ''; position: absolute; inset: -11px -6px; }
+.topnav .brand .lockup { height: 24px; }
+.navlinks { display: flex; gap: 32px; align-items: center; }
 .navlinks a {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--ink-mid);
   text-decoration: none;
@@ -405,55 +318,55 @@ body {
   transition: color 160ms var(--ease);
 }
 .navlinks a:hover { color: var(--ink-hi); }
-.navlinks a.active { color: var(--heat); }
+.navlinks a.active { color: var(--ink-hi); }
 .navlinks a.active::after {
   content: '';
   position: absolute;
   left: 0; right: 0;
-  bottom: -17px;
+  bottom: -14px;
   height: 2px;
   background: var(--heat);
-  box-shadow: 0 0 8px var(--heat);
 }
+.topnav-you, .apphead-you { display: flex; align-items: center; gap: 14px; }
 .nav-avatar {
+  position: relative;
   width: 30px; height: 30px;
   border-radius: var(--r-md);
   border: 1px solid var(--hair-3);
-  background: linear-gradient(135deg, var(--surf-3), var(--surf-2));
+  background: var(--surf-3);
   display: inline-flex; align-items: center; justify-content: center;
-  overflow: hidden;
+  overflow: visible;
   text-decoration: none;
   color: var(--ink-hi);
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
 }
+.nav-avatar img { border-radius: inherit; overflow: hidden; }
+.nav-avatar::after { content: ''; position: absolute; inset: -8px; }
 
 .apphead {
-  position: relative;
-  z-index: 5;
+  position: sticky; top: 0;
+  z-index: 40;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px 14px;
+  padding: 14px 20px;
+  padding-top: max(14px, env(safe-area-inset-top));
+  background: rgba(7,7,8,0.94);
   border-bottom: 1px solid var(--hair);
 }
-.apphead .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; color: var(--ink-hi); }
-.apphead .brand .mark { width: 26px; height: 26px; filter: drop-shadow(0 0 8px var(--heat-glow)); }
-.apphead .nav-avatar { width: 28px; height: 28px; }
+.apphead .brand .lockup { height: 22px; }
+@media (max-width: 1023px) { .nav-avatar { width: 36px; height: 36px; } }
 
 .botnav {
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  height: 64px;
+  height: calc(64px + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 50;
-  /* #1269: dropped `backdrop-filter: blur(20px)` — a fixed full-width bar on
-     every app page forces the GPU to re-blur everything behind it on every
-     animated frame. The bar is already 92% opaque, so a near-opaque solid fill
-     reads the same with no live compositing cost. */
-  background: rgba(10,8,5,0.975);
-  border-top: 1px solid var(--hair-2);
+  /* #1269: solid, near-opaque — no backdrop-filter on a fixed full-width bar. */
+  background: rgba(7,7,8,0.975);
+  border-top: 1px solid var(--hair);
   display: grid;
   grid-template-columns: repeat(5, 1fr);
 }
@@ -462,7 +375,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 5px;
   color: var(--ink-low);
   text-decoration: none;
   font-family: var(--font-mono);
@@ -472,23 +385,23 @@ body {
   position: relative;
   min-height: 44px;
 }
-.botnav a svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.5; }
-.botnav a.active { color: var(--heat); }
+.botnav a svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.5; }
+.botnav a.active { color: var(--ink-hi); }
 .botnav a.active::before {
   content: '';
   position: absolute;
-  top: 0; left: 25%; right: 25%;
-  height: 2px;
+  top: 0; left: calc(50% - 10px);
+  width: 20px;
+  height: 1px;
   background: var(--heat);
-  box-shadow: 0 0 8px var(--heat);
 }
 
 main.shell {
   position: relative;
   z-index: 3;
-  max-width: 1440px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 18px 20px 40px;
+  padding: 20px 20px 56px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -503,7 +416,7 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
   .apphead { display: none; }
   .botnav { display: none; }
   body.has-botnav { padding-bottom: 0; }
-  main.shell { padding: 28px 32px 60px; gap: 18px; }
+  main.shell { padding: 32px 32px 80px; gap: 18px; }
   main.shell.with-nav, main.shell.with-nav-action { padding-bottom: 60px; }
 }
 

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HeatMark, HeatWordmark } from "@/components/heat/HeatMark";
+import { HotlineStacked } from "@/components/heat/HeatMark";
 
 /**
  * Global 404 — a branded, navigable dead-end stop. Without this, unknown URLs
@@ -22,8 +22,7 @@ export default function NotFound() {
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-        <HeatMark size={64} />
-        <HeatWordmark size={36} />
+        <HotlineStacked height={96} />
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, maxWidth: 340 }}>
@@ -46,7 +45,7 @@ export default function NotFound() {
         </p>
       </div>
 
-      <Link href="/" className="btn-heat" style={{ minWidth: 168, justifyContent: "center" }}>
+      <Link href="/" className="btn-solid" style={{ minWidth: 168, justifyContent: "center" }}>
         Back to HOTLINE
         <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="9 18 15 12 9 6" />

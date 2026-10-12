@@ -1,14 +1,14 @@
 {
   "name": "HOTLINE",
   "short_name": "HOTLINE",
-  "description": "CS2 Major Pick'Em companion for IEM Cologne 2026",
+  "description": "CS2 Major Pick'Em companion — PGL Major Singapore 2026",
   "id": "/",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0a0a0b",
-  "theme_color": "#0a0a0b",
+  "background_color": "#070708",
+  "theme_color": "#070708",
   "categories": ["sports", "games", "entertainment"],
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
