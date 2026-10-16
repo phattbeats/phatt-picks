@@ -15,6 +15,8 @@ import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
 import { isPlayoffSection } from "@/lib/write-core";
 import { LockInStage } from "@/components/LockInStage";
 import { ActionBar, type BarTone } from "@/components/sg/picks/ActionBar";
+import { SealPicks, sealStatusText } from "@/components/sg/picks/SealPicks";
+import type { SealView } from "@/lib/pick-lock-core";
 import { bucketDisplay, playerCutout, teamCode, teamColor } from "@/components/sg/picks/team-art";
 
 type GroupId = number;
@@ -51,6 +53,8 @@ interface Props {
    * bracket is revealed. Shown on pool cards and in the dossier; display only.
    */
   recordByTeam?: Record<number, { wins: number; losses: number }>;
+  /** The viewer's self-seal on this stage (pick-lock-core) — sealed = read-only. */
+  initialSeal?: SealView | null;
 }
 
 const SAVED_FLASH_MS = 1200;
@@ -93,7 +97,7 @@ export function PicksBoard({
   section,
   teams,
   initialPicks,
-  enabled,
+  enabled: signedIn,
   eventId,
   steamLinked,
   initiallySynced,
@@ -101,7 +105,12 @@ export function PicksBoard({
   liveStatsAsOf,
   spotlightMarket,
   recordByTeam,
+  initialSeal = null,
 }: Props) {
+  // A sealed stage is a commitment: the board turns read-only (the write path
+  // refuses edits too — 409 picks_sealed).
+  const [seal, setSeal] = useState<SealView | null>(initialSeal);
+  const enabled = signedIn && !seal;
   const teamMap = useMemo(() => new Map(teams.map((t) => [t.pickid, t])), [teams]);
 
   const [picks, setPicks] = useState<PicksMap>(initialPicks);
@@ -244,6 +253,25 @@ export function PicksBoard({
     : saveValues.includes("saving")
       ? { text: "Saving…", tone: "info" }
       : null;
+
+  // HOTLINE self-seal (distinct from the amber Valve "Lock in & sync").
+  const sealStatus: { text: string; tone: BarTone } | null = seal
+    ? { text: sealStatusText(seal), tone: seal.steamDiverged ? "warn" : "ok" }
+    : null;
+  const sealControl = (
+    <SealPicks
+      sectionId={section.sectionid}
+      stageLabel={section.name.split(" | ")[0]}
+      total={slotTotal}
+      ready={filledTotal >= slotTotal && !localStatus}
+      seal={seal}
+      onChange={(s) => {
+        setSeal(s);
+        setSelected(null);
+      }}
+      steamLinked={steamLinked}
+    />
+  );
 
   return (
     <div className="pickboard-sg">
@@ -417,6 +445,8 @@ export function PicksBoard({
                     <>
                       Tap or drag · <i>{isPlayoff ? "★" : "i"}</i> for {isPlayoff ? "spotlight" : "dossier"}
                     </>
+                  ) : signedIn ? (
+                    "Sealed · read only"
                   ) : (
                     "Sign in to make your calls"
                   )}
@@ -527,7 +557,7 @@ export function PicksBoard({
         );
       })}
 
-      {enabled &&
+      {signedIn &&
         (steamLinked ? (
           <LockInStage
             sectionId={isPlayoff ? "playoff" : section.sectionid}
@@ -535,15 +565,18 @@ export function PicksBoard({
             initiallySynced={initiallySynced}
             onSynced={() => setUnsavedSinceSync(false)}
             progress={{ filled: filledTotal, total: slotTotal }}
-            localStatus={localStatus}
+            localStatus={localStatus ?? sealStatus}
+            secondary={sealControl}
           />
         ) : (
-          // Not Steam-linked: picks save in HOTLINE only, so no Lock In CTA.
+          // Not Steam-linked: picks save in HOTLINE only, so no Lock In CTA —
+          // sealing is the only action.
           <ActionBar
             filled={filledTotal}
             total={slotTotal}
-            state={localStatus?.text ?? (filledTotal >= slotTotal ? "All calls made" : "Saved · local")}
-            tone={localStatus?.tone ?? "info"}
+            state={localStatus?.text ?? sealStatus?.text ?? (filledTotal >= slotTotal ? "All calls made" : "Saved · local")}
+            tone={localStatus?.tone ?? sealStatus?.tone ?? "info"}
+            cta={sealControl}
           />
         ))}
 

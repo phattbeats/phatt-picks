@@ -4,6 +4,11 @@ import { getSession } from "@/lib/session";
 import { isOwner } from "@/lib/owner";
 import { prisma } from "@/lib/db";
 import { sessionize } from "@/lib/analytics-core";
+import { fmtLead, PLAYOFF_SEAL_UNIT, sealMetrics, sealUnitFor } from "@/lib/pick-lock-core";
+import { unitLockAtMs } from "@/lib/pick-lock";
+import { getCommittedLayout } from "@/lib/layout";
+import { getEventConfig } from "@/lib/events-core";
+import { eventShortName } from "@/lib/leaderboard";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Route traffic · HOTLINE" };
@@ -52,6 +57,58 @@ function Breakdown({ title, data }: { title: string; data: Row[] }) {
       )}
     </div>
   );
+}
+
+/**
+ * Sealed-picks metric (pick-lock-core) — per (event, seal unit): players with
+ * picks, how many sealed, the public/hidden split at seal time, hidden→public
+ * converts, and the median lead time between sealing and the stage's lock.
+ */
+async function sealedPicksReport() {
+  const [pickers, seals] = await Promise.all([
+    prisma.pick.groupBy({ by: ["eventId", "sectionId", "playerId"], where: { pickId: { not: 0 } } }),
+    prisma.pickLock.findMany({
+      select: { eventId: true, sectionId: true, visibility: true, initialVisibility: true, lockedAt: true },
+    }),
+  ]);
+  const key = (e: number, u: number) => `${e}:${u}`;
+  const playersByUnit = new Map<string, Set<string>>();
+  for (const p of pickers) {
+    const k = key(p.eventId, sealUnitFor(p.sectionId));
+    const s = playersByUnit.get(k) ?? new Set<string>();
+    s.add(p.playerId);
+    playersByUnit.set(k, s);
+  }
+  const sealsByUnit = new Map<string, typeof seals>();
+  for (const s of seals) {
+    const k = key(s.eventId, s.sectionId);
+    sealsByUnit.set(k, [...(sealsByUnit.get(k) ?? []), s]);
+  }
+  const committed = getCommittedLayout();
+  const units = [...new Set([...playersByUnit.keys(), ...sealsByUnit.keys()])].map((k) => k.split(":").map(Number));
+  return units
+    .sort((x, y) => y[0] - x[0] || x[1] - y[1])
+    .map(([eventId, unit]) => {
+      const cfg = getEventConfig(eventId);
+      const section = committed.sections.find((s) => s.sectionid === unit);
+      const stage = unit === PLAYOFF_SEAL_UNIT ? "Playoffs" : section ? section.name.split(" | ")[0] : `Section ${unit}`;
+      const unitSeals = sealsByUnit.get(key(eventId, unit)) ?? [];
+      return {
+        eventId,
+        unit,
+        event: cfg ? eventShortName(cfg) : `Event ${eventId}`,
+        stage,
+        m: sealMetrics({
+          playersWithPicks: playersByUnit.get(key(eventId, unit))?.size ?? 0,
+          seals: unitSeals.map((s) => ({
+            initialVisibility: s.initialVisibility,
+            visibility: s.visibility,
+            lockedAtMs: s.lockedAt.getTime(),
+          })),
+          stageLockAtMs: unitLockAtMs(eventId, unit),
+        }),
+      };
+    });
 }
 
 /**
@@ -128,6 +185,8 @@ export default async function AnalyticsPage({
   };
   const entries = tally(sessions.map((s) => s.entryPath)).slice(0, 8);
   const exits = tally(sessions.map((s) => s.exitPath)).slice(0, 8);
+
+  const sealRows = await sealedPicksReport();
 
   const pct = (n: number) => (total ? `${((n / total) * 100).toFixed(1)}%` : "—");
   const fmtDay = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : "—");
@@ -250,6 +309,59 @@ export default async function AnalyticsPage({
                     <td className="m">{e.event}</td>
                     <td className="d">{e.label ?? ""}</td>
                     <td className="r m">{e._count._all.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </section>
+
+      <section className="chap">
+        <div className="chap-h">
+          <h2>Sealed picks</h2>
+          <p>
+            Players who sealed a stage early, and whether they shared it. All time, per event and stage
+            — from the PickLock table, not the range above. &ldquo;Chose public&rdquo; is the pick at seal
+            time; hidden seals later switched to public are counted separately.
+          </p>
+        </div>
+        <div className="sgc-tw">
+          {sealRows.length === 0 ? (
+            <p className="sgc-empty">No picks yet.</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Event · stage</th>
+                  <th className="r">With picks</th>
+                  <th className="r">Sealed</th>
+                  <th className="r">% sealed</th>
+                  <th className="r">Chose public</th>
+                  <th className="r">Chose hidden</th>
+                  <th className="r">Hidden to public</th>
+                  <th className="r">Median lead</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sealRows.map((r) => (
+                  <tr key={`${r.eventId}:${r.unit}`}>
+                    <td className="m">
+                      {r.event} · {r.stage}
+                    </td>
+                    <td className="r m">{r.m.players}</td>
+                    <td className="r m">{r.m.sealed}</td>
+                    <td className="r m">{r.m.sealedPct == null ? "—" : `${r.m.sealedPct}%`}</td>
+                    <td className="r m">
+                      {r.m.chosePublic}
+                      <span className="d"> {r.m.publicPct == null ? "" : `· ${r.m.publicPct}%`}</span>
+                    </td>
+                    <td className="r m">
+                      {r.m.choseHidden}
+                      <span className="d"> {r.m.publicPct == null ? "" : `· ${Math.round((100 - r.m.publicPct) * 10) / 10}%`}</span>
+                    </td>
+                    <td className="r m">{r.m.converted}</td>
+                    <td className="r d">{fmtLead(r.m.medianLeadMs)}</td>
                   </tr>
                 ))}
               </tbody>

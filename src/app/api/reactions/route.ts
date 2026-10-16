@@ -21,6 +21,8 @@ import { createCooldownStore, checkCooldown } from "@/lib/security-core";
 import { isValidStampId, getStamp, tallyReactions } from "@/lib/bleachers-core";
 import { isLockTimePassed } from "@/lib/lock-schedule-core";
 import { isSwissSection } from "@/lib/swiss-bucket-core";
+import { isPublicSeal } from "@/lib/pick-lock-core";
+import { getSeal } from "@/lib/pick-lock";
 import { currentEventId, getEventConfig } from "@/lib/events-core";
 import { getCommittedLayout } from "@/lib/layout";
 import { isPushConfigured, sendPushToPlayer } from "@/lib/notify";
@@ -71,7 +73,12 @@ export async function POST(req: NextRequest) {
   // stage's picks once its lock passes (or it resolves); mirror that gate so the
   // Bleachers can never be used to probe a hidden pick. Self-reaction is already
   // blocked above, so this is purely the public-reveal gate.
-  if (!isLockTimePassed(sId, Date.now(), getEventConfig(eventId)?.lockSchedule)) {
+  // A PUBLIC self-seal (pick-lock-core) shows the calls before lock, so they're
+  // reactable from that moment — the point of sharing early is the discussion.
+  if (
+    !isLockTimePassed(sId, Date.now(), getEventConfig(eventId)?.lockSchedule) &&
+    !isPublicSeal(await getSeal(targetPlayerId, eventId, sId))
+  ) {
     return NextResponse.json({ ok: false, reason: "not-revealed" }, { status: 409 });
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { ActionBar, type BarTone } from "@/components/sg/picks/ActionBar";
 
 interface Props {
@@ -24,6 +24,11 @@ interface Props {
   progress?: { filled: number; total: number };
   /** Per-slot autosave status from the board (saving / failed) — wins over the sync state. */
   localStatus?: { text: string; tone: BarTone } | null;
+  /**
+   * A second action rendered beside the Steam CTA — the HOTLINE "Seal picks"
+   * control (SealPicks). Kept separate so the Valve push stays its own button.
+   */
+  secondary?: ReactNode;
 }
 
 type WriteSkip = "write-disabled" | "no-steam-id" | "no-auth-code" | "no-picks" | "pickem-not-open";
@@ -112,6 +117,7 @@ export function LockInStage({
   onSynced,
   progress,
   localStatus,
+  secondary,
 }: Props) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [result, setResult] = useState<WriteResult | null>(null);
@@ -191,7 +197,24 @@ export function LockInStage({
       </button>
     );
 
-    return <ActionBar filled={filled} total={total} state={text} tone={tone} cta={cta} />;
+    return (
+      <ActionBar
+        filled={filled}
+        total={total}
+        state={text}
+        tone={tone}
+        cta={
+          secondary ? (
+            <div className="sgp-ctas">
+              {secondary}
+              {cta}
+            </div>
+          ) : (
+            cta
+          )
+        }
+      />
+    );
   }
 
   const label = syncing
@@ -218,6 +241,7 @@ export function LockInStage({
       >
         {label}
       </button>
+      {secondary}
     </div>
   );
 }

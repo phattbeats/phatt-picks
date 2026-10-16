@@ -7,6 +7,9 @@
  * (the write path resolves it from GetTournamentItems at upload time).
  * pickId 0 = clear/TBD.
  *
+ * A stage the player has SEALED (POST /api/picks/seal) is refused with 409
+ * `picks_sealed` — sealing is a commitment, checked after the stage gate.
+ *
  * Spec §7: "Saving a pick == locking it." The handler refuses any write to a
  * section whose stage has closed (picks_allowed flipped off OR a StageOutcome
  * already exists for any slot in the section), and refuses any individual pick
@@ -28,6 +31,7 @@ import { isLockTimePassed } from "@/lib/lock-schedule-core";
 import { currentEventId, getEventConfig } from "@/lib/events-core";
 import { isWriteFrozenById } from "@/lib/event-freeze";
 import { isPlayoffSection, PLAYOFF_ROUNDS, playoffFieldTeams } from "@/lib/playoff-bracket-core";
+import { getSeal } from "@/lib/pick-lock";
 
 export async function GET(req: NextRequest) {
   const EVENT_ID = currentEventId(); // per-request active event (#1046)
@@ -117,6 +121,12 @@ export async function POST(req: NextRequest) {
 
   if (lockSection.groups.some((g) => !isStageWritable(g, hasOutcome, lockedByTime))) {
     return NextResponse.json({ error: "stage_locked" }, { status: 409 });
+  }
+
+  // Self-seal (pick-lock-core): a player who sealed this stage committed to it —
+  // no further edits to any section of the unit, even while the stage is open.
+  if (await getSeal(session.playerId, evtId, secId)) {
+    return NextResponse.json({ error: "picks_sealed" }, { status: 409 });
   }
 
   // Eligibility universe for a downstream playoff pick (#1204): your SF/GF

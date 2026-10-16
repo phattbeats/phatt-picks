@@ -1,0 +1,84 @@
+/* HOTLINE Singapore — self-sealed picks (pick-lock-core).
+   .sgs-* : the "Seal picks" control in the Pick'Em action bar, its confirm
+   sheet (bottom sheet on mobile → centred dialog ≥760px), the sealed badge,
+   and the "Sealed early · public" markers on compare / profile.
+   Flat carbon idiom: hairlines, mono labels, no blur (#1269). */
+
+/* Two CTAs side by side in the action bar (seal + Valve sync). */
+.sgp-ctas { display: flex; align-items: center; gap: 8px; flex: none; }
+.sgs-ctl { display: inline-flex; align-items: center; gap: 8px; flex: none; }
+.sgp-action .sgs-btn, .sgp-lockcard .sgs-btn { gap: 8px; }
+.sgs-btn .s { display: none; }
+@media (max-width: 520px) {
+  .sgs-btn .l { display: none; }
+  .sgs-btn .s { display: inline; }
+  .sgp-ctas { gap: 6px; }
+}
+
+/* Sealed badge */
+.sgs-badge {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+  padding: 6px 9px; border: 1px solid var(--hair-2); border-radius: var(--r-sm); color: var(--ink-mid);
+}
+.sgs-badge.pub { color: var(--tac-green); border-color: rgba(155,210,60,.35); }
+@media (max-width: 520px) { .sgp-action .sgs-badge { display: none; } }
+
+/* Confirm sheet */
+.sgs-sheet {
+  position: fixed; z-index: 201; left: 0; right: 0; bottom: 0; max-height: 92dvh; overflow-y: auto;
+  display: grid; gap: 14px; align-content: start;
+  padding: 24px 22px calc(22px + env(safe-area-inset-bottom));
+  background: var(--surf-1); border: 1px solid var(--hair-2); border-radius: 10px 10px 0 0;
+  animation: sgp-sheet-in .28s var(--ease) both;
+}
+@media (min-width: 760px) {
+  .sgs-sheet {
+    left: 50%; right: auto; bottom: auto; top: 50%; width: 460px; transform: translate(-50%, -50%);
+    border-radius: var(--r-md); padding: 28px; animation: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) { .sgs-sheet { animation: none; } }
+.sgs-sheet .eyebrow { font-size: 10px; }
+.sgs-sheet h2 { font-size: 34px; margin: 0; }
+.sgs-sheet p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink-mid); text-wrap: pretty; }
+.sgs-sheet p b { color: var(--ink-hi); font-weight: 600; }
+.sgs-opts { display: grid; gap: 8px; }
+.sgs-opt {
+  display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: 12px;
+  min-height: 64px; padding: 10px 14px; text-align: left; cursor: pointer;
+  background: var(--surf-2); color: var(--ink-hi);
+  border: 1px solid var(--hair-2); border-radius: var(--r-md);
+  transition: border-color 160ms var(--ease), background 160ms var(--ease);
+}
+.sgs-opt:hover { border-color: var(--hair-3); }
+.sgs-opt.on { border-color: var(--ink-hi); background: var(--surf-3); }
+.sgs-opt:focus-visible { outline: 2px solid var(--heat); outline-offset: 2px; }
+.sgs-opt .ic { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--hair-2); color: var(--ink-mid); }
+.sgs-opt.on .ic { color: var(--ink-hi); border-color: var(--ink-hi); }
+.sgs-opt .tx { display: grid; gap: 2px; min-width: 0; }
+.sgs-opt .tx b { font-family: var(--font-display); font-weight: 800; font-size: 18px; text-transform: uppercase; letter-spacing: .02em; }
+.sgs-opt .tx span { font-size: 13px; color: var(--ink-mid); }
+.sgs-sheet .sgs-fine { font-size: 12px; color: var(--ink-low); }
+.sgs-sheet .sgs-err { color: var(--ember); font-size: 13px; }
+.sgs-act { display: flex; gap: 10px; justify-content: flex-end; padding-top: 4px; }
+.sgs-act .btn-ghost, .sgs-act .btn-solid { min-height: 48px; }
+@media (max-width: 759px) { .sgs-act > * { flex: 1; } }
+
+/* Markers on compare / profile */
+.sgs-mark {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--tac-green);
+}
+.sgs-mark.warn { color: var(--heat); }
+.sgs-marks { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 6px; }
+.cmp-s.hid .cmp-nm { color: var(--ink-low); }
+.cmp-s.hid .cmp-blank { display: grid; place-items: center; color: var(--ink-low); }
+.cmp-shared { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.cmp-shared a {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px;
+  border: 1px solid rgba(155,210,60,.35); border-radius: var(--r-sm);
+  font-size: 13px; color: var(--ink-hi); text-decoration: none;
+}
+.cmp-shared a:hover { border-color: var(--tac-green); }

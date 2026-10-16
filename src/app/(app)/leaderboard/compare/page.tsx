@@ -7,9 +7,12 @@
  * stage split into its buckets, your picks lined up against theirs with the
  * shared calls first, hit/miss marked once a result exists.
  *
- * Reveal rule is unchanged (#862 / #898): a group's team choices stay
- * hidden for EVERYONE until its stage locks (either Valve flips picks_allowed,
- * the published lock time passes, or a result lands). Scores are always public.
+ * Reveal rule (#862 / #898 + pick-lock-core): a group's team choices stay
+ * hidden until its stage locks (either Valve flips picks_allowed, the published
+ * lock time passes, or a result lands) — UNLESS that player sealed the stage
+ * PUBLIC, in which case their side shows right away with a "Sealed early ·
+ * public" marker. The viewer always sees their own side. Hidden sides are
+ * masked server-side (never shipped). Scores are always public.
  * Section-qualified pick maps prevent a revealed stage from leaking a still-open
  * stage's secret pick across a reused groupid.
  *
@@ -43,6 +46,9 @@ import { currentEvent } from "@/lib/events-core";
 import { isRevealForcedById } from "@/lib/event-freeze";
 import { eventShortName, layoutForEvent, resolveArchiveEvent } from "@/lib/leaderboard";
 import { RankAvatar } from "@/components/sg/ranks/RankAvatar";
+import { visibilityReason, isPublicSeal } from "@/lib/pick-lock-core";
+import { getEventSeals } from "@/lib/pick-lock";
+import { EyeIcon } from "@/components/sg/picks/SealPicks";
 
 export const dynamic = "force-dynamic";
 
@@ -78,8 +84,19 @@ function bucketTitle(label: string): string {
 
 type TileState = "hit" | "miss" | "pending" | "empty";
 
-/** One side of a split row — logo + name + ✓/✕ once judged. */
-function PickSide({ team, state, steal }: { team: TeamDef | undefined; state: TileState; steal: boolean }) {
+/** One side of a split row — logo + name + ✓/✕ once judged. `hidden` = this
+ *  player's calls are still under wraps (the other side sealed public early). */
+function PickSide({ team, state, steal, hidden = false }: { team: TeamDef | undefined; state: TileState; steal: boolean; hidden?: boolean }) {
+  if (hidden) {
+    return (
+      <span className="cmp-s hid">
+        <span className="tile cmp-blank" aria-hidden>
+          <LockIcon size={12} />
+        </span>
+        <span className="cmp-nm">Under wraps</span>
+      </span>
+    );
+  }
   const name = team?.name ?? "—";
   return (
     <span className={`cmp-s ${state}${steal ? " steal" : ""}`}>
@@ -286,6 +303,13 @@ export default async function ComparePage({
   // sectionId:groupid → revealed?  (computed once, reused by the grid below)
   const revealedByGroup = new Map<string, boolean>();
 
+  // Self-seals (pick-lock-core). Archived Majors are fully revealed anyway.
+  const seals = await getEventSeals(EVENT_ID);
+  const sideReason = (playerId: string, sectionId: number, stageRevealed: boolean) =>
+    visibilityReason({ stageRevealed, isSelf: viewerId === playerId, seal: seals.sealFor(playerId, sectionId) });
+  const sideVisible = (playerId: string, sectionId: number, stageRevealed: boolean) =>
+    sideReason(playerId, sectionId, stageRevealed) !== "hidden";
+
   for (const section of layout.sections) {
     const stageLabel = section.name.split(" | ")[0];
     for (const group of section.groups) {
@@ -297,7 +321,9 @@ export default async function ComparePage({
         eventArchived,
       );
       revealedByGroup.set(gKey, revealed);
-      if (!revealed) continue;
+      // Per-side visibility (pick-lock-core): stage lock, self, or a public seal.
+      // Only groups where BOTH sides are visible feed the agreement / steal maths.
+      if (!sideVisible(aId, section.sectionid, revealed) || !sideVisible(bId, section.sectionid, revealed)) continue;
 
       const aGroup = aPicksMap[section.sectionid]?.[group.groupid] ?? {};
       const bGroup = bPicksMap[section.sectionid]?.[group.groupid] ?? {};
@@ -335,6 +361,18 @@ export default async function ComparePage({
       }
     }
   }
+
+  // Who has shared calls early — a PUBLIC seal on a stage that hasn't locked
+  // yet. Surfaced in the "under wraps" state so the room can find them.
+  const unitRevealed = (unit: number) => {
+    const sec = layout.sections.find((s) => s.sectionid === unit);
+    return !!sec && sec.groups.every((g) => revealedByGroup.get(`${unit}:${g.groupid}`));
+  };
+  const sharedEarly = archive
+    ? []
+    : players.filter(
+        (p) => p.id !== aId && seals.rows.some((r) => r.playerId === p.id && isPublicSeal(r) && !unitRevealed(r.sectionId)),
+      );
 
   const resolvedAny = aSteals.length + bSteals.length + bothRight > 0;
   const agreePct = compared > 0 ? Math.round((agreed / compared) * 100) : 0;
@@ -420,7 +458,10 @@ export default async function ComparePage({
           <h2>{compared === 0 ? "Calls under wraps" : agreePct >= 60 ? "Same brain, mostly" : agreePct >= 40 ? "Split down the middle" : "Different reads"}</h2>
           <p>
             {compared === 0 ? (
-              <>Picks reveal as each stage locks — then you&apos;ll see every call you share.</>
+              <>
+                Picks reveal as each stage locks — then you&apos;ll see every call you share. Anyone who{" "}
+                <b>seals their picks public</b> shows them early.
+              </>
             ) : (
               <>
                 {aIsYou ? "You" : a.displayName} and {b.displayName} agreed on <b>{agreed} of {compared}</b> revealed
@@ -428,6 +469,21 @@ export default async function ComparePage({
               </>
             )}
           </p>
+          {compared === 0 && sharedEarly.length > 0 && (
+            <>
+              <span className="sgs-mark" style={{ marginTop: 14 }}>
+                <EyeIcon size={12} /> Shared early · {sharedEarly.length} player{sharedEarly.length === 1 ? "" : "s"}
+              </span>
+              <div className="cmp-shared">
+                {sharedEarly.map((p) => (
+                  <Link key={p.id} href={compareHref(aId, p.id)} prefetch={false} aria-current={p.id === bId ? "true" : undefined}>
+                    <RankAvatar name={p.displayName} avatarUrl={p.avatarUrl} size={22} />
+                    {p.displayName}
+                  </Link>
+                ))}
+              </div>
+            </>
+          )}
         </div>
         {compared > 0 && (
           <div className="cmp-meter" role="img" aria-label={`${agreed} of ${compared} calls in common`}>
@@ -497,16 +553,45 @@ export default async function ComparePage({
       {layout.sections.map((section) => {
         const stageLabel = section.name.split(" | ")[0];
         const isSwiss = isSwissSection(section.sectionid);
+        // "Sealed early · public" markers — only while the stage itself is
+        // still under wraps (after lock everyone's calls show anyway).
+        const stageOpen = !section.groups.every((g) => revealedByGroup.get(`${section.sectionid}:${g.groupid}`));
+        const marks = stageOpen
+          ? [
+              { id: aId, name: aIsYou ? "You" : a.displayName },
+              { id: bId, name: bIsYou ? "You" : b.displayName },
+            ]
+              .map((p) => ({ ...p, seal: seals.sealFor(p.id, section.sectionid) }))
+              .filter((p) => isPublicSeal(p.seal))
+          : [];
         return (
           <section key={section.sectionid} className="chap">
             <div className="chap-h">
               <h2>{stageLabel}</h2>
+              {marks.length > 0 && (
+                <div className="sgs-marks">
+                  {marks.map((m) => (
+                    <span key={m.id} className="sgs-mark">
+                      <EyeIcon size={12} /> {m.name} · sealed early · public
+                      {m.seal?.steamDivergedAt && <span className="sgs-mark warn"> · changed in-game after sealing</span>}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             {section.groups.map((group) => {
-              const revealed = revealedByGroup.get(`${section.sectionid}:${group.groupid}`) ?? false;
-              const aGroup = aPicksMap[section.sectionid]?.[group.groupid] ?? {};
-              const bGroup = bPicksMap[section.sectionid]?.[group.groupid] ?? {};
+              const stageRevealed = revealedByGroup.get(`${section.sectionid}:${group.groupid}`) ?? false;
+              const aReason = sideReason(aId, section.sectionid, stageRevealed);
+              const bReason = sideReason(bId, section.sectionid, stageRevealed);
+              // The grid opens once the stage locks, or early when either side
+              // sealed public. A side that's still under wraps is masked HERE, on
+              // the server — its picks never reach the rendered output.
+              const revealed = stageRevealed || aReason === "public-seal" || bReason === "public-seal";
+              const aHidden = aReason === "hidden";
+              const bHidden = bReason === "hidden";
+              const aGroup = aHidden ? {} : (aPicksMap[section.sectionid]?.[group.groupid] ?? {});
+              const bGroup = bHidden ? {} : (bPicksMap[section.sectionid]?.[group.groupid] ?? {});
               const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
               // Read-only on resolution applies to SWISS only. The playoff bracket
               // resolves match-by-match while it's still the live event everyone is
@@ -523,7 +608,8 @@ export default async function ComparePage({
                       <span>{ppp}</span>
                     </div>
                     <p className="cmp-locked">
-                      <LockIcon size={11} /> Both players&apos; picks unlock when this stage starts
+                      <LockIcon size={11} /> Both players&apos; picks unlock when this stage starts — or as soon as
+                      one seals them public
                     </p>
                   </div>
                 );
@@ -587,7 +673,7 @@ export default async function ComparePage({
                         <div className="cmp-gh">
                           <h3>{isSwiss ? bucketTitle(bucket.label) : bucket.label}</h3>
                           <span>
-                            {same}/{pairs.length} same · {ppp}
+                            {aHidden || bHidden ? ppp : `${same}/${pairs.length} same · ${ppp}`}
                           </span>
                         </div>
                         {pairs.map(({ aSlot, bSlot }) => {
@@ -604,7 +690,7 @@ export default async function ComparePage({
                           return (
                             <div key={`${aSlot}-${bSlot}`} className={`cmp-cr${isSame ? " same" : ""}`}>
                               <div className="cmp-cell">
-                                <PickSide team={team(aPick)} state={aState} steal={aSteal} />
+                                <PickSide team={team(aPick)} state={aState} steal={aSteal} hidden={aHidden} />
                                 {aPick && aPick !== 0 && (
                                   <BleachersStrip
                                     targetPlayerId={aId}
@@ -616,11 +702,17 @@ export default async function ComparePage({
                                   />
                                 )}
                               </div>
-                              <span className="cmp-m" aria-label={isSame ? "same pick" : "different pick"}>
-                                {isSame ? "=" : "≠"}
-                              </span>
+                              {aHidden || bHidden ? (
+                                <span className="cmp-m" aria-hidden="true">
+                                  ·
+                                </span>
+                              ) : (
+                                <span className="cmp-m" aria-label={isSame ? "same pick" : "different pick"}>
+                                  {isSame ? "=" : "≠"}
+                                </span>
+                              )}
                               <div className="cmp-cell r">
-                                <PickSide team={team(bPick)} state={bState} steal={bSteal} />
+                                <PickSide team={team(bPick)} state={bState} steal={bSteal} hidden={bHidden} />
                                 {bPick && bPick !== 0 && (
                                   <BleachersStrip
                                     targetPlayerId={bId}

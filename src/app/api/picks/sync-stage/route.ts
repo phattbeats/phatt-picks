@@ -17,6 +17,8 @@ import { getSession } from "@/lib/session";
 import { syncStageToValve, syncPlayoffBracketToValve } from "@/lib/picks-write";
 import { currentEventId } from "@/lib/events-core";
 import { isPickemOpen, PICKEM_NOT_OPEN_ERROR } from "@/lib/layout-state";
+import { prisma } from "@/lib/db";
+import { PLAYOFF_SEAL_UNIT, sealUnitFor } from "@/lib/pick-lock-core";
 
 export async function POST(req: NextRequest) {
   const EVENT_ID = currentEventId(); // per-request active event (#1046)
@@ -42,6 +44,17 @@ export async function POST(req: NextRequest) {
       { error: "Provide { sectionId } or { playoff: true }" },
       { status: 400 },
     );
+  }
+
+  // A sealed stage whose sealed set just landed on Steam in full now has a
+  // known-good Steam baseline: a later in-game change gets flagged by the mirror
+  // (pick-lock-core nextSteamState), and any earlier divergence is resolved.
+  if (result.ok && !result.degraded && !result.escalate) {
+    const unit = sealUnitFor(body?.playoff ? PLAYOFF_SEAL_UNIT : body.sectionId);
+    await prisma.pickLock.updateMany({
+      where: { playerId: session.playerId, eventId: EVENT_ID, sectionId: unit },
+      data: { steamMatchedAt: new Date(), steamDivergedAt: null },
+    });
   }
 
   return NextResponse.json(result);

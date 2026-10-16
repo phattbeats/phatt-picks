@@ -20,6 +20,7 @@ import { parsePredictions } from "@/lib/predictions";
 import { getCommittedLayout, buildSectionByGroup } from "@/lib/layout";
 import { isEventFrozenById } from "@/lib/event-freeze";
 import { isPickemOpen } from "@/lib/layout-state";
+import { nextSteamState, partitionMirror, sealUnitFor, sectionsInUnit, slotKey } from "@/lib/pick-lock-core";
 
 export type MirrorSkip = "no-steam-id" | "no-auth-code" | "event-archived" | "pickem-not-open";
 
@@ -65,7 +66,47 @@ export async function mirrorPlayerPredictions(
     const sectionByGroup = new Map<number, number>(
       [...layoutSectionByGroup.entries()].map(([gid, s]) => [gid, s.sectionid]),
     );
-    const preds = parsePredictions(envelope, sectionByGroup);
+    const allPreds = parsePredictions(envelope, sectionByGroup);
+
+    // Self-sealed stages (pick-lock-core): the sealed snapshot on HOTLINE is
+    // authoritative, so Valve's picks for a sealed unit are NEVER mirrored over
+    // it. We only record whether Valve still matches the sealed set, so a change
+    // made in the CS2 client after sealing is surfaced (not silently adopted).
+    const seals = await prisma.pickLock.findMany({ where: { playerId, eventId } });
+    let preds = allPreds;
+    if (seals.length > 0) {
+      const sealedUnits = new Set(seals.map((s) => s.sectionId));
+      const sealedRows = await prisma.pick.findMany({
+        where: { playerId, eventId },
+        select: { sectionId: true, groupId: true, slotIndex: true, pickId: true },
+      });
+      const snapshot = new Map(
+        sealedRows
+          .filter((r) => sealedUnits.has(sealUnitFor(r.sectionId)))
+          .map((r) => [slotKey(r.sectionId, r.groupId, r.slotIndex), r.pickId] as const),
+      );
+      const split = partitionMirror(allPreds, sealedUnits, snapshot);
+      preds = split.mirror;
+      const now = new Date();
+      for (const seal of seals) {
+        const matches = split.matchByUnit.get(seal.sectionId);
+        if (matches === undefined) continue;
+        const next = nextSteamState(seal, matches, now);
+        if (matches) {
+          // Valve holds exactly the sealed set → those rows are on Steam (#1214).
+          await prisma.pick.updateMany({
+            where: { playerId, eventId, sectionId: { in: sectionsInUnit(seal.sectionId) }, isLocal: true },
+            data: { isLocal: false },
+          });
+        }
+        if (
+          next.steamMatchedAt?.getTime() !== seal.steamMatchedAt?.getTime() ||
+          next.steamDivergedAt?.getTime() !== seal.steamDivergedAt?.getTime()
+        ) {
+          await prisma.pickLock.update({ where: { id: seal.id }, data: next });
+        }
+      }
+    }
 
     // Mirror as non-local rows; itemId string straight through (rule #2).
     await prisma.$transaction(
