@@ -63,6 +63,32 @@ const TILE_LOGO = 20;
 
 const fmtRecord = (r?: { wins: number; losses: number }) => (r ? `${r.wins}–${r.losses}` : null);
 
+/**
+ * Pool-card background art: the team's logo, oversized and cropped by the card
+ * (the self-hosted mark first, then the sticker). Walks the same tiers as
+ * TeamLogo and falls back to the team code only when no image loads. Plain
+ * opacity, no filter, so a full pool stays cheap to composite (#1269).
+ */
+function PoolLogoArt({ team }: { team: TeamDef }) {
+  const srcs = useMemo(
+    () => resolveLogoTiers(team).flatMap((tier) => (tier.kind === "image" ? [tier.src] : [])),
+    [team],
+  );
+  const [index, setIndex] = useState(0);
+  if (index >= srcs.length) return <span className="code">{teamCode(team)}</span>;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- remote sticker fallback; TeamLogo is unoptimized too.
+    <img
+      className="logo"
+      src={srcs[index]}
+      alt=""
+      draggable={false}
+      decoding="async"
+      onError={() => setIndex((i) => i + 1)}
+    />
+  );
+}
+
 export function PicksBoard({
   section,
   teams,
@@ -407,11 +433,11 @@ export function PicksBoard({
                   if (!t) return null;
                   const isSelected = selected === t.pickid;
                   const isUsed = usedTeamIds.has(t.pickid);
-                  const cls = ["sgp-team", isSelected ? "sel" : "", isUsed ? "used" : ""]
-                    .filter(Boolean)
-                    .join(" ");
                   const color = teamColor(t);
                   const cutout = playerCutout(t.pickid);
+                  const cls = ["sgp-team", cutout ? "cut" : "", isSelected ? "sel" : "", isUsed ? "used" : ""]
+                    .filter(Boolean)
+                    .join(" ");
                   const rank = (liveTeamStats?.[t.pickid] ?? statsForPickid(t.pickid))?.worldRank;
                   const region = regionForPickid(t.pickid);
                   const rec = fmtRecord(recordByTeam?.[t.pickid]);
@@ -434,7 +460,12 @@ export function PicksBoard({
                         aria-pressed={isSelected}
                         aria-label={`${t.name}${isUsed ? " (already picked)" : ""}${isSelected ? " — selected" : ""}`}
                       >
-                        {cutout ? (
+                        {/* Team logo large behind everything (the code only
+                            when no logo loads), then the player cutout over it. */}
+                        <span className="bg" aria-hidden="true">
+                          <PoolLogoArt team={t} />
+                        </span>
+                        {cutout && (
                           <Image
                             src={cutout}
                             alt=""
@@ -442,10 +473,6 @@ export function PicksBoard({
                             sizes="(min-width: 1024px) 200px, 50vw"
                             draggable={false}
                           />
-                        ) : (
-                          <span className="bg" aria-hidden="true">
-                            {teamCode(t)}
-                          </span>
                         )}
                         <span className="sgp-mark sm" aria-hidden="true">
                           <TeamLogo tiers={resolveLogoTiers(t)} teamName={t.name} size={TILE_LOGO} />

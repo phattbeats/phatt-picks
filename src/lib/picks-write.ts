@@ -27,6 +27,7 @@ import {
   ValveApiError,
 } from "@/lib/valve";
 import { buildItemIdMap } from "@/lib/items";
+import { isPickemOpen } from "@/lib/layout-state";
 import {
   resolveUploadPick,
   parseAssignedItemIds,
@@ -49,7 +50,8 @@ export type WriteSkip =
   | "write-disabled"
   | "no-steam-id"
   | "no-auth-code"
-  | "no-picks";
+  | "no-picks"
+  | "pickem-not-open";
 
 export interface WriteResult {
   ok: boolean;
@@ -64,8 +66,12 @@ export interface WriteResult {
 /** Preconditions shared by stage + playoff writes. Returns auth, or a skip. */
 async function loadWriteAuth(
   playerId: string,
+  eventId: number,
 ): Promise<{ steamId: string; authCode: string } | { skip: WriteSkip }> {
   if (!isWriteEnabled()) return { skip: "write-disabled" };
+  // Pre-open: Valve's Pick'Em for this event isn't open (no layout), so an
+  // upload can only 404. Skip before touching the player's auth code.
+  if (!(await isPickemOpen(eventId))) return { skip: "pickem-not-open" };
 
   const player = await prisma.player.findUnique({
     where: { id: playerId },
@@ -191,7 +197,7 @@ export async function syncStageToValve(
   eventId: number,
   sectionId: number,
 ): Promise<WriteResult> {
-  const auth = await loadWriteAuth(playerId);
+  const auth = await loadWriteAuth(playerId, eventId);
   if ("skip" in auth) return { ok: false, synced: 0, skipped: auth.skip };
 
   const rows = await prisma.pick.findMany({
@@ -211,7 +217,7 @@ export async function syncPlayoffBracketToValve(
   playerId: string,
   eventId: number,
 ): Promise<WriteResult> {
-  const auth = await loadWriteAuth(playerId);
+  const auth = await loadWriteAuth(playerId, eventId);
   if ("skip" in auth) return { ok: false, synced: 0, skipped: auth.skip };
 
   const rows = await prisma.pick.findMany({

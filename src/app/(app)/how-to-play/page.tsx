@@ -3,8 +3,12 @@
 import Link from "next/link";
 import { TapDemo } from "@/components/sg/content/TapDemo";
 import { coinArtSrc, COIN_TIERS, type CoinTier } from "@/lib/challenge-coin-core";
+import { currentEventId } from "@/lib/events-core";
+import { isPickemOpen } from "@/lib/layout-state";
 
 export const metadata = { title: "How Pick'Em works · HOTLINE" };
+// Per-request: the closing CTA follows whether Valve has opened Pick'Em yet.
+export const dynamic = "force-dynamic";
 
 /**
  * How it works — the newcomer field manual (#987), rebuilt as the Singapore
@@ -45,7 +49,7 @@ const SWISS: { h: string; recs: { r: string; cls?: string; tag?: string }[] }[] 
   {
     h: "Rd 3",
     recs: [
-      { r: "3–0", cls: "sw", tag: "sweep" },
+      { r: "3–0", cls: "sweep", tag: "sweep" },
       { r: "2–1" },
       { r: "1–2" },
       { r: "0–3", cls: "wo", tag: "out" },
@@ -65,7 +69,8 @@ const TIER_COPY: Record<CoinTier, { name: string; rule: string }> = {
 /** Illustrative strike — the last Major's coin art (Singapore's is minted at its final). */
 const COIN_ART_SLUG = "iem-cologne-2026";
 
-export default function HowToPlayPage() {
+export default async function HowToPlayPage() {
+  const open = await isPickemOpen(currentEventId());
   return (
     <div className="sgc-ed">
       <section className="bleed tall sgc-hero">
@@ -150,7 +155,7 @@ export default function HowToPlayPage() {
           ))}
         </div>
         <div className="sgc-legend">
-          <span><i className="sw" />3–0 · you call 2</span>
+          <span><i className="sweep" />3–0 · you call 2</span>
           <span><i className="ad" />3–1 or 3–2 · you call 6</span>
           <span><i className="wo" />0–3 · you call 2</span>
         </div>
@@ -258,7 +263,10 @@ export default function HowToPlayPage() {
           <div className="sgc-lane">
             <div className="ph"><img src="/wrapped/major-nations.jpg" alt="" loading="lazy" /></div>
             <div className="b">
-              <span className="eyebrow"><b>Needs the Viewer Pass</b></span>
+              <span className="eyebrow">
+                <b>Needs the Viewer Pass</b>
+                {!open && <> · when Pick&apos;Em opens</>}
+              </span>
               <h3>Sync with Steam</h3>
               <ul>
                 <li>Everything on the left</li>
@@ -297,7 +305,13 @@ export default function HowToPlayPage() {
       </section>
 
       <section className="cta">
-        <Link href="/picks" prefetch={false} className="btn-solid">Make your calls</Link>
+        {open ? (
+          <Link href="/picks" prefetch={false} className="btn-solid">Make your calls</Link>
+        ) : (
+          <button type="button" className="btn-solid" disabled title="Picks open when Valve opens Pick'Em for this Major.">
+            Opens when Valve opens Pick&apos;Em
+          </button>
+        )}
         <Link href="/faq" prefetch={false} className="btn-ghost">Read the FAQ</Link>
       </section>
     </div>

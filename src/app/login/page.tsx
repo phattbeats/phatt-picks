@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { HotlineLockup } from "@/components/heat/HeatMark";
 import { SplashIntro } from "@/components/sg/auth/SplashIntro";
+import { currentEventId } from "@/lib/events-core";
+import { isPickemOpen } from "@/lib/layout-state";
 
 /**
  * Signed-out landing AND sign-in (HANDOFF §5e) — the old splash gate and the
@@ -31,6 +33,7 @@ export default async function LoginPage({
   const errorMsg = error ? (ERROR_MESSAGES[error] ?? "Something went wrong signing you in. Please try again.") : null;
   // Bounced back with an error → don't replay the long intro.
   const override = intro === "first" || intro === "return" ? intro : errorMsg ? "return" : null;
+  const open = await isPickemOpen(currentEventId());
 
   return (
     <>
@@ -67,7 +70,9 @@ export default async function LoginPage({
             </Link>
           </div>
           <span className="fine rise d4">
-            Steam syncs your official Valve picks and needs a CS2 Viewer Pass. Local mode is fully featured.
+            {open
+              ? "Steam syncs your official Valve picks and needs a CS2 Viewer Pass. Local mode is fully featured."
+              : "Picks and Steam sync open when Valve opens Pick'Em. Sign in now and you're ready. Local mode is fully featured."}
           </span>
         </div>
       </SplashIntro>

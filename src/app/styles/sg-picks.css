@@ -185,15 +185,28 @@ a.sgp-note:hover { border-color: var(--hair-3); color: var(--ink-hi); }
 }
 .sgp-team:disabled { cursor: default; }
 .sgp-team > img { object-fit: cover; object-position: top; filter: saturate(.7) contrast(1.05); }
+/* Background art: a team-colour radial (cheap gradient, no blur) under the
+   team's logo, oversized and cropped by the card. The player cutout paints
+   over it. Opacity only, no filter (#1269 GPU safety). */
 .sgp-team .bg {
+  position: absolute; inset: 0; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 90%, var(--team, var(--surf-3)), transparent 70%);
+}
+.sgp-team .bg .logo {
+  position: absolute; left: 60%; top: 40%; width: 112%; height: 112%;
+  transform: translate(-50%, -50%); object-fit: contain; opacity: .3;
+  pointer-events: none; user-select: none;
+}
+/* Behind a player: bigger, pushed up-right so it frames the cutout, and quieter. */
+.sgp-team.cut .bg .logo { left: 64%; top: 34%; width: 120%; height: 120%; opacity: .26; }
+.sgp-team .bg .code {
   position: absolute; inset: 0; display: grid; place-items: center;
   font-family: var(--font-display); font-weight: 900; font-size: 64px; line-height: 1;
   color: rgba(255,255,255,.07);
-  background: radial-gradient(ellipse at 50% 90%, var(--team, var(--surf-3)), transparent 70%);
-  opacity: .9;
 }
 .sgp-team::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7,7,8,0) 35%, rgba(7,7,8,.95)); pointer-events: none; }
-.sgp-team > :not(img):not(.bg) { position: relative; z-index: 1; }
+/* Only the name + meta sit in flow; the corner mark and bucket chip stay absolute (a broad :not() rule here used to out-rank them and drop the mark to the bottom). */
+.sgp-team > .nm, .sgp-team > .meta { position: relative; z-index: 1; }
 .sgp-team .sgp-mark { position: absolute; top: 10px; left: 10px; z-index: 2; }
 .sgp-team .in { position: absolute; top: 44px; left: 10px; z-index: 2; font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; color: var(--heat); }
 .sgp-team .nm { display: block; font-family: var(--font-display); font-weight: 800; font-size: 20px; text-transform: uppercase; line-height: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -217,7 +230,7 @@ a.sgp-note:hover { border-color: var(--hair-3); color: var(--ink-hi); }
 @media (max-width: 480px) {
   .sgp-team { padding: 10px; }
   .sgp-team .nm { font-size: 17px; }
-  .sgp-team .bg { font-size: 52px; }
+  .sgp-team .bg .code { font-size: 52px; }
 }
 @media (prefers-reduced-motion: reduce) { .sgp-team.sel { transform: none; } }
 
@@ -347,3 +360,6 @@ a.sgp-note:hover { border-color: var(--hair-3); color: var(--ink-hi); }
 .stage-logo .lbl { font-family: var(--font-mono); font-size: 11px; letter-spacing: .42em; text-indent: .42em; line-height: 1; color: var(--heat); text-transform: uppercase; }
 .stage-logo .num { font-family: var(--font-display); font-weight: 900; line-height: .8; color: var(--ink-hi); }
 .stage-logo .sub { font-family: var(--font-mono); font-size: 10px; letter-spacing: .34em; text-indent: .34em; line-height: 1; margin-top: 3px; color: var(--ink-mid); text-transform: uppercase; }
+
+/* Pre-open picks screen (no layout yet): links row under the note copy */
+.sgp-note-links { display: flex; flex-wrap: wrap; gap: 8px 22px; }

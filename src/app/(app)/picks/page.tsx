@@ -57,6 +57,13 @@ export default async function PicksPage({
   const layout = await getEffectiveLayout(EVENT_ID);
   const session = await getSession();
 
+  // Pre-open: Valve hasn't opened this Major's Pick'Em (no layout). There are no
+  // stages or teams to show, and nothing to sync. Show an honest "not open"
+  // screen with the Stage I countdown, not the previous Major's field.
+  if (!layout) {
+    return <PicksNotOpen event={event} signedIn={!!session} />;
+  }
+
   if (session?.steamId) {
     await mirrorPlayerPredictionsThrottled(session.playerId, EVENT_ID);
   }
@@ -738,6 +745,68 @@ export default async function PicksPage({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * The picks screen before Valve opens this Major's Pick'Em: no stages, no pool,
+ * no sync. Countdown to Stage I (registry `stageOneStart`) + one honest line.
+ */
+function PicksNotOpen({
+  event,
+  signedIn,
+}: {
+  event: ReturnType<typeof getEventConfig>;
+  signedIn: boolean;
+}) {
+  const name = event ? event.name.replace(/\s+CS2\s+Major\s+Championship$/i, "") : "This Major";
+  const stageOne = event ? stageOneStartFor(event) : null;
+  return (
+    <div className="sgp-page">
+      <StageHeader
+        photo="/wrapped/major-cover.jpg"
+        eyebrow={
+          <>
+            {name} · <b>Pick&apos;Em not open</b>
+          </>
+        }
+        title="Pick'Em"
+        lockbox={
+          stageOne ? (
+            <LockCountdown variant="box" lockAt={stageOne} boxLabel="Stage I starts" />
+          ) : (
+            <>
+              <span className="k">Status</span>
+              <span className="v sm">Not open</span>
+            </>
+          )
+        }
+      />
+      <div className="sgp-note big rise d2">
+        <span className="ic" aria-hidden="true">
+          <LockIcon size={15} />
+        </span>
+        <div>
+          <span className="eyebrow">Not open yet</span>
+          <h2>Opens when Valve opens Pick&apos;Em</h2>
+          <p>
+            Valve hasn&apos;t opened Pick&apos;Em for <b>{name}</b> yet, so there are no stages or teams to call.
+            When it opens, the field appears here and you can make your picks and sync them to Steam.
+          </p>
+          <p>Viewer Pass, Steam sync and picks are all available once Pick&apos;Em opens.</p>
+          <span className="sgp-note-links">
+            <Link href="/how-to-play" className="go" prefetch={false}>
+              How it works →
+            </Link>
+            {!signedIn && (
+              <Link href="/login" className="go" prefetch={false}>
+                Sign in now →
+              </Link>
+            )}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

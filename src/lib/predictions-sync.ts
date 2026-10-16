@@ -19,8 +19,9 @@ import { fetchTournamentPredictions, ValveApiError } from "@/lib/valve";
 import { parsePredictions } from "@/lib/predictions";
 import { getCommittedLayout, buildSectionByGroup } from "@/lib/layout";
 import { isEventFrozenById } from "@/lib/event-freeze";
+import { isPickemOpen } from "@/lib/layout-state";
 
-export type MirrorSkip = "no-steam-id" | "no-auth-code" | "event-archived";
+export type MirrorSkip = "no-steam-id" | "no-auth-code" | "event-archived" | "pickem-not-open";
 
 export interface MirrorResult {
   ok: boolean;
@@ -42,6 +43,9 @@ export async function mirrorPlayerPredictions(
   // predictions for a finished event. Keyed on effective status (clock + real
   // GF), no human flip. No-op for the live event.
   if (await isEventFrozenById(eventId)) return { ok: false, mirrored: 0, skipped: "event-archived" };
+  // Pre-open: Valve 404s every predictions read until its Pick'Em opens, so
+  // there's nothing to mirror (and no Valve call to waste).
+  if (!(await isPickemOpen(eventId))) return { ok: false, mirrored: 0, skipped: "pickem-not-open" };
 
   const player = await prisma.player.findUnique({
     where: { id: playerId },

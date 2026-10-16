@@ -13,7 +13,7 @@
  * Run: node --env-file=.env scripts/verify-stage-gate.ts
  */
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -21,7 +21,10 @@ import {
   buildResolvedKeys,
   isStagePickable,
   selectCurrentStageIndex,
+  PICKEM_NOT_OPEN,
 } from "../src/lib/stage-gate-core.ts";
+import { resolveEventLayout } from "../src/lib/layout-merge-core.ts";
+import { getEventConfig } from "../src/lib/events-core.ts";
 import type { Layout } from "../src/lib/layout.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -229,6 +232,54 @@ const built = buildResolvedKeys([
 check("buildResolvedKeys formats keys as `${section}:${group}:${slot}`",
   built.has("105:271:0") && built.has("105:271:3") && built.size === 2,
 );
+
+// ── Pre-open: an event Valve hasn't opened has NO layout ──────────────────
+// Valve 404s GetTournamentLayout until a Major's Pick'Em opens. The site must
+// read that as "not open" for every stage, never borrow another event's fixture
+// (Singapore once rendered Cologne's Stage I as an open Singapore stage).
+console.log("\nstage-gate - pre-open (no layout for the event)");
+
+const notOpen = isStagePickable(null, 105);
+check("no layout -> not pickable, reason pickem-not-open",
+  notOpen.pickable === false && notOpen.reason === "pickem-not-open");
+check("no layout -> same answer for any section id",
+  [105, 106, 107, 108, 0].every((id) => isStagePickable(null, id).reason === "pickem-not-open"));
+check("PICKEM_NOT_OPEN constant matches", PICKEM_NOT_OPEN.reason === "pickem-not-open" && !PICKEM_NOT_OPEN.pickable);
+check("current-stage selection over an empty status list never throws", selectCurrentStageIndex([]) === -1);
+
+check("resolveEventLayout: no fixture + no live cache -> null", resolveEventLayout(null, null) === null);
+check("resolveEventLayout: no fixture + empty live layout -> null",
+  resolveEventLayout(null, { event: 27, name: "x", sections: [], teams: [] }) === null);
+const liveOnly: Layout = { ...layout, event: 27 };
+check("resolveEventLayout: no fixture + live layout -> that live layout (flips open on its own)",
+  resolveEventLayout(null, liveOnly)?.event === 27 &&
+  isStagePickable(resolveEventLayout(null, liveOnly), 105).pickable === true);
+check("resolveEventLayout: fixture present -> fixture (Cologne archive keeps resolving)",
+  resolveEventLayout(layout, null)?.event === 26 && resolveEventLayout(layout, null)?.sections.length === layout.sections.length);
+
+// Registry facts the runtime rule leans on: Cologne's fixture IS event 26, and
+// Singapore (upcoming) has no committed layout fixture in this build.
+const sg = getEventConfig(27);
+check("committed fixture describes Cologne (event 26)", layout.event === 26 && getEventConfig(26)?.fixtures.layout === "cologne-layout");
+check("Singapore (27) is registered with a layout fixture name that isn't committed",
+  !!sg && !existsSync(join(ROOT, `src/fixtures/${sg.fixtures.layout}.json`)));
+
+// Source pins for the server-only modules (prisma imports keep them out of
+// plain node): the lookup is event-keyed, and every write/sync path refuses.
+const layoutSrc = read("src/lib/layout.ts");
+check("layout.ts committedLayoutFor matches on the fixture's own event id",
+  /export function committedLayoutFor\(eventId: number\): Layout \| null \{\s*return COMMITTED\.result\.event === eventId \? COMMITTED\.result : null;/.test(layoutSrc));
+const stateSrc = read("src/lib/layout-state.ts");
+check("getEffectiveLayout resolves via committedLayoutFor(eventId), not the global fixture",
+  /resolveEventLayout\(committedLayoutFor\(eventId\), live\)/.test(stateSrc) && !/import \{[^}]*getCommittedLayout/.test(stateSrc));
+check("refreshLayoutOnRead swallows Valve 404 (pre-open) without logging",
+  /e instanceof ValveApiError && e\.status === 404\) return;/.test(stateSrc));
+for (const route of ["src/app/api/picks/route.ts", "src/app/api/picks/sync-stage/route.ts", "src/app/api/picks/sync/route.ts"]) {
+  check(`${route} refuses pre-open with 409 PICKEM_NOT_OPEN_ERROR`,
+    /NextResponse\.json\(PICKEM_NOT_OPEN_ERROR, \{ status: 409 \}\)/.test(read(route)));
+}
+check("picks-write skips uploads pre-open", /skip: "pickem-not-open"/.test(read("src/lib/picks-write.ts")));
+check("predictions mirror skips pre-open", /skipped: "pickem-not-open"/.test(read("src/lib/predictions-sync.ts")));
 
 console.log("\n" + pass + "/" + (pass + fail) + " checks passed");
 process.exit(fail === 0 ? 0 : 1);

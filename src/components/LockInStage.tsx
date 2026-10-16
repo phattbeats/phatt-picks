@@ -26,7 +26,7 @@ interface Props {
   localStatus?: { text: string; tone: BarTone } | null;
 }
 
-type WriteSkip = "write-disabled" | "no-steam-id" | "no-auth-code" | "no-picks";
+type WriteSkip = "write-disabled" | "no-steam-id" | "no-auth-code" | "no-picks" | "pickem-not-open";
 
 interface WriteResult {
   ok: boolean;
@@ -61,6 +61,10 @@ function describe(r: WriteResult | null, unsaved: boolean, initiallySynced: bool
     return unsaved
       ? { pill: "Saved locally — not yet on Steam", pillTone: "warn" }
       : { pill: `Synced to Steam (${r.synced} pick${r.synced === 1 ? "" : "s"})`, pillTone: "ok" };
+  }
+  // Pre-open (route 409 `pickem_not_open`, or the library skip).
+  if (r.skipped === "pickem-not-open" || r.error === "pickem_not_open") {
+    return { pill: "Available when Pick'Em opens", pillTone: "info" };
   }
   if (r.skipped === "no-auth-code") {
     return { pill: "Add your Steam auth code to sync", pillTone: "warn" };

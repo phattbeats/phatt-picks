@@ -19,7 +19,7 @@
  * Run:  node scripts/verify-m6-logos.ts
  */
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import {
@@ -40,6 +40,9 @@ const manifest = JSON.parse(read("src/fixtures/cologne-logos.json")) as {
   logos: LogoMap;
 };
 const LOGOS = manifest.logos;
+const MARKS = new Set(
+  (JSON.parse(read("src/fixtures/team-marks.json")) as { marks: string[] }).marks,
+);
 const tiersFor = (t: { pickid: number; logo: string; name: string }) =>
   resolveLogoTiers(t, LOGOS);
 
@@ -105,6 +108,32 @@ check(
 check(
   "TBD monogram label is '?'",
   tbdTiers[0].kind === "monogram" && tbdTiers[0].label === "?",
+);
+
+// Self-hosted team marks (scripts/build-team-marks.ts): with the committed mark
+// index, a team that has its own mark leads with it and keeps the sticker as
+// the fallback; a team without one keeps the sticker-first order.
+const naviMarked = resolveLogoTiers(navi, LOGOS, MARKS);
+check(
+  "marked team → selfhost → bymykel → monogram",
+  kinds(naviMarked) === "selfhost → bymykel → monogram",
+  kinds(naviMarked),
+);
+check(
+  "unmarked team keeps sticker-first order",
+  kinds(resolveLogoTiers({ ...navi, logo: "ghost" }, LOGOS, MARKS)) === "bymykel → selfhost → monogram",
+);
+const unmarked = real.filter((t) => !MARKS.has(t.logo));
+check(
+  `every non-TBD team has a self-hosted mark`,
+  unmarked.length === 0,
+  unmarked.length ? `no mark: ${unmarked.map((t) => t.name).join(", ")}` : `${real.length}/${real.length}`,
+);
+const absent = [...MARKS].filter((m) => !existsSync(join(ROOT, "public", selfHostUrl(m))));
+check(
+  "every indexed mark exists under public/logos",
+  absent.length === 0,
+  absent.length ? `missing files: ${absent.join(", ")}` : "",
 );
 
 // 3. terminal tier never fails + monogram labels.

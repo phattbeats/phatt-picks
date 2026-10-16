@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { getCommittedLayout, type TeamDef } from "@/lib/layout";
+import { getCommittedLayout, type Layout, type TeamDef } from "@/lib/layout";
+import { getEffectiveLayout } from "@/lib/layout-state";
 import { prisma } from "@/lib/db";
-import { isStagePickable, selectCurrentStageIndex } from "@/lib/stage-gate-core";
+import { isStagePickable, selectCurrentStageIndex, PICKEM_NOT_OPEN } from "@/lib/stage-gate-core";
 import { isPlayoffSection } from "@/lib/playoff-bracket-core";
 import { getSession } from "@/lib/session";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
@@ -76,7 +77,17 @@ export default async function DashboardPage() {
   // the whole process lifetime and serve the stale event.)
   const EVENT_ID = currentEventId();
   const event = getEventConfig(EVENT_ID);
-  const layout = getCommittedLayout();
+  // The event's own layout, or null until Valve opens its Pick'Em. Pre-open
+  // there are no stages or teams to score, so an empty layout stands in and
+  // every stage reads "not open" — never the previous Major's field.
+  const effectiveLayout = await getEffectiveLayout(EVENT_ID);
+  const preOpen = effectiveLayout === null;
+  const layout: Layout = effectiveLayout ?? {
+    event: EVENT_ID,
+    name: event?.name ?? "",
+    sections: [],
+    teams: [],
+  };
   const session = await getSession();
 
   // Live driver (#866): one atomic 30s claim gates a deferred background ingest
@@ -131,7 +142,11 @@ export default async function DashboardPage() {
     }),
   }));
   const activeIdx = selectCurrentStageIndex(stageStatuses.map((s) => s.pick));
-  const active = stageStatuses[activeIdx];
+  // Pre-open there are no sections: Stage I stands in, gated "pickem-not-open".
+  const active = stageStatuses[activeIdx] ?? {
+    section: { sectionid: 0, name: "Stage I", groups: [] },
+    pick: PICKEM_NOT_OPEN,
+  };
 
   // The three single-elim sections (108/109/110) read as ONE "Playoffs" stage on
   // the hero, the same way the picks page consolidates them (#1007).
@@ -222,8 +237,11 @@ export default async function DashboardPage() {
     ? { href: `/leaderboard?major=${prev.slug}`, label: `Final standings · ${shortEventName(prev.name)}` }
     : null;
 
-  const pickHref = `/picks?section=${active.section.sectionid}`;
-  const pickCta = active.pick.pickable
+  // Pre-open the primary CTA explains the game instead of promising picks.
+  const pickHref = preOpen ? "/how-to-play" : `/picks?section=${active.section.sectionid}`;
+  const pickCta = preOpen
+    ? "How It Works"
+    : active.pick.pickable
     ? session
       ? selfPickComplete
         ? "Edit Picks"
@@ -250,7 +268,17 @@ export default async function DashboardPage() {
     state: "done" | "now" | "next";
     status: string;
   };
-  const pathCells: PathCell[] = [];
+  const pathCells: PathCell[] = preOpen
+    ? // No layout yet: the standard Major path (three Swiss stages + Playoffs), all not open.
+      ["Stage I", "Stage II", "Stage III", "Playoffs"].map((title, i) => ({
+        key: `pre-${i}`,
+        title,
+        href: "/picks",
+        sectionIds: [],
+        state: i === 0 ? ("now" as const) : ("next" as const),
+        status: "not open",
+      }))
+    : [];
   stageStatuses.forEach((s, i) => {
     const playoff = isPlayoffSection(s.section.sectionid);
     const isActive = i === activeIdx;
@@ -305,7 +333,9 @@ export default async function DashboardPage() {
         : `${NUM[scoredCount] ?? scoredCount} down, ${(NUM[pathCells.length - scoredCount] ?? pathCells.length - scoredCount).toLowerCase()} to go`;
 
   // Field row: photographed teams present in the committed layout, by HLTV rank.
-  const fieldTeams = layout.teams
+  // A contenders preview ("ranked by HLTV"), not the event's pick pool, so it
+  // keeps reading the committed roster while the event has no layout.
+  const fieldTeams = (preOpen ? getCommittedLayout() : layout).teams
     .filter((t) => FIELD_PHOTOS[t.name])
     .map((t) => ({ team: t, rank: statsForPickid(t.pickid)?.worldRank ?? null }))
     .sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999))
@@ -336,7 +366,7 @@ export default async function DashboardPage() {
               <span className="eyebrow rise hm-eyebrow">
                 {eventStarted ? <span className="live">{eventLabel}</span> : <span>{eventName} · <b>{eventLabel}</b></span>}
                 <span>
-                  {activePlayoff ? "Playoffs" : `Stage ${String(activeIdx + 1).padStart(2, "0")}`}
+                  {activePlayoff ? "Playoffs" : `Stage ${String(Math.max(activeIdx, 0) + 1).padStart(2, "0")}`}
                 </span>
                 <StageStatusTag pickability={active.pick} />
               </span>
@@ -404,7 +434,11 @@ export default async function DashboardPage() {
         <div className="chap-h">
           <h2>{pathHeadline}</h2>
           <p>
-            {selfRow && !boardLevel ? (
+            {preOpen ? (
+              <>
+                Pick&apos;Em <b>isn&apos;t open yet</b>. Every stage opens when Valve opens Pick&apos;Em for {city}.
+              </>
+            ) : selfRow && !boardLevel ? (
               <>
                 You have <b>{selfRow.score} of {maxPoints} points</b> banked.
               </>
@@ -476,12 +510,15 @@ export default async function DashboardPage() {
             </p>
             <div className="hm-meta">
               <span>
-                Points <b>{selfRow?.score ?? 0}</b> of {maxPoints}
+                Points <b>{selfRow?.score ?? 0}</b>
+                {preOpen ? null : <> of {maxPoints}</>}
               </span>
               <span>
                 {champion
                   ? "final"
-                  : `${activeLabel} ${
+                  : preOpen
+                    ? "Pick'Em not open"
+                    : `${activeLabel} ${
                       active.pick.pickable
                         ? "open"
                         : active.pick.reason === "locked-time-passed"
@@ -498,7 +535,11 @@ export default async function DashboardPage() {
           <Link href="/login" className="card hm-card hm-getin" prefetch={false}>
             <span className="eyebrow">Get in</span>
             <h2 className="display">Connect Steam</h2>
-            <p className="hm-card-copy">Sync your Valve picks, save locally, and climb the board.</p>
+            <p className="hm-card-copy">
+              {preOpen
+                ? "Sign in now. Picks and Steam sync open when Valve opens Pick'Em."
+                : "Sync your Valve picks, save locally, and climb the board."}
+            </p>
             <span className="eyebrow hm-go">Sign in →</span>
           </Link>
         )}
@@ -544,8 +585,8 @@ export default async function DashboardPage() {
                 Ranked by HLTV as of <b>{statsAsOf}</b>. {city}&apos;s field is set when Valve seeds Stage I.
               </p>
             </div>
-            <Link className="eyebrow" href="/picks" prefetch={false}>
-              Open Pick&apos;Em →
+            <Link className="eyebrow" href={preOpen ? "/teams" : "/picks"} prefetch={false}>
+              {preOpen ? "Teams →" : "Open Pick'Em →"}
             </Link>
           </div>
           <div className="hm-field">
@@ -695,6 +736,7 @@ function ConcludedHero({
 
 function StageStatusTag({ pickability }: { pickability: ReturnType<typeof isStagePickable> }) {
   if (pickability.pickable) return <span className="tag warn">Picks Open</span>;
+  if (pickability.reason === "pickem-not-open") return <span className="tag">Picks not open</span>;
   if (pickability.reason === "locked-time-passed") return <span className="tag">Underway · Locked</span>;
   if (pickability.reason === "locked-by-valve") return <span className="tag">Locked by Valve</span>;
   if (pickability.reason === "teams-not-set") return <span className="tag">Teams not set</span>;
@@ -733,7 +775,9 @@ function StageBody({
             ? `${filledSlots} of ${totalSlots} ${sectionName} slots locked. Finish the rest — who goes 3‑0, who crashes 0‑3, your advancing eight — before the window shuts.`
             : `You haven't called your ${sectionName} picks yet. Lock who goes 3‑0, who crashes 0‑3, and your advancing eight before the window shuts.`
         : `Pick window is open. Sign in to lock your ${sectionName} picks before the window shuts.`
-    : pickability.reason === "teams-not-set"
+    : pickability.reason === "pickem-not-open"
+      ? `Valve hasn't opened Pick'Em for this Major yet. Picks, Steam sync and the Viewer Pass open when it does.`
+      : pickability.reason === "teams-not-set"
       ? isPlayoff
         ? `The eight are still being seeded. The playoff bracket opens automatically once Valve sets the matchups.`
         : `Teams for ${sectionName} aren't seeded yet. Picks open automatically once Valve sets the bracket.`

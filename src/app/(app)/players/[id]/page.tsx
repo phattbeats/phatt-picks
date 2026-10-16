@@ -16,7 +16,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCommittedLayout, buildTeamMap } from "@/lib/layout";
+import { buildTeamMap, type Layout } from "@/lib/layout";
+import { getEffectiveLayout } from "@/lib/layout-state";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
 import { arePicksRevealed, groupOutcomeKey } from "@/lib/reveal-core";
 import { isLockTimePassed, lockTimeForSection } from "@/lib/lock-schedule-core";
@@ -81,7 +82,11 @@ export default async function PlayerProfilePage({
   const EVENT_ID = event.eventId;
   const isLiveView = EVENT_ID === live.eventId;
   const { id } = await params;
-  const layout = getCommittedLayout();
+  // The event's own layout; null until Valve opens its Pick'Em, in which case
+  // there are no stages to show (never the previous Major's).
+  const effectiveLayout = await getEffectiveLayout(EVENT_ID);
+  const preOpen = effectiveLayout === null;
+  const layout: Layout = effectiveLayout ?? { event: EVENT_ID, name: event.name, sections: [], teams: [] };
   const teamMap = buildTeamMap(layout);
   const session = await getSession();
   await refreshOutcomesOnRead(EVENT_ID); // live driver (#866) — shared 30s claim; no-op once frozen
@@ -270,7 +275,9 @@ export default async function PlayerProfilePage({
           ? `${rank}${ordSuffix(rank)} on the board`
           : "Unranked";
   const statCopy =
-    resolved === 0 ? (
+    preOpen ? (
+      <>Pick&apos;Em isn&apos;t open yet at {eventName}. Stages appear when Valve opens it.</>
+    ) : resolved === 0 ? (
       <>Nothing is scored yet at {eventName}. <b>{maxPoints} points</b> are on the table.</>
     ) : (
       <>
@@ -412,10 +419,15 @@ export default async function PlayerProfilePage({
             <h2>Call by call</h2>
             <p>Every stage at a glance. <b>Tap a stage</b> to open the full board.</p>
           </div>
-          {isSelf && isLiveView && (
+          {isSelf && isLiveView && !preOpen && (
             <Link className="btn-ghost" href="/picks" prefetch={false}>Your picks</Link>
           )}
         </div>
+        {preOpen && (
+          <p className="muted">
+            <b>Pick&apos;Em isn&apos;t open yet.</b> Every stage shows up here once Valve opens Pick&apos;Em for this Major.
+          </p>
+        )}
         <div className="pp-stages">
           {layout.sections.map((section) => {
             const stageLabel = section.name.split(" | ")[0];

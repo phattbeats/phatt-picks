@@ -19,9 +19,9 @@
 import { prisma } from "./db";
 import { claimRefreshSlot, runDeferred } from "./source-refresh";
 import { parseSafeJson } from "./bigint";
-import { getCommittedLayout, type Layout, type LayoutEnvelope } from "./layout";
-import { mergeLiveLayout } from "./layout-merge-core";
-import { fetchTournamentLayout } from "./valve";
+import { committedLayoutFor, type Layout, type LayoutEnvelope } from "./layout";
+import { resolveEventLayout } from "./layout-merge-core";
+import { fetchTournamentLayout, ValveApiError } from "./valve";
 import { isEventFrozenById } from "./event-freeze";
 
 /**
@@ -62,17 +62,33 @@ async function readCachedLayout(eventId: number): Promise<Layout | null> {
 }
 
 /**
- * The committed fixture with the live `group.teams` + `picks_allowed` overlaid
- * from the cached layout. This is what the pick pool (PicksBoard) and the
- * write-side eligibility check (validatePickAgainstLayout) must read so the
- * Stage-III advancers and the playoff bracket become pickable as Valve seeds
- * them. Degrades to the bare fixture when nothing is cached yet.
+ * The event's layout: its committed fixture with the live `group.teams` +
+ * `picks_allowed` overlaid from the cached layout, or — for an event with no
+ * committed fixture — the cached live layout itself. This is what the pick pool
+ * (PicksBoard) and the write-side eligibility check (validatePickAgainstLayout)
+ * must read so the Stage-III advancers and the playoff bracket become pickable
+ * as Valve seeds them.
+ *
+ * Returns NULL when the event has neither (resolveEventLayout): Valve hasn't
+ * opened its Pick'Em, so there is nothing to pick, sync or write. Callers treat
+ * null as the "pickem-not-open" state. It never falls back to another event's
+ * fixture — that is how Singapore once rendered Cologne's Stage I as open.
  */
-export async function getEffectiveLayout(eventId: number): Promise<Layout> {
-  const committed = getCommittedLayout();
+export async function getEffectiveLayout(eventId: number): Promise<Layout | null> {
   const live = await readCachedLayout(eventId);
-  return mergeLiveLayout(committed, live);
+  return resolveEventLayout(committedLayoutFor(eventId), live);
 }
+
+/** Has Valve opened this event's Pick'Em (i.e. does it have a layout)? */
+export async function isPickemOpen(eventId: number): Promise<boolean> {
+  return (await getEffectiveLayout(eventId)) !== null;
+}
+
+/** Shared 4xx body for every write/sync path refused before Pick'Em opens. */
+export const PICKEM_NOT_OPEN_ERROR = {
+  error: "pickem_not_open",
+  message: "Pick'Em isn't open yet. Picks and Steam sync open when Valve opens Pick'Em for this Major.",
+} as const;
 
 // Dedicated refresh slot — gates how often a live-layout fetch is *attempted*
 // across the whole cluster, independent of the outcomes refresh (#866) so a
@@ -98,7 +114,16 @@ export async function refreshLayoutOnRead(eventId: number): Promise<void> {
   if (await isEventFrozenById(eventId)) return; // #949/954: frozen (effectively archived) Majors never re-crawl
   if (!(await claimLayoutRefreshSlot())) return; // within floor or lost the race — no-op
   runDeferred(async () => {
-    const envelope = await fetchTournamentLayout(eventId);
+    let envelope: LayoutEnvelope;
+    try {
+      envelope = await fetchTournamentLayout(eventId);
+    } catch (e) {
+      // 404 = Valve hasn't opened this event's Pick'Em yet. That's the expected
+      // pre-open answer, so it isn't logged. The next claim retries, and the first
+      // 200 fills the cache, which flips the site to open.
+      if (e instanceof ValveApiError && e.status === 404) return;
+      throw e;
+    }
     await cacheLiveLayout(eventId, envelope);
   }, "layout-state");
 }
