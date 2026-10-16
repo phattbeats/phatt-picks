@@ -3,6 +3,7 @@ import { HeatBottomNav } from "@/components/heat/HeatBottomNav";
 import { HowToPlayAnnounce } from "@/components/heat/HowToPlayAnnounce";
 import { StageWrappedGate } from "@/components/heat/StageWrappedGate";
 import { AnnouncePopup } from "@/components/heat/AnnouncePopup";
+import { CoachTips } from "@/components/coach/CoachTips";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { resolveTopbarYou } from "@/lib/topbar-you-core";
@@ -16,7 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const playerRow = session
     ? await prisma.player.findUnique({
         where: { id: session.playerId },
-        select: { avatarUrl: true },
+        select: { avatarUrl: true, createdAt: true },
       })
     : null;
   const topbar: TopbarYouProps = resolveTopbarYou({
@@ -59,6 +60,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {children}
       </main>
       <HeatBottomNav />
+      {/* Coach marks (blue bubbles): first-visit tour / what's-new tips. */}
+      <CoachTips selfId={session?.playerId ?? null} accountCreatedAtMs={playerRow?.createdAt.getTime() ?? null} />
     </>
   );
 }

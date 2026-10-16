@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { LeaderboardRow } from "@/lib/leaderboard";
 import { RankAvatar } from "./RankAvatar";
+import { nameFit } from "@/lib/name-fit";
 
 /** Documentary stills behind the three podium cards (see /public/wrapped/CREDITS.md). */
 const PODIUM_PHOTOS = ["/wrapped/major-champion.jpg", "/wrapped/major-cinderella.jpg", "/wrapped/major-woxic.jpg"];
@@ -25,6 +26,8 @@ export function Podium({
       {top.map((row, i) => {
         const rank = i + 1;
         const label = final ? (rank === 1 ? "Champion" : rank === 2 ? "Runner-up" : "Third") : null;
+        // Full name, always (Brandon) — sized to the card, wraps, no ellipsis.
+        const fit = nameFit(row.displayName, "rk-pod-name");
         return (
           <Link
             key={row.playerId}
@@ -38,7 +41,9 @@ export function Podium({
             <span className="rk-pod-r">{String(rank).padStart(2, "0")}</span>
             <span className="rk-pod-nm">
               <RankAvatar name={row.displayName} avatarUrl={row.avatarUrl} size={rank === 1 ? 40 : 32} />
-              <span className="rk-pod-name">{row.displayName}</span>
+              <span className={fit.className} style={fit.style}>
+                {row.displayName}
+              </span>
               {row.synced && !row.isLocal && <span className="sync">synced</span>}
               {row.coinTier && (
                 <span className={`coin-sticker ${row.coinTier}`} title={`${row.coinTier} coin`} role="img" aria-label={`${row.coinTier} coin`} />

@@ -6,6 +6,7 @@ import { AvatarUpload } from "@/components/AvatarUpload";
 import { AdminLocalPlayers } from "@/components/AdminLocalPlayers";
 import { LoginTokenPanel } from "@/components/LoginTokenPanel";
 import { ClaimLocalPicksPanel } from "@/components/ClaimLocalPicksPanel";
+import { TipsSettingRow } from "@/components/coach/TipsSettingRow";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { getReferralStats } from "@/lib/invite";
@@ -193,6 +194,8 @@ export default async function SettingsPage() {
               <h2>Session</h2>
             </div>
             <div className="list">
+              {/* Coach-mark tips (blue bubbles): on/off + reset. */}
+              <TipsSettingRow />
               {/* Help & guides live on their own INFO page (#1283). */}
               <div className="row">
                 <div>

@@ -33,7 +33,7 @@ export function HeatHeader({ topbar, profileHref = "/profile" }: { topbar: Topba
       {/* Desktop */}
       <nav className="topnav">
         <div className="topnav-inner">
-          <Link href="/" className="brand" aria-label="HOTLINE — home">
+          <Link href="/" className="brand" aria-label="HOTLINE — home" data-tip="nav-lockup">
             <HotlineLockup height={24} />
           </Link>
           <div className="navlinks">
@@ -56,7 +56,7 @@ export function HeatHeader({ topbar, profileHref = "/profile" }: { topbar: Topba
 
       {/* Mobile */}
       <header className="apphead">
-        <Link href="/" className="brand" aria-label="HOTLINE — home">
+        <Link href="/" className="brand" aria-label="HOTLINE — home" data-tip="nav-lockup">
           <HotlineLockup height={22} />
         </Link>
         <div className="apphead-you">

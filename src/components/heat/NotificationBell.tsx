@@ -338,6 +338,7 @@ export function NotificationBell() {
       <button
         type="button"
         className={`notifbell-btn${unread > 0 ? " has-unread" : ""}`}
+        data-tip="nav-bell"
         onClick={toggle}
         aria-label={unread > 0 ? `Notifications — ${unread} new` : "Notifications"}
         aria-expanded={open}

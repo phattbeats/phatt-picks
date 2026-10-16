@@ -450,7 +450,7 @@ export default async function DashboardPage() {
             )}
           </p>
         </div>
-        <div className="hm-path">
+        <div className="hm-path" data-tip="home-path">
           {pathCells.map((c) => {
             const scored = cellScored(c.sectionIds);
             const state = scored && c.state !== "now" ? "done" : c.state;

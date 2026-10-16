@@ -1289,50 +1289,65 @@ main.shell.with-nav-action { padding-bottom: calc(152px + env(safe-area-inset-bo
 }
 
 /* ── THE BLEACHERS — semi-anonymous pick reactions (#1211) ───────────────
-   Sits under a revealed pick on a player's profile. Wordless by design (Brandon):
-   just the anonymous stamp tally + the drop affordance. Senders stay masked
-   until the stage resolves (enforced server-side). Singapore: a quiet hairline
-   sub-row, 2px chips, no glow. */
+   Sits under a revealed pick (profile, compare, locked board). Quiet but clear:
+   small low-contrast chips that brighten on hover/focus; YOUR stamp is the
+   filled chip, everyone else's are outlined; the trigger is a labelled smiley.
+   Visual height 26px, hit area >=40px via a transparent ::before. No glow, no
+   accent colour on counts. Senders stay masked until the stage resolves. */
 .bleachers {
-  margin-top: 10px; padding-top: 10px;
-  border-top: 1px solid var(--hair);
-  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin-top: 6px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px;
+  --bl-ink: var(--ink-low);
 }
-.bleachers-tally { display: flex; flex-wrap: wrap; gap: 6px; }
-.bleach-stamp {
-  display: inline-flex; align-items: center; gap: 6px;
-  min-height: 28px; padding: 3px 9px;
-  border-radius: var(--r-sm); background: var(--surf-2); border: 1px solid var(--hair-2);
-  font-family: var(--font-mono); font-size: 12px;
+.bleachers:hover, .bleachers:focus-within, .bleachers.open { --bl-ink: var(--ink-mid); }
+.bleach-stamp, .bleach-add, .bleach-opt {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 26px; padding: 0 8px;
+  border-radius: 13px; background: transparent; border: 1px solid var(--hair-2);
+  color: var(--bl-ink); font-family: var(--font-mono); font-size: 11px; line-height: 1;
+  font-variant-numeric: tabular-nums;
+  transition: color var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease), background var(--duration-fast) var(--ease);
 }
-.bleach-stamp .bleach-ct { font-weight: 500; color: var(--ink-hi); }
-.bleach-stamp.heat .bleach-ct { color: var(--heat); }
-.bleach-stamp.props .bleach-ct { color: var(--tac-green); }
-.bleach-stamp.mine { border-color: var(--heat); }
-.bleach-glyph { font-size: 13px; line-height: 1; }
-.bleachers-drop { display: flex; }
-.bleach-add {
-  min-height: 44px; padding: 0 14px;
-  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
-  color: var(--ink-mid); background: transparent;
-  border: 1px dashed var(--hair-3); border-radius: var(--r-sm); cursor: pointer;
-  transition: color var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease);
+/* >=40px tap target without the visual weight. */
+.bleach-stamp::before, .bleach-add::before, .bleach-opt::before { content: ''; position: absolute; left: 0; right: 0; top: -7px; bottom: -7px; }
+button.bleach-stamp, .bleach-add, .bleach-opt { cursor: pointer; }
+button.bleach-stamp:hover, .bleach-add:hover, .bleach-opt:hover { color: var(--ink-hi); border-color: var(--hair-3); }
+.bleach-stamp:focus-visible, .bleach-add:focus-visible, .bleach-opt:focus-visible { outline: 2px solid var(--heat); outline-offset: 2px; }
+.bleach-ct { color: inherit; }
+/* Yours: filled. */
+.bleach-stamp.mine { background: rgba(242, 241, 236, 0.12); border-color: rgba(242, 241, 236, 0.45); color: var(--ink-hi); }
+.bleach-glyph { font-size: 12px; line-height: 1; filter: saturate(0.55); transition: filter var(--duration-fast) var(--ease); }
+.bleachers:hover .bleach-glyph, .bleachers:focus-within .bleach-glyph, .bleach-stamp.mine .bleach-glyph { filter: none; }
+.bleach-add { border-style: dashed; padding: 0 9px 0 7px; }
+.bleach-add svg { flex: none; }
+.bleach-add-t { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; }
+.bleach-add[aria-expanded="true"] { color: var(--ink-hi); border-style: solid; border-color: var(--hair-3); }
+.bleach-stamp:disabled, .bleach-add:disabled, .bleach-opt:disabled { opacity: 0.55; cursor: default; }
+/* The vocabulary — a small floating tray under the trigger (doesn't reflow
+   the row, fits narrow compare cells): glyph over a tiny label per stamp. */
+.bleachers { position: relative; }
+.bleach-options {
+  position: absolute; z-index: 20; top: calc(100% + 6px); left: 0;
+  display: flex; gap: 2px; width: max-content; max-width: calc(100vw - 24px);
+  padding: 5px; border-radius: 12px;
+  background: var(--surf-2); border: 1px solid var(--hair-3);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
 }
-.bleach-add:hover { color: var(--ink-hi); border-color: var(--ink-hi); }
-.bleach-add:disabled { opacity: 0.5; cursor: default; }
-.bleach-options { display: flex; flex-wrap: wrap; gap: 6px; }
 .bleach-opt {
-  display: inline-flex; align-items: center; gap: 6px;
-  min-height: 44px; padding: 0 12px;
-  border-radius: var(--r-sm); background: transparent; border: 1px solid var(--hair-2);
-  color: var(--ink-mid); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em;
-  cursor: pointer;
-  transition: color var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease);
+  --bl-ink: var(--ink-mid);
+  flex-direction: column; justify-content: center; gap: 4px;
+  width: 56px; height: 50px; padding: 0; border-color: transparent; border-radius: 8px;
 }
-.bleach-opt:hover { color: var(--ink-hi); border-color: var(--ink-hi); }
-.bleach-opt.active { border-color: var(--heat); color: var(--ink-hi); }
-.bleach-opt:disabled { opacity: 0.5; cursor: default; }
-.bleach-opt-lbl { white-space: nowrap; }
+.bleach-opt::before { display: none; }
+.bleach-opt .bleach-glyph { filter: none; font-size: 18px; }
+.bleach-opt-lbl { white-space: nowrap; font-size: 8.5px; letter-spacing: 0.06em; }
+.bleach-opt:hover { background: var(--surf-3); border-color: transparent; }
+.bleach-opt.active { background: rgba(242, 241, 236, 0.12); border-color: rgba(242, 241, 236, 0.45); color: var(--ink-hi); }
+.bleach-msg { flex-basis: 100%; font-family: var(--font-mono); font-size: 11px; color: var(--ink-mid); }
+@media (prefers-reduced-motion: reduce) {
+  .bleach-stamp, .bleach-add, .bleach-opt, .bleach-glyph { transition: none; }
+}
 
 /* Player-profile playoff picks as full-width blocks (#1211) — a pick header
    row with the Bleachers strip beneath. Singapore: hairline rows. */

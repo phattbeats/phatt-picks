@@ -190,7 +190,7 @@ function SideRow({
         <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={24} />
       </span>
       <span className="nm">
-        <Link href={teamHref(team)} prefetch={false}>
+        <Link href={teamHref(team)} prefetch={false} data-tip="team-link">
           {team.name}
         </Link>
         {side.userPicked && <span className="sgb-call">Your call</span>}

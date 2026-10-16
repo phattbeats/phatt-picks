@@ -44,7 +44,7 @@ export function ChallengeCoinShelf({
   const empties = coins.length === 0 && !pending ? 3 : 0;
 
   return (
-    <section className="chap coin-shelf">
+    <section className="chap coin-shelf" data-tip="profile-coins">
       <div className="chap-h row2">
         <div>
           <h2>Challenge coins</h2>

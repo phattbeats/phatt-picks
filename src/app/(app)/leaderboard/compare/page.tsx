@@ -49,6 +49,7 @@ import { RankAvatar } from "@/components/sg/ranks/RankAvatar";
 import { visibilityReason, isPublicSeal } from "@/lib/pick-lock-core";
 import { getEventSeals } from "@/lib/pick-lock";
 import { EyeIcon } from "@/components/sg/picks/SealPicks";
+import { nameFit, nameLineChars } from "@/lib/name-fit";
 
 export const dynamic = "force-dynamic";
 
@@ -254,7 +255,6 @@ export default async function ComparePage({
   const aIsYou = session?.playerId === aId;
   const bIsYou = session?.playerId === bId;
   const aName = aIsYou ? "You" : a.displayName;
-  const bName = bIsYou ? "you" : b.displayName;
 
   const viewerId = session?.playerId ?? null;
   // Past Majors are read-only history — no new reactions.
@@ -377,23 +377,33 @@ export default async function ComparePage({
   const resolvedAny = aSteals.length + bSteals.length + bothRight > 0;
   const agreePct = compared > 0 ? Math.round((agreed / compared) * 100) : 0;
 
-  const side = (p: PlayerLite, score: number, you: boolean) => {
+  // Hero name sizing (Brandon): names are ALWAYS fully visible up to
+  // NAME_FIT_MAX chars — the type scales to its column by length and may wrap
+  // to two lines; never an ellipsis. See lib/name-fit.ts + sg-compare.css.
+  // Both names are sized off the longer one so the duel stays balanced (a
+  // 5-char name doesn't tower over a 12-char one); floor of 8 caps short pairs.
+  const duelChars = Math.max(nameLineChars(a.displayName), nameLineChars(b.displayName), 8);
+  const side = (p: PlayerLite, score: number, you: boolean, align: "l" | "r") => {
     const rank = rankOf(p.id);
+    const fit = nameFit(p.displayName, "cmp-big");
+    fit.style = { ...fit.style, ["--nf-chars" as string]: duelChars };
     return (
-      <div className="cmp-p">
-        <span className="eyebrow">
-          #{String(rank).padStart(2, "0")}
-          {you && (
-            <>
-              {" "}
-              · <b>you</b>
-            </>
-          )}{" "}
-          · {provenance(p)}
+      <div className={`cmp-p ${align}`}>
+        <span className="cmp-tag">
+          <RankAvatar name={p.displayName} avatarUrl={p.avatarUrl} size={32} />
+          <span className="eyebrow">
+            #{String(rank).padStart(2, "0")}
+            {you && (
+              <>
+                {" "}
+                · <b>you</b>
+              </>
+            )}{" "}
+            · {provenance(p)}
+          </span>
         </span>
-        <span className="cmp-who">
-          <RankAvatar name={p.displayName} avatarUrl={p.avatarUrl} size={36} />
-          <span className="cmp-big">{p.displayName}</span>
+        <span className={fit.className} style={fit.style} title={p.displayName}>
+          {p.displayName}
         </span>
         <span className="cmp-pts">
           <b>{score}</b> pts
@@ -440,14 +450,16 @@ export default async function ComparePage({
           </span>
           <h1 className="rk-sr">Compare</h1>
           <div className="cmp-duel rise d1">
-            {side(a, aScore, aIsYou)}
-            <span className="cmp-x">
-              VS
-              <span className={lead === 0 ? "" : "lead"}>
-                {lead === 0 ? "Tied" : lead > 0 ? `+${lead} ←` : `→ +${-lead}`}
+            {side(a, aScore, aIsYou, "l")}
+            <span className="cmp-x" aria-label={lead === 0 ? "Tied" : `${lead > 0 ? aName : b.displayName} leads by ${Math.abs(lead)}`}>
+              <span className="cmp-vs" aria-hidden>
+                VS
+              </span>
+              <span className={`cmp-lead${lead === 0 ? "" : " on"}`} aria-hidden>
+                {lead === 0 ? "Tied" : lead > 0 ? `← +${lead}` : `+${-lead} →`}
               </span>
             </span>
-            {side(b, bScore, bIsYou)}
+            {side(b, bScore, bIsYou, "r")}
           </div>
         </div>
       </section>
@@ -519,34 +531,59 @@ export default async function ComparePage({
         ) : (
           <div className="cmp-steal">
             {stealCard(aSteals, aName, b.displayName, true)}
-            {stealCard(bSteals, b.displayName, bName, false)}
+            {stealCard(bSteals, b.displayName, aIsYou ? "you" : a.displayName, false)}
           </div>
         )}
       </section>
 
-      {/* Opponent switcher */}
-      <section className="chap">
+      {/* Rival picker — every other player as a full-name card (rank, points,
+          gap to the left-hand player). Names wrap; nothing is truncated. */}
+      <section className="chap" aria-labelledby="cmp-rivals-h">
         <div className="chap-h row2">
           <div>
-            <h2>Compare against</h2>
+            <h2 id="cmp-rivals-h">Compare against</h2>
           </div>
+          <span className="eyebrow">
+            {aIsYou ? "You" : a.displayName} vs <b>anyone</b> · {ranked.length - 1} rival{ranked.length - 1 !== 1 ? "s" : ""}
+          </span>
         </div>
-        <div className="cmp-opps">
-          {players
-            .filter((p) => p.id !== aId)
-            .map((p) => (
-              <Link
-                key={p.id}
-                href={compareHref(aId, p.id)}
-                prefetch={false}
-                className={p.id === bId ? "on" : undefined}
-                aria-current={p.id === bId ? "true" : undefined}
-              >
-                <RankAvatar name={p.displayName} avatarUrl={p.avatarUrl} size={24} />
-                {p.displayName}
-              </Link>
-            ))}
-        </div>
+        <ul className="cmp-rivals">
+          {ranked
+            .filter((r) => r.player.id !== aId)
+            .map(({ player: p, score }) => {
+              const on = p.id === bId;
+              const gap = score - aScore;
+              const gapLabel = gap === 0 ? "level" : gap > 0 ? `+${gap}` : `−${-gap}`;
+              const gapWords =
+                gap === 0
+                  ? `level with ${aIsYou ? "you" : a.displayName}`
+                  : `${Math.abs(gap)} ${gap > 0 ? "ahead of" : "behind"} ${aIsYou ? "you" : a.displayName}`;
+              return (
+                <li key={p.id}>
+                  <Link
+                    href={compareHref(aId, p.id)}
+                    prefetch={false}
+                    scroll={false}
+                    className={`cmp-rival${on ? " on" : ""}`}
+                    aria-current={on ? "true" : undefined}
+                    aria-label={`${p.displayName}, rank ${rankOf(p.id)}, ${score} points, ${gapWords}${on ? " — selected" : ""}`}
+                  >
+                    <RankAvatar name={p.displayName} avatarUrl={p.avatarUrl} size={36} />
+                    <span className="cmp-rival-id">
+                      <span className="cmp-rival-nm">{p.displayName}</span>
+                      <span className="cmp-rival-m">
+                        #{String(rankOf(p.id)).padStart(2, "0")} · {score} pts
+                        {p.id === session?.playerId ? " · you" : ""}
+                      </span>
+                    </span>
+                    <span className={`cmp-rival-gap${gap > 0 ? " up" : gap < 0 ? " dn" : ""}`} aria-hidden>
+                      {on ? "Selected" : gapLabel}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+        </ul>
       </section>
 
       {/* Side by side — per-stage, per-bucket split rows */}

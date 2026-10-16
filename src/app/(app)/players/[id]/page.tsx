@@ -41,6 +41,7 @@ import { isEventArchived } from "@/lib/majors-core";
 import { BleachersStrip, type TallyLine } from "@/components/heat/BleachersStrip";
 import { tallyReactions, pickTargetKey, type ReactionLike } from "@/lib/bleachers-core";
 import { ChallengeCoinShelf } from "@/components/heat/ChallengeCoinShelf";
+import { nameFit } from "@/lib/name-fit";
 import { getPlayerChallengeCoins } from "@/lib/challenge-coins";
 import { isPublicSeal } from "@/lib/pick-lock-core";
 import { getEventSeals } from "@/lib/pick-lock";
@@ -274,6 +275,8 @@ export default async function PlayerProfilePage({
 
   // Chapter headline — a statement, not a label.
   const who = isSelf ? "You" : player.displayName;
+  // Hero name: full name always, scaled to the column (lib/name-fit.ts).
+  const heroFit = nameFit(player.displayName, "display pp-hero-name");
   const statHead =
     resolved === 0
       ? "All to play for"
@@ -306,7 +309,7 @@ export default async function PlayerProfilePage({
   };
 
   const gear = (
-    <Link href="/settings" prefetch={false} className="profile-gear" aria-label="Settings">
+    <Link href="/settings" prefetch={false} className="profile-gear" aria-label="Settings" data-tip="profile-settings">
       <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <circle cx="12" cy="12" r="3" />
         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
@@ -336,7 +339,9 @@ export default async function PlayerProfilePage({
               {isSelf ? "Your profile" : "Player"} · <b>{provenance}</b>
               {joinLabel ? ` · since ${joinLabel}` : ""}
             </span>
-            <h1 className="display">{player.displayName}</h1>
+            <h1 className={heroFit.className} style={heroFit.style}>
+              {player.displayName}
+            </h1>
           </div>
           <nav className="pp-hero-links rise d2" aria-label="Profile links">
             <Link className="eyebrow" href="/leaderboard" prefetch={false}>← Leaderboard</Link>
