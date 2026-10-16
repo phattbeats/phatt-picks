@@ -9,6 +9,8 @@ import "./styles/sg-notify.css";
 import "./styles/sg-people.css";
 import "./styles/sg-content.css";
 import "./styles/sg-bracket.css";
+import "./styles/sg-compare.css";
+import "./styles/sg-coach.css";
 import { PwaRegister } from "@/components/PwaRegister";
 import { HeatBackground } from "@/components/heat/HeatBackground";
 

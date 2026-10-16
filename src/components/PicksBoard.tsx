@@ -259,7 +259,7 @@ export function PicksBoard({
                 const disp = bucketDisplay(bucket.label);
                 return (
                   <div key={bucket.label} className="sgp-bucket">
-                    <div className="sgp-bk">
+                    <div className="sgp-bk" data-tip="picks-buckets">
                       <span>{disp.title}</span>
                       <b>
                         {bucket.slotIndexes.filter((i) => groupPicksMap[i]).length}/
@@ -470,6 +470,7 @@ export function PicksBoard({
                           is `used` (pointer-events:none) or the stage is locked. */}
                       <span
                         className={`sgp-info${isPlayoff ? " spot" : ""}`}
+                        data-tip="picks-dossier"
                         style={
                           isPlayoff && teamAccent(t)
                             ? ({ "--team-accent": teamAccent(t) } as CSSProperties)

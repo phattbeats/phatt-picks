@@ -123,7 +123,7 @@ async function LiveBoard() {
       </section>
 
       {last && (
-        <Link href={`/leaderboard?major=${encodeURIComponent(last.slug)}`} prefetch={false} className="rk-archive">
+        <Link href={`/leaderboard?major=${encodeURIComponent(last.slug)}`} prefetch={false} className="rk-archive" data-tip="lb-archive">
           <span className="eyebrow">Last Major</span>
           <span className="rk-archive-t">
             Final standings · {eventShortName(last)} <span aria-hidden>→</span>
@@ -176,7 +176,7 @@ async function LiveBoard() {
                 <b>You&apos;re {ordinal(selfIdx + 1)}</b>
                 {leaderGap > 0 ? `, ${leaderGap} pt${leaderGap !== 1 ? "s" : ""} off the lead.` : " — top of the board."}
               </span>
-              <Link href="/leaderboard/compare" prefetch={false} className="btn-solid">
+              <Link href="/leaderboard/compare" prefetch={false} className="btn-solid" data-tip="lb-compare">
                 Compare picks
               </Link>
             </section>
@@ -189,7 +189,7 @@ async function LiveBoard() {
               </div>
               <nav className="rk-links" aria-label="Leaderboard links">
                 {rows.length >= 2 && (
-                  <Link href="/leaderboard/compare" prefetch={false}>
+                  <Link href="/leaderboard/compare" prefetch={false} data-tip="lb-compare">
                     Compare picks →
                   </Link>
                 )}

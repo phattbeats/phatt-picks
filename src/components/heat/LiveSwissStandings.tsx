@@ -101,7 +101,7 @@ export function LiveSwissStandings({
                   <span aria-hidden="true" className="std-mono">{row.name.slice(0, 2).toUpperCase()}</span>
                 )}
                 {team ? (
-                  <Link href={teamHref(team)} prefetch={false} className="std-name">
+                  <Link href={teamHref(team)} prefetch={false} className="std-name" data-tip="team-link">
                     {team.name}
                   </Link>
                 ) : (

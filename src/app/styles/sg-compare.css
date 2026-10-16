@@ -1,0 +1,83 @@
+/* HOTLINE Singapore — compare page hero + rival picker, and the shared
+   name-fit primitive for player names set in display type.
+   Loads app-wide; every selector is scoped under .nfit / .cmp-*. */
+
+/* ── name-fit (lib/name-fit.ts) ──────────────────────────────────────────
+   A player name is always fully visible up to 35 chars. The element carries
+   --nf-chars (chars on its widest line, from nameFit()); the size is the
+   container width divided by that many glyph-widths, clamped per surface:
+     --nf-min / --nf-max  size bounds        --nf-em   glyph width (em)
+     --nf-room            px the line shares with siblings (avatar etc.)
+   Needs a `container-type:inline-size` ancestor for cqi (falls back to the
+   viewport). Wraps on spaces (balanced); only breaks mid-word if a spaceless
+   name can't fit at --nf-min. Over 35 chars: 2-line clamp, the only ellipsis. */
+/* Defaults live in the var() fallbacks so a surface rule of equal specificity
+   in any stylesheet can set them regardless of load order. */
+.nfit,.bleed .nfit{
+  display:block;min-width:0;max-width:100%;
+  font-size:clamp(var(--nf-min,22px),calc((100cqi - var(--nf-room,0px)) / (var(--nf-chars,10) * var(--nf-em,.52))),var(--nf-max,96px));
+  white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;text-wrap:balance}
+.nfit-clamp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+
+/* ── hero duel ──────────────────────────────────────────────────────────── */
+.cmp-hero{min-height:min(60dvh,560px)}
+.cmp-hero .in{max-width:none}
+.cmp-back{color:var(--ink-mid);text-decoration:none;min-height:44px;display:inline-flex;align-items:center;margin:0;padding:0}
+.cmp-duel{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:clamp(16px,3vw,48px);padding-top:6px}
+.cmp-p{display:grid;gap:12px;min-width:0;align-content:end;container-type:inline-size}
+.cmp-p.r{text-align:right;justify-items:end}
+.cmp-tag{display:flex;align-items:center;gap:10px;min-width:0;max-width:100%}
+.cmp-p.r .cmp-tag{flex-direction:row-reverse}
+.cmp-tag .eyebrow{min-width:0}
+.cmp-big{--nf-min:26px;--nf-max:104px;
+  font-family:var(--font-display);font-weight:900;text-transform:uppercase;line-height:.88;letter-spacing:-.005em;color:var(--ink-hi)}
+.cmp-pts{font-family:var(--font-mono);font-size:13px;color:var(--ink-mid)}
+.cmp-pts b{color:var(--ink-hi);font-weight:500;font-size:22px;font-variant-numeric:tabular-nums}
+
+/* VS + lead — a quiet hinge between the two names */
+.cmp-x{display:grid;justify-items:center;gap:10px;padding-bottom:34px}
+.cmp-vs{font-family:var(--font-display);font-weight:800;font-size:clamp(22px,2.2vw,32px);line-height:1;color:var(--ink-low);letter-spacing:.04em}
+.cmp-lead{font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;
+  color:var(--ink-mid);padding:4px 8px;border:1px solid var(--hair-2);border-radius:var(--r-sm)}
+.cmp-lead.on{color:var(--heat);border-color:rgba(240,163,0,.4)}
+
+/* Mobile: stacked duel — A, a hairline VS hinge, then B (right-aligned so it
+   still reads as a face-off). Each name gets the full column. */
+@media(max-width:699px){
+  .cmp-duel{grid-template-columns:minmax(0,1fr);gap:16px}
+  .cmp-x{grid-template-columns:1fr auto auto 1fr;align-items:center;gap:12px;padding:0}
+  .cmp-x::before,.cmp-x::after{content:'';height:1px;background:var(--hair-2)}
+  .cmp-vs{font-size:20px}
+  .cmp-big{--nf-min:24px;--nf-max:76px}
+}
+
+/* ── rival picker ───────────────────────────────────────────────────────── */
+.cmp-rivals{list-style:none;margin:0;padding:0;display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+.cmp-rivals>li{min-width:0;display:grid}
+.cmp-rival{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;min-height:64px;padding:12px 14px 12px 12px;
+  border:1px solid var(--hair-2);border-radius:var(--r-md);background:var(--surf-1);color:var(--ink-mid);text-decoration:none;
+  transition:border-color var(--duration-fast) var(--ease),background var(--duration-fast) var(--ease)}
+.cmp-rival:hover{border-color:var(--hair-3);color:var(--ink-hi)}
+.cmp-rival:focus-visible{outline:2px solid var(--heat);outline-offset:2px}
+.cmp-rival.on{border-color:var(--ink-hi);background:var(--surf-2);color:var(--ink-hi);box-shadow:inset 2px 0 0 var(--heat)}
+.cmp-rival-id{display:grid;gap:4px;min-width:0}
+.cmp-rival-nm{font-size:15px;font-weight:500;line-height:1.25;color:var(--ink-hi);overflow-wrap:anywhere;text-wrap:pretty}
+.cmp-rival-m{font-family:var(--font-mono);font-size:11px;color:var(--ink-mid);font-variant-numeric:tabular-nums}
+.cmp-rival-gap{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-low);white-space:nowrap;font-variant-numeric:tabular-nums}
+.cmp-rival-gap.up{color:var(--ink-hi)}
+.cmp-rival.on .cmp-rival-gap{color:var(--heat)}
+/* Mobile: a two-row horizontal strip (snap, next column peeks in so it reads
+   as scrollable); the current rival is pulled to the front. */
+@media(max-width:699px){
+  .cmp-rivals{grid-template-columns:none;grid-auto-flow:column;grid-template-rows:repeat(2,auto);grid-auto-columns:min(76%,280px);
+    overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scroll-padding:0 20px;
+    margin:0 -20px;padding:0 20px 6px;scrollbar-width:thin}
+  .cmp-rivals>li{scroll-snap-align:start}
+  .cmp-rivals>li:has(.on){order:-1}
+  .cmp-rival{min-height:60px;padding:10px 12px 10px 10px}
+}
+
+/* reactions under the right-hand (opponent) pick hug the right edge */
+.cmp-cell.r .bleachers{justify-content:flex-end}
+/* the stamp tray opens toward the page centre from the right-hand cell */
+.cmp-cell.r .bleach-options{left:auto;right:0}
