@@ -1,0 +1,240 @@
+/* HOTLINE Singapore — challenge coins (#1278).
+   The coin case on a profile (.cc-*), the coin-holders page (.ch-*), the
+   shared inspectable coin trigger (.coin-collectible-trigger / .coin-shine) and
+   the drag-to-rotate inspector (.coin-inspect-* / .coin3d-*).
+   Coins and felt are Blender renders (scripts/coins/); everything here is
+   flat paint + box-shadow — no blur / backdrop-filter on large areas (#1269),
+   and every motion stands down under prefers-reduced-motion. */
+
+/* metal ink — tier names, plate lines */
+.coin-collectible-tier {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 500; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--ink-low);
+}
+.coin-collectible-tier.diamond, .cc-plate-sub.diamond, .ch-tier-nm.diamond { color: #a9d8ff; }
+.coin-collectible-tier.gold, .cc-plate-sub.gold, .ch-tier-nm.gold { color: #f0c463; }
+.coin-collectible-tier.silver, .cc-plate-sub.silver, .ch-tier-nm.silver { color: #d4d6da; }
+.coin-collectible-tier.bronze, .cc-plate-sub.bronze, .ch-tier-nm.bronze { color: #d9915e; }
+
+/* ── the inspectable coin (button wrapping the rendered face) ── */
+.coin-collectible-trigger {
+  appearance: none; background: none; border: 0; padding: 0; cursor: pointer;
+  width: 100%; height: 100%; min-width: 44px; min-height: 44px; display: block;
+  border-radius: 50%;
+  transition: transform 0.35s var(--ease);
+}
+.coin-collectible-trigger:hover { transform: translateY(-3px); }
+.coin-collectible-trigger:focus-visible { outline: 2px solid var(--heat); outline-offset: 4px; }
+.coin-collectible-trigger img { width: 100%; height: 100%; object-fit: contain; display: block; }
+/* --shimmer-delay staggers a one-shot strike-in (opacity + lift, compositor-only). */
+.coin-shine { position: relative; display: block; width: 100%; height: 100%; border-radius: 50%; }
+.coin-shine img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.coin-shine { animation: coin-strike 0.6s var(--ease) both; animation-delay: calc(var(--shimmer-delay, 0s) * 0.12); }
+@keyframes coin-strike { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ── the case ─────────────────────────────────────────────────────────────
+   A slim carbon shell (hinge barrel on top, as if the lid's just been lifted),
+   a recessed bed, and one felt compartment per Major. Compartments are the
+   rendered felt tile (portrait 2.0 × 2.6: well centred 38.46% down, apron
+   below for the plate) — keep in sync with FELT_H in render-coin.py. */
+.cc-sect .chap-h.row2 { align-items: end; }
+.cc-head-r { display: flex; gap: 18px; align-items: baseline; flex-wrap: wrap; }
+.cc-head-r a.eyebrow:hover { color: var(--ink-hi); }
+.cc-case {
+  --slot-w: 224px;
+  position: relative; display: inline-block; max-width: 100%;
+  padding: 22px 14px 14px; border-radius: var(--r-lg);
+  background: linear-gradient(180deg, #17171a 0%, #0e0e10 38%, #0b0b0c 100%);
+  border: 1px solid var(--hair-2);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), inset 0 -1px 0 rgba(0,0,0,0.6), 0 22px 44px -18px rgba(0,0,0,0.85);
+  justify-self: start;
+}
+/* hinge: the barrel strip along the top edge, two knuckles */
+.cc-hinge {
+  position: absolute; left: 10px; right: 10px; top: 6px; height: 6px; border-radius: 3px;
+  background: linear-gradient(180deg, #050506, #1c1c20);
+  box-shadow: inset 0 1px 1px rgba(0,0,0,0.8), 0 1px 0 rgba(255,255,255,0.05);
+}
+.cc-hinge i {
+  position: absolute; top: -2px; width: 46px; height: 10px; border-radius: 3px;
+  background: linear-gradient(180deg, #55555c 0%, #2a2a2f 45%, #141416 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 1px 2px rgba(0,0,0,0.7);
+}
+.cc-hinge i:first-child { left: 14%; }
+.cc-hinge i:last-child { right: 14%; }
+.cc-bed {
+  display: grid; grid-template-columns: repeat(var(--cols, 3), var(--slot-w)); gap: 5px;
+  padding: 5px; border-radius: var(--r-sm); background: #040507;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.9);
+}
+.cc-slot {
+  position: relative; aspect-ratio: 600 / 780; border-radius: 2px; overflow: hidden;
+  background: #0a1626 url(/coins/felt-slot.webp) center / 100% 100% no-repeat;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.55), inset 0 8px 14px -6px rgba(0,0,0,0.6);
+}
+/* the coin rests in the well (well ⌀ = 80% of the tile; coin a hair smaller) */
+.cc-coin { position: absolute; left: 50%; top: 38.46%; width: 76%; aspect-ratio: 1; transform: translate(-50%, -50%); }
+.cc-coin .coin-collectible-trigger { box-shadow: 0 7px 12px rgba(0,0,0,0.6), 0 2px 3px rgba(0,0,0,0.75); }
+.cc-coin .coin-collectible-trigger:hover { transform: translateY(-4px) scale(1.015); box-shadow: 0 14px 18px rgba(0,0,0,0.55), 0 3px 5px rgba(0,0,0,0.7); }
+/* an empty recess: the note is stitched into the felt */
+.cc-empty {
+  position: absolute; left: 50%; top: 38.46%; width: 56%; transform: translate(-50%, -50%);
+  text-align: center; font-family: var(--font-mono); font-size: 9px; line-height: 1.5;
+  letter-spacing: 0.18em; text-transform: uppercase; color: rgba(170, 190, 220, 0.5);
+  text-shadow: 0 -1px 0 rgba(0,0,0,0.6);
+}
+/* engraved plate on the felt apron */
+.cc-plate {
+  position: absolute; left: 11%; right: 11%; bottom: 7.5%;
+  display: grid; gap: 3px; justify-items: center; text-align: center;
+  padding: 7px 14px 6px; border-radius: 2px;
+  background: linear-gradient(180deg, #34353a 0%, #1f2023 52%, #2a2b2f 100%);
+  border: 1px solid rgba(255,255,255,0.07);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+/* two pin heads */
+.cc-plate::before, .cc-plate::after {
+  content: ''; position: absolute; top: 50%; width: 4px; height: 4px; margin-top: -2px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #9a9aa0, #3a3a40 70%);
+}
+.cc-plate::before { left: 5px; }
+.cc-plate::after { right: 5px; }
+.cc-plate-nm {
+  font-family: var(--font-display); font-weight: 800; font-size: 14px; line-height: 1;
+  text-transform: uppercase; letter-spacing: 0.04em; color: #d9d7d0;
+  text-shadow: 0 -1px 0 rgba(0,0,0,0.85), 0 1px 0 rgba(255,255,255,0.06);
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cc-plate-sub {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-mid); text-shadow: 0 -1px 0 rgba(0,0,0,0.85); white-space: nowrap;
+}
+/* glass lid sheen — two faint diagonal reflections, paint only */
+.cc-glass {
+  position: absolute; inset: 19px 14px 14px; border-radius: var(--r-sm); pointer-events: none;
+  background: linear-gradient(112deg,
+    rgba(255,255,255,0) 30%, rgba(255,255,255,0.05) 37%, rgba(255,255,255,0.015) 44%, rgba(255,255,255,0) 50%,
+    rgba(255,255,255,0) 72%, rgba(255,255,255,0.03) 77%, rgba(255,255,255,0) 81%);
+}
+@media (max-width: 600px) {
+  /* full-width on phones: a shrink-to-fit case would collapse its 1fr columns */
+  .cc-case { display: block; width: 100%; justify-self: stretch; padding: 18px 10px 10px; }
+  .cc-hinge i { width: 36px; }
+  .cc-bed { grid-template-columns: repeat(var(--cols-m, 2), minmax(0, 1fr)); gap: 4px; padding: 4px; }
+  .cc-glass { inset: 15px 10px 10px; }
+  .cc-plate { left: 7%; right: 7%; padding: 6px 10px 5px; }
+  .cc-plate-nm { font-size: 12px; }
+  .cc-plate-sub { font-size: 8px; letter-spacing: 0.12em; }
+  .cc-empty { font-size: 8px; width: 62%; }
+}
+
+/* ── coin-holders page (/coins) ── */
+/* hero: the four metals fanned on the right, over the photo (desktop only) */
+.ch-fan { position: absolute; right: 3%; bottom: 8%; z-index: 1; width: min(40%, 520px); aspect-ratio: 2 / 1; pointer-events: none; }
+.ch-fan img { position: absolute; width: 44%; height: auto; bottom: 0; animation: rise .8s var(--ease) both; }
+.ch-fan img.bronze { left: 0; bottom: 4%; animation-delay: .05s; }
+.ch-fan img.silver { left: 19%; bottom: 14%; animation-delay: .12s; }
+.ch-fan img.gold { left: 38%; bottom: 6%; animation-delay: .19s; }
+.ch-fan img.diamond { left: 57%; bottom: 16%; animation-delay: .26s; }
+@media (max-width: 1280px) { .ch-fan { display: none; } }
+.ch-major { display: grid; gap: 22px; }
+.ch-tiers { display: grid; border-top: 1px solid var(--hair); }
+.ch-tier {
+  display: grid; grid-template-columns: 112px minmax(0, 200px) minmax(0, 1fr); gap: 24px; align-items: center;
+  padding: 22px 0; border-bottom: 1px solid var(--hair);
+}
+.ch-coin { width: 112px; height: 112px; }
+.ch-coin .coin-collectible-trigger { box-shadow: 0 8px 16px -6px rgba(0,0,0,0.8); }
+.ch-tier-k { display: grid; gap: 6px; }
+.ch-tier-nm { font-family: var(--font-display); font-weight: 900; font-size: 34px; line-height: 0.9; text-transform: uppercase; }
+.ch-tier-rule { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-mid); }
+.ch-holders { display: flex; flex-wrap: wrap; gap: 8px; }
+.ch-holder {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 14px 6px 6px;
+  background: var(--surf-1); border: 1px solid var(--hair); border-radius: var(--r-md);
+  color: var(--ink-hi); text-decoration: none; transition: border-color 0.15s ease;
+}
+.ch-holder:hover { border-color: var(--hair-3); }
+.ch-holder:focus-visible { outline: 2px solid var(--heat); outline-offset: 2px; }
+.ch-holder .av { width: 32px; height: 32px; overflow: hidden; }
+.ch-holder .av img { width: 100%; height: 100%; object-fit: cover; }
+.ch-holder-nm { font-size: 15px; font-weight: 500; }
+.ch-holder-f { font-family: var(--font-mono); font-size: 11px; color: var(--ink-mid); }
+.ch-holder.you { border-color: rgba(240, 163, 0, 0.45); }
+.ch-none { font-size: 14px; color: var(--ink-low); }
+.ch-pending { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 28px; align-items: center; }
+.ch-pending .cc-case { --slot-w: 180px; }
+.ch-pending p { color: var(--ink-mid); font-size: 15px; max-width: 460px; text-wrap: pretty; }
+.ch-pending p b { color: var(--ink-hi); font-weight: 500; }
+@media (max-width: 760px) {
+  .ch-tier { grid-template-columns: 76px minmax(0, 1fr); gap: 14px 16px; padding: 18px 0; }
+  .ch-coin { width: 76px; height: 76px; }
+  .ch-tier-nm { font-size: 26px; }
+  .ch-holders { grid-column: 1 / -1; }
+  .ch-pending { grid-template-columns: 1fr; gap: 18px; }
+  .ch-pending .cc-case { display: inline-block; width: auto; justify-self: start; }
+  .ch-pending .cc-bed { grid-template-columns: repeat(1, 170px); }
+}
+
+/* ── How it works: coin chapter case + holders link ── */
+.sgc-coin-case { display: grid; gap: 14px; justify-items: start; }
+.sgc-coin-case .cc-case { --slot-w: 196px; }
+.sgc-coin-links { display: flex; gap: 22px; flex-wrap: wrap; align-items: baseline; }
+.sgc-coin-links a.eyebrow { color: var(--heat); }
+.sgc-coin-links a.eyebrow:hover { color: var(--ink-hi); }
+
+/* ── Coin inspector — drag-to-rotate 3D lightbox ──
+   Solid carbon scrim (no backdrop blur, #1269), flat close. */
+.coin-inspect-backdrop {
+  position: fixed; inset: 0; z-index: 200; display: grid; place-items: center;
+  background: rgba(7,7,8,0.94); padding: 24px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+.coin-inspect-panel {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 20px;
+  max-width: 100%;
+}
+.coin-inspect-close {
+  position: absolute; top: -8px; right: -8px; z-index: 2; width: 44px; height: 44px;
+  background: var(--surf-1); border: 1px solid var(--hair-2); color: var(--ink-hi);
+  font-size: 22px; line-height: 1; cursor: pointer; border-radius: var(--r-sm);
+}
+.coin-inspect-close:hover { border-color: var(--ink-hi); }
+.coin-inspect-close:focus-visible { outline: 2px solid var(--heat); outline-offset: 2px; }
+.coin-inspect-stage { perspective: 900px; max-width: calc(100vw - 48px); display: grid; place-items: center; }
+.coin-inspect-grab { cursor: grab; touch-action: none; display: grid; place-items: center; }
+.coin-inspect-grab:active { cursor: grabbing; }
+@media (max-width: 380px) { .coin-inspect-stage { transform: scale(0.86); } }
+.coin3d { position: relative; transform-style: preserve-3d; will-change: transform; }
+.coin3d-face {
+  position: absolute; inset: 0; backface-visibility: hidden;
+  border-radius: 50%; overflow: hidden;
+}
+.coin3d-face img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.coin3d-shine { display: none; }
+/* Reeded (milled) edge strips — ribs across the thickness over a cross-
+   thickness shade so the wall reads as rounded, polished metal. Base colours
+   are sampled from the rendered rims. */
+.coin3d-edge {
+  position: absolute; top: 50%; left: 50%;
+  background-image:
+    repeating-linear-gradient(to bottom, rgba(0,0,0,0.5) 0 1px, rgba(255,255,255,0.2) 1px 2.5px),
+    linear-gradient(to right, rgba(0,0,0,0.65) 0%, rgba(255,255,255,0.28) 45%, rgba(0,0,0,0.65) 100%);
+}
+.coin3d-edge.diamond { background-color: #a9b1bb; }
+.coin3d-edge.gold { background-color: #b88a34; }
+.coin3d-edge.silver { background-color: #a3a6aa; }
+.coin3d-edge.bronze { background-color: #a0673f; }
+.coin-inspect-meta { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.coin-inspect-name { font-family: var(--font-display); font-weight: 800; font-size: 26px; line-height: 1; text-transform: uppercase; color: var(--ink-hi); }
+.coin-inspect-finish { font-family: var(--font-mono); font-size: 11px; color: var(--ink-mid); letter-spacing: 0.06em; }
+.coin-inspect-hint {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--ink-low); margin-top: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coin-shine, .ch-fan img { animation: none; }
+  .coin-collectible-trigger, .ch-holder { transition: none; }
+  .coin-collectible-trigger:hover, .cc-coin .coin-collectible-trigger:hover { transform: none; }
+}

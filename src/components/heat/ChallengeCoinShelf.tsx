@@ -1,15 +1,22 @@
 /**
- * Challenge coin case (#1278) — the collectible row on a player's profile:
- * one struck, Major-logo coin per event they took part in, its metal decided by
- * the finish. Server component — it lays out the pre-rendered coin art the pure
- * core resolves; each coin opens the drag-to-rotate inspector on tap.
+ * Challenge coin case (#1278) — the collectible on a player's profile, kept the
+ * way a collector keeps a struck coin: in a protective case, each Major's coin
+ * resting in its own recessed felt slot with an engraved plate beneath it
+ * (Major · metal · finish). Server component — it lays out the Blender-rendered
+ * coin art (public/coins, see scripts/coins/) the pure core resolves; tapping a
+ * coin opens the drag-to-rotate inspector.
  *
- * Empty by design until a Major concludes (coins mint on archive). On your own
- * profile the case still shows with empty slots — an obvious home for coins to
- * land (#1283). On someone else's it stays hidden so a fresh profile isn't
- * cluttered. `pending` adds an "in play" slot for the live Major.
+ * Empty by design until a Major concludes (coins mint at the Grand Final). On
+ * your own profile the case still shows with empty slots — an obvious home for
+ * coins to land (#1283). On someone else's it stays hidden so a fresh profile
+ * isn't cluttered. `pending` adds the live Major's empty recess ("Mints at the
+ * Grand Final").
+ *
+ * Styles: src/app/styles/sg-coins.css (.cc-*). The felt is a rendered tile
+ * (/coins/felt-slot.webp) — no blur / backdrop-filter anywhere (#1269).
  */
 
+import Link from "next/link";
 import { type ChallengeCoin } from "@/lib/challenge-coin-core";
 import { InspectableCoin } from "@/components/heat/CoinInspector";
 
@@ -25,8 +32,65 @@ function ordSuffix(n: number): string {
 }
 
 /** Display name without the long "CS2 Major Championship" tail. */
-function shortName(name: string): string {
+export function coinShortName(name: string): string {
   return name.replace(/\s+CS2 Major Championship$/i, "");
+}
+
+/** "2nd of 7", or null when the finish is unknown. */
+export function finishLabel(finish: number | null, fieldSize: number): string | null {
+  return finish != null ? `${finish}${ordSuffix(finish)} of ${fieldSize}` : null;
+}
+
+/**
+ * One felt compartment. With a `coin` it holds the struck, inspectable coin;
+ * without one it's the bare recess (`emptyNote` is stitched into the well).
+ */
+export function CoinSlot({
+  coin = null,
+  title,
+  sub,
+  subTier,
+  emptyNote,
+  delay = 0,
+}: {
+  coin?: ChallengeCoin | null;
+  title: string;
+  sub?: string | null;
+  /** Colours the plate's second line in the coin's metal. */
+  subTier?: ChallengeCoin["tier"];
+  emptyNote?: string;
+  delay?: number;
+}) {
+  return (
+    <div className={`cc-slot${coin ? "" : " empty"}`}>
+      {coin ? (
+        <div className="cc-coin">
+          <InspectableCoin coin={coin} size={240} delay={delay} />
+        </div>
+      ) : (
+        emptyNote && <span className="cc-empty">{emptyNote}</span>
+      )}
+      <div className="cc-plate">
+        <span className="cc-plate-nm">{title}</span>
+        {sub && <span className={`cc-plate-sub${subTier ? ` ${subTier}` : ""}`}>{sub}</span>}
+      </div>
+    </div>
+  );
+}
+
+/** The protective case shell: hinge, felt bed, glass sheen. Children = slots. */
+export function CoinCase({ slots, children }: { slots: number; children: React.ReactNode }) {
+  const cols = Math.max(1, Math.min(slots, 4));
+  return (
+    <div
+      className="cc-case"
+      style={{ ["--cols" as string]: cols, ["--cols-m" as string]: Math.min(cols, 2) } as React.CSSProperties}
+    >
+      <span className="cc-hinge" aria-hidden="true"><i /><i /></span>
+      <div className="cc-bed">{children}</div>
+      <span className="cc-glass" aria-hidden="true" />
+    </div>
+  );
 }
 
 export function ChallengeCoinShelf({
@@ -36,51 +100,44 @@ export function ChallengeCoinShelf({
 }: {
   coins: ChallengeCoin[];
   isSelf: boolean;
-  /** The live Major's coin-to-be: an empty "in play" slot. */
+  /** The live Major's coin-to-be: an empty recess awaiting its strike. */
   pending?: { name: string; note: string } | null;
 }) {
   if (coins.length === 0 && !isSelf) return null;
 
-  const empties = coins.length === 0 && !pending ? 3 : 0;
+  const showPending = !!pending && (isSelf || coins.length > 0);
+  const empties = coins.length === 0 && !showPending ? 3 : 0;
+  const slots = coins.length + (showPending ? 1 : 0) + empties;
 
   return (
-    <section className="chap coin-shelf">
+    <section className="chap cc-sect">
       <div className="chap-h row2">
         <div>
           <h2>Challenge coins</h2>
         </div>
-        {coins.length > 0 && <span className="eyebrow">{coins.length} struck · tap to inspect</span>}
+        <span className="cc-head-r">
+          {coins.length > 0 && <span className="eyebrow">{coins.length} struck · tap to inspect</span>}
+          <Link href="/coins" prefetch={false} className="eyebrow">Coin holders →</Link>
+        </span>
       </div>
-      <div className="coin-shelf-grid">
+      <CoinCase slots={slots}>
         {coins.map((c, i) => (
-          <div key={c.eventId} className="coin-collectible">
-            <div className="coin-collectible-disc">
-              <InspectableCoin coin={c} size={150} delay={i * 1.3} />
-            </div>
-            <div className={`coin-collectible-tier ${c.tier}`}>{c.tier}</div>
-            <div className="coin-collectible-name">{shortName(c.name)}</div>
-            {c.finish != null && (
-              <div className="coin-collectible-finish">
-                {c.finish}
-                {ordSuffix(c.finish)} of {c.fieldSize}
-              </div>
-            )}
-          </div>
+          <CoinSlot
+            key={c.eventId}
+            coin={c}
+            title={coinShortName(c.name)}
+            sub={[c.tier, finishLabel(c.finish, c.fieldSize)].filter(Boolean).join(" · ")}
+            subTier={c.tier}
+            delay={i * 1.3}
+          />
         ))}
-        {pending && (isSelf || coins.length > 0) && (
-          <div className="coin-collectible">
-            <div className="coin-collectible-disc coin-slot-empty" aria-hidden="true" />
-            <div className="coin-collectible-tier">In play</div>
-            <div className="coin-collectible-name">{pending.name}</div>
-            <div className="coin-collectible-finish">{pending.note}</div>
-          </div>
+        {showPending && pending && (
+          <CoinSlot title={pending.name} sub="To be minted" emptyNote={pending.note} />
         )}
         {Array.from({ length: empties }).map((_, i) => (
-          <div key={`empty-${i}`} className="coin-collectible" aria-hidden="true">
-            <div className="coin-collectible-disc coin-slot-empty" />
-          </div>
+          <CoinSlot key={`empty-${i}`} title="Next Major" sub="Empty slot" />
         ))}
-      </div>
+      </CoinCase>
     </section>
   );
 }

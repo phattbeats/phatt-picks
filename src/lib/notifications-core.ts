@@ -378,7 +378,7 @@ const TIER_LABEL: Record<CoinTier, string> = {
  * the player took part (#1278). Capped at maxAgeMs so an old coin never
  * backfills the feed long after it was earned (the coin itself lives forever on
  * the shelf; only the notification is time-bound). `href` lands on the Majors
- * page where the coin sits in its velvet case, ready to inspect.
+ * page where the coin sits in its felt-lined case, ready to inspect.
  */
 export function coinEarnedEntry(
   input: CoinEarnedInput,
