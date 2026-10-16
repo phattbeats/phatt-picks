@@ -12,6 +12,7 @@ import "./styles/sg-seal.css";
 import "./styles/sg-bracket.css";
 import "./styles/sg-compare.css";
 import "./styles/sg-coach.css";
+import "./styles/sg-coins.css";
 import { PwaRegister } from "@/components/PwaRegister";
 import { HeatBackground } from "@/components/heat/HeatBackground";
 

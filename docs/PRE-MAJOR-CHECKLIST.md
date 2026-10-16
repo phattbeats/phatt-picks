@@ -132,8 +132,10 @@ frozen snapshot is what renders until the first live crawl lands.
       optional self-host SVG fallback.
 - [ ] Challenge-coin art — drop the four front faces
       `public/coins/<event-slug>-{diamond,gold,silver,bronze}.png` (#1278). The
-      reverses `public/coins/_back-{tier}.png` are shared, leave them. Coins mint
-      automatically once the Major archives — no DB, no per-team config.
+      reverses `public/coins/_back-{tier}.png` are shared, leave them. Render the
+      fronts from the Major's logo with the Blender recipe in
+      `scripts/coins/render-coin.py` (header). Coins mint automatically once the
+      Major's Grand Final resolves — no DB, no per-team config.
 - [ ] `verify-team-stats`, `verify-team-stats-live`, `verify-lock-schedule`,
       `verify-regions` all green.
 - [ ] `prisma db push` ran on the deploy (creates `TeamStatsCache` +

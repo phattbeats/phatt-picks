@@ -149,7 +149,15 @@ const CATEGORIES = [
               <li><b>Silver</b> — top 50%</li>
               <li><b>Bronze</b> — everyone else who took part</li>
             </ul>
-            <p>Coins sit on the shelf on your player profile, and you get a notification when one is struck.</p>
+            <p>
+              Each slice rounds <b>up</b> to whole places, so even a small field strikes every metal —
+              in a field of 7, #1 is diamond, #2 gold, #3–4 silver and #5–7 bronze. Any field of two or
+              more always has a gold.
+            </p>
+            <p>
+              Coins sit in the felt-lined case on your player profile, you get a notification when one is
+              struck, and <Link href="/coins" prefetch={false}>the coin-holders page</Link> lists who holds what for every Major.
+            </p>
           </>
         ),
       },

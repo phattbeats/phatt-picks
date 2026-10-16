@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { TapDemo } from "@/components/sg/content/TapDemo";
-import { coinArtSrc, COIN_TIERS, type CoinTier } from "@/lib/challenge-coin-core";
+import { COIN_TIERS, type ChallengeCoin, type CoinTier } from "@/lib/challenge-coin-core";
+import { CoinCase, CoinSlot } from "@/components/heat/ChallengeCoinShelf";
 import { currentEventId } from "@/lib/events-core";
 import { isPickemOpen } from "@/lib/layout-state";
 
@@ -19,7 +20,7 @@ export const dynamic = "force-dynamic";
  *   • the 2 / 6 / 2 calls — swiss-bucket-core.ts bucketSwissSlots(10)
  *   • lock & reveal       — reveal-core.ts (picks are revealed iff not writable)
  *   • coins               — challenge-coin-core.ts (≥1 real pick + Major
- *                          concluded; finish percentile → tier)
+ *                          concluded; finish rank slots → tier)
  * Singapore stage day-splits are unpublished (events-core), so only the dated
  * windows are shown: Swiss 25 Nov – 6 Dec, playoffs 10–13 Dec.
  */
@@ -60,14 +61,23 @@ const SWISS: { h: string; recs: { r: string; cls?: string; tag?: string }[] }[] 
 ];
 
 const TIER_COPY: Record<CoinTier, { name: string; rule: string }> = {
-  diamond: { name: "Diamond", rule: "#1 · or top 10%" },
+  diamond: { name: "Diamond", rule: "#1 · top 10%" },
   gold: { name: "Gold", rule: "Top 25%" },
   silver: { name: "Silver", rule: "Top 50%" },
   bronze: { name: "Bronze", rule: "You took part" },
 };
 
-/** Illustrative strike — the last Major's coin art (Singapore's is minted at its final). */
-const COIN_ART_SLUG = "iem-cologne-2026";
+/** Illustrative strike — the last Major's coins (Singapore's is minted at its final).
+ *  Real ChallengeCoin shapes so each one opens the drag-to-rotate inspector. */
+const DEMO_COINS: ChallengeCoin[] = COIN_TIERS.map((tier) => ({
+  eventId: 0,
+  slug: "iem-cologne-2026",
+  name: "IEM Cologne 2026",
+  tier,
+  finish: null,
+  fieldSize: 0,
+  earnedAtMs: 0,
+}));
 
 export default async function HowToPlayPage() {
   const open = await isPickemOpen(currentEventId());
@@ -292,16 +302,26 @@ export default async function HowToPlayPage() {
             <b>Where you finish decides the metal.</b>
           </p>
         </div>
-        <div className="sgc-coins">
-          {COIN_TIERS.map((tier) => (
-            <figure key={tier}>
-              <img src={coinArtSrc(COIN_ART_SLUG, tier)} alt={`${TIER_COPY[tier].name} coin`} width={150} height={150} loading="lazy" />
-              <span className="tn">{TIER_COPY[tier].name}</span>
-              <span className="tr">{TIER_COPY[tier].rule}</span>
-            </figure>
-          ))}
+        <div className="sgc-coin-case">
+          <CoinCase slots={DEMO_COINS.length}>
+            {DEMO_COINS.map((coin, i) => (
+              <CoinSlot
+                key={coin.tier}
+                coin={coin}
+                title={TIER_COPY[coin.tier].name}
+                sub={TIER_COPY[coin.tier].rule}
+                subTier={coin.tier}
+                delay={i * 1.3}
+              />
+            ))}
+          </CoinCase>
+          <span className="sgc-note">
+            Shown: the Cologne 2026 strike · tap one to turn it over · slices round up, so #2 of 7 is gold
+          </span>
+          <span className="sgc-coin-links">
+            <Link href="/coins" prefetch={false} className="eyebrow">See current coin-holders →</Link>
+          </span>
         </div>
-        <span className="sgc-note">Shown: the Cologne 2026 strike · Singapore&apos;s mints at its final</span>
       </section>
 
       <section className="cta">

@@ -7,8 +7,9 @@
  * ring, all in CSS `preserve-3d` (no WebGL). Idles with a slow auto-spin so it
  * reads as a physical object; grabbing it takes over, releasing hands it back.
  *
- * The faces are the same pre-rendered metal art shown on the shelf, so the
- * inspect view and the shelf thumbnail are always the identical coin.
+ * The faces are the same Blender renders shown in the case (straight-on
+ * orthographic front + back, scripts/coins/), so the inspect view and the case
+ * thumbnail are always the identical coin.
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -26,7 +27,7 @@ export function CoinInspector({
   onClose: () => void;
 }) {
   const DIAM = 300; // on-screen coin diameter (px)
-  const THICK = 34; // coin thickness (px) — chunky, quarter-like
+  const THICK = 27; // coin thickness (px) — matches the render (0.15 R body + relief)
   // Rim sits flush at the disc edge (art is cropped to the disc, so the face
   // radius IS DIAM/2). Tuck 1px so the reeded wall hugs the face instead of
   // ringing it like an orbit.
@@ -164,7 +165,7 @@ export function CoinInspector({
       </div>
     </div>
   );
-  // Portal to <body> so the fixed-position lightbox escapes the velvet shelf's
+  // Portal to <body> so the fixed-position lightbox escapes the coin case's
   // overflow + any transformed ancestor (which would otherwise clip the coin
   // to the card — #1274 "fix clipping"). Mirrors StageWrapped/SpotlightModal.
   return typeof document === "undefined" ? null : createPortal(tree, document.body);

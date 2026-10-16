@@ -96,14 +96,8 @@
 .sgc-lane li{display:flex;gap:10px}.sgc-lane li::before{content:'—';color:var(--ink-mid);flex:none}
 .sgc-lane li.no::before{content:'✕';color:var(--ember)}
 .sgc-lane a{color:var(--heat);text-decoration:none}
-/* coins */
-.sgc-coins{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--hair);border:1px solid var(--hair);border-radius:var(--r-md);overflow:hidden;margin:0}
-.sgc-coins figure{background:var(--surf-1);padding:24px 10px 18px;display:grid;justify-items:center;gap:6px;text-align:center;margin:0}
-.sgc-coins img{width:min(150px,100%);height:auto;aspect-ratio:1;object-fit:contain}
-.sgc-coins .tn{font-family:var(--font-display);font-weight:800;font-size:22px;text-transform:uppercase}
-.sgc-coins .tr{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mid)}
+/* coins — the case lives in sg-coins.css (.cc-*, .sgc-coin-case) */
 .sgc-note{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mid)}
-@media(max-width:640px){.sgc-coins{grid-template-columns:1fr 1fr}}
 
 /* ── 13 · News ──────────────────────────────────────────────────────── */
 .sgc-news-hero .display{font-size:clamp(40px,7vw,96px);text-wrap:balance;overflow-wrap:anywhere}
