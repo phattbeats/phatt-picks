@@ -3,7 +3,9 @@
  *
  * Reached by tapping a row on the leaderboard or directory. Applies the
  * reveal-core gate exactly like /leaderboard/compare: a player's individual
- * team choices stay hidden until the stage locks. The viewer's OWN picks are
+ * team choices stay hidden until the stage locks — unless the player sealed
+ * that stage PUBLIC (pick-lock-core), which reveals it early with a "Sealed
+ * early · public" marker. The viewer's OWN picks are
  * always visible to themselves (no lock gate against yourself), matching the
  * /picks page.
  *
@@ -39,6 +41,9 @@ import { BleachersStrip, type TallyLine } from "@/components/heat/BleachersStrip
 import { tallyReactions, pickTargetKey, type ReactionLike } from "@/lib/bleachers-core";
 import { ChallengeCoinShelf } from "@/components/heat/ChallengeCoinShelf";
 import { getPlayerChallengeCoins } from "@/lib/challenge-coins";
+import { isPublicSeal } from "@/lib/pick-lock-core";
+import { getEventSeals } from "@/lib/pick-lock";
+import { EyeIcon } from "@/components/sg/picks/SealPicks";
 import {
   dayMonth,
   majorPhoto,
@@ -142,6 +147,9 @@ export default async function PlayerProfilePage({
     tallyReactions(reactionsByPick.get(pickTargetKey(sectionId, groupId, slotIndex)) ?? [], viewerId).map(
       (t) => ({ id: t.stamp.id, glyph: t.stamp.glyph, label: t.stamp.label, kind: t.stamp.kind, count: t.count, mine: t.mine }),
     );
+
+  // This player's self-seals (pick-lock-core) — a public one reveals early.
+  const seals = await getEventSeals(EVENT_ID, [player.id]);
 
   const breakdown = scorePlayer(layout, pickMap, outcomeMap);
   const score = breakdown.total;
@@ -428,7 +436,21 @@ export default async function PlayerProfilePage({
                 eventArchived,
               ),
             );
-            const showVerdicts = isSelf || lockRevealedAll;
+            // Self-seal (pick-lock-core): a PUBLIC seal shows this player's calls
+            // to everyone before the stage locks; a hidden one changes nothing.
+            const seal = seals.sealFor(player.id, section.sectionid);
+            const publicSeal = isPublicSeal(seal);
+            const showVerdicts = isSelf || lockRevealedAll || publicSeal;
+            const sealNote =
+              seal && !lockRevealedAll && (isSelf || publicSeal) ? (
+                <div className="sgs-marks" style={{ marginBottom: 12 }}>
+                  <span className={`sgs-mark${publicSeal ? "" : " hid"}`} style={publicSeal ? undefined : { color: "var(--ink-mid)" }}>
+                    <EyeIcon off={!publicSeal} size={12} />
+                    {publicSeal ? "Sealed early · public" : "Sealed · hidden until the stage locks"}
+                  </span>
+                  {seal.steamDivergedAt && <span className="sgs-mark warn">Changed in-game after sealing</span>}
+                </div>
+              ) : null;
             const dots = dotsBySection.get(section.sectionid) ?? [];
             const secResolved = resolvedBySection.get(section.sectionid) ?? 0;
             const pts = pointsBySection.get(section.sectionid) ?? 0;
@@ -467,7 +489,8 @@ export default async function PlayerProfilePage({
                   groupHasOutcome.has(groupOutcomeKey(section.sectionid, group.groupid)),
                   isLockTimePassed(section.sectionid, nowMs, event.lockSchedule),
                   eventArchived,
-                );
+                ) ||
+                publicSeal;
               if (!revealed) {
                 return (
                   <details key={section.sectionid} className="stage-fold">
@@ -490,9 +513,10 @@ export default async function PlayerProfilePage({
               const groupResolved = Object.keys(outcomeMap[section.sectionid]?.[group.groupid] ?? {}).length >= group.picks.length;
               return (
                 <details key={section.sectionid} className="stage-fold">
-                  {summary("Turns green / red as teams clinch")}
+                  {summary(publicSeal && !lockRevealedAll ? "Sealed early · public" : "Turns green / red as teams clinch")}
                   <div className="stage-fold-body">
                     {revealLink}
+                    {sealNote}
                     <LockedPicksBoard
                       bare
                       section={section}
@@ -515,9 +539,10 @@ export default async function PlayerProfilePage({
             // Non-Swiss (playoffs): keep the per-match blocks, inside the expandable row.
             return (
               <details key={section.sectionid} className="stage-fold">
-                {summary("Playoffs")}
+                {summary(publicSeal && !lockRevealedAll ? "Sealed early · public" : "Playoffs")}
                 <div className="stage-fold-body">
                   {revealLink}
+                  {sealNote}
                   {section.groups.map((group) => {
                     // Self always sees own picks; others wait for stage lock.
                     const lockRevealed = arePicksRevealed(
@@ -526,7 +551,7 @@ export default async function PlayerProfilePage({
                       isLockTimePassed(section.sectionid, nowMs, event.lockSchedule),
                       eventArchived,
                     );
-                    const revealed = isSelf || lockRevealed;
+                    const revealed = isSelf || lockRevealed || publicSeal;
                     const groupPicks = pickMap[section.sectionid]?.[group.groupid] ?? {};
                     const groupOutcomes = outcomeMap[section.sectionid]?.[group.groupid] ?? {};
 
@@ -601,7 +626,7 @@ export default async function PlayerProfilePage({
                                       the live event, so a resolved QF/SF must NOT silently
                                       lock reactions (#1262). Swiss read-only-on-resolve
                                       is handled in the Swiss branch above. */}
-                                  {lockRevealed && pick != null && (
+                                  {(lockRevealed || publicSeal) && pick != null && (
                                     <BleachersStrip
                                       targetPlayerId={player.id}
                                       sectionId={section.sectionid}

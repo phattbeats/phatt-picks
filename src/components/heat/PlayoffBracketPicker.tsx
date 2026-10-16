@@ -27,6 +27,8 @@ import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
 import { SpotlightModal, type SpotlightMarketLine } from "@/components/ui/SpotlightModal";
 import { LockInStage } from "@/components/LockInStage";
+import { SealPicks, sealStatusText } from "@/components/sg/picks/SealPicks";
+import type { SealView } from "@/lib/pick-lock-core";
 import { teamAccent } from "@/lib/playoff-spotlights";
 import { teamHref, teamPortrait } from "@/components/sg/teams/team-assets";
 import type { TeamDef } from "@/lib/layout";
@@ -75,6 +77,7 @@ export function PlayoffBracketPicker({
   liveTeamStats,
   liveStatsAsOf,
   spotlightMarket,
+  initialSeal = null,
 }: {
   model: BracketPickModel;
   teams: TeamDef[];
@@ -89,8 +92,13 @@ export function PlayoffBracketPicker({
   liveTeamStats?: Record<number, TeamStats>;
   liveStatsAsOf?: string;
   spotlightMarket?: Record<number, SpotlightMarketLine>;
+  /** The viewer's self-seal on the bracket (pick-lock-core) — sealed = read-only. */
+  initialSeal?: SealView | null;
 }) {
   const teamMap = useMemo(() => new Map(teams.map((t) => [t.pickid, t])), [teams]);
+  const [seal, setSeal] = useState<SealView | null>(initialSeal);
+  // Sealed = committed: no more crowning (the write path refuses it too).
+  const canEdit = enabled && !seal;
 
   // `picks` is always the pruned, self-consistent set (resolveBracketPicks).
   const [picks, setPicks] = useState<Record<number, number>>(
@@ -176,24 +184,24 @@ export function PlayoffBracketPicker({
 
   // Debounce: coalesce a burst of crowns into a single save of the final state.
   useEffect(() => {
-    if (!enabled) return;
+    if (!canEdit) return;
     if (diffGroups(picks, lastSaved.current).length === 0) return;
     setUnsavedSinceSync(true);
     const t = window.setTimeout(() => void flush(), 200);
     return () => window.clearTimeout(t);
-  }, [picks, enabled, flush]);
+  }, [picks, canEdit, flush]);
 
   // Crown `teamId` the winner of `groupId`, then re-resolve so the advance
   // propagates and any now-impossible downstream pick is pruned. The save effect
   // above picks up the new state.
   const crown = useCallback(
     (groupId: number, teamId: number) => {
-      if (!enabled || teamId <= 0) return;
+      if (!canEdit || teamId <= 0) return;
       setPicks((prev) =>
         prev[groupId] === teamId ? prev : resolveBracketPicks(model, { ...prev, [groupId]: teamId }).picks,
       );
     },
-    [enabled, model],
+    [canEdit, model],
   );
 
   const champion =
@@ -203,6 +211,19 @@ export function PlayoffBracketPicker({
   const venue = VENUES[eventId] ?? DEFAULT_VENUE;
   const saveLabel =
     saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : saveState === "error" ? "Retry" : null;
+
+  // HOTLINE self-seal of the whole bracket (one unit, keyed on the QF section).
+  const sealControl = (
+    <SealPicks
+      sectionId={model.rounds[0]?.matches[0]?.sectionId ?? 108}
+      stageLabel="Playoffs"
+      total={totalMatches}
+      ready={pickCount >= totalMatches && saveState !== "saving" && saveState !== "error"}
+      seal={seal}
+      onChange={setSeal}
+      steamLinked={steamLinked}
+    />
+  );
 
   return (
     <div className="sgb">
@@ -262,7 +283,7 @@ export function PlayoffBracketPicker({
                 top={resolved.participants.get(m.groupId)?.top ?? null}
                 bottom={resolved.participants.get(m.groupId)?.bottom ?? null}
                 teamMap={teamMap}
-                enabled={enabled}
+                enabled={canEdit}
                 over={dragOver === m.groupId}
                 setOver={(on) => setDragOver(on ? m.groupId : dragOver === m.groupId ? null : dragOver)}
                 onCrown={crown}
@@ -274,9 +295,23 @@ export function PlayoffBracketPicker({
         ))}
       </div>
 
-      {enabled && steamLinked && (
-        <LockInStage sectionId="playoff" unsavedSinceSync={unsavedSinceSync} initiallySynced={initiallySynced} onSynced={() => setUnsavedSinceSync(false)} />
-      )}
+      {enabled &&
+        (steamLinked ? (
+          <LockInStage
+            sectionId="playoff"
+            unsavedSinceSync={unsavedSinceSync}
+            initiallySynced={initiallySynced}
+            onSynced={() => setUnsavedSinceSync(false)}
+            secondary={sealControl}
+          />
+        ) : (
+          <div className="sgp-lockcard">
+            <span className={`s${seal ? " ok" : ""}`} aria-live="polite">
+              {seal ? sealStatusText(seal) : pickCount >= totalMatches ? "All calls made · saved here" : `${totalMatches - pickCount} to go`}
+            </span>
+            {sealControl}
+          </div>
+        ))}
 
       {statsTeam && (
         <SpotlightModal

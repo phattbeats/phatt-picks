@@ -24,6 +24,7 @@ import {
   planLocalMerge,
   pickSlotKey,
 } from "@/lib/local-merge-core";
+import { sealUnitFor } from "@/lib/pick-lock-core";
 
 export async function POST(req: NextRequest) {
   // CSRF defense-in-depth alongside the JSON-body CORS preflight.
@@ -88,7 +89,16 @@ export async function POST(req: NextRequest) {
     }),
   ]);
 
-  const plan = planLocalMerge(localPicks, steamPicks.map(pickSlotKey));
+  // A stage the Steam account has SEALED is a commitment (pick-lock-core) —
+  // guest picks never merge into it; they're dropped with the retired account.
+  const seals = await prisma.pickLock.findMany({
+    where: { playerId: session.playerId },
+    select: { eventId: true, sectionId: true },
+  });
+  const sealed = new Set(seals.map((s) => `${s.eventId}:${s.sectionId}`));
+  const mergeable = localPicks.filter((p) => !sealed.has(`${p.eventId}:${sealUnitFor(p.sectionId)}`));
+
+  const plan = planLocalMerge(mergeable, steamPicks.map(pickSlotKey));
 
   await prisma.$transaction(async (tx) => {
     if (plan.reassign.length > 0) {
@@ -113,7 +123,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     merged: plan.reassign.length,
-    skipped: plan.skipped.length,
+    skipped: plan.skipped.length + (localPicks.length - mergeable.length),
     from: local.displayName,
   });
 }

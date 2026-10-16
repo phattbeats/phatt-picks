@@ -34,6 +34,7 @@ model Player {
   pushSubscriptions PushSubscription[]
   rankSnapshots     RankSnapshot[]
   notificationReads NotificationRead[]
+  pickLocks         PickLock[]
 }
 
 // Individual slot picks — one row per (player, event, section, group, slotIndex)
@@ -94,6 +95,37 @@ model RankSnapshot {
   resolvedAt DateTime
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@unique([playerId, eventId, sectionId])
+  @@index([eventId, sectionId])
+}
+
+// A player's self-seal on one stage's picks (pick-lock-core). Sealing is an
+// opt-in commitment made while the stage is still OPEN: HOTLINE refuses any
+// further edit to that stage for that player, and the player chooses whether
+// the sealed calls are visible to everyone right away ("public") or stay under
+// wraps until the stage locks like everyone else's ("hidden"). Hidden → public
+// is allowed later; public → hidden and unsealing are not (no
+// influence-then-switch). `sectionId` is the seal UNIT: a Swiss section id, or
+// the Quarterfinals id for the whole playoff bracket (sealed as one stage).
+// `initialVisibility` keeps the choice made at seal time for the analytics
+// split even after a hidden → public switch (`publicAt`). The steam* columns
+// track whether Valve's in-game picks still match the sealed set: the Steam
+// mirror never overwrites a sealed stage, it only notes a divergence.
+model PickLock {
+  id                String    @id @default(cuid())
+  playerId          String
+  player            Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  eventId           Int
+  sectionId         Int       // seal unit (Swiss section, or QF id for the bracket)
+  visibility        String    // "public" | "hidden" — current
+  initialVisibility String    // "public" | "hidden" — chosen at seal time
+  lockedAt          DateTime  @default(now())
+  publicAt          DateTime? // when it became public (= lockedAt for public seals)
+  steamMatchedAt    DateTime? // last time Valve's picks were seen matching the sealed set
+  steamDivergedAt   DateTime? // Valve's picks changed away from the sealed set after a match
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@unique([playerId, eventId, sectionId])
   @@index([eventId, sectionId])

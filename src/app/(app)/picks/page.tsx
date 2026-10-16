@@ -41,6 +41,7 @@ import { currentEventId, getEventConfig, stageOneStartFor } from "@/lib/events-c
 import { scorePlayer, type OutcomeMap } from "@/lib/scoring";
 import { StageHeader } from "@/components/sg/picks/StageHeader";
 import { StageTabs, type StageTab } from "@/components/sg/picks/StageTabs";
+import { getSeal, toSealView } from "@/lib/pick-lock";
 
 export const dynamic = "force-dynamic";
 
@@ -172,6 +173,10 @@ export default async function PicksPage({
     const placed = picks.filter((p) => p.pickId !== 0);
     mySectionSynced = placed.length > 0 && placed.every((p) => !p.isLocal);
   }
+
+  // The viewer's self-seal on the active stage (pick-lock-core). Playoff rounds
+  // resolve onto the one bracket unit, so any playoff tab finds it.
+  const mySeal = session ? toSealView(await getSeal(session.playerId, EVENT_ID, activeSectionId)) : null;
 
   // Live Swiss lineup (#898): once a Swiss stage locks we show the standings
   // in place of the picker. Build it from the resolved answer key + the viewer's
@@ -515,6 +520,22 @@ export default async function PicksPage({
           pushed to the official in-game Pick'Em. Point them at the page. */}
       {needsSteamLink && <SteamLinkNotice />}
 
+      {/* Sealed, then changed in the CS2 client (pick-lock-core): HOTLINE keeps
+          the sealed set; say so plainly. Shown publicly next to the seal too. */}
+      {mySeal?.steamDiverged && (
+        <div className="sgp-note solo">
+          <div>
+            <span className="tag warn">Changed in-game after sealing</span>
+            <h2>Steam no longer matches your sealed calls</h2>
+            <p>
+              Your in-game CS2 Pick&apos;Em changed after you sealed this stage. HOTLINE keeps and scores your{" "}
+              <b>sealed set</b>, and the change is noted on your seal. <b>Lock in &amp; sync</b> pushes the sealed
+              set back to Steam.
+            </p>
+          </div>
+        </div>
+      )}
+
       <StageTabs tabs={tabs} />
 
       {/* Stage content */}
@@ -541,6 +562,7 @@ export default async function PicksPage({
               liveTeamStats={liveTeamStats?.byPickid}
               liveStatsAsOf={liveTeamStats?.asOf}
               spotlightMarket={spotlightMarket}
+              initialSeal={mySeal}
             />
           ) : playoffSeeded ? (
             // #1263: bracket seeded + picks locked. Show the viewer's OWN
@@ -622,6 +644,7 @@ export default async function PicksPage({
             liveTeamStats={liveTeamStats?.byPickid}
             liveStatsAsOf={liveTeamStats?.asOf}
             recordByTeam={liveStandings ? Object.fromEntries(recordsByPickId(liveStandings.rows)) : undefined}
+            initialSeal={mySeal}
           />
           {/* #943: 24h before this stage locks, the live Swiss bracket AND the
               W-L standings table appear beneath the picker so you can study the
