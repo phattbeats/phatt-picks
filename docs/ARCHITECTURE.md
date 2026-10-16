@@ -274,10 +274,11 @@ leaves / pure helpers) or the verifier can't load it standalone.
   it mints the moment the Grand Final crowns a champion (`grandFinalResolvedAtMs`; `dates.end` is only
   a backstop), **not** after the GF+48h archive grace (#1274). `isCoinEarned` (`participated &&
   archived`) in `challenge-coin-core.ts`. The tier (diamond / gold / silver / bronze) is your
-  finish percentile (`coinTierForFinish` against `TIER_CUTOFFS`; the outright winner is always
-  diamond). Pure derivation only — **no new table**; `challenge-coins.ts` reads the same picks +
+  finish against rank SLOTS that round up — `tierSlots` = ceil(field × `TIER_CUTOFFS`) — so a
+  7-player field is #1 diamond / #2 gold / #3–4 silver / #5–7 bronze (`coinTierForFinish`; the
+  outright winner is always diamond and any 2+ field strikes a gold). Pure derivation only — **no new table**; `challenge-coins.ts` reads the same picks +
   `StageOutcome` rows as `/majors` and short-circuits to zero work until an event archives.
-- Rendered as a red-velvet display case (`ChallengeCoinShelf`) on `/players/{id}` and on each
+- Rendered as a felt-lined protective case (`ChallengeCoinShelf`, `sg-coins.css`) on `/players/{id}` and on each
   concluded `/majors` row, with a drag-to-rotate CSS-3D `CoinInspector` (no WebGL). Art is a
   **per-Major seam**: front PNGs `public/coins/<event-slug>-{tier}.png` (`coinArtSrc`) over shared
   reverses `public/coins/_back-{tier}.png` — see NEXT-MAJOR.

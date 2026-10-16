@@ -4,8 +4,9 @@
  * The collectible Major-logo coin track. This pins the PURE earn + tier logic
  * (challenge-coin-core) so the rules Brandon confirmed can't silently drift:
  *   • a coin mints ONLY when the player participated AND the Major concluded;
- *   • four earned finishes by percentile — diamond / gold / silver / bronze —
- *     with the outright winner always diamond;
+ *   • four earned finishes by rank slots — ceil(field × 10/25/50%) — diamond /
+ *     gold / silver / bronze, the outright winner always diamond, and any
+ *     field of 2+ always strikes a gold (the 7-player Cologne #2 is GOLD);
  *   • an unscored finish still earns the BRONZE coin (took part), never higher;
  *   • the front art path is the slug+tier asset, the back is the shared tier art;
  *   • deriveChallengeCoins filters to earned coins and tiers each one.
@@ -19,6 +20,7 @@
 import {
   COIN_TIERS,
   TIER_CUTOFFS,
+  tierSlots,
   isCoinEarned,
   coinTierForFinish,
   coinArtSrc,
@@ -49,7 +51,7 @@ check("NOT earned when neither", isCoinEarned({ participated: false, archived: f
 check("four tiers, best-first", COIN_TIERS.join(",") === "diamond,gold,silver,bronze");
 check("cutoffs are diamond<gold<silver", TIER_CUTOFFS.diamond < TIER_CUTOFFS.gold && TIER_CUTOFFS.gold < TIER_CUTOFFS.silver);
 
-// ── 3. Tier maths by finish percentile (field of 100) ────────────────────────
+// ── 3. Tier maths by rank slots (field of 100) ────────────────────────
 check("winner is diamond", coinTierForFinish(1, 100) === "diamond");
 check("10th of 100 is diamond (top 10%)", coinTierForFinish(10, 100) === "diamond");
 check("11th of 100 is gold", coinTierForFinish(11, 100) === "gold");
@@ -59,10 +61,30 @@ check("50th of 100 is silver (top 50%)", coinTierForFinish(50, 100) === "silver"
 check("51st of 100 is bronze", coinTierForFinish(51, 100) === "bronze");
 check("last of 100 is bronze", coinTierForFinish(100, 100) === "bronze");
 
-// Tiny fields: the winner is always diamond even when percentile rounding is coarse.
+// Slot counts round UP so small fields keep every tier.
+const s7 = tierSlots(7);
+check("field of 7 slots: 1 diamond / to 2 gold / to 4 silver", s7.diamond === 1 && s7.gold === 2 && s7.silver === 4);
+const s100 = tierSlots(100);
+check("field of 100 slots: 10 / 25 / 50", s100.diamond === 10 && s100.gold === 25 && s100.silver === 50);
+
+// The real Cologne field (7 players): #1 diamond, #2 gold, #3-4 silver, #5-7 bronze.
+const cologne = [1, 2, 3, 4, 5, 6, 7].map((f) => coinTierForFinish(f, 7)).join(",");
+check("Cologne (7): diamond,gold,silver,silver,bronze,bronze,bronze", cologne === "diamond,gold,silver,silver,bronze,bronze,bronze");
+
+// Tiny fields: the winner is always diamond and #2 is always gold.
 check("winner of a 2-player field is diamond", coinTierForFinish(1, 2) === "diamond");
-check("2nd of a 2-player field is bronze (pct 1.0 beyond every cutoff)", coinTierForFinish(2, 2) === "bronze");
+check("2nd of a 2-player field is gold (a 2+ field always has a gold)", coinTierForFinish(2, 2) === "gold");
+check("2nd of a 3-player field is gold", coinTierForFinish(2, 3) === "gold");
+check("3rd of a 3-player field is bronze", coinTierForFinish(3, 3) === "bronze");
 check("solo field winner is diamond", coinTierForFinish(1, 1) === "diamond");
+let alwaysGold = true;
+for (let n = 2; n <= 200; n++) {
+  const tiers = Array.from({ length: n }, (_, i) => coinTierForFinish(i + 1, n));
+  if (!tiers.includes("gold") || tiers[0] !== "diamond") alwaysGold = false;
+  // Monotone: a better finish never strikes a worse metal.
+  for (let i = 1; i < n; i++) if (COIN_TIERS.indexOf(tiers[i]) < COIN_TIERS.indexOf(tiers[i - 1])) alwaysGold = false;
+}
+check("every field of 2..200 has a diamond winner, a gold, and monotone tiers", alwaysGold);
 
 // Custom cutoffs are honoured (injectable).
 check("custom cutoffs flip 30th of 100 to gold", coinTierForFinish(30, 100, { diamond: 0.1, gold: 0.4, silver: 0.6 }) === "gold");

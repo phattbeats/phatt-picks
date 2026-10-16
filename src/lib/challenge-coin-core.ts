@@ -32,16 +32,38 @@ export type CoinTier = "diamond" | "gold" | "silver" | "bronze";
 export const COIN_TIERS: readonly CoinTier[] = ["diamond", "gold", "silver", "bronze"];
 
 /**
- * Finish-percentile cutoffs (inclusive upper bound, best → base): a player in
- * the top 10% strikes diamond, top 25% gold, top 50% silver, the rest bronze.
- * The outright winner is always diamond regardless of field size. Single knob —
- * retune here; the verify harness pins the maths, not the values.
+ * Field-share cutoffs (best → base): the top 10% of the field strikes diamond,
+ * the top 25% gold, the top 50% silver, the rest bronze. Each share is turned
+ * into a SLOT COUNT that rounds UP — ceil(fieldSize × share) — so small fields
+ * still get every tier: in a field of 7, ceil(0.7)=1 diamond, ceil(1.75)=2 →
+ * #2 gold, ceil(3.5)=4 → #3–4 silver, #5–7 bronze. (The old finish/fieldSize
+ * ratio left a 7-player field with no gold at all: 2/7 = 0.29 > 0.25.) The
+ * outright winner is always diamond, and any field of 2+ always has a gold.
+ * Single knob — retune here; the verify harness pins the maths, not the values.
  */
 export const TIER_CUTOFFS: Readonly<Record<Exclude<CoinTier, "bronze">, number>> = {
   diamond: 0.1,
   gold: 0.25,
   silver: 0.5,
 };
+
+/**
+ * How many finishing places each tier reaches down to in a field of `fieldSize`
+ * (inclusive, best → base): ranks 1..diamond are diamond, ..gold are gold,
+ * ..silver are silver. Rounds UP so a tier never disappears in a small field,
+ * and each tier reaches at least one place past the one above it (while the
+ * field has room) so a 2+ player field always strikes a gold.
+ */
+export function tierSlots(
+  fieldSize: number,
+  cutoffs: Readonly<Record<Exclude<CoinTier, "bronze">, number>> = TIER_CUTOFFS,
+): { diamond: number; gold: number; silver: number } {
+  const n = Math.max(0, Math.floor(fieldSize));
+  const diamond = Math.min(n, Math.max(1, Math.ceil(n * cutoffs.diamond)));
+  const gold = Math.min(n, Math.max(diamond + 1, Math.ceil(n * cutoffs.gold)));
+  const silver = Math.min(n, Math.max(gold, Math.ceil(n * cutoffs.silver)));
+  return { diamond, gold, silver };
+}
 
 /** Everything needed to decide one player's coin for one Major. Pure shape. */
 export interface CoinInput {
@@ -84,11 +106,11 @@ export function isCoinEarned(i: { participated: boolean; archived: boolean }): b
 }
 
 /**
- * The earned tier for a finish among the field, by percentile (finish/fieldSize)
- * against TIER_CUTOFFS: diamond → gold → silver → bronze. The outright winner is
- * always diamond. An unscored / unknown finish falls back to BRONZE — you still
- * earn the coin for taking part, just the base finish. `cutoffs` is injectable so
- * the verify harness can pin the maths independent of the shipped values.
+ * The earned tier for a finish among the field, by rank slots (see tierSlots):
+ * diamond → gold → silver → bronze. The outright winner is always diamond. An
+ * unscored / unknown finish falls back to BRONZE — you still earn the coin for
+ * taking part, just the base finish. `cutoffs` is injectable so the verify
+ * harness can pin the maths independent of the shipped values.
  */
 export function coinTierForFinish(
   finish: number | null,
@@ -97,10 +119,10 @@ export function coinTierForFinish(
 ): CoinTier {
   if (finish === null || finish < 1 || fieldSize < 1) return "bronze";
   if (finish === 1) return "diamond";
-  const pct = finish / fieldSize;
-  if (pct <= cutoffs.diamond) return "diamond";
-  if (pct <= cutoffs.gold) return "gold";
-  if (pct <= cutoffs.silver) return "silver";
+  const slots = tierSlots(fieldSize, cutoffs);
+  if (finish <= slots.diamond) return "diamond";
+  if (finish <= slots.gold) return "gold";
+  if (finish <= slots.silver) return "silver";
   return "bronze";
 }
 
