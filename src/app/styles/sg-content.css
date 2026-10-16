@@ -31,15 +31,16 @@
 .sgc-swiss .col>span:first-child{font-family:var(--font-mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-mid);text-align:center;margin-bottom:4px}
 .sgc-rec{height:48px;border:1px solid var(--hair-2);border-radius:var(--r-md);display:grid;place-items:center;font-family:var(--font-mono);font-size:15px;background:var(--surf-1);position:relative}
 .sgc-rec small{position:absolute;bottom:2px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mid);line-height:1}
-.sgc-rec.sw{border-color:var(--tac-green);color:var(--tac-green)}
+/* `.sweep`, not `.sw`: `.sw` is sg.css's global toggle switch (40×22 + knob), which shrank this node and the legend swatch */
+.sgc-rec.sweep{border-color:var(--tac-green);color:var(--tac-green)}
 .sgc-rec.ad{border-color:rgba(242,241,236,.5)}
 .sgc-rec.wo{border-color:var(--ember);color:var(--ember)}
 .sgc-rec.el{color:var(--ink-mid);border-style:dashed}
-.sgc-rec.sw,.sgc-rec.ad,.sgc-rec.wo,.sgc-rec.el{padding-bottom:10px}
+.sgc-rec.sweep,.sgc-rec.ad,.sgc-rec.wo,.sgc-rec.el{padding-bottom:10px}
 .sgc-legend{display:flex;flex-wrap:wrap;gap:12px 18px;font-size:14px;color:var(--ink-mid)}
 .sgc-legend span{display:flex;gap:8px;align-items:center}
 .sgc-legend i{width:12px;height:12px;border-radius:2px;border:1px solid var(--hair-3)}
-.sgc-legend i.sw{border-color:var(--tac-green)}.sgc-legend i.ad{border-color:rgba(242,241,236,.6)}.sgc-legend i.wo{border-color:var(--ember)}
+.sgc-legend i.sweep{border-color:var(--tac-green)}.sgc-legend i.ad{border-color:rgba(242,241,236,.6)}.sgc-legend i.wo{border-color:var(--ember)}
 /* tap demo */
 .sgc-demo{display:grid;gap:20px;border:1px solid var(--hair);border-radius:var(--r-md);padding:20px;background:var(--surf-1)}
 @media(min-width:900px){.sgc-demo{grid-template-columns:1fr 1fr;gap:36px;padding:32px}}
