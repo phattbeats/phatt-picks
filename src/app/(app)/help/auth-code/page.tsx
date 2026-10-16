@@ -2,6 +2,8 @@ import Link from "next/link";
 import { AuthCodeForm } from "@/components/AuthCodeForm";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
+import { currentEventId } from "@/lib/events-core";
+import { isPickemOpen } from "@/lib/layout-state";
 
 export const metadata = { title: "Connect Steam · HOTLINE" };
 
@@ -10,6 +12,7 @@ const STEAM_AUTH_HELP = "https://help.steampowered.com/en/wizard/HelpWithGameIss
 export default async function AuthCodeHelpPage() {
   const session = await getSession();
   const connected = Boolean(session?.steamId);
+  const open = await isPickemOpen(currentEventId());
 
   let hasAuthCode = false;
   if (connected && session) {
@@ -48,6 +51,12 @@ export default async function AuthCodeHelpPage() {
               Own the <b>Singapore Viewer Pass</b> (in CS2, about $10) and open the Pick&apos;Em in-game once. The
               official Pick&apos;Em exists only for Viewer Pass owners — without it, the code won&apos;t work.
             </p>
+            {!open && (
+              <p>
+                <b>Not open yet.</b> Valve hasn&apos;t opened Pick&apos;Em for this Major, so the Viewer Pass and
+                the in-game Pick&apos;Em aren&apos;t available. You can save your code now. Sync starts when it opens.
+              </p>
+            )}
           </div>
 
           <div className="steps rise d2">

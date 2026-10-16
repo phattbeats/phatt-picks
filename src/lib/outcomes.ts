@@ -29,7 +29,7 @@ import {
   type RawResolvedSlot,
 } from "./outcomes-core";
 import { fetchLiquipediaResults, LiquipediaThrottledError } from "./liquipedia";
-import { fetchTournamentLayout } from "./valve";
+import { fetchTournamentLayout, ValveApiError } from "./valve";
 import { isEventFrozenById } from "./event-freeze";
 import { cacheLiveLayout } from "./layout-state";
 import { writeRankSnapshots } from "./rank-snapshot";
@@ -97,6 +97,9 @@ async function tryValveOracle(eventId: number): Promise<RawResolvedSlot[] | null
     }
     return resolved.length > 0 ? resolved : null;
   } catch (e) {
+    // 404 = this event's Pick'Em isn't open yet (pre-open Major). Expected on
+    // every tick until Valve opens it, so it isn't logged.
+    if (e instanceof ValveApiError && e.status === 404) return null;
     console.error(
       "[outcomes] Valve oracle (GetTournamentLayout) failed (non-fatal):",
       e instanceof Error ? e.message : e,

@@ -10,7 +10,7 @@
  */
 
 import { prisma } from "@/lib/db";
-import { getCommittedLayout, type Layout } from "@/lib/layout";
+import { committedLayoutFor, type Layout } from "@/lib/layout";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap, type ScoreBreakdown } from "@/lib/scoring";
 import { visibleCoinTier } from "@/lib/coin-core";
 import { currentEventId, getEventBySlug, type EventConfig } from "@/lib/events-core";
@@ -44,8 +44,7 @@ export function eventShortName(event: Pick<EventConfig, "name">): string {
  * other event degrades honestly — same rule as the Majors page (`layoutFor`).
  */
 export function layoutForEvent(eventId: number): Layout | null {
-  const committed = getCommittedLayout();
-  return committed.event === eventId ? committed : null;
+  return committedLayoutFor(eventId);
 }
 
 /**

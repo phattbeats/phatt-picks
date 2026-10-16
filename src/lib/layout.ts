@@ -52,8 +52,25 @@ export interface LayoutEnvelope {
 // the fixture is the schema-defining snapshot.
 const COMMITTED: LayoutEnvelope = layoutFixture as LayoutEnvelope;
 
+/**
+ * The committed fixture — IEM Cologne 2026 (event 26), whatever event is being
+ * served. Fine for Cologne's own archived views and for event-agnostic
+ * structure, but NOT a statement about any other event's Pick'Em: a Major whose
+ * layout Valve hasn't published has no sections or teams yet. For "what can be
+ * picked for event N" read `committedLayoutFor(N)` or, server-side,
+ * `getEffectiveLayout(N)` (layout-state), which return null until it opens.
+ */
 export function getCommittedLayout(): Layout {
   return COMMITTED.result;
+}
+
+/**
+ * The committed fixture that describes `eventId`, or null when no fixture in
+ * this build does (e.g. the next Major before its layout lands — the
+ * pre-open state). Never substitutes another event's fixture.
+ */
+export function committedLayoutFor(eventId: number): Layout | null {
+  return COMMITTED.result.event === eventId ? COMMITTED.result : null;
 }
 
 /** Build a pickid → TeamDef lookup from the layout. */

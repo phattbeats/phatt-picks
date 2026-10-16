@@ -22,7 +22,7 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { assertBigIntString } from "@/lib/bigint";
 import { validatePickAgainstLayout } from "@/lib/layout";
-import { getEffectiveLayout } from "@/lib/layout-state";
+import { getEffectiveLayout, PICKEM_NOT_OPEN_ERROR } from "@/lib/layout-state";
 import { isStageWritable } from "@/lib/reveal-core";
 import { isLockTimePassed } from "@/lib/lock-schedule-core";
 import { currentEventId, getEventConfig } from "@/lib/events-core";
@@ -73,7 +73,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "event_archived" }, { status: 409 });
   }
 
+  // Pre-open: Valve hasn't published this event's layout (GetTournamentLayout
+  // 404s), so there is no stage to write into. Refuse rather than validating
+  // against some other event's fixture.
   const layout = await getEffectiveLayout(evtId);
+  if (!layout) {
+    return NextResponse.json(PICKEM_NOT_OPEN_ERROR, { status: 409 });
+  }
   const section = layout.sections.find((s) => s.sectionid === secId);
   if (!section) {
     return NextResponse.json({ error: `unknown section ${secId}` }, { status: 400 });

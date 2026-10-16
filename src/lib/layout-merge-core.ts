@@ -75,3 +75,28 @@ export function mergeLiveLayout(committed: Layout, live: Layout | null | undefin
 
   return { ...committed, sections, teams: [...teamMap.values()] };
 }
+
+/**
+ * The layout an event's Pick'Em actually runs on, or null when it isn't open.
+ *
+ * Valve answers GetTournamentLayout with a 404 ("event/section not open") until
+ * a Major's Pick'Em opens, so an event only has a layout once (a) this build
+ * commits a fixture whose `event` matches, or (b) a live fetch has cached
+ * Valve's layout for it. Before that there are no sections or teams to pick.
+ * Returning null — never another event's fixture — is what keeps the next
+ * Major from rendering the last one's field as an open stage.
+ *
+ *   - committed fixture for the event → it, with the live overlay merged on;
+ *   - else a cached live layout with at least one section → that layout;
+ *   - else → null (pre-open).
+ */
+export function resolveEventLayout(
+  committed: Layout | null,
+  live: Layout | null | undefined,
+): Layout | null {
+  if (committed) return mergeLiveLayout(committed, live);
+  if (live && Array.isArray(live.sections) && live.sections.length > 0) {
+    return { ...live, teams: Array.isArray(live.teams) ? live.teams : [] };
+  }
+  return null;
+}

@@ -33,6 +33,12 @@ import type { Layout } from "./layout";
 export type StagePickability =
   /** Open for picks — render the picker. */
   | { pickable: true; reason: "open" }
+  /**
+   * Valve hasn't opened this event's Pick'Em yet — no layout exists for it
+   * (GetTournamentLayout 404s). Every stage of the event is in this state until
+   * a layout lands; the site hides the pool, sync and write paths.
+   */
+  | { pickable: false; reason: "pickem-not-open" }
   /** The stage's published lock time has passed — it has begun, picks closed. */
   | { pickable: false; reason: "locked-time-passed" }
   /** Valve closed the window — render the Locked card; picks are revealed elsewhere. */
@@ -104,11 +110,18 @@ export function selectCurrentStageIndex(
   return statuses.length - 1;
 }
 
+/** The gate result for every stage of an event whose Pick'Em isn't open. */
+export const PICKEM_NOT_OPEN: StagePickability = { pickable: false, reason: "pickem-not-open" };
+
 export function isStagePickable(
-  layout: Layout,
+  layout: Layout | null,
   sectionId: number,
   opts: StageGateOpts = {},
 ): StagePickability {
+  // No layout for the event = Valve hasn't opened its Pick'Em. Checked first:
+  // nothing about a stage is knowable before the event has a layout.
+  if (!layout) return PICKEM_NOT_OPEN;
+
   const section = layout.sections.find((s) => s.sectionid === sectionId);
   if (!section) return { pickable: false, reason: "unknown-section" };
 

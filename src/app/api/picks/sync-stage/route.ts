@@ -16,11 +16,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { syncStageToValve, syncPlayoffBracketToValve } from "@/lib/picks-write";
 import { currentEventId } from "@/lib/events-core";
+import { isPickemOpen, PICKEM_NOT_OPEN_ERROR } from "@/lib/layout-state";
 
 export async function POST(req: NextRequest) {
   const EVENT_ID = currentEventId(); // per-request active event (#1046)
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+
+  // Pre-open: Valve's write path 404s until its Pick'Em opens. Refuse up front
+  // with a clear reason instead of a degraded "saved locally".
+  if (!(await isPickemOpen(EVENT_ID))) {
+    return NextResponse.json(PICKEM_NOT_OPEN_ERROR, { status: 409 });
+  }
 
   const body = await req.json().catch(() => ({}));
 
