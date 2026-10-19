@@ -28,6 +28,9 @@ felt and the CS2/HOTLINE reverse are shared — leave them):
            --font BigShouldersDisplay-ExtraBold.ttf
        done
      Open work/front-gold.preview.png to check the layout (logo fit: --logo-w/-h/-y).
+     A tall shield mark needs its own fit — PGL Singapore 2026 (Liquipedia's
+     2000px "darkmode" PNG; a white copy is public/watch/pgl-singapore.png) used
+     --logo-w 0.80 --logo-h 1.12 --logo-y -0.03.
   3. Render each tier (Blender 4.5 — e.g. the blendergrid/blender:4.5 image,
      whose entrypoint is `blender -b -noaudio`):
        blender -b -noaudio --python scripts/coins/render-coin.py -- \
