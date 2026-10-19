@@ -23,6 +23,7 @@ import { majorChampion, majorWrappedStageKey, type MajorChampion } from "@/lib/s
 import { statsForPickid, TEAM_STATS_AS_OF } from "@/lib/team-stats-core";
 import { StageWrappedReplay } from "@/components/heat/StageWrappedReplay";
 import { StageCountdown } from "@/components/sg/home/StageCountdown";
+import { PHOTOS } from "@/lib/photos";
 
 export const dynamic = "force-dynamic";
 
@@ -359,7 +360,7 @@ export default async function DashboardPage() {
       ) : (
         <section className="bleed tall hm-hero">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/wrapped/major-cover.jpg" alt="" />
+          <img src={PHOTOS.homeHero} alt="" />
           <span className="credit">Photo · {PHOTO_CREDIT}</span>
           <div className="in">
             <div className="hm-hero-main">
@@ -681,7 +682,7 @@ function ConcludedHero({
   return (
     <section className="bleed tall hm-hero">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/wrapped/major-champion.jpg" alt="" />
+      <img src={PHOTOS.homeChampion} alt="" />
       <span className="credit">Photo · {PHOTO_CREDIT}</span>
       <div className="in">
         <div className="hm-hero-main">

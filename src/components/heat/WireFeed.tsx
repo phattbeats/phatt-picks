@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- wire images are arbitrary external (RSS) URLs, validated by safeHttpUrl; next/image would need a remotePatterns allowlist. */
 
 import { safeHttpUrl, timeAgo, type WireItem } from "@/lib/news-core";
+import { WIRE_FALLBACK_PHOTOS } from "@/lib/photos";
 
 /**
  * Wire feed (#857), Singapore skin (prototype 13). Pure presentational server
@@ -19,14 +20,8 @@ import { safeHttpUrl, timeAgo, type WireItem } from "@/lib/news-core";
  *
  * Items without an image fall back to a stock Major photo (decorative only —
  * it never stands in for the story's own art), credited like every other
- * /public/wrapped still.
+ * /public/photos still.
  */
-
-const FALLBACK_PHOTOS = [
-  "/wrapped/major-cathedral.jpg",
-  "/wrapped/major-donk.jpg",
-  "/wrapped/major-nations.jpg",
-];
 
 export function WireFeed({
   items,
@@ -59,7 +54,7 @@ export function WireFeed({
           <div className="chap-h"><h2>Also breaking</h2></div>
           <div className="sgc-lead">
             {also.map((it, i) => (
-              <AlsoCard key={it.externalId} item={it} now={now} fallback={FALLBACK_PHOTOS[(i + 1) % FALLBACK_PHOTOS.length]} />
+              <AlsoCard key={it.externalId} item={it} now={now} fallback={WIRE_FALLBACK_PHOTOS[(i + 1) % WIRE_FALLBACK_PHOTOS.length]} />
             ))}
           </div>
         </section>
@@ -113,7 +108,7 @@ function Lead({ item, now }: { item: WireItem; now: number }) {
   const href = safeHttpUrl(item.sourceUrl);
   return (
     <section className="bleed sgc-news-hero">
-      <img src={img ?? FALLBACK_PHOTOS[0]} alt="" />
+      <img src={img ?? WIRE_FALLBACK_PHOTOS[0]} alt="" />
       {!img && <span className="credit">Photo · HLTV</span>}
       <div className="in">
         <span className="eyebrow rise">

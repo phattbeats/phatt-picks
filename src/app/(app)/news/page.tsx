@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { getWireItems } from "@/lib/news";
 import { WireFeed } from "@/components/heat/WireFeed";
+import { PHOTOS } from "@/lib/photos";
 
 export const metadata = { title: "Wire · HOTLINE" };
 export const dynamic = "force-dynamic";
@@ -35,7 +36,7 @@ export default async function NewsPage() {
 function EmptyWire() {
   return (
     <section className="bleed">
-      <img src="/wrapped/major-cathedral.jpg" alt="" />
+      <img src={PHOTOS.newsHero} alt="" />
       <span className="credit">Photo · HLTV</span>
       <div className="in">
         <span className="eyebrow rise">

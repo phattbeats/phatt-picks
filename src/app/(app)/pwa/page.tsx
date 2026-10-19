@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { PwaGuide } from "@/components/heat/PwaGuide";
+import { PHOTOS } from "@/lib/photos";
 
 export const metadata = { title: "Install · HOTLINE" };
 
@@ -33,7 +34,7 @@ export default function PwaInstallPage() {
           <p className="sgc-pwa-note">iOS requires the installed app for notifications to work.</p>
         </div>
         <div className="sgc-dev rise d1" aria-hidden>
-          <img className="bg" src="/wrapped/major-cover.jpg" alt="" />
+          <img className="bg" src={PHOTOS.pwaBackdrop} alt="" />
           <div className="grid">
             <i /><i /><i /><i /><i />
             <span className="hl"><img src="/brand/app-icon.png" alt="" /></span>

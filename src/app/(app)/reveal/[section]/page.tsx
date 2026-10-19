@@ -43,6 +43,7 @@ import { buildStageWrappedDeck, stageWrappedHasContent, type StageWrappedBestCal
 import { isPlayoffSection, playoffRoundForSection, PLAYOFF_ROUNDS } from "@/lib/playoff-bracket-core";
 import { majorWrappedStageKey } from "@/lib/stage-wrapped-launch";
 import { majorShortName, ordSuffix, requestedEvent } from "@/components/sg/people/people-data";
+import { PHOTOS } from "@/lib/photos";
 
 /** Short pick-type tag for a Swiss slot (3:0 / 3:1·3:2 / 0:3). */
 function bucketLabelFor(sectionId: number, group: Section["groups"][number], slotIndex: number): string | null {
@@ -122,7 +123,7 @@ export default async function StageRevealPage({
   ) : (
     <>Stage <b>{numeral}</b> · results in · picks public{!isLiveEvent && eventShort ? ` · ${eventShort}` : ""}</>
   );
-  const heroPhoto = playoff ? "/wrapped/major-champion.jpg" : "/wrapped/major-woxic.jpg";
+  const heroPhoto = playoff ? PHOTOS.revealPlayoffs : PHOTOS.revealStage;
   // The playoff reveal's recap IS the Major Wrapped deck (one bracket → one
   // cinematic), opened through the app-wide launcher's replay bus rather than a
   // per-round wrap. The per-round wrap ("Grand Final — nothing to wrap yet") is

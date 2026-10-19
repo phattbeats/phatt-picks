@@ -3,6 +3,7 @@ import Link from "next/link";
 import { resolveInvite } from "@/lib/invite";
 import { DISPLAY_NAME_MAX } from "@/lib/local-auth-core";
 import { HotlineLockup } from "@/components/heat/HeatMark";
+import { PHOTOS } from "@/lib/photos";
 
 /**
  * Public invite landing — the link a friend opens to onboard unaided.
@@ -22,7 +23,7 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
   return (
     <div className="full sg-auth sg-join" data-screen-label="Invite / Join">
       <div className="bgp">
-        <img src="/wrapped/major-nations.jpg" alt="" />
+        <img src={PHOTOS.joinHero} alt="" />
       </div>
       <div className="top rise">
         <Link href="/login?intro=return" prefetch={false} className="brand" aria-label="HOTLINE sign-in">

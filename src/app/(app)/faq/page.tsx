@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Faq } from "@/components/heat/Faq";
+import { PHOTOS } from "@/lib/photos";
 
 export const metadata = { title: "FAQ · HOTLINE" };
 
@@ -227,7 +228,7 @@ export default function FaqPage() {
   return (
     <div className="sgc-ed">
       <section className="bleed short">
-        <img src="/wrapped/major-thanks.jpg" alt="" />
+        <img src={PHOTOS.faqHero} alt="" />
         <span className="credit">Photo · HLTV</span>
         <div className="in">
           <span className="eyebrow rise">Field manual</span>

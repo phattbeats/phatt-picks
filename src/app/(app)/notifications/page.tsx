@@ -5,6 +5,7 @@ import { type NotifEntry } from "@/lib/notifications-core";
 import { buildPlayerFeed } from "@/lib/notifications-feed";
 import { NotifGlyph } from "@/components/heat/NotifGlyph";
 import { InboxControls } from "./InboxControls";
+import { PHOTOS } from "@/lib/photos";
 
 export const metadata = { title: "Inbox · HOTLINE" };
 export const dynamic = "force-dynamic";
@@ -83,7 +84,7 @@ export default async function NotificationsPage({
         <section className="nf-lead rise d1">
           <div className="nf-lead-ph photo">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/wrapped/magixx-1v4.jpg" alt="" loading="lazy" decoding="async" />
+            <img src={PHOTOS.notificationsEmpty} alt="" loading="lazy" decoding="async" />
             <span className="credit">IEM Cologne Major 2026 · HLTV</span>
           </div>
           <div className="nf-lead-b">

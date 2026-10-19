@@ -6,6 +6,7 @@ import { randomName } from "@/lib/local-auth-core";
 import { HotlineLockup } from "@/components/heat/HeatMark";
 import { TokenSignInPanel } from "@/components/TokenSignInPanel";
 import { LocalNameField } from "@/components/sg/auth/LocalNameField";
+import { PHOTOS } from "@/lib/photos";
 
 const ERROR_MESSAGES: Record<string, string> = {
   ip_limit:
@@ -35,7 +36,7 @@ export default async function LocalSignInPage({
   return (
     <div className="full sg-auth sg-local" data-screen-label="Play locally">
       <div className="bgp">
-        <img src="/wrapped/major-thanks.jpg" alt="" />
+        <img src={PHOTOS.localSignIn} alt="" />
       </div>
       <div className="top">
         <Link href="/login?intro=return" prefetch={false} className="brand" aria-label="HOTLINE sign-in">

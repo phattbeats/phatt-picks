@@ -3,6 +3,7 @@ import { HotlineLockup } from "@/components/heat/HeatMark";
 import { SplashIntro } from "@/components/sg/auth/SplashIntro";
 import { currentEventId } from "@/lib/events-core";
 import { isPickemOpen } from "@/lib/layout-state";
+import { PHOTOS } from "@/lib/photos";
 
 /**
  * Signed-out landing AND sign-in (HANDOFF §5e) — the old splash gate and the
@@ -40,7 +41,7 @@ export default async function LoginPage({
       <noscript>
         <style>{NOSCRIPT_CSS}</style>
       </noscript>
-      <SplashIntro override={override} photo="/wrapped/major-cover.jpg">
+      <SplashIntro override={override} photo={PHOTOS.splash}>
         <div className="top">
           <span className="brand">
             <HotlineLockup height={28} />

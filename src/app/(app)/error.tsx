@@ -1,6 +1,6 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element -- static decorative photo from /public/wrapped. */
+/* eslint-disable @next/next/no-img-element -- static decorative photo from /public/photos. */
 
 /**
  * Route-segment error boundary for the main app pages (#860 review).
@@ -14,6 +14,8 @@
  * not caught here (a higher boundary would be needed) — this covers page bodies.
  * Singapore skin: the 22-states photo card.
  */
+import { PHOTOS } from "@/lib/photos";
+
 export default function AppError({
   reset,
 }: {
@@ -22,7 +24,7 @@ export default function AppError({
 }) {
   return (
     <section className="sgc-state" role="alert">
-      <img src="/wrapped/cologne-player.jpg" alt="" />
+      <img src={PHOTOS.errorHero} alt="" />
       <div>
         <span className="tag crit">Signal dropped</span>
         <h1 className="display h2">Temporarily unavailable</h1>

@@ -8,6 +8,7 @@ import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { UserDirectory, type DirRow } from "@/components/heat/UserDirectory";
 import { currentEvent, previousMajor } from "@/lib/events-core";
 import { majorFinishesAndCoins, majorShortName, ordSuffix } from "@/components/sg/people/people-data";
+import { PHOTOS } from "@/lib/photos";
 
 export const metadata = { title: "Directory · HOTLINE" };
 
@@ -79,7 +80,7 @@ export default async function DirectoryPage() {
     <div className="pp-page">
       <section className="bleed short">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/wrapped/major-thanks.jpg" alt="" />
+        <img src={PHOTOS.playersHero} alt="" />
         <span className="credit">Photo · HLTV</span>
         <div className="in">
           <span className="eyebrow rise">

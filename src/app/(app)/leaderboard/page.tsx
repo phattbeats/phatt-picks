@@ -16,6 +16,7 @@ import {
 } from "@/lib/leaderboard";
 import { Podium } from "@/components/sg/ranks/Podium";
 import { LeaderRows } from "@/components/sg/ranks/LeaderRows";
+import { PHOTOS } from "@/lib/photos";
 
 /** Rank-delta arrows: current rank vs the snapshot frozen at the previous resolved stage. */
 async function rankDeltas(eventId: number, rows: LeaderboardRow[]) {
@@ -112,7 +113,7 @@ async function LiveBoard() {
   return (
     <div className="rk-page">
       <section className="bleed short">
-        <Image src="/wrapped/major-thanks.jpg" alt="" fill priority sizes="100vw" />
+        <Image src={PHOTOS.leaderboardLive} alt="" fill priority sizes="100vw" />
         <span className="credit">Photo · IEM Cologne Major 2026 · HLTV</span>
         <div className="in">
           <span className="eyebrow rise">
@@ -243,7 +244,7 @@ async function FinalBoard({ event }: { event: EventConfig }) {
 
   const hero = (count: number | null) => (
     <section className="bleed short">
-      <Image src="/wrapped/major-champion.jpg" alt="" fill priority sizes="100vw" />
+      <Image src={PHOTOS.leaderboardFinal} alt="" fill priority sizes="100vw" />
       <span className="credit">Photo · IEM Cologne Major 2026 · HLTV</span>
       <div className="in">
         <span className="eyebrow rise">

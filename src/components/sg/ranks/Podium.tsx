@@ -3,9 +3,8 @@ import Link from "next/link";
 import type { LeaderboardRow } from "@/lib/leaderboard";
 import { RankAvatar } from "./RankAvatar";
 import { nameFit } from "@/lib/name-fit";
+import { PODIUM_PHOTOS } from "@/lib/photos";
 
-/** Documentary stills behind the three podium cards (see /public/wrapped/CREDITS.md). */
-const PODIUM_PHOTOS = ["/wrapped/major-champion.jpg", "/wrapped/major-cinderella.jpg", "/wrapped/major-woxic.jpg"];
 
 /**
  * Photographic top-3 podium (prototype 03). #1 spans the full row on mobile and

@@ -33,6 +33,7 @@ import {
   ordSuffix,
   playerMajorsHistory,
 } from "@/components/sg/people/people-data";
+import { PHOTOS } from "@/lib/photos";
 
 export default async function MajorsPage() {
   const session = await getSession();
@@ -45,8 +46,8 @@ export default async function MajorsPage() {
   const hero = (eyebrow: React.ReactNode) => (
     <section className="bleed short">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/wrapped/cologne-arena.jpg" alt="" />
-      <span className="credit">Photo · Wikimedia Commons</span>
+      <img src={PHOTOS.majorsHero} alt="" />
+      <span className="credit">Photo · HLTV</span>
       <div className="in">
         <span className="eyebrow rise">{eyebrow}</span>
         <h1 className="display rise d1">Your Majors</h1>

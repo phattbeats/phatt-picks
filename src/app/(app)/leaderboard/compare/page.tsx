@@ -50,6 +50,7 @@ import { visibilityReason, isPublicSeal } from "@/lib/pick-lock-core";
 import { getEventSeals } from "@/lib/pick-lock";
 import { EyeIcon } from "@/components/sg/picks/SealPicks";
 import { nameFit, nameLineChars } from "@/lib/name-fit";
+import { PHOTOS } from "@/lib/photos";
 
 export const dynamic = "force-dynamic";
 
@@ -438,7 +439,7 @@ export default async function ComparePage({
   return (
     <div className="rk-page">
       <section className="bleed cmp-hero">
-        <Image src="/wrapped/major-cinderella.jpg" alt="" fill priority sizes="100vw" />
+        <Image src={PHOTOS.compareHero} alt="" fill priority sizes="100vw" />
         <span className="credit">Photo · IEM Cologne Major 2026 · HLTV</span>
         <div className="in">
           <Link href={boardHref} prefetch={false} className="eyebrow cmp-back">

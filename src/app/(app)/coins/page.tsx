@@ -18,6 +18,7 @@ import { COIN_TIERS, tierSlots, type ChallengeCoin, type CoinTier } from "@/lib/
 import { InspectableCoin } from "@/components/heat/CoinInspector";
 import { CoinCase, CoinSlot, finishLabel } from "@/components/heat/ChallengeCoinShelf";
 import { dayMonth, majorShortName, monthYear } from "@/components/sg/people/people-data";
+import { PHOTOS } from "@/lib/photos";
 
 export const metadata = { title: "Coin holders · HOTLINE" };
 
@@ -157,7 +158,7 @@ export default async function CoinsPage() {
   return (
     <div className="pp-page">
       <section className="bleed short">
-        <img src="/wrapped/major-champion.jpg" alt="" />
+        <img src={PHOTOS.coinsHero} alt="" />
         <span className="credit">Photo · HLTV</span>
         {/* the four metals at a 3/4 angle (render-coin.py --mode beauty); diamond on top */}
         <div className="ch-fan" aria-hidden="true">

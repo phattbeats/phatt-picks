@@ -55,6 +55,7 @@ import {
   playerMajorsHistory,
   requestedEvent,
 } from "@/components/sg/people/people-data";
+import { profilePhoto } from "@/lib/photos";
 
 /** Short pick-type tag for a slot (3:0 / 3:1·3:2 / 0:3 for Swiss; — otherwise). */
 function bucketLabelFor(sectionId: number, group: Section["groups"][number], slotIndex: number): string | null {
@@ -323,7 +324,7 @@ export default async function PlayerProfilePage({
           profile is the clean stat card, the gear is the one door to settings. */}
       <section className={`bleed pp-hero${isSelf ? " self" : ""}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/wrapped/major-nations.jpg" alt="" />
+        <img src={profilePhoto(player.id)} alt="" />
         <span className="credit">Photo · HLTV</span>
         {isSelf && gear}
         <div className="in">

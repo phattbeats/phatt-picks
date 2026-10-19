@@ -6,6 +6,7 @@ import { COIN_TIERS, type ChallengeCoin, type CoinTier } from "@/lib/challenge-c
 import { CoinCase, CoinSlot } from "@/components/heat/ChallengeCoinShelf";
 import { currentEventId } from "@/lib/events-core";
 import { isPickemOpen } from "@/lib/layout-state";
+import { PHOTOS } from "@/lib/photos";
 
 export const metadata = { title: "How Pick'Em works · HOTLINE" };
 // Per-request: the closing CTA follows whether Valve has opened Pick'Em yet.
@@ -84,7 +85,7 @@ export default async function HowToPlayPage() {
   return (
     <div className="sgc-ed">
       <section className="bleed tall sgc-hero">
-        <img src="/wrapped/major-cover.jpg" alt="" />
+        <img src={PHOTOS.howToPlayHero} alt="" />
         <span className="credit">Photo · HLTV</span>
         <div className="in">
           <span className="eyebrow rise">Field manual · PGL Major Singapore 2026</span>
@@ -257,7 +258,7 @@ export default async function HowToPlayPage() {
         </div>
         <div className="sgc-lanes">
           <div className="sgc-lane">
-            <div className="ph"><img src="/wrapped/major-thanks.jpg" alt="" loading="lazy" /></div>
+            <div className="ph"><img src={PHOTOS.howToPlayCommunity} alt="" loading="lazy" /></div>
             <div className="b">
               <span className="eyebrow">Free</span>
               <h3>Play here</h3>
@@ -271,7 +272,7 @@ export default async function HowToPlayPage() {
             </div>
           </div>
           <div className="sgc-lane">
-            <div className="ph"><img src="/wrapped/major-nations.jpg" alt="" loading="lazy" /></div>
+            <div className="ph"><img src={PHOTOS.howToPlayNations} alt="" loading="lazy" /></div>
             <div className="b">
               <span className="eyebrow">
                 <b>Needs the Viewer Pass</b>

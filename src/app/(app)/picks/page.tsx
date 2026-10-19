@@ -42,6 +42,7 @@ import { scorePlayer, type OutcomeMap } from "@/lib/scoring";
 import { StageHeader } from "@/components/sg/picks/StageHeader";
 import { StageTabs, type StageTab } from "@/components/sg/picks/StageTabs";
 import { getSeal, toSealView } from "@/lib/pick-lock";
+import { PHOTOS } from "@/lib/photos";
 
 export const dynamic = "force-dynamic";
 
@@ -515,7 +516,7 @@ export default async function PicksPage({
     </>
   );
 
-  const headerPhoto = playoffActive ? "/wrapped/major-cathedral.jpg" : "/wrapped/major-cover.jpg";
+  const headerPhoto = playoffActive ? PHOTOS.picksPlayoffs : PHOTOS.picksHeader;
   // Room for a fixed bar: the Swiss action bar (signed in, open) or sign-in bar.
   const hasBar = !session || (!playoffActive && activePickability.pickable && !!section);
 
@@ -788,7 +789,7 @@ function PicksNotOpen({
   return (
     <div className="sgp-page">
       <StageHeader
-        photo="/wrapped/major-cover.jpg"
+        photo={PHOTOS.picksNotOpen}
         eyebrow={
           <>
             {name} · <b>Pick&apos;Em not open</b>

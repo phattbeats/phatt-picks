@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- static editorial photos from /public/wrapped. */
 
 import Link from "next/link";
+import { INFO_PHOTOS } from "@/lib/photos";
 
 export const metadata = { title: "Info · HOTLINE" };
 
@@ -27,35 +28,35 @@ const GUIDES: Guide[] = [
     kicker: "Start here",
     title: "How it works",
     blurb: "The whole thing in five minutes — stages, Swiss, scoring and coins.",
-    img: "/wrapped/major-cover.jpg",
+    img: INFO_PHOTOS[0],
   },
   {
     href: "/faq",
     kicker: "Quick answers",
     title: "FAQ",
     blurb: "Scoring, Swiss buckets, the Viewer Pass, locks and coins.",
-    img: "/wrapped/major-thanks.jpg",
+    img: INFO_PHOTOS[1],
   },
   {
     href: "/help/auth-code",
     kicker: "Two minutes",
     title: "Steam sync",
     blurb: "Link your in-game Pick'Em with an auth code.",
-    img: "/wrapped/major-champion.jpg",
+    img: INFO_PHOTOS[2],
   },
   {
     href: "/pwa",
     kicker: "For alerts",
     title: "Install HOTLINE",
     blurb: "Put it on your home screen so lock alerts reach you.",
-    img: "/wrapped/magixx-1v4.jpg",
+    img: INFO_PHOTOS[3],
   },
   {
     href: "/players",
     kicker: "Directory",
     title: "The room",
     blurb: "Everyone calling this Major — tap through to any profile and their picks.",
-    img: "/wrapped/major-nations.jpg",
+    img: INFO_PHOTOS[4],
   },
 ];
 

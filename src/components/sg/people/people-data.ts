@@ -14,11 +14,12 @@ import { resolveEffectiveStatus } from "@/lib/event-lifecycle-core";
 import { computeFinish, buildMajorsHistory, type MajorHistoryRow } from "@/lib/majors-core";
 import { coinMintAtMs } from "@/lib/event-freeze";
 import { deriveChallengeCoins, type ChallengeCoin } from "@/lib/challenge-coin-core";
+import { PHOTOS } from "@/lib/photos";
 
 /** Editorial dressing per Major: short name, photo and its credit line. */
 const MAJOR_META: Record<string, { short: string; photo: string; credit: string }> = {
   "iem-cologne-2026": { short: "IEM Cologne 2026", photo: "/wrapped/major-champion.jpg", credit: "Photo · HLTV" },
-  "pgl-singapore-2026": { short: "Singapore 2026", photo: "/wrapped/major-cover.jpg", credit: "Photo · HLTV" },
+  "pgl-singapore-2026": { short: "Singapore 2026", photo: PHOTOS.singaporeMajor, credit: "Photo · HLTV" },
 };
 
 export function majorShortName(cfg: Pick<EventConfig, "slug" | "name">): string {
@@ -27,7 +28,7 @@ export function majorShortName(cfg: Pick<EventConfig, "slug" | "name">): string 
 
 export function majorPhoto(slug: string): { src: string; credit: string } {
   const m = MAJOR_META[slug];
-  return m ? { src: m.photo, credit: m.credit } : { src: "/wrapped/major-cover.jpg", credit: "Photo · HLTV" };
+  return m ? { src: m.photo, credit: m.credit } : { src: PHOTOS.homeHero, credit: "Photo · HLTV" };
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
