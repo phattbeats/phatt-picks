@@ -1,10 +1,11 @@
 import Image from "next/image";
+import type { EventBrand } from "@/lib/event-brand";
 
 /**
  * #942 — "Watch Now" band for the dashboard. Nudges players toward the
- * official IEM Cologne Major 2026 broadcasts (ESL's own channels). YouTube
- * leads, with Twitch and Kick alongside it. Channels verified live 2026-06-05
- * (ESLCS on all three).
+ * current Major's official broadcasts, the organiser's own channels from
+ * event-brand.ts (ESL for Cologne, PGL for Singapore). YouTube leads, with
+ * Twitch and Kick alongside it.
  *
  * Pure server component: brand glyphs are inlined SVG (simple-icons paths), the
  * event lockup is the official PNG given a white treatment so it reads on the
@@ -37,52 +38,52 @@ const KickGlyph = (
   </svg>
 );
 
-const PLATFORMS: Platform[] = [
+const platforms = ({ youtube, twitch, kick }: EventBrand["streams"]): Platform[] => [
   {
     name: "YouTube",
-    handle: "@ESLCS",
-    href: "https://www.youtube.com/@ESLCS",
+    handle: `@${youtube}`,
+    href: `https://www.youtube.com/@${youtube}`,
     color: "#FF0000",
     glyph: YouTubeGlyph,
   },
   {
     name: "Twitch",
-    handle: "/eslcs",
-    href: "https://www.twitch.tv/eslcs",
+    handle: `/${twitch}`,
+    href: `https://www.twitch.tv/${twitch}`,
     color: "#9146FF",
     glyph: TwitchGlyph,
   },
   {
     name: "Kick",
-    handle: "/eslcs",
-    href: "https://kick.com/eslcs",
+    handle: `/${kick}`,
+    href: `https://kick.com/${kick}`,
     color: "#53FC19",
     glyph: KickGlyph,
   },
 ];
 
-export function WatchNow() {
+export function WatchNow({ brand }: { brand: EventBrand }) {
   return (
     <section className="chap watch" aria-label="Watch the official streams">
       <div className="chap-h row2">
         <div>
           <h2>Watch it live</h2>
           <p>
-            Catch every map on the official <b>IEM Cologne Major 2026</b> broadcast.
+            Catch every map on the official <b>{brand.broadcast}</b> broadcast.
           </p>
         </div>
         <Image
-          src="/watch/iem-cologne.png"
-          alt="Intel Extreme Masters · ESL Cologne Major 2026"
-          width={1920}
-          height={1013}
-          className="watch-logo"
+          src={brand.logo.src}
+          alt={brand.logo.alt}
+          width={brand.logo.width}
+          height={brand.logo.height}
+          className={`watch-logo${brand.logo.height > brand.logo.width ? " tall" : ""}`}
           priority={false}
         />
       </div>
 
       <div className="watch-grid">
-        {PLATFORMS.map((p) => (
+        {platforms(brand.streams).map((p) => (
           <a
             key={p.name}
             href={p.href}

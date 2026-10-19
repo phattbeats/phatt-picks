@@ -84,7 +84,8 @@
 .sgc-flow .k{font-family:var(--font-mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-mid)}
 .sgc-flow .t{font-family:var(--font-display);font-weight:800;font-size:24px;text-transform:uppercase;line-height:1}
 .sgc-flow p{font-size:14px;color:var(--ink-mid);text-wrap:pretty}
-@media(max-width:760px){.sgc-flow{grid-template-columns:1fr 1fr;row-gap:28px}}
+.sgc-flow.five{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media(max-width:760px){.sgc-flow,.sgc-flow.five{grid-template-columns:1fr 1fr;row-gap:28px}}
 /* lanes */
 .sgc-lanes{display:grid;gap:12px}@media(min-width:760px){.sgc-lanes{grid-template-columns:1fr 1fr}}
 .sgc-lane{border:1px solid var(--hair);border-radius:var(--r-md);overflow:hidden;background:var(--surf-1);display:grid;align-content:start}

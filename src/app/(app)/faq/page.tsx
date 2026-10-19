@@ -111,6 +111,22 @@ const CATEGORIES = [
         ),
       },
       {
+        q: "Can I show my picks before the lock?",
+        a: (
+          <>
+            <p>
+              Yes. Once every call in a stage is made, you can <b>seal</b> it. Choose <b>Public</b> and
+              your calls show on your profile and in head-to-head straight away. Choose <b>Hidden</b> and
+              they stay private until the stage locks, like everyone else&apos;s.
+            </p>
+            <p>
+              Sealed calls can&apos;t be changed. You can switch Hidden to Public later, but Public is
+              final, so nobody can sway the room and then backtrack.
+            </p>
+          </>
+        ),
+      },
+      {
         q: "Can I rank #1 without Steam?",
         a: (
           <p>
@@ -125,7 +141,7 @@ const CATEGORIES = [
           <p>
             Yes. Tap any player on the <Link href="/leaderboard" prefetch={false}>leaderboard</Link> to
             open their profile, then hit <b>Compare with mine</b> to see both sets side by side for every
-            revealed stage.
+            revealed stage, plus any stage they&apos;ve sealed public.
           </p>
         ),
       },

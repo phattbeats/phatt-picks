@@ -147,6 +147,19 @@ export function coinBackSrc(tier: CoinTier): string {
 }
 
 /**
+ * Map prefixes for the WebGL inspector (scripts/coins/build-inspect-maps.py
+ * writes `-h`, `-n` and `-s.webp` under /public/coins/3d). Fronts are per Major
+ * and tier; the diamond reverse has its own relief (gem seats), the other three
+ * tiers share one.
+ */
+export function coinMapPrefixes(slug: string, tier: CoinTier): { front: string; back: string } {
+  return {
+    front: `/coins/3d/${slug}-${tier}`,
+    back: tier === "diamond" ? "/coins/3d/_back-diamond" : "/coins/3d/_back",
+  };
+}
+
+/**
  * Derive the minted coins from a player's per-Major rows (already scored by the
  * caller, exactly as /majors does). Only earned coins come back; tier is decided
  * per Major. Order is preserved — the caller sorts (newest Major first).

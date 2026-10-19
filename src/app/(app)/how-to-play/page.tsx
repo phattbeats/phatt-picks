@@ -20,6 +20,8 @@ export const dynamic = "force-dynamic";
  *                          12/10/7 playoffs; 135 perfect) via scoring.ts
  *   • the 2 / 6 / 2 calls — swiss-bucket-core.ts bucketSwissSlots(10)
  *   • lock & reveal       — reveal-core.ts (picks are revealed iff not writable)
+ *   • sealing             — pick-lock-core.ts (full stage only; public is final,
+ *                          hidden → public allowed, no unseal)
  *   • coins               — challenge-coin-core.ts (≥1 real pick + Major
  *                          concluded; finish rank slots → tier)
  * Singapore stage day-splits are unpublished (events-core), so only the dated
@@ -229,20 +231,23 @@ export default async function HowToPlayPage() {
         </div>
       </section>
 
-      {/* 05 — Lock & reveal */}
+      {/* 05 — Seal, lock & reveal */}
       <section className="chap">
         <div className="chap-h">
-          <span className="n">05 — Lock &amp; reveal</span>
-          <h2>No copying</h2>
+          <span className="n">05 — Seal, lock &amp; reveal</span>
+          <h2>Show them or hide them</h2>
           <p>
-            Everyone&apos;s picks stay hidden while a stage is open. <b>The moment it locks</b>, the
-            whole room&apos;s calls go public at once.
+            Your picks stay hidden while a stage is open, unless you choose to show them. Seal a stage
+            early and pick <b>Public</b> to put your calls in front of the room now, or <b>Hidden</b> to
+            keep them under wraps. <b>The moment a stage locks</b>, everyone&apos;s calls go public at
+            once.
           </p>
         </div>
-        <div className="sgc-flow">
-          <div><span className="k">Open</span><span className="t">Call it</span><p>Make and change picks freely. Nobody sees yours.</p></div>
-          <div><span className="k">First match</span><span className="t">Locked</span><p>Picks freeze the moment the stage starts.</p></div>
-          <div><span className="k">At lock</span><span className="t">Reveal</span><p>Every player&apos;s calls go public — consensus, bold calls, who faded whom.</p></div>
+        <div className="sgc-flow five">
+          <div><span className="k">Open</span><span className="t">Call it</span><p>Make and change picks freely. Nobody sees yours unless you seal them public.</p></div>
+          <div><span className="k">Optional</span><span className="t">Seal</span><p>Happy with a full stage? Seal it. <b>Public</b> shows your calls on your profile and in head-to-head right away. <b>Hidden</b> waits for the lock. Sealed calls can&apos;t change, and public is final.</p></div>
+          <div><span className="k">First match</span><span className="t">Locked</span><p>Picks freeze the moment the stage starts, sealed or not.</p></div>
+          <div><span className="k">At lock</span><span className="t">Reveal</span><p>Every remaining call goes public: consensus, bold calls, who faded whom.</p></div>
           <div><span className="k">Results land</span><span className="t">Scored</span><p>Points update live, the board redraws, the next stage opens.</p></div>
         </div>
       </section>

@@ -44,6 +44,7 @@ import { isPlayoffSection, playoffRoundForSection, PLAYOFF_ROUNDS } from "@/lib/
 import { majorWrappedStageKey } from "@/lib/stage-wrapped-launch";
 import { majorShortName, ordSuffix, requestedEvent } from "@/components/sg/people/people-data";
 import { PHOTOS } from "@/lib/photos";
+import { eventLogoSrc } from "@/lib/event-brand";
 
 /** Short pick-type tag for a Swiss slot (3:0 / 3:1·3:2 / 0:3). */
 function bucketLabelFor(sectionId: number, group: Section["groups"][number], slotIndex: number): string | null {
@@ -84,14 +85,14 @@ export default async function StageRevealPage({
   if (!sectionDef) notFound();
 
   // Visual assets for the Stage Wrapped deck (#1054): team-logo cascade from
-  // the same teamMap + manifest the reveal grid uses, plus the major + game
-  // brand marks served from /public/watch.
+  // the same teamMap + manifest the reveal grid uses, plus this Major's mark
+  // (event-brand.ts) and the game mark, served from /public/watch.
   const wrappedAssets = {
     resolveTeamLogo: (pid: number) => {
       const t = teamMap.get(pid);
       return t ? { tiers: resolveLogoTiers(t), name: t.name } : null;
     },
-    majorLogoSrc: "/watch/iem-cologne.png",
+    majorLogoSrc: eventLogoSrc(eventCfg?.slug),
     gameLogoSrc: "/watch/counter-strike.png",
   };
 

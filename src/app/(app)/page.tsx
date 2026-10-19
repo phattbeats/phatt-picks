@@ -24,6 +24,7 @@ import { statsForPickid, TEAM_STATS_AS_OF } from "@/lib/team-stats-core";
 import { StageWrappedReplay } from "@/components/heat/StageWrappedReplay";
 import { StageCountdown } from "@/components/sg/home/StageCountdown";
 import { PHOTOS } from "@/lib/photos";
+import { eventBrand } from "@/lib/event-brand";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +79,7 @@ export default async function DashboardPage() {
   // the whole process lifetime and serve the stale event.)
   const EVENT_ID = currentEventId();
   const event = getEventConfig(EVENT_ID);
+  const watchBrand = eventBrand(event?.slug);
   // The event's own layout, or null until Valve opens its Pick'Em. Pre-open
   // there are no stages or teams to score, so an empty layout stands in and
   // every stage reads "not open" — never the previous Major's field.
@@ -650,10 +652,9 @@ export default async function DashboardPage() {
         </nav>
       </section>
 
-      {/* Watch the official streams — the channel list is ESL's (IEM Cologne),
-          so it only renders while that's the event being served. Re-point
-          WatchNow at the broadcaster's channels before showing it for others. */}
-      {event?.slug === "iem-cologne-2026" && <WatchNow />}
+      {/* Watch the official streams — the served Major's own broadcaster
+          (event-brand.ts); a Major without channels on file shows nothing. */}
+      {watchBrand && <WatchNow brand={watchBrand} />}
     </div>
   );
 }

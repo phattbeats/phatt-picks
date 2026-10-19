@@ -18,6 +18,8 @@
 import { prisma } from "@/lib/db";
 import { getCommittedLayout, buildTeamMap } from "@/lib/layout";
 import { resolveLogoTiers } from "@/lib/logos";
+import { getEventConfig } from "@/lib/events-core";
+import { eventLogoSrc } from "@/lib/event-brand";
 import type { WrappedSlide } from "@/lib/stage-wrapped-core";
 import type { StageWrappedAssets } from "@/lib/stage-wrapped-content";
 import { buildPlayoffBracket, PLAYOFF_ROUNDS } from "@/lib/playoff-bracket-core";
@@ -34,14 +36,14 @@ export interface StageWrappedAutoDeck {
   slides: WrappedSlide[];
 }
 
-/** Visual assets for the deck — same logo cascade + brand marks the reveal grid uses. */
-function buildWrappedAssets(teamMap: ReturnType<typeof buildTeamMap>): StageWrappedAssets {
+/** Visual assets for the deck — same logo cascade the reveal grid uses, plus this Major's mark. */
+function buildWrappedAssets(teamMap: ReturnType<typeof buildTeamMap>, eventId: number): StageWrappedAssets {
   return {
     resolveTeamLogo: (pid: number) => {
       const t = teamMap.get(pid);
       return t ? { tiers: resolveLogoTiers(t), name: t.name } : null;
     },
-    majorLogoSrc: "/watch/iem-cologne.png",
+    majorLogoSrc: eventLogoSrc(getEventConfig(eventId)?.slug),
     gameLogoSrc: "/watch/counter-strike.png",
   };
 }
@@ -99,7 +101,7 @@ export async function prepareMajorWrappedAutoDeck(
   if (!resolved) return null;
   const { teamMap, facts } = resolved;
 
-  const assets = buildWrappedAssets(teamMap);
+  const assets = buildWrappedAssets(teamMap, eventId);
   // Lead with the curated historic-moment photo beats (cathedral, donk, woxic,
   // the Cinderellas, magixx) rather than the seed-derived stub; the champion /
   // road / runner-up stay computed from the bracket.

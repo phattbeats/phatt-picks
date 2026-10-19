@@ -1,7 +1,7 @@
 /* HOTLINE Singapore — challenge coins (#1278).
    The coin case on a profile (.cc-*), the coin-holders page (.ch-*), the
    shared inspectable coin trigger (.coin-collectible-trigger / .coin-shine) and
-   the drag-to-rotate inspector (.coin-inspect-* / .coin3d-*).
+   the inspector (.coin-inspect-*; WebGL coin, .coin3d-* is its CSS fallback).
    Coins and felt are Blender renders (scripts/coins/); everything here is
    flat paint + box-shadow — no blur / backdrop-filter on large areas (#1269),
    and every motion stands down under prefers-reduced-motion. */
@@ -225,6 +225,21 @@
 .coin3d-edge.gold { background-color: #b88a34; }
 .coin3d-edge.silver { background-color: #a3a6aa; }
 .coin3d-edge.bronze { background-color: #a0673f; }
+/* WebGL coin: the canvas fades in over the rendered face once it's struck. */
+.coin-inspect-gl { position: relative; display: grid; place-items: center; }
+.coin-inspect-poster { position: absolute; width: 62%; height: 62%; object-fit: contain; opacity: 0.55; }
+.coin-inspect-canvas { display: block; cursor: grab; touch-action: none; opacity: 0; transition: opacity 400ms ease; }
+.coin-inspect-canvas.on { opacity: 1; }
+.coin-inspect-canvas:active { cursor: grabbing; }
+.coin-inspect-tools { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
+.coin-inspect-tools button {
+  min-width: 44px; height: 40px; padding: 0 14px;
+  background: var(--surf-1); border: 1px solid var(--hair-2); border-radius: var(--r-sm);
+  color: var(--ink-hi); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+  cursor: pointer;
+}
+.coin-inspect-tools button:hover { border-color: var(--ink-hi); }
+.coin-inspect-tools button:focus-visible { outline: 2px solid var(--heat); outline-offset: 2px; }
 .coin-inspect-meta { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
 .coin-inspect-name { font-family: var(--font-display); font-weight: 800; font-size: 26px; line-height: 1; text-transform: uppercase; color: var(--ink-hi); }
 .coin-inspect-finish { font-family: var(--font-mono); font-size: 11px; color: var(--ink-mid); letter-spacing: 0.06em; }
