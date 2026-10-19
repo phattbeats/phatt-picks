@@ -196,7 +196,8 @@ so they can only be filled after Phase 1's layout lands.
 | **Logos** | `src/fixtures/cologne-logos.json` | `pickid → { name, image }`. **Generated** — run `node scripts/build-logos.ts`, which resolves Steam CDN images. The manifest goes **stale when the upstream feed rotates**; if logos 404 site-wide, re-run it. |
 | **Regions** | `src/lib/regions-core.ts` | `TEAM_REGIONS`: `pickid → "EU"\|"NA"\|"SA"\|"ASIA"\|"OCE"` (CIS folds into EU). Drives the region chips. |
 | **Team stats** | `src/lib/team-stats-core.ts` **+ `team-stats-sources.ts`** | `TEAM_STATS` (in `-core`): `pickid → { roster, world rank, recent W-L, hltvUrl }`, a **frozen HLTV snapshot** with a `TEAM_STATS_AS_OF` date — the fallback + roster/rank base. **As of #921 the `recent[]` (Last-5) auto-refreshes live** during a stage via `team-stats.ts` + the **`TEAM_SOURCES`** map in `team-stats-sources.ts` (`pickid → HLTV profile URL`), so per major you update **both** files. Roster/rank still re-gathered by hand (`scripts/gather-team-stats.ts`, `TEAM_STATS_AS_OF` bump). Powers the dossier drawer. See `PRE-MAJOR-CHECKLIST.md` §3. |
-| **Challenge-coin art** | `public/coins/<event-slug>-{diamond,gold,silver,bronze}.png` | The four front faces for the Major's collectible coin (#1278), keyed by the event **slug** (`coinArtSrc(slug, tier)` in `challenge-coin-core.ts`). The reverses `public/coins/_back-{tier}.png` are **shared** across Majors — don't duplicate them. Coins are pure-derived (no DB, no per-team map); the only per-major input is these four images. They are Blender/Cycles renders — the recipe (relief maps → render → finish) is in the header of `scripts/coins/render-coin.py`; feed it the new Major's logo. A missing image degrades to the `<img>` alt. |
+| **Challenge-coin art** | `public/coins/<event-slug>-{diamond,gold,silver,bronze}.png` | The four front faces for the Major's collectible coin (#1278), keyed by the event **slug** (`coinArtSrc(slug, tier)` in `challenge-coin-core.ts`). The reverses `public/coins/_back-{tier}.png` are **shared** across Majors — don't duplicate them. Coins are pure-derived (no DB, no per-team map); the only per-major input is these four images. They are Blender/Cycles renders — the recipe (relief maps → render → finish) is in the header of `scripts/coins/render-coin.py`; feed it the new Major's logo, then run `scripts/coins/build-inspect-maps.py` on the same reliefs for the WebGL inspector's `public/coins/3d/<slug>-<tier>-{h,n,s}.webp`. A missing image degrades to the `<img>` alt; missing 3D maps fall back to the CSS coin. |
+| **Event brand** | `src/lib/event-brand.ts` + `public/watch/<mark>.png` | The Major's mark (white on transparent) and its organiser's English YouTube/Twitch/Kick handles. Watch Now, the stage reveal and the Wrapped decks read it; a Major without an entry hides Watch Now. |
 
 Run their verifiers: `verify-regions.ts`, `verify-team-stats.ts`, `verify-m6-logos.ts`.
 
@@ -246,6 +247,7 @@ Once live, each stage start is a small recurring routine:
 [ ] TEAM_STATS + AS_OF         → frozen HLTV snapshot                   (Phase 3)
 [ ] TEAM_SOURCES               → pickid → HLTV profile URL (live Last-5)(Phase 3)
 [ ] public/coins/<slug>-*.png  → 4 coin front faces (shared backs reused) (Phase 3)
+[ ] public/coins/3d/<slug>-*   → inspector maps for the 4 fronts (build-inspect-maps.py) (Phase 3)
 [ ] run every scripts/verify-*.ts that touches the above
 [ ] deploy → warm /api/standings/refresh inside a match window
 ```

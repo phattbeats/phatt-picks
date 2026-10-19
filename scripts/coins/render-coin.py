@@ -39,6 +39,9 @@ felt and the CS2/HOTLINE reverse are shared — leave them):
      (add --gems for diamond; --cpu if there's no CUDA device).
   4. Ship: python3 scripts/coins/finish-coin.py face work/front-gold.png \
        public/coins/<event-slug>-gold.png   (crops to the disc, 640px, pngquant)
+  5. 3D inspector maps from the same reliefs (no render needed):
+       python3 scripts/coins/build-inspect-maps.py work/front-gold \
+         public/coins/3d/<event-slug>-gold   (writes -h/-n/-s.webp)
   The reverse is the same recipe with --logo public/watch/counter-strike.png
   --logo-w 1.08 --logo-h 0.26 --logo-y -0.14 --sub-logo public/brand/symbol-white.png
   --sub-logo-h 0.30 --sub-logo-y 0.24 --top "HOTLINE PICK'EM"

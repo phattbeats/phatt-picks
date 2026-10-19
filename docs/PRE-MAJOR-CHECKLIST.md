@@ -134,7 +134,9 @@ frozen snapshot is what renders until the first live crawl lands.
       `public/coins/<event-slug>-{diamond,gold,silver,bronze}.png` (#1278). The
       reverses `public/coins/_back-{tier}.png` are shared, leave them. Render the
       fronts from the Major's logo with the Blender recipe in
-      `scripts/coins/render-coin.py` (header). Coins mint automatically once the
+      `scripts/coins/render-coin.py` (header), then build the inspector's 3D maps
+      `public/coins/3d/<event-slug>-<tier>-{h,n,s}.webp` from the same reliefs
+      (`scripts/coins/build-inspect-maps.py`). Coins mint automatically once the
       Major's Grand Final resolves — no DB, no per-team config.
 - [ ] `verify-team-stats`, `verify-team-stats-live`, `verify-lock-schedule`,
       `verify-regions` all green.
