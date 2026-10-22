@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { AuthCodeForm } from "@/components/AuthCodeForm";
 import { getSession } from "@/lib/session";
-import { prisma } from "@/lib/db";
-import { currentEventId } from "@/lib/events-core";
+import { currentEvent } from "@/lib/events-core";
+import { eventShortName } from "@/lib/leaderboard";
+import { authCodeStatus, savedForLabel } from "@/lib/authcode";
 import { isPickemOpen } from "@/lib/layout-state";
 
 export const metadata = { title: "Connect Steam · HOTLINE" };
@@ -12,16 +13,11 @@ const STEAM_AUTH_HELP = "https://help.steampowered.com/en/wizard/HelpWithGameIss
 export default async function AuthCodeHelpPage() {
   const session = await getSession();
   const connected = Boolean(session?.steamId);
-  const open = await isPickemOpen(currentEventId());
+  const event = currentEvent();
+  const open = await isPickemOpen(event.eventId);
+  const majorName = eventShortName(event);
 
-  let hasAuthCode = false;
-  if (connected && session) {
-    const p = await prisma.player.findUnique({
-      where: { id: session.playerId },
-      select: { authCode: true },
-    });
-    hasAuthCode = Boolean(p?.authCode);
-  }
+  const code = connected && session ? await authCodeStatus(session.playerId, event.eventId) : null;
 
   return (
     <div className="sg-page sg-authcode" data-screen-label="Auth Code Setup">
@@ -39,7 +35,8 @@ export default async function AuthCodeHelpPage() {
         </h1>
         <p>
           One code mirrors your official Valve Pick&apos;Em into HOTLINE and lets the app{" "}
-          <b>set picks back in-game</b>. Optional — local play is the same board and the same scoring, no Steam needed.
+          <b>set picks back in-game</b>. Steam may give you a new code for each Major, so add this Major&apos;s code
+          when Pick&apos;Em opens.
         </p>
       </div>
 
@@ -110,7 +107,11 @@ export default async function AuthCodeHelpPage() {
 
         <aside className="side rise d3">
           {connected ? (
-            <AuthCodeForm initiallySet={hasAuthCode} />
+            <AuthCodeForm
+              initialStatus={code?.status ?? "none"}
+              majorName={majorName}
+              staleFor={code?.status === "stale" ? savedForLabel(code.savedForEventId) : null}
+            />
           ) : (
             <a href="/api/auth/steam" className="btn-solid">
               Sign in with Steam to paste your code

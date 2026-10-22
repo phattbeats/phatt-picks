@@ -136,3 +136,4 @@
 .sg-authform .btn-solid,.sg-authform .btn-ghost{width:100%}
 .sg-authform .saved{font-size:13px;color:var(--tac-green)}
 .sg-authform .msg{font-size:13px;color:var(--ink-mid);text-wrap:pretty}
+.sg-authform .stale{font-size:13px;line-height:1.5;color:var(--heat)}

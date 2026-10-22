@@ -4,16 +4,28 @@ import { useState } from "react";
 
 /**
  * Paste-and-save form for the Valve Game Authentication Code. Posts to
- * /api/auth/steam/authcode (M2), which encrypts it at rest. Only rendered for
- * signed-in Steam players; validates the 4-5-4 shape before sending.
+ * /api/auth/steam/authcode (M2), which encrypts it at rest and records the
+ * Major it was saved for. Only rendered for signed-in Steam players; validates
+ * the 4-5-4 shape before sending. A code saved for an earlier Major shows as
+ * stale (Steam may issue a new code each Major) and asks for this Major's.
  * Styled by `.sg-authform` in sg-auth.css.
  */
 
 const AUTH_CODE_RE = /^[A-Z0-9]{4}-[A-Z0-9]{5}-[A-Z0-9]{4}$/;
 
-export function AuthCodeForm({ initiallySet }: { initiallySet: boolean }) {
+export function AuthCodeForm({
+  initialStatus,
+  majorName,
+  staleFor,
+}: {
+  initialStatus: "none" | "current" | "stale";
+  majorName: string;
+  /** The Major a stale code was saved for, e.g. "IEM Cologne 2026". */
+  staleFor: string | null;
+}) {
   const [value, setValue] = useState("");
-  const [saved, setSaved] = useState(initiallySet);
+  const [status, setStatus] = useState(initialStatus);
+  const saved = status !== "none";
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -37,7 +49,7 @@ export function AuthCodeForm({ initiallySet }: { initiallySet: boolean }) {
         mirrorOk?: boolean;
       };
       if (res.ok && data.ok) {
-        setSaved(true);
+        setStatus("current");
         setValue("");
         if (data.mirrorOk && (data.mirrored ?? 0) > 0) {
           setMsg(`Saved. Imported ${data.mirrored} pick${data.mirrored === 1 ? "" : "s"} from Steam.`);
@@ -63,7 +75,7 @@ export function AuthCodeForm({ initiallySet }: { initiallySet: boolean }) {
     setMsg(null);
     try {
       await fetch("/api/auth/steam/authcode", { method: "DELETE" });
-      setSaved(false);
+      setStatus("none");
       setMsg("Auth code removed.");
     } finally {
       setBusy(false);
@@ -72,8 +84,13 @@ export function AuthCodeForm({ initiallySet }: { initiallySet: boolean }) {
 
   return (
     <div className="sg-authform">
-      {saved && (
-        <p className="saved">✓ An auth code is on file. You can replace it below.</p>
+      {status === "current" && (
+        <p className="saved">✓ Your {majorName} code is on file. You can replace it below.</p>
+      )}
+      {status === "stale" && (
+        <p className="stale">
+          {`Your code on file is from ${staleFor ?? "an earlier Major"}. Steam may give you a new code for each Major, so paste your ${majorName} code to keep syncing.`}
+        </p>
       )}
       <div className="field">
         <label htmlFor="authCode">Paste your code</label>
@@ -92,7 +109,7 @@ export function AuthCodeForm({ initiallySet }: { initiallySet: boolean }) {
       </div>
       <span className="hint">Format 4–5–4, with dashes</span>
       <button type="button" className="btn-solid" onClick={save} disabled={!valid || busy}>
-        {busy ? "Saving…" : saved ? "Replace code" : "Save code"}
+        {busy ? "Saving…" : status === "current" ? "Replace code" : status === "stale" ? `Save ${majorName} code` : "Save code"}
       </button>
       {saved && (
         <button type="button" className="btn-ghost" onClick={remove} disabled={busy}>

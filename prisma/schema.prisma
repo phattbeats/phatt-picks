@@ -14,6 +14,7 @@ model Player {
   avatarUrl     String?
   steamId       String?  @unique  // 17-digit SteamID64, stored as string
   authCode      String?           // encrypted per-user auth code for Valve API
+  authCodeEventId Int?            // the Major the code was saved for; Steam may issue a new code each Major
   isLocal       Boolean  @default(true)
   hasViewerPass Boolean  @default(false)
   hasValveCoin  Boolean  @default(false)

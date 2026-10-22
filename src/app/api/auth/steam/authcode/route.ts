@@ -46,7 +46,9 @@ export async function POST(req: NextRequest) {
 
   await prisma.player.update({
     where: { id: session.playerId },
-    data: { authCode: encryptAuthCode(authCode) },
+    // Remember which Major the code was saved for: Steam may issue a new code
+    // per Major, so a code saved for an earlier one is flagged as stale.
+    data: { authCode: encryptAuthCode(authCode), authCodeEventId: EVENT_ID },
   });
 
   // #853: as soon as the auth code is stored, pull any existing/partial
@@ -73,7 +75,7 @@ export async function DELETE() {
   }
   await prisma.player.update({
     where: { id: session.playerId },
-    data: { authCode: null },
+    data: { authCode: null, authCodeEventId: null },
   });
   return NextResponse.json({ ok: true, hasAuthCode: false });
 }

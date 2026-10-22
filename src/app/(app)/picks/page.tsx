@@ -2,7 +2,7 @@ import Link from "next/link";
 import { buildTeamMap } from "@/lib/layout";
 import { getEffectiveLayout, refreshLayoutOnRead } from "@/lib/layout-state";
 import { getSession } from "@/lib/session";
-import { hasAuthCode } from "@/lib/authcode";
+import { authCodeStatus, savedForLabel } from "@/lib/authcode";
 import { prisma } from "@/lib/db";
 import { mirrorPlayerPredictionsThrottled } from "@/lib/predictions-sync";
 import { PicksBoard } from "@/components/PicksBoard";
@@ -95,9 +95,11 @@ export default async function PicksPage({
   // Signed in via Steam but no auth code yet: picks save in HOTLINE, but we
   // can't push them to the official in-game CS2 Pick'Em until they connect a
   // Game Authentication Code. Surface that gap up front with a link (#891).
-  const needsSteamLink = session?.steamId
-    ? !(await hasAuthCode(session.playerId))
-    : false;
+  // A code saved for an earlier Major counts as missing too (Steam may issue
+  // a new code each Major); the notice then asks for this Major's code.
+  const code = session?.steamId ? await authCodeStatus(session.playerId, EVENT_ID) : null;
+  const needsSteamLink = !!code && code.status !== "current";
+  const staleCodeFor = code?.status === "stale" ? savedForLabel(code.savedForEventId) : null;
 
   // Scheduled hard lock (#886/898): once a stage's first match starts, its
   // pick window is closed — even though the committed layout still says
@@ -526,7 +528,7 @@ export default async function PicksPage({
 
       {/* Steam-connected but no auth code: picks live in HOTLINE, not yet
           pushed to the official in-game Pick'Em. Point them at the page. */}
-      {needsSteamLink && <SteamLinkNotice />}
+      {needsSteamLink && <SteamLinkNotice staleFor={staleCodeFor} />}
 
       {/* Sealed, then changed in the CS2 client (pick-lock-core): HOTLINE keeps
           the sealed set; say so plainly. Shown publicly next to the seal too. */}
@@ -835,16 +837,22 @@ function PicksNotOpen({
   );
 }
 
-function SteamLinkNotice() {
+function SteamLinkNotice({ staleFor }: { staleFor: string | null }) {
   return (
     <Link href="/help/auth-code" className="sgp-note solo" prefetch={false}>
       <div>
-        <span className="tag warn">Saved here — not on Steam yet</span>
-        <h2>Your picks are saved in HOTLINE</h2>
-        <p>
-          To push them to your <b>official in-game CS2 Pick&apos;Em</b>, connect your Steam Game
-          Authentication Code. It takes a minute.
-        </p>
+        <span className="tag warn">{staleFor ? "New Major, new code" : "Saved here — not on Steam yet"}</span>
+        <h2>{staleFor ? "Add this Major's auth code" : "Your picks are saved in HOTLINE"}</h2>
+        {staleFor ? (
+          <p>
+            {`Your saved code is from ${staleFor}. Steam may give you a new Game Authentication Code for each Major. Paste this Major's code to keep your picks syncing to the official in-game Pick'Em.`}
+          </p>
+        ) : (
+          <p>
+            To push them to your <b>official in-game CS2 Pick&apos;Em</b>, connect your Steam Game
+            Authentication Code. It takes a minute.
+          </p>
+        )}
         <span className="go">
           Connect Steam to sync
           <svg
