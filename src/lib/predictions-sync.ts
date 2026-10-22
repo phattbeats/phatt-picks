@@ -54,7 +54,8 @@ export async function mirrorPlayerPredictions(
   });
   if (!player?.steamId) return { ok: false, mirrored: 0, skipped: "no-steam-id" };
 
-  const authCode = await getDecryptedAuthCode(playerId);
+  // A code saved for another Major counts as none (each Major needs its own).
+  const authCode = await getDecryptedAuthCode(playerId, eventId);
   if (!authCode) return { ok: false, mirrored: 0, skipped: "no-auth-code" };
 
   let mirrored;

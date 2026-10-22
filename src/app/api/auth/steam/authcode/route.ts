@@ -46,8 +46,8 @@ export async function POST(req: NextRequest) {
 
   await prisma.player.update({
     where: { id: session.playerId },
-    // Remember which Major the code was saved for: Steam may issue a new code
-    // per Major, so a code saved for an earlier one is flagged as stale.
+    // Remember which Major the code was saved for: each Major needs its own
+    // code, and sync never sends a code saved for another one.
     data: { authCode: encryptAuthCode(authCode), authCodeEventId: EVENT_ID },
   });
 

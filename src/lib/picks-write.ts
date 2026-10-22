@@ -80,7 +80,8 @@ async function loadWriteAuth(
   // Local players have no steamId and never write to Valve (rule #6).
   if (!player?.steamId) return { skip: "no-steam-id" };
 
-  const authCode = await getDecryptedAuthCode(playerId);
+  // A code saved for another Major counts as none (each Major needs its own).
+  const authCode = await getDecryptedAuthCode(playerId, eventId);
   if (!authCode) return { skip: "no-auth-code" };
 
   return { steamId: player.steamId, authCode };

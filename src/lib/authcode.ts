@@ -8,16 +8,32 @@
 
 import { prisma } from "@/lib/db";
 import { decryptAuthCode } from "@/lib/crypto";
-import { getEventConfig } from "@/lib/events-core";
+import { getEventBySlug, getEventConfig } from "@/lib/events-core";
 import { eventShortName } from "@/lib/leaderboard";
 
-/** Decrypt and return a player's stored Valve auth code, or null if none is set. */
-export async function getDecryptedAuthCode(playerId: string): Promise<string | null> {
+/**
+ * Codes saved before we recorded the Major (authCodeEventId null) were all
+ * saved for IEM Cologne 2026.
+ */
+const LEGACY_AUTH_CODE_EVENT_ID = getEventBySlug("iem-cologne-2026")?.eventId ?? 26;
+
+/** The Major a stored code was saved for. */
+function codeEventId(authCodeEventId: number | null): number {
+  return authCodeEventId ?? LEGACY_AUTH_CODE_EVENT_ID;
+}
+
+/**
+ * Decrypt and return a player's Valve auth code for `eventId`, or null if none
+ * is set or the stored code was saved for a different Major. Each Major needs
+ * its own code, so an old one is never sent to Valve.
+ */
+export async function getDecryptedAuthCode(playerId: string, eventId: number): Promise<string | null> {
   const player = await prisma.player.findUnique({
     where: { id: playerId },
-    select: { authCode: true },
+    select: { authCode: true, authCodeEventId: true },
   });
   if (!player?.authCode) return null;
+  if (codeEventId(player.authCodeEventId) !== eventId) return null;
   return decryptAuthCode(player.authCode);
 }
 
@@ -31,10 +47,9 @@ export async function hasAuthCode(playerId: string): Promise<boolean> {
 }
 
 /**
- * Is the stored code for this Major? Steam may issue a new Game Authentication
- * Code each Major, so a code saved for an earlier one (or before we recorded
- * the Major, `authCodeEventId` null) is "stale": the player is asked for this
- * Major's code. Sync still tries a stale code, in case Steam kept it valid.
+ * Is the stored code for this Major? Each Major needs its own Game
+ * Authentication Code, so a code saved for another Major is "stale": sync
+ * stops using it and the player is asked for this Major's code.
  */
 export async function authCodeStatus(
   playerId: string,
@@ -45,7 +60,7 @@ export async function authCodeStatus(
     select: { authCode: true, authCodeEventId: true },
   });
   if (!player?.authCode) return { status: "none", savedForEventId: null };
-  const savedFor = player.authCodeEventId ?? null;
+  const savedFor = codeEventId(player.authCodeEventId);
   return { status: savedFor === eventId ? "current" : "stale", savedForEventId: savedFor };
 }
 
