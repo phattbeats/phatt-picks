@@ -48,12 +48,12 @@ export default async function AuthCodeHelpPage() {
           <div className="pre rise d1">
             <span className="tag warn">Before you start</span>
             <p>
-              Own the <b>Singapore Viewer Pass</b> (in CS2, about $10) and open the Pick&apos;Em in-game once. The
+              Own the <b>Singapore Viewer Pass</b>{" "}(in CS2, about $10) and open the Pick&apos;Em in-game once. The
               official Pick&apos;Em exists only for Viewer Pass owners — without it, the code won&apos;t work.
             </p>
             {!open && (
               <p>
-                <b>Not open yet.</b> Valve hasn&apos;t opened Pick&apos;Em for this Major, so the Viewer Pass and
+                <b>Not open yet.</b>{" "}Valve hasn&apos;t opened Pick&apos;Em for this Major, so the Viewer Pass and
                 the in-game Pick&apos;Em aren&apos;t available. You can save your code now. Sync starts when it opens.
               </p>
             )}
@@ -78,7 +78,7 @@ export default async function AuthCodeHelpPage() {
                 <div className="shot">
                   <span className="k">help.steampowered.com</span>
                   <span>
-                    Help → <b>Counter-Strike 2</b> → &ldquo;I want to view, generate, or replace my Game Authentication
+                    Help → <b>Counter-Strike 2</b>{" "}→ &ldquo;I want to view, generate, or replace my Game Authentication
                     Code&rdquo;
                   </span>
                 </div>

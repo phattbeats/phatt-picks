@@ -60,7 +60,7 @@ let maxAniso = 8;
 /** One felt slot of the intro case: a resting coin (its rendered art), a plate, or a bare well. */
 export interface CaseSlot {
   art?: string | null;
-  plate?: { title: string; sub?: string | null } | null;
+  plate?: { title: string; who?: string | null; sub?: string | null } | null;
 }
 
 /** Tier palettes, linear RGB (render-coin.py TIERS). */
@@ -512,33 +512,42 @@ function studioScene(): { scene: THREE.Scene; dispose(): void } {
 }
 
 /** The engraved plate under the well, as on the profile's case (.cc-plate). */
-function plateCanvas(title: string, sub: string | null | undefined): HTMLCanvasElement {
+const PLATE_W = 1024;
+const plateH = (who: boolean) => (who ? 240 : 180);
+
+function plateCanvas(title: string, sub: string | null | undefined, who?: string | null): HTMLCanvasElement {
   const c = document.createElement("canvas");
-  c.width = 1024;
-  c.height = 180;
+  c.width = PLATE_W;
+  c.height = plateH(!!who);
   const ctx = c.getContext("2d")!;
-  const g = ctx.createLinearGradient(0, 0, 0, 180);
+  const g = ctx.createLinearGradient(0, 0, 0, c.height);
   g.addColorStop(0, "#34353a");
   g.addColorStop(0.52, "#1f2023");
   g.addColorStop(1, "#2a2b2f");
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 1024, 180);
+  ctx.fillRect(0, 0, PLATE_W, c.height);
   ctx.textAlign = "center";
   ctx.fillStyle = "#d9d7d0";
   ctx.font = `800 72px ${COIN_FONT}`;
   ctx.fillText(title.toLocaleUpperCase(), 512, sub ? 94 : 114, 880);
+  // The holder's name sits between the Major and the metal · finish line.
+  if (who) {
+    ctx.fillStyle = "#b9b6ae";
+    ctx.font = `700 44px ${COIN_FONT}`;
+    ctx.fillText(who.toLocaleUpperCase(), 512, 150, 880);
+  }
   if (sub) {
     ctx.fillStyle = "#9a9aa0";
     ctx.font = `500 32px "JetBrains Mono", monospace`;
-    ctx.fillText(sub.toLocaleUpperCase().split("").join(String.fromCharCode(8202)), 512, 146, 880);
+    ctx.fillText(sub.toLocaleUpperCase().split("").join(String.fromCharCode(8202)), 512, who ? 206 : 146, 880);
   }
   for (const x of [34, 990]) {
-    const pin = ctx.createRadialGradient(x - 4, 86, 1, x, 90, 12);
+    const pin = ctx.createRadialGradient(x - 4, c.height / 2 - 4, 1, x, c.height / 2, 12);
     pin.addColorStop(0, "#9a9aa0");
     pin.addColorStop(1, "#3a3a40");
     ctx.fillStyle = pin;
     ctx.beginPath();
-    ctx.arc(x, 90, 11, 0, Math.PI * 2);
+    ctx.arc(x, c.height / 2, 11, 0, Math.PI * 2);
     ctx.fill();
   }
   return c;
@@ -620,9 +629,7 @@ function caseModel(felt: HTMLImageElement, slots: CaseSlot[], index: number, art
   restGeo.rotateX(Math.PI / 2);
   owned.push(restGeo);
   const restEdge = mat(new THREE.MeshStandardMaterial({ color: 0x8a7f6a, roughness: 0.3, metalness: 1 }));
-  const plH = (TILE_W * 0.78 * 180) / 1024;
-  const plGeo = new THREE.BoxGeometry(TILE_W * 0.78, plH, 0.02);
-  owned.push(plGeo);
+  const plW = TILE_W * 0.78;
   let shadow: THREE.Mesh | null = null;
 
   for (let i = 0; i < CASE_SLOTS; i++) {
@@ -646,9 +653,16 @@ function caseModel(felt: HTMLImageElement, slots: CaseSlot[], index: number, art
       }
     }
     if (slot?.plate) {
+      const plH = (plW * plateH(!!slot.plate.who)) / PLATE_W;
       add(
-        plGeo,
-        mat(new THREE.MeshStandardMaterial({ map: tex(plateCanvas(slot.plate.title, slot.plate.sub)), roughness: 0.42, metalness: 0.55 })),
+        new THREE.BoxGeometry(plW, plH, 0.02),
+        mat(
+          new THREE.MeshStandardMaterial({
+            map: tex(plateCanvas(slot.plate.title, slot.plate.sub, slot.plate.who)),
+            roughness: 0.42,
+            metalness: 0.55,
+          }),
+        ),
         x,
         cy - TILE_H / 2 + TILE_H * 0.075 + plH / 2,
         FELT_Z + 0.01,

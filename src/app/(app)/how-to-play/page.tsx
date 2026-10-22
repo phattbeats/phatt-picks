@@ -120,7 +120,7 @@ export default async function HowToPlayPage() {
           <h2>Four stages, start to trophy</h2>
           <p>
             Each stage halves the field. You make a fresh set of calls before every one — they{" "}
-            <b>lock at the first match</b> and can&apos;t be changed after.
+            <b>lock at the first match</b>{" "}and can&apos;t be changed after.
           </p>
         </div>
         <div className="sgc-tl">
@@ -158,7 +158,7 @@ export default async function HowToPlayPage() {
           <h2>Three wins in, three losses out</h2>
           <p>
             In each Swiss stage, teams keep playing until they hit <b>3 wins</b> (through) or{" "}
-            <b>3 losses</b> (gone). They&apos;re matched by record, so a 2–0 team plays another 2–0.
+            <b>3 losses</b>{" "}(gone). They&apos;re matched by record, so a 2–0 team plays another 2–0.
           </p>
         </div>
         <div className="sgc-swiss" role="img" aria-label="Swiss record paths: every team finishes on 3–0, 3–1 or 3–2 (through), or 0–3, 1–3 or 2–3 (out).">

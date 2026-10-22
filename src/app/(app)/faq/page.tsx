@@ -32,7 +32,7 @@ const CATEGORIES = [
         a: (
           <>
             <p>
-              <b>When Valve opens Pick&apos;Em for the Major.</b> HOTLINE mirrors Valve&apos;s Pick&apos;Em,
+              <b>When Valve opens Pick&apos;Em for the Major.</b>{" "}HOTLINE mirrors Valve&apos;s Pick&apos;Em,
               so the stages, the teams, Steam sync and the Viewer Pass all arrive together.
             </p>
             <p>Until then the picks page reads &quot;not open&quot;, and the countdown on Home runs to Stage I.</p>
@@ -49,7 +49,7 @@ const CATEGORIES = [
               souvenir drops from matches you watch.
             </p>
             <p>
-              You only need it to <b>sync with Steam</b> — playing on HOTLINE itself is free. Valve
+              You only need it to <b>sync with Steam</b>{" "}— playing on HOTLINE itself is free. Valve
               puts it on sale when Pick&apos;Em opens.
             </p>
           </>
@@ -116,7 +116,7 @@ const CATEGORIES = [
           <>
             <p>
               Yes. Once every call in a stage is made, you can <b>seal</b> it. Choose <b>Public</b> and
-              your calls show on your profile and in head-to-head straight away. Choose <b>Hidden</b> and
+              your calls show on your profile and in head-to-head straight away. Choose <b>Hidden</b>{" "}and
               they stay private until the stage locks, like everyone else&apos;s.
             </p>
             <p>
@@ -140,7 +140,7 @@ const CATEGORIES = [
         a: (
           <p>
             Yes. Tap any player on the <Link href="/leaderboard" prefetch={false}>leaderboard</Link> to
-            open their profile, then hit <b>Compare with mine</b> to see both sets side by side for every
+            open their profile, then hit <b>Compare with mine</b>{" "}to see both sets side by side for every
             revealed stage, plus any stage they&apos;ve sealed public.
           </p>
         ),
@@ -215,7 +215,7 @@ const CATEGORIES = [
         a: (
           <>
             <p>
-              You give HOTLINE a <b>Game Authentication Code</b> from Steam Help, and it reads your
+              You give HOTLINE a <b>Game Authentication Code</b>{" "}from Steam Help, and it reads your
               in-game Pick&apos;Em. You need this Major&apos;s Viewer Pass and to have made picks in the
               in-game Pick&apos;Em, so sync starts once Valve opens Pick&apos;Em.
             </p>

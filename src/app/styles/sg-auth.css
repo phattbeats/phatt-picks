@@ -115,10 +115,11 @@
 .sg-authcode .main{display:grid;gap:28px;min-width:0}
 @media(min-width:1024px){.sg-authcode .lay{grid-template-columns:minmax(0,1fr) 400px;gap:64px;align-items:start}.sg-authcode .side{position:sticky;top:96px}}
 .sg-authcode .pre{display:grid;grid-template-columns:auto 1fr;gap:14px;padding:18px 20px;border:1px solid rgba(240,163,0,.35);border-radius:var(--r-md);background:var(--surf-1)}
-.sg-authcode .pre .tag{align-self:start}
+.sg-authcode .pre .tag{align-self:start;justify-self:start;grid-row:1 / span 3}
+.sg-authcode .pre>:not(.tag){grid-column:2}
 .sg-authcode .pre p{font-size:15px;color:var(--ink-mid);text-wrap:pretty}
 .sg-authcode .pre p b,.sg-authcode .steps p b,.sg-authcode .shot b{color:var(--ink-hi);font-weight:500}
-@media(max-width:480px){.sg-authcode .pre{grid-template-columns:1fr}.sg-authcode .pre .tag{justify-self:start}}
+@media(max-width:480px){.sg-authcode .pre{grid-template-columns:1fr}.sg-authcode .pre .tag{grid-row:auto}.sg-authcode .pre>:not(.tag){grid-column:auto}}
 .sg-authcode .steps .step-cta{margin-top:14px}
 .sg-authcode .shot{margin-top:14px;display:grid;gap:6px;padding:14px 16px;border:1px dashed var(--hair-2);border-radius:var(--r-md);background:var(--surf-1);font-size:13px;color:var(--ink-mid);line-height:1.5}
 .sg-authcode .shot .k{font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-low)}

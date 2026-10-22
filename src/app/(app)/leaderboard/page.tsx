@@ -264,7 +264,7 @@ async function FinalBoard({ event }: { event: EventConfig }) {
         {hero(null)}
         {backLink}
         <p className="rk-note">
-          Final scores for <b>{eventName}</b> aren&apos;t available on this build. Every pick is stored — the board
+          Final scores for <b>{eventName}</b>{" "}aren&apos;t available on this build. Every pick is stored — the board
           returns when its layout is restored.
         </p>
       </div>

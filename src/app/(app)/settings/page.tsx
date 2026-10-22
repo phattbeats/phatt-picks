@@ -181,7 +181,7 @@ export default async function SettingsPage() {
                   </div>
                   <p className="s">
                     <b>iPhone:</b> tap Share → Add to Home Screen, then open HOTLINE from the new icon.{" "}
-                    <b>Android / desktop:</b> use your browser&apos;s &ldquo;Install app&rdquo; option.
+                    <b>Android / desktop:</b>{" "}use your browser&apos;s &ldquo;Install app&rdquo; option.
                   </p>
                 </div>
               </div>

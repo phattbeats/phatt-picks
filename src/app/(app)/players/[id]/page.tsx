@@ -439,7 +439,7 @@ export default async function PlayerProfilePage({
         </div>
         {preOpen && (
           <p className="muted">
-            <b>Pick&apos;Em isn&apos;t open yet.</b> Every stage shows up here once Valve opens Pick&apos;Em for this Major.
+            <b>Pick&apos;Em isn&apos;t open yet.</b>{" "}Every stage shows up here once Valve opens Pick&apos;Em for this Major.
           </p>
         )}
         <div className="pp-stages">

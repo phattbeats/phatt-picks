@@ -2,7 +2,7 @@
  * Challenge coin case (#1278) — the collectible on a player's profile, kept the
  * way a collector keeps a struck coin: in a protective case, each Major's coin
  * resting in its own recessed felt slot with an engraved plate beneath it
- * (Major · metal · finish). Server component — it lays out the Blender-rendered
+ * (Major, holder, metal · finish). Server component — it lays out the Blender-rendered
  * coin art (public/coins, see scripts/coins/) the pure core resolves; tapping a
  * coin opens the drag-to-rotate inspector.
  *
@@ -60,6 +60,7 @@ export function CoinSlot({
       {title && (
         <div className="cc-plate">
           <span className="cc-plate-nm">{title}</span>
+          {coin?.holder && <span className="cc-plate-who">{coin.holder}</span>}
           {sub && <span className={`cc-plate-sub${subTier ? ` ${subTier}` : ""}`}>{sub}</span>}
         </div>
       )}
@@ -87,7 +88,7 @@ export function caseViewFor(items: CaseItem[], i: number): CaseView {
     index: i - start,
     slots: items.slice(start, start + 4).map((it) => ({
       art: it.coin ? coinArtSrc(it.coin.slug, it.coin.tier) : null,
-      plate: it.title ? { title: it.title, sub: it.sub ?? null } : null,
+      plate: it.title ? { title: it.title, who: it.coin?.holder ?? null, sub: it.sub ?? null } : null,
     })),
   };
 }

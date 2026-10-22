@@ -98,6 +98,12 @@
   text-shadow: 0 -1px 0 rgba(0,0,0,0.85), 0 1px 0 rgba(255,255,255,0.06);
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+.cc-plate-who {
+  font-family: var(--font-display); font-weight: 700; font-size: 11px; line-height: 1;
+  text-transform: uppercase; letter-spacing: 0.08em; color: #b9b6ae;
+  text-shadow: 0 -1px 0 rgba(0,0,0,0.85);
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .cc-plate-sub {
   font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
   color: var(--ink-mid); text-shadow: 0 -1px 0 rgba(0,0,0,0.85); white-space: nowrap;
@@ -118,6 +124,7 @@
   .cc-plate { left: 7%; right: 7%; padding: 6px 10px 5px; }
   .cc-plate-nm { font-size: 12px; }
   .cc-plate-sub { font-size: 8px; letter-spacing: 0.12em; }
+  .cc-plate-who { font-size: 9px; }
 }
 
 /* ── coin-holders page (/coins) ── */

@@ -148,7 +148,7 @@ export default async function ComparePage({
             </span>
             <h2>Not on this build</h2>
             <p>
-              Picks for <b>{eventName}</b> are stored but can&apos;t be laid out here yet.
+              Picks for <b>{eventName}</b>{" "}are stored but can&apos;t be laid out here yet.
             </p>
           </div>
           <div className="cta">
@@ -646,7 +646,7 @@ export default async function ComparePage({
                       <span>{ppp}</span>
                     </div>
                     <p className="cmp-locked">
-                      <LockIcon size={11} /> Both players&apos; picks unlock when this stage starts — or as soon as
+                      <LockIcon size={11} />{" "}Both players&apos; picks unlock when this stage starts — or as soon as
                       one seals them public
                     </p>
                   </div>
