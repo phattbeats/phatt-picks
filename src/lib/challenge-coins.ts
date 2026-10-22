@@ -33,6 +33,8 @@ interface ScoredField {
   ranked: string[];
   /** Non-cleared pick count per player. */
   pickCountById: Record<string, number>;
+  /** Display name per player (engraved on their coin). */
+  nameById: Record<string, string>;
 }
 
 /** The layout fixture that describes a given event, or null if not loadable. */
@@ -81,7 +83,7 @@ async function scoreField(eventId: number): Promise<ScoredField> {
   const ranked = [...playerIds].sort(
     (a, b) => scoreById[b] - scoreById[a] || (nameById[a] ?? "").localeCompare(nameById[b] ?? ""),
   );
-  return { scored: layout != null, ranked, pickCountById };
+  return { scored: layout != null, ranked, pickCountById, nameById };
 }
 
 /** Newest Major first by start date (registry `dates.start`), slug as a tiebreak. */
@@ -106,6 +108,7 @@ function coinInputAt(
     finish: field.scored ? computeFinish(playerId, field.ranked) : null,
     fieldSize: field.ranked.length,
     earnedAtMs: mintedAtMs,
+    holder: field.nameById[playerId] ?? null,
   };
 }
 

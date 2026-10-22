@@ -80,6 +80,7 @@ const DEMO_COINS: ChallengeCoin[] = COIN_TIERS.map((tier) => ({
   finish: null,
   fieldSize: 0,
   earnedAtMs: 0,
+  holder: "Your name",
 }));
 
 export default async function HowToPlayPage() {

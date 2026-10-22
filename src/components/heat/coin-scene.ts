@@ -7,6 +7,10 @@
  * studio of softbox panels (like the render rig), so the metal throws hard
  * reflections that slide across it as you turn it.
  *
+ * The reverse carries the holder's name, struck at load time into the shared
+ * back maps (engrave) with the same bevel and heights build-coin-maps.py uses,
+ * so it reads as part of the die rather than a label on top.
+ *
  * Loaded on demand by CoinInspector (dynamic import), so three.js only ships to
  * people who open a coin. Geometry constants mirror render-coin.py.
  */
@@ -21,6 +25,10 @@ const RIM_LIP_H = 0.38; // relief height at the very edge (build-coin-maps.py)
 const REEDS = 192;
 const GEM_RING = 0.7935;
 const GEM_R = 0.05;
+// Relief levels and the inner field edge, from build-coin-maps.py.
+const H_RELIEF = 0.86;
+const R_FIELD = 0.695;
+const COIN_FONT = '"Big Shoulders Display", Impact, sans-serif';
 
 /** Tier palettes, linear RGB (render-coin.py TIERS). */
 const TIERS: Record<CoinTier, { metal: [number, number, number]; frost: number; enamel: [number, number, number]; patina: number }> = {
@@ -36,6 +44,8 @@ export interface CoinSceneOptions {
   /** Map prefixes under /public, e.g. "/coins/3d/iem-cologne-2026-gold" (adds -h/-n/-s.webp). */
   front: string;
   back: string;
+  /** Struck into the reverse below the CS2 mark; omit for an unnamed coin. */
+  inscription?: { name: string; line?: string | null } | null;
   reducedMotion: boolean;
 }
 
@@ -110,19 +120,198 @@ function polarDisc(rings: number, segs: number): THREE.BufferGeometry {
   return g;
 }
 
+function toCanvas(img: HTMLImageElement): HTMLCanvasElement {
+  const c = document.createElement("canvas");
+  c.width = img.naturalWidth;
+  c.height = img.naturalHeight;
+  c.getContext("2d", { willReadFrequently: true })!.drawImage(img, 0, 0);
+  return c;
+}
+
+/** Separable gaussian blur of a w×h float field, in place. */
+function blur(a: Float32Array, w: number, h: number, sigma: number) {
+  const r = Math.ceil(sigma * 3);
+  const k = new Float32Array(2 * r + 1);
+  let sum = 0;
+  for (let i = -r; i <= r; i++) sum += k[i + r] = Math.exp(-(i * i) / (2 * sigma * sigma));
+  for (let i = 0; i < k.length; i++) k[i] /= sum;
+  const tmp = new Float32Array(a.length);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      let v = 0;
+      for (let i = -r; i <= r; i++) v += a[y * w + Math.min(w - 1, Math.max(0, x + i))] * k[i + r];
+      tmp[y * w + x] = v;
+    }
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      let v = 0;
+      for (let i = -r; i <= r; i++) v += tmp[Math.min(h - 1, Math.max(0, y + i)) * w + x] * k[i + r];
+      a[y * w + x] = v;
+    }
+}
+
+/**
+ * Where to wrap a long name: the separator (space, _, -, .) or case/digit
+ * change nearest the middle, else the middle itself. Null when it's too short
+ * to be worth wrapping.
+ */
+function splitName(name: string): [string, string] | null {
+  const chars = [...name];
+  if (chars.length < 12) return null;
+  let best = -1;
+  for (let i = 2; i < chars.length - 2; i++) {
+    const prev = chars[i - 1];
+    const cur = chars[i];
+    const sep = /[\s_\-.]/.test(prev);
+    const shift = (/[a-z]/.test(prev) && /[A-Z]/.test(cur)) || (/[A-Za-z]/.test(prev) && /\d/.test(cur));
+    if ((sep || shift) && (best < 0 || Math.abs(i - chars.length / 2) < Math.abs(best - chars.length / 2))) best = i;
+  }
+  if (best < 0 || Math.abs(best - chars.length / 2) > chars.length / 4) best = Math.ceil(chars.length / 2);
+  const a = chars.slice(0, best).join("").trim();
+  const b = chars.slice(best).join("").trim();
+  return a && b ? [a, b] : null;
+}
+
+/**
+ * Strike the holder's name into the reverse's field, under the CS2 mark:
+ * a small "STRUCK FOR", the name, and the finish beneath. The letters are
+ * raised to the same height as the rest of the die lettering, with the same
+ * rounded shoulder, polished against the frosted field. Edits the three back
+ * maps (as canvases) in place, only inside the band the lettering occupies.
+ */
+function engrave(
+  height: HTMLCanvasElement,
+  normal: HTMLCanvasElement,
+  surf: HTMLCanvasElement,
+  text: { name: string; line?: string | null },
+) {
+  const N = height.width;
+  const px = (u: number) => (u * N) / 2; // coin units → pixels
+  // The band below the wordmark, inside the bead ring.
+  const top = Math.round(px(1 + 0.27));
+  const bot = Math.round(px(1 + 0.64));
+  const left = Math.round(px(1 - 0.62));
+  const W = Math.round(px(1 + 0.62)) - left;
+  const H = bot - top;
+
+  const mask = document.createElement("canvas");
+  mask.width = W;
+  mask.height = H;
+  const ctx = mask.getContext("2d", { willReadFrequently: true })!;
+  ctx.fillStyle = "#fff";
+  ctx.textBaseline = "alphabetic";
+
+  ctx.font = `800 100px ${COIN_FONT}`;
+  const emPerCap = 100 / (ctx.measureText("H").actualBoundingBoxAscent || 70);
+  const widthAt = (str: string, capR: number, tracking: number) => {
+    const size = px(capR) * emPerCap;
+    ctx.font = `800 ${size}px ${COIN_FONT}`;
+    return [...str].reduce((w, ch) => w + ctx.measureText(ch).width + tracking * size, -tracking * size);
+  };
+  // Widest the field allows at a line's lower edge.
+  const maxWAt = (cy: number, cap: number) => {
+    const yLow = Math.abs(cy) + cap / 2;
+    return px(2 * Math.sqrt(Math.max(0, (R_FIELD - 0.05) ** 2 - yLow * yLow)));
+  };
+
+  // One line centred on x = 0 with its cap centred on coin y = `cy`
+  // (negative = below centre), shrinking then condensing to fit the field.
+  const line = (str: string, cy: number, cap: number, minCap: number, tracking: number) => {
+    const s = str.toLocaleUpperCase();
+    const maxW = maxWAt(cy, cap);
+    let c = cap;
+    while (c > minCap && widthAt(s, c, tracking) > maxW) c *= 0.96;
+    const w = widthAt(s, c, tracking);
+    const squeeze = Math.min(1, maxW / w);
+    const size = px(c) * emPerCap;
+    ctx.font = `800 ${size}px ${COIN_FONT}`;
+    ctx.save();
+    ctx.translate(px(1) - left, px(1 - cy) + px(c) / 2 - top);
+    ctx.scale(squeeze, 1);
+    let x = -w / 2;
+    for (const ch of s) {
+      ctx.fillText(ch, x, 0);
+      x += ctx.measureText(ch).width + tracking * size;
+    }
+    ctx.restore();
+  };
+
+  const name = text.name.trim();
+  const hasLine = !!text.line;
+  const nameCy = hasLine ? -0.43 : -0.45;
+  const split = splitName(name);
+  line("Struck for", -0.315, 0.044, 0.044, 0.3);
+  // A name too long to stay legible on one line wraps at its natural break.
+  if (split && widthAt(name.toLocaleUpperCase(), 0.08, 0.05) > maxWAt(nameCy, 0.08)) {
+    line(split[0], -0.395, 0.08, 0.045, 0.05);
+    line(split[1], -0.49, 0.08, 0.045, 0.05);
+    if (hasLine) line(text.line!, -0.575, 0.04, 0.034, 0.3);
+  } else {
+    line(name, nameCy, 0.13, 0.05, 0.05);
+    if (hasLine) line(text.line!, -0.56, 0.044, 0.036, 0.3);
+  }
+
+  // Bevel exactly like build-coin-maps.py: blur, steepen, smoothstep.
+  const m = ctx.getImageData(0, 0, W, H).data;
+  const bev = new Float32Array(W * H);
+  for (let i = 0; i < bev.length; i++) bev[i] = m[i * 4] / 255;
+  blur(bev, W, H, 1.6);
+  for (let i = 0; i < bev.length; i++) {
+    const b = Math.min(1, Math.max(0, (bev[i] - 0.5) * 1.35 + 0.5));
+    bev[i] = b * b * (3 - 2 * b);
+  }
+
+  const hctx = height.getContext("2d", { willReadFrequently: true })!;
+  const nctx = normal.getContext("2d", { willReadFrequently: true })!;
+  const sctx = surf.getContext("2d", { willReadFrequently: true })!;
+  const hd = hctx.getImageData(left, top, W, H);
+  const nd = nctx.getImageData(left, top, W, H);
+  const sd = sctx.getImageData(left, top, W, H);
+
+  const hf = new Float32Array(W * H);
+  for (let i = 0; i < hf.length; i++) {
+    const base = hd.data[i * 4] / 255;
+    hf[i] = base + (H_RELIEF - base) * bev[i];
+    const v = Math.round(hf[i] * 255);
+    hd.data[i * 4] = hd.data[i * 4 + 1] = hd.data[i * 4 + 2] = v;
+  }
+  // Normals from the float height (build-inspect-maps.py: slope × RELIEF·N/2).
+  const k = (RELIEF * N) / 2;
+  for (let y = 1; y < H - 1; y++)
+    for (let x = 1; x < W - 1; x++) {
+      const i = y * W + x;
+      if (bev[i - 1] + bev[i + 1] + bev[i - W] + bev[i + W] + bev[i] < 1e-3) continue;
+      const dx = (hf[i + 1] - hf[i - 1]) / 2;
+      const dyImg = (hf[i + W] - hf[i - W]) / 2;
+      const nx = -dx * k;
+      const ny = dyImg * k;
+      const inv = 1 / Math.hypot(nx, ny, 1);
+      nd.data[i * 4] = Math.round((nx * inv * 0.5 + 0.5) * 255);
+      nd.data[i * 4 + 1] = Math.round((ny * inv * 0.5 + 0.5) * 255);
+      nd.data[i * 4 + 2] = Math.round((inv * 0.5 + 0.5) * 255);
+    }
+  // Polished letters on the frosted field.
+  for (let i = 0; i < bev.length; i++) {
+    if (bev[i] < 1e-3) continue;
+    const p = sd.data[i * 4] / 255;
+    const e = sd.data[i * 4 + 1] / 255;
+    const polish = Math.max(p, bev[i]);
+    sd.data[i * 4] = Math.round(polish * 255);
+    sd.data[i * 4 + 2] = Math.round(Math.max(0, 1 - polish - e) * 255);
+  }
+  hctx.putImageData(hd, left, top);
+  nctx.putImageData(nd, left, top);
+  sctx.putImageData(sd, left, top);
+}
+
 /**
  * Turn a face's surface mask (R polish, G enamel, B frosted, A cavity) into the
  * tier's albedo, roughness/metalness and clearcoat maps.
  */
-function surfaceTextures(img: HTMLImageElement, tier: CoinTier) {
-  const w = img.naturalWidth;
-  const h = img.naturalHeight;
-  const read = document.createElement("canvas");
-  read.width = w;
-  read.height = h;
-  const rctx = read.getContext("2d", { willReadFrequently: true })!;
-  rctx.drawImage(img, 0, 0);
-  const src = rctx.getImageData(0, 0, w, h).data;
+function surfaceTextures(read: HTMLCanvasElement, tier: CoinTier) {
+  const w = read.width;
+  const h = read.height;
+  const src = read.getContext("2d", { willReadFrequently: true })!.getImageData(0, 0, w, h).data;
 
   const mk = () => {
     const c = document.createElement("canvas");
@@ -323,27 +512,28 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
   coin.add(new THREE.Mesh(wallGeo, wallMat));
   disposables.push(wallGeo, wallMat, reed);
 
-  const loader = new THREE.TextureLoader();
-  const loadTex = (src: string) =>
-    new Promise<THREE.Texture>((resolve, reject) => {
-      loader.load(src, (t) => resolve(t), undefined, reject);
-    });
-
   const rings = 320;
   const segs = 640;
   const discGeo = polarDisc(rings, segs);
   disposables.push(discGeo);
 
-  async function face(prefix: string, side: 1 | -1) {
-    const [height, normal, surfImg] = await Promise.all([
-      loadTex(`${prefix}-h.webp`),
-      loadTex(`${prefix}-n.webp`),
+  async function face(prefix: string, side: 1 | -1, inscription?: CoinSceneOptions["inscription"]) {
+    const [hImg, nImg, sImg] = await Promise.all([
+      loadImage(`${prefix}-h.webp`),
+      loadImage(`${prefix}-n.webp`),
       loadImage(`${prefix}-s.webp`),
+      inscription ? document.fonts?.load(`800 100px ${COIN_FONT}`).catch(() => null) : null,
     ]);
+    const hCan = toCanvas(hImg);
+    const nCan = toCanvas(nImg);
+    const sCan = toCanvas(sImg);
+    if (inscription?.name.trim()) engrave(hCan, nCan, sCan, inscription);
+    const height = new THREE.CanvasTexture(hCan);
+    const normal = new THREE.CanvasTexture(nCan);
     height.colorSpace = THREE.NoColorSpace;
     normal.colorSpace = THREE.NoColorSpace;
     normal.anisotropy = 8;
-    const { map, orm, coat } = surfaceTextures(surfImg, tier);
+    const { map, orm, coat } = surfaceTextures(sCan, tier);
     const mat = new THREE.MeshPhysicalMaterial({
       map,
       roughnessMap: orm,
@@ -391,7 +581,7 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
     disposables.push(gemGeo, gemMat);
   }
 
-  const ready = Promise.all([face(opts.front, 1), face(opts.back, -1)]).then(() => undefined);
+  const ready = Promise.all([face(opts.front, 1), face(opts.back, -1, opts.inscription)]).then(() => undefined);
 
   // ── motion ──
   const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.22, 0.35, 0));

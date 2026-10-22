@@ -17,28 +17,14 @@
  */
 
 import Link from "next/link";
-import { type ChallengeCoin } from "@/lib/challenge-coin-core";
-import { InspectableCoin } from "@/components/heat/CoinInspector";
+import { finishLabel, type ChallengeCoin } from "@/lib/challenge-coin-core";
 
-function ordSuffix(n: number): string {
-  const v = n % 100;
-  if (v >= 11 && v <= 13) return "th";
-  switch (n % 10) {
-    case 1: return "st";
-    case 2: return "nd";
-    case 3: return "rd";
-    default: return "th";
-  }
-}
+export { finishLabel };
+import { InspectableCoin } from "@/components/heat/CoinInspector";
 
 /** Display name without the long "CS2 Major Championship" tail. */
 export function coinShortName(name: string): string {
   return name.replace(/\s+CS2 Major Championship$/i, "");
-}
-
-/** "2nd of 7", or null when the finish is unknown. */
-export function finishLabel(finish: number | null, fieldSize: number): string | null {
-  return finish != null ? `${finish}${ordSuffix(finish)} of ${fieldSize}` : null;
 }
 
 /**

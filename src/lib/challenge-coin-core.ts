@@ -85,6 +85,8 @@ export interface CoinInput {
   /** When the Major concluded (archive instant, epoch ms) — when the coin was
    *  minted. Drives the "coin earned" notification's sort/unread (#1278). */
   earnedAtMs: number;
+  /** The player's display name, struck into the coin's reverse. */
+  holder?: string | null;
 }
 
 /** A coin the player owns, ready to render on the shelf. */
@@ -98,6 +100,8 @@ export interface ChallengeCoin {
   fieldSize: number;
   /** Archive instant (epoch ms) the coin was minted at. */
   earnedAtMs: number;
+  /** Whose coin it is: engraved on the reverse. Null/absent = an unnamed sample. */
+  holder?: string | null;
 }
 
 /** A coin mints when the player took part AND the Major has concluded. */
@@ -159,6 +163,22 @@ export function coinMapPrefixes(slug: string, tier: CoinTier): { front: string; 
   };
 }
 
+function ordSuffix(n: number): string {
+  const v = n % 100;
+  if (v >= 11 && v <= 13) return "th";
+  switch (n % 10) {
+    case 1: return "st";
+    case 2: return "nd";
+    case 3: return "rd";
+    default: return "th";
+  }
+}
+
+/** "2nd of 7", or null when the finish is unknown. */
+export function finishLabel(finish: number | null, fieldSize: number): string | null {
+  return finish != null ? `${finish}${ordSuffix(finish)} of ${fieldSize}` : null;
+}
+
 /**
  * Derive the minted coins from a player's per-Major rows (already scored by the
  * caller, exactly as /majors does). Only earned coins come back; tier is decided
@@ -176,6 +196,7 @@ export function deriveChallengeCoins(inputs: readonly CoinInput[]): ChallengeCoi
       finish: i.finish,
       fieldSize: i.fieldSize,
       earnedAtMs: i.earnedAtMs,
+      holder: i.holder ?? null,
     });
   }
   return coins;

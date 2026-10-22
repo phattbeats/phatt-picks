@@ -87,7 +87,7 @@ function StruckMajor({ roll, viewerId }: { roll: MajorCoinRoll; viewerId: string
           return (
             <div key={tier} className="ch-tier">
               <div className="ch-coin">
-                <InspectableCoin coin={{ ...art, finish: null }} size={112} delay={ti * 1.2} />
+                <InspectableCoin coin={{ ...art, finish: null, holder: null }} size={112} delay={ti * 1.2} />
               </div>
               <div className="ch-tier-k">
                 <span className={`ch-tier-nm ${tier}`}>{tier}</span>

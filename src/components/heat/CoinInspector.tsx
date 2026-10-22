@@ -6,7 +6,8 @@
  * reflective tier metal, glossy enamel, a reeded edge and (diamond) cut stones
  * (coin-scene.ts, loaded only when a coin is opened). Drag to turn it, flick to
  * set it spinning, double-tap or Flip to toss it, scroll or pinch to zoom in on
- * the strike. The key light follows the pointer so the metal catches it.
+ * the strike. The key light follows the pointer so the metal catches it. The
+ * reverse is struck with the holder's name and finish (coin.holder).
  *
  * Without WebGL, or for a Major whose 3D maps haven't been built, it falls back
  * to the CSS coin: the rendered front and back faces on a reeded wall.
@@ -14,7 +15,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { coinArtSrc, coinBackSrc, coinMapPrefixes, type ChallengeCoin } from "@/lib/challenge-coin-core";
+import { coinArtSrc, coinBackSrc, coinMapPrefixes, finishLabel, type ChallengeCoin } from "@/lib/challenge-coin-core";
 import type { CoinScene } from "./coin-scene";
 
 /** Number of flat strips approximating the cylinder's reeded (ribbed) edge. */
@@ -34,6 +35,8 @@ export function CoinInspector({
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef<number | null>(null);
   const lastTap = useRef(0);
+  const holder = coin.holder?.trim() || null;
+  const finishLine = finishLabel(coin.finish, coin.fieldSize);
 
   // Size the stage to the viewport: big enough to read the strike.
   useEffect(() => {
@@ -52,7 +55,13 @@ export function CoinInspector({
         const mod = await import("./coin-scene");
         if (cancelled || !canvasRef.current || !mod.webglAvailable()) throw new Error("no webgl");
         const reduced = !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-        scene = mod.createCoinScene({ canvas: canvasRef.current, tier: coin.tier, reducedMotion: reduced, ...coinMapPrefixes(coin.slug, coin.tier) });
+        scene = mod.createCoinScene({
+          canvas: canvasRef.current,
+          tier: coin.tier,
+          reducedMotion: reduced,
+          inscription: holder ? { name: holder, line: finishLine } : null,
+          ...coinMapPrefixes(coin.slug, coin.tier),
+        });
         sceneRef.current = scene;
         await scene.ready;
         if (!cancelled) setMode("webgl");
@@ -67,7 +76,7 @@ export function CoinInspector({
       scene?.dispose();
       sceneRef.current = null;
     };
-  }, [coin.slug, coin.tier]);
+  }, [coin.slug, coin.tier, holder, finishLine]);
 
   useEffect(() => {
     sceneRef.current?.resize(px);
@@ -143,7 +152,7 @@ export function CoinInspector({
         <button className="coin-inspect-close" onClick={onClose} aria-label="Close">×</button>
 
         {mode === "css" ? (
-          <CssCoin coin={coin} />
+          <CssCoin coin={coin} holder={holder} line={finishLine} />
         ) : (
           <div className="coin-inspect-gl" style={{ width: px, height: px }}>
             {mode === "loading" && (
@@ -180,7 +189,9 @@ export function CoinInspector({
                 <button type="button" onClick={() => sceneRef.current?.zoom(1 / 0.7)} aria-label="Zoom out">−</button>
                 <button type="button" onClick={() => sceneRef.current?.reset()}>Reset</button>
               </div>
-              <span className="coin-inspect-hint">Drag to turn · flick to spin · double-tap to flip · scroll or pinch to zoom</span>
+              <span className="coin-inspect-hint">
+                Drag to turn · flick to spin · double-tap to flip{holder ? " for the engraving" : ""} · scroll or pinch to zoom
+              </span>
             </>
           ) : (
             <span className="coin-inspect-hint">{mode === "loading" ? "Striking the coin…" : "Drag to rotate"}</span>
@@ -200,7 +211,7 @@ export function CoinInspector({
  * rendered front and back faces on a CSS `preserve-3d` disc with a reeded wall.
  * Idles with a slow auto-spin; a drag takes over and a release coasts.
  */
-function CssCoin({ coin }: { coin: ChallengeCoin }) {
+function CssCoin({ coin, holder, line }: { coin: ChallengeCoin; holder: string | null; line: string | null }) {
   const DIAM = 300; // on-screen coin diameter (px)
   const THICK = 27; // coin thickness (px) — matches the render (0.15 R body + relief)
   // Rim sits flush at the disc edge (art is cropped to the disc, so the face
@@ -293,6 +304,13 @@ function CssCoin({ coin }: { coin: ChallengeCoin }) {
           <div className="coin3d-face" style={{ transform: `rotateY(180deg) translateZ(${THICK / 2}px)` }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={back} alt="" width={DIAM} height={DIAM} draggable={false} />
+            {holder && (
+              <span className={`coin3d-engrave ${coin.tier}`}>
+                <small>Struck for</small>
+                <b style={{ fontSize: holder.length > 14 ? 15 : 24 }}>{holder}</b>
+                {line && <small>{line}</small>}
+              </span>
+            )}
             <span className={`coin3d-shine ${coin.tier}`} aria-hidden="true" />
           </div>
           {/* Reeded edge — a true cylinder wall about the coin's own (Z)
