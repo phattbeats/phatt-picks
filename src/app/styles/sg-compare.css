@@ -81,3 +81,9 @@
 .cmp-cell.r .bleachers{justify-content:flex-end}
 /* the stamp tray opens toward the page centre from the right-hand cell */
 .cmp-cell.r .bleach-options{left:auto;right:0}
+/* Major switcher in the hero: same two players, another Major. */
+.cmp-majors{margin:14px 0 6px;flex-wrap:wrap;border-bottom-color:rgba(255,255,255,.14)}
+.cmp-majors a{color:var(--ink-mid);text-decoration:none;min-height:40px;display:inline-flex;align-items:center}
+.cmp-majors a:hover{color:var(--ink-hi)}
+.cmp-majors .off{color:var(--ink-low);font-family:var(--font-mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;padding:10px 0;min-height:40px;display:inline-flex;align-items:center;opacity:.7}
+@media(max-width:600px){.cmp-hero .credit{top:auto;bottom:10px}}

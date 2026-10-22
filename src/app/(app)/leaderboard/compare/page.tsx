@@ -18,13 +18,17 @@
  *
  * `?major=<slug>` compares a past registered event (read-only: no outcome
  * refresh, no reactions, entrants only). Unknown / current slug → live event.
+ * With no `?major` and the live Major's Pick'Em not open yet (no layout, so
+ * nothing to compare), it opens on the last concluded Major instead. A Major
+ * switcher in the hero moves the same two players between Majors.
  */
 
 import { LockIcon } from "@/components/ui/LockIcon";
 import Image from "next/image";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { getCommittedLayout, buildTeamMap, type TeamDef } from "@/lib/layout";
+import { buildTeamMap, type TeamDef } from "@/lib/layout";
+import { getEffectiveLayout } from "@/lib/layout-state";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
 import { arePicksRevealed, groupOutcomeKey } from "@/lib/reveal-core";
 import { getSession } from "@/lib/session";
@@ -42,7 +46,8 @@ import {
 } from "@/lib/swiss-bucket-core";
 import { isBucketImpossibleByRecord } from "@/lib/swiss-standings-core";
 import { getSwissRecords } from "@/lib/swiss-results";
-import { currentEvent } from "@/lib/events-core";
+import { currentEvent, previousMajor, EVENTS, type EventConfig } from "@/lib/events-core";
+import { resolveEffectiveStatus } from "@/lib/event-lifecycle-core";
 import { isRevealForcedById } from "@/lib/event-freeze";
 import { eventShortName, layoutForEvent, resolveArchiveEvent } from "@/lib/leaderboard";
 import { RankAvatar } from "@/components/sg/ranks/RankAvatar";
@@ -128,16 +133,35 @@ export default async function ComparePage({
   searchParams: Promise<{ a?: string; b?: string; major?: string }>;
 }) {
   const params = await searchParams;
-  const archive = resolveArchiveEvent(params.major);
-  // Per-request active event (#1046), or the requested past Major.
-  const event = archive ?? currentEvent();
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now();
+  const live = currentEvent(nowMs);
+  // The live Major's own layout (null until Valve opens its Pick'Em). Never
+  // another event's fixture.
+  const liveLayout = await getEffectiveLayout(live.eventId);
+  // Requested past Major; else, while the live Major has nothing to compare,
+  // the last concluded one.
+  const fallback = !params.major && !liveLayout ? previousMajor(nowMs) : null;
+  const archive = resolveArchiveEvent(params.major, nowMs) ?? (fallback && layoutForEvent(fallback.eventId) ? fallback : null);
+  // Per-request active event (#1046), or the past Major being shown.
+  const event = archive ?? live;
   const EVENT_ID = event.eventId;
+
+  // Major switcher: the live Major plus every concluded one this build can lay
+  // out, newest first. The live tab is inert until its Pick'Em opens.
+  const majors: { event: EventConfig; open: boolean }[] = [
+    { event: live, open: !!liveLayout },
+    ...Object.values(EVENTS)
+      .filter((e) => e.eventId !== live.eventId && resolveEffectiveStatus(e, nowMs) === "archived" && layoutForEvent(e.eventId))
+      .sort((x, y) => Date.parse(y.dates.start) - Date.parse(x.dates.start))
+      .map((e) => ({ event: e, open: true })),
+  ];
   const eventName = eventShortName(event);
   const majorQ = archive ? `major=${encodeURIComponent(archive.slug)}&` : "";
   const boardHref = archive ? `/leaderboard?major=${encodeURIComponent(archive.slug)}` : "/leaderboard";
   const compareHref = (aId: string, bId: string) => `/leaderboard/compare?${majorQ}a=${encodeURIComponent(aId)}&b=${encodeURIComponent(bId)}`;
 
-  const layout = archive ? layoutForEvent(EVENT_ID) : getCommittedLayout();
+  const layout = archive ? layoutForEvent(EVENT_ID) : liveLayout;
   if (!layout) {
     return (
       <div className="rk-page">
@@ -178,11 +202,9 @@ export default async function ComparePage({
       }),
   );
 
-  // Per-request server clock for the published lock schedule (#898): a stage
-  // that has begun reveals its picks for comparison even before Valve flips
-  // picks_allowed or a result lands. Dynamic RSC, so reading the time is intended.
-  // eslint-disable-next-line react-hooks/purity
-  const nowMs = Date.now();
+  // nowMs (above) is the per-request clock for the published lock schedule
+  // (#898): a stage that has begun reveals its picks for comparison even before
+  // Valve flips picks_allowed or a result lands.
 
   // #954: once the Major is effectively archived (its real Grand Final
   // resolved), every stage is public history regardless of its per-stage lock —
@@ -449,6 +471,32 @@ export default async function ComparePage({
             Head to head · <b>{eventName}</b>
             {archive ? " · final" : ""}
           </span>
+          {majors.length > 1 && (
+            <nav className="tabs cmp-majors rise" aria-label="Major">
+              {majors.map(({ event: m, open }) => {
+                const on = m.eventId === EVENT_ID;
+                const label = eventShortName(m);
+                if (!open)
+                  return (
+                    <span key={m.eventId} className="off" title="Opens when Valve opens Pick'Em">
+                      {`${label} · opens with Pick'Em`}
+                    </span>
+                  );
+                const q = m.eventId === live.eventId ? "" : `major=${encodeURIComponent(m.slug)}&`;
+                return (
+                  <Link
+                    key={m.eventId}
+                    href={`/leaderboard/compare?${q}a=${encodeURIComponent(aId)}&b=${encodeURIComponent(bId)}`}
+                    prefetch={false}
+                    className={on ? "on" : undefined}
+                    aria-current={on ? "page" : undefined}
+                  >
+                    {label}
+                  </Link>
+                );
+              })}
+            </nav>
+          )}
           <h1 className="rk-sr">Compare</h1>
           <div className="cmp-duel rise d1">
             {side(a, aScore, aIsYou, "l")}
