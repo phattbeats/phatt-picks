@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { TapDemo } from "@/components/sg/content/TapDemo";
 import { COIN_TIERS, type ChallengeCoin, type CoinTier } from "@/lib/challenge-coin-core";
-import { CoinCase, CoinSlot } from "@/components/heat/ChallengeCoinShelf";
+import { CoinCase, CoinSlot, caseViewFor, type CaseItem } from "@/components/heat/ChallengeCoinShelf";
 import { currentEventId } from "@/lib/events-core";
 import { isPickemOpen } from "@/lib/layout-state";
 import { PHOTOS } from "@/lib/photos";
@@ -81,6 +81,12 @@ const DEMO_COINS: ChallengeCoin[] = COIN_TIERS.map((tier) => ({
   fieldSize: 0,
   earnedAtMs: 0,
   holder: "Your name",
+}));
+
+const DEMO_CASE: CaseItem[] = DEMO_COINS.map((coin) => ({
+  coin,
+  title: TIER_COPY[coin.tier].name,
+  sub: TIER_COPY[coin.tier].rule,
 }));
 
 export default async function HowToPlayPage() {
@@ -311,14 +317,15 @@ export default async function HowToPlayPage() {
         </div>
         <div className="sgc-coin-case">
           <CoinCase slots={DEMO_COINS.length}>
-            {DEMO_COINS.map((coin, i) => (
+            {DEMO_CASE.map((it, i) => (
               <CoinSlot
-                key={coin.tier}
-                coin={coin}
-                title={TIER_COPY[coin.tier].name}
-                sub={TIER_COPY[coin.tier].rule}
-                subTier={coin.tier}
+                key={it.coin!.tier}
+                coin={it.coin}
+                title={it.title}
+                sub={it.sub}
+                subTier={it.coin!.tier}
                 delay={i * 1.3}
+                caseView={caseViewFor(DEMO_CASE, i)}
               />
             ))}
           </CoinCase>

@@ -63,7 +63,7 @@
 .cc-hinge i:first-child { left: 14%; }
 .cc-hinge i:last-child { right: 14%; }
 .cc-bed {
-  display: grid; grid-template-columns: repeat(var(--cols, 3), var(--slot-w)); gap: 5px;
+  display: grid; grid-template-columns: repeat(var(--cols, 3), minmax(0, var(--slot-w))); gap: 5px;
   padding: 5px; border-radius: var(--r-sm); background: #040507;
   box-shadow: inset 0 2px 5px rgba(0,0,0,0.9);
 }

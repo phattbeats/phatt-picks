@@ -7,10 +7,15 @@
  * studio of softbox panels (like the render rig), so the metal throws hard
  * reflections that slide across it as you turn it.
  *
- * It opens with the coin in its case: the glass lid swings up on its hinge and
- * the coin lifts off the felt and turns to you (caseModel; any input skips it,
- * reduced motion never plays it). It renders supersampled so edges and fine
- * lettering stay crisp.
+ * It opens on the player's case, four felt slots filled as on their profile:
+ * the glass lid swings up, the view closes in on the chosen coin and it lifts
+ * off the felt to face you (caseModel; any input skips it, reduced motion never
+ * plays it).
+ *
+ * GPU budget: it draws only while something moves, at screen density (and
+ * lower if frames run slow), then lays down one supersampled frame when the
+ * coin settles, so a resting coin is crisp and costs nothing. Low-spec devices
+ * get 1024px maps and a lighter mesh.
  *
  * The reverse carries the holder's name, struck at load time into the shared
  * back maps (engrave) with the same bevel and heights build-coin-maps.py uses,
@@ -45,9 +50,18 @@ const WELL_DY = 90 / 228;
 const FELT_Z = -(T / 2 + RIM_LIP_H * RELIEF) - 0.004;
 const LID_Z = FELT_Z + 0.44;
 const CASE_M = 0.16; // shell wall / lid frame width
-const INTRO_MS = 2900;
-const INTRO_DIST = 9.4;
+const CASE_GAP = 0.06; // felt-to-felt gap between slots (.cc-bed gap)
+const CASE_SLOTS = 4;
+const INTRO_MS = 3400;
+const INTRO_WIDE = 24; // camera distance that frames the whole four-slot case
+const INTRO_CLOSE = 9.4; // closed in on the chosen slot
 let maxAniso = 8;
+
+/** One felt slot of the intro case: a resting coin (its rendered art), a plate, or a bare well. */
+export interface CaseSlot {
+  art?: string | null;
+  plate?: { title: string; sub?: string | null } | null;
+}
 
 /** Tier palettes, linear RGB (render-coin.py TIERS). */
 const TIERS: Record<CoinTier, { metal: [number, number, number]; frost: number; enamel: [number, number, number]; patina: number }> = {
@@ -65,8 +79,8 @@ export interface CoinSceneOptions {
   back: string;
   /** Struck into the reverse below the CS2 mark; omit for an unnamed coin. */
   inscription?: { name: string; line?: string | null } | null;
-  /** Open the coin from its case, with this engraved plate under the well. */
-  intro?: { plate: { title: string; sub?: string | null } } | null;
+  /** Open the coin from its case: the four slots as on the profile, and which one holds this coin. */
+  intro?: { slots: CaseSlot[]; index: number } | null;
   reducedMotion: boolean;
 }
 
@@ -143,12 +157,23 @@ function polarDisc(rings: number, segs: number): THREE.BufferGeometry {
   return g;
 }
 
-function toCanvas(img: HTMLImageElement): HTMLCanvasElement {
+/** Draw an image to a canvas, optionally downscaled to `size` px square. */
+function toCanvas(img: HTMLImageElement, size?: number): HTMLCanvasElement {
   const c = document.createElement("canvas");
-  c.width = img.naturalWidth;
-  c.height = img.naturalHeight;
-  c.getContext("2d", { willReadFrequently: true })!.drawImage(img, 0, 0);
+  c.width = size ?? img.naturalWidth;
+  c.height = size ?? img.naturalHeight;
+  c.getContext("2d", { willReadFrequently: true })!.drawImage(img, 0, 0, c.width, c.height);
   return c;
+}
+
+/** Phones, tablets and small machines: fewer cores, little memory, or touch-first. */
+function isLowSpec(): boolean {
+  const nav = navigator as Navigator & { deviceMemory?: number };
+  return (
+    (nav.hardwareConcurrency ?? 8) <= 4 ||
+    (nav.deviceMemory ?? 8) <= 4 ||
+    !!window.matchMedia?.("(pointer: coarse)").matches
+  );
 }
 
 /** Separable gaussian blur of a w×h float field, in place. */
@@ -196,8 +221,8 @@ function splitName(name: string): [string, string] | null {
 }
 
 /**
- * Strike the holder's name into the reverse's field, under the CS2 mark:
- * a small "STRUCK FOR", the name, and the finish beneath. The letters are
+ * Strike the holder's name into the reverse's field, under the CS2 mark,
+ * with their finish beneath. The letters are
  * raised to the same height as the rest of the die lettering, with the same
  * rounded shoulder, polished against the frosted field. Edits the three back
  * maps (as canvases) in place, only inside the band the lettering occupies.
@@ -261,24 +286,23 @@ function engrave(
 
   const name = text.name.trim();
   const hasLine = !!text.line;
-  const nameCy = hasLine ? -0.43 : -0.45;
+  const nameCy = hasLine ? -0.39 : -0.44;
   const split = splitName(name);
-  line("Struck for", -0.315, 0.044, 0.044, 0.3);
   // A name too long to stay legible on one line wraps at its natural break.
   if (split && widthAt(name.toLocaleUpperCase(), 0.08, 0.05) > maxWAt(nameCy, 0.08)) {
-    line(split[0], -0.395, 0.08, 0.045, 0.05);
-    line(split[1], -0.49, 0.08, 0.045, 0.05);
-    if (hasLine) line(text.line!, -0.575, 0.04, 0.034, 0.3);
+    line(split[0], -0.35, 0.085, 0.045, 0.05);
+    line(split[1], -0.45, 0.085, 0.045, 0.05);
+    if (hasLine) line(text.line!, -0.555, 0.042, 0.034, 0.3);
   } else {
     line(name, nameCy, 0.13, 0.05, 0.05);
-    if (hasLine) line(text.line!, -0.56, 0.044, 0.036, 0.3);
+    if (hasLine) line(text.line!, -0.53, 0.046, 0.036, 0.3);
   }
 
   // Bevel exactly like build-coin-maps.py: blur, steepen, smoothstep.
   const m = ctx.getImageData(0, 0, W, H).data;
   const bev = new Float32Array(W * H);
   for (let i = 0; i < bev.length; i++) bev[i] = m[i * 4] / 255;
-  blur(bev, W, H, 1.6);
+  blur(bev, W, H, Math.max(0.8, (1.6 * N) / 2048));
   for (let i = 0; i < bev.length; i++) {
     const b = Math.min(1, Math.max(0, (bev[i] - 0.5) * 1.35 + 0.5));
     bev[i] = b * b * (3 - 2 * b);
@@ -483,11 +507,12 @@ function studioScene(): { scene: THREE.Scene; dispose(): void } {
   panel(7, 2.5, [0, -7, 5], 1.4); // floor bounce
   panel(3, 3, [5, 5, 8], 2.2); // front fill, off-axis so a head-on view never mirrors it whole
   panel(1.2, 6, [-3, 6, -8], 2.5, 0xcfe0ff); // cool back rim
+  panel(7, 3.2, [0, 3.2, 9], 1.1); // soft wide front-top, so a face-on coin still has something to mirror
   return { scene, dispose: () => owned.forEach((o) => o.dispose()) };
 }
 
 /** The engraved plate under the well, as on the profile's case (.cc-plate). */
-function plateTexture(title: string, sub: string | null | undefined): THREE.CanvasTexture {
+function plateCanvas(title: string, sub: string | null | undefined): HTMLCanvasElement {
   const c = document.createElement("canvas");
   c.width = 1024;
   c.height = 180;
@@ -516,14 +541,11 @@ function plateTexture(title: string, sub: string | null | undefined): THREE.Canv
     ctx.arc(x, 90, 11, 0, Math.PI * 2);
     ctx.fill();
   }
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = maxAniso;
-  return t;
+  return c;
 }
 
 /** A soft round contact shadow (dark centre fading out). */
-function shadowTexture(): THREE.CanvasTexture {
+function shadowCanvas(): HTMLCanvasElement {
   const c = document.createElement("canvas");
   c.width = c.height = 256;
   const ctx = c.getContext("2d")!;
@@ -533,23 +555,27 @@ function shadowTexture(): THREE.CanvasTexture {
   g.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 256, 256);
-  return new THREE.CanvasTexture(c);
+  return c;
 }
 
 interface CaseModel {
   group: THREE.Group;
   lid: THREE.Group;
   shadow: THREE.Mesh;
+  /** Local x of the case's centre (the chosen coin sits at x = 0). */
+  centreX: number;
   fade: { m: THREE.Material; base: number }[];
   dispose(): void;
 }
 
 /**
- * The coin's case: felt tile with its well, the engraved plate, a dark shell
- * and a hinged glass lid (pivot on the far edge). The coin's own centre is
- * the origin, so it rests in the well as built.
+ * The player's coin case, as on their profile: a row of four felt tiles with
+ * wells and engraved plates, coins resting in the filled ones, a dark shell
+ * and one hinged glass lid (pivot on the far edge). The chosen coin's centre
+ * is the origin, so it rests in its well as built; the other coins are flat
+ * discs wearing their rendered art (they never come close to the camera).
  */
-function caseModel(felt: HTMLImageElement, plate: { title: string; sub?: string | null }): CaseModel {
+function caseModel(felt: HTMLImageElement, slots: CaseSlot[], index: number, arts: Map<string, HTMLImageElement>): CaseModel {
   const group = new THREE.Group();
   const owned: { dispose(): void }[] = [];
   const fade: { m: THREE.Material; base: number }[] = [];
@@ -559,55 +585,87 @@ function caseModel(felt: HTMLImageElement, plate: { title: string; sub?: string 
     owned.push(m);
     return m;
   };
-  const add = (geo: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number, parent: THREE.Object3D = group) => {
+  const add = (geo: THREE.BufferGeometry, m: THREE.Material | THREE.Material[], x: number, y: number, z: number, parent: THREE.Object3D = group) => {
     const mesh = new THREE.Mesh(geo, m);
     mesh.position.set(x, y, z);
     parent.add(mesh);
     owned.push(geo);
     return mesh;
   };
+  const tex = (img: HTMLImageElement | HTMLCanvasElement) => {
+    const t = img instanceof HTMLCanvasElement ? new THREE.CanvasTexture(img) : new THREE.Texture(img);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = maxAniso;
+    t.needsUpdate = true;
+    owned.push(t);
+    return t;
+  };
+
+  const step = TILE_W + CASE_GAP;
+  const slotX = (i: number) => (i - index) * step;
+  const centreX = slotX((CASE_SLOTS - 1) / 2);
   const cy = -WELL_DY; // tile centre
-  const W = TILE_W + 2 * CASE_M;
+  const bedW = CASE_SLOTS * TILE_W + (CASE_SLOTS - 1) * CASE_GAP;
+  const W = bedW + 2 * CASE_M;
   const H = TILE_H + 2 * CASE_M;
 
-  const feltTex = new THREE.Texture(felt);
-  feltTex.colorSpace = THREE.SRGBColorSpace;
-  feltTex.anisotropy = maxAniso;
-  feltTex.needsUpdate = true;
-  owned.push(feltTex);
-  add(new THREE.PlaneGeometry(TILE_W, TILE_H), mat(new THREE.MeshStandardMaterial({ map: feltTex, color: 0x8c96a8, roughness: 1, metalness: 0 })), 0, cy, FELT_Z);
-
-  const shTex = shadowTexture();
+  const feltMat = mat(new THREE.MeshStandardMaterial({ map: tex(felt), color: 0x8c96a8, roughness: 1, metalness: 0 }));
+  const tileGeo = new THREE.PlaneGeometry(TILE_W, TILE_H);
+  owned.push(tileGeo);
+  const shTex = new THREE.CanvasTexture(shadowCanvas());
   owned.push(shTex);
-  const shadow = add(
-    new THREE.PlaneGeometry(2.3, 2.3),
-    mat(new THREE.MeshBasicMaterial({ map: shTex, depthWrite: false, opacity: 0.9 })),
-    0,
-    0,
-    FELT_Z + 0.002,
-  );
-
-  const plTex = plateTexture(plate.title, plate.sub);
-  owned.push(plTex);
+  const shGeo = new THREE.PlaneGeometry(2.3, 2.3);
+  owned.push(shGeo);
+  const restGeo = new THREE.CylinderGeometry(R, R, T + 2 * RIM_LIP_H * RELIEF, 64);
+  restGeo.rotateX(Math.PI / 2);
+  owned.push(restGeo);
+  const restEdge = mat(new THREE.MeshStandardMaterial({ color: 0x8a7f6a, roughness: 0.3, metalness: 1 }));
   const plH = (TILE_W * 0.78 * 180) / 1024;
-  add(
-    new THREE.BoxGeometry(TILE_W * 0.78, plH, 0.02),
-    mat(new THREE.MeshStandardMaterial({ map: plTex, roughness: 0.42, metalness: 0.55 })),
-    0,
-    cy - TILE_H / 2 + TILE_H * 0.075 + plH / 2,
-    FELT_Z + 0.01,
-  );
+  const plGeo = new THREE.BoxGeometry(TILE_W * 0.78, plH, 0.02);
+  owned.push(plGeo);
+  let shadow: THREE.Mesh | null = null;
+
+  for (let i = 0; i < CASE_SLOTS; i++) {
+    const x = slotX(i);
+    const slot = slots[i] ?? null;
+    const tile = new THREE.Mesh(tileGeo, feltMat);
+    tile.position.set(x, cy, FELT_Z);
+    group.add(tile);
+    const filled = i === index || !!(slot?.art && arts.get(slot.art));
+    if (filled) {
+      const sh = new THREE.Mesh(shGeo, mat(new THREE.MeshBasicMaterial({ map: shTex, depthWrite: false, opacity: 0.9 })));
+      sh.position.set(x, 0, FELT_Z + 0.002);
+      group.add(sh);
+      if (i === index) shadow = sh;
+    }
+    if (i !== index && slot?.art) {
+      const art = arts.get(slot.art);
+      if (art) {
+        const face = mat(new THREE.MeshBasicMaterial({ map: tex(art), toneMapped: false }));
+        add(restGeo, [restEdge, face, face], x, 0, 0);
+      }
+    }
+    if (slot?.plate) {
+      add(
+        plGeo,
+        mat(new THREE.MeshStandardMaterial({ map: tex(plateCanvas(slot.plate.title, slot.plate.sub)), roughness: 0.42, metalness: 0.55 })),
+        x,
+        cy - TILE_H / 2 + TILE_H * 0.075 + plH / 2,
+        FELT_Z + 0.01,
+      );
+    }
+  }
 
   const shell = mat(new THREE.MeshStandardMaterial({ color: 0x141418, roughness: 0.36, metalness: 0.4 }));
   const wallH = LID_Z - FELT_Z;
   const wz = (FELT_Z + LID_Z) / 2;
-  add(new THREE.BoxGeometry(W, H, 0.2), shell, 0, cy, FELT_Z - 0.1);
-  for (const sx of [-1, 1]) add(new THREE.BoxGeometry(CASE_M, H, wallH), shell, sx * (TILE_W / 2 + CASE_M / 2), cy, wz);
-  for (const sy of [-1, 1]) add(new THREE.BoxGeometry(TILE_W, CASE_M, wallH), shell, 0, cy + sy * (TILE_H / 2 + CASE_M / 2), wz);
+  add(new THREE.BoxGeometry(W, H, 0.2), shell, centreX, cy, FELT_Z - 0.1);
+  for (const sx of [-1, 1]) add(new THREE.BoxGeometry(CASE_M, H, wallH), shell, centreX + sx * (bedW / 2 + CASE_M / 2), cy, wz);
+  for (const sy of [-1, 1]) add(new THREE.BoxGeometry(bedW, CASE_M, wallH), shell, centreX, cy + sy * (TILE_H / 2 + CASE_M / 2), wz);
 
   // Lid, hinged along the far edge; its children hang down from the hinge.
   const lid = new THREE.Group();
-  lid.position.set(0, cy + H / 2, LID_Z);
+  lid.position.set(centreX, cy + H / 2, LID_Z);
   group.add(lid);
   const rim = mat(new THREE.MeshStandardMaterial({ color: 0x232328, roughness: 0.24, metalness: 0.85 }));
   add(new THREE.BoxGeometry(W, CASE_M, 0.05), rim, 0, -CASE_M / 2, 0.025, lid);
@@ -633,12 +691,12 @@ function caseModel(felt: HTMLImageElement, plate: { title: string; sub?: string 
     lid,
   );
   const knuckle = mat(new THREE.MeshStandardMaterial({ color: 0x55555c, roughness: 0.2, metalness: 1 }));
-  for (const sx of [-1, 1]) {
-    const k = add(new THREE.CylinderGeometry(0.045, 0.045, 0.5, 20), knuckle, sx * W * 0.3, cy + H / 2, LID_Z);
-    k.rotation.z = Math.PI / 2;
-  }
+  const knGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.6, 20);
+  knGeo.rotateZ(Math.PI / 2);
+  for (const sx of [-1, 1]) add(knGeo.clone(), knuckle, centreX + sx * W * 0.32, cy + H / 2, LID_Z);
+  owned.push(knGeo);
 
-  return { group, lid, shadow, fade, dispose: () => owned.forEach((o) => o.dispose()) };
+  return { group, lid, shadow: shadow!, centreX, fade, dispose: () => owned.forEach((o) => o.dispose()) };
 }
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -646,11 +704,25 @@ const smooth = (x: number) => x * x * (3 - 2 * x);
 
 export function createCoinScene(opts: CoinSceneOptions): CoinScene {
   const { canvas, tier, reducedMotion } = opts;
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
-  maxAniso = renderer.capabilities.getMaxAnisotropy();
-  // Supersample: draw at 1.5× the screen's own density (2× on a 1× screen),
-  // up to a 2400px buffer, and let the browser filter it down.
-  const ssRatio = (px: number) => Math.min(Math.max(2, (window.devicePixelRatio || 1) * 1.5), 3, 2400 / px);
+  const lowSpec = isLowSpec();
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: lowSpec ? "default" : "high-performance" });
+  maxAniso = Math.min(renderer.capabilities.getMaxAnisotropy(), lowSpec ? 4 : 16);
+  const mapSize = lowSpec ? 1024 : undefined; // 2048 maps otherwise
+  // Resolution: while it moves, screen density (stepped down further if frames
+  // run slow); at rest, one supersampled frame (1.5× density, at least 2×, up
+  // to a 2400px buffer) the browser filters down, so the still coin is crisp.
+  const dpr = window.devicePixelRatio || 1;
+  let cssPx = 560;
+  let motionScale = 1;
+  const motionRatio = () => Math.min(dpr, 2, 1600 / cssPx) * motionScale;
+  const stillRatio = () => Math.min(Math.max(2, dpr * 1.5), lowSpec ? 2 : 3, (lowSpec ? 1800 : 2400) / cssPx);
+  let ratioNow = 0;
+  const applyRatio = (r: number) => {
+    if (Math.abs(r - ratioNow) < 1e-3) return;
+    ratioNow = r;
+    renderer.setPixelRatio(r);
+    renderer.setSize(cssPx, cssPx, false);
+  };
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
@@ -683,7 +755,7 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
 
   // Reeded edge wall spanning both rim lips.
   const wallH = T + 2 * RIM_LIP_H * RELIEF;
-  const wallGeo = new THREE.CylinderGeometry(R, R, wallH, 768, 1, true);
+  const wallGeo = new THREE.CylinderGeometry(R, R, wallH, lowSpec ? 256 : 384, 1, true);
   wallGeo.rotateX(Math.PI / 2);
   const reed = reedNormalTexture();
   const wallMat = new THREE.MeshPhysicalMaterial({
@@ -696,8 +768,10 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
   coin.add(new THREE.Mesh(wallGeo, wallMat));
   disposables.push(wallGeo, wallMat, reed);
 
-  const rings = 320;
-  const segs = 640;
+  // Vertex displacement only carries the broad relief; the normal map carries
+  // the fine strike, so the mesh can stay modest.
+  const rings = lowSpec ? 160 : 256;
+  const segs = lowSpec ? 320 : 512;
   const discGeo = polarDisc(rings, segs);
   disposables.push(discGeo);
 
@@ -708,9 +782,9 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
       loadImage(`${prefix}-s.webp`),
       inscription ? document.fonts?.load(`800 100px ${COIN_FONT}`).catch(() => null) : null,
     ]);
-    const hCan = toCanvas(hImg);
-    const nCan = toCanvas(nImg);
-    const sCan = toCanvas(sImg);
+    const hCan = toCanvas(hImg, mapSize);
+    const nCan = toCanvas(nImg, mapSize);
+    const sCan = toCanvas(sImg, mapSize);
     if (inscription?.name.trim()) engrave(hCan, nCan, sCan, inscription);
     const height = new THREE.CanvasTexture(hCan);
     const normal = new THREE.CanvasTexture(nCan);
@@ -743,15 +817,15 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
 
   if (tier === "diamond") {
     const gemGeo = gemGeometry();
+    // Mirror facets with a touch of iridescent fire. Real transmission would
+    // re-render the whole scene into a buffer every frame for two tiny stones.
     const gemMat = new THREE.MeshPhysicalMaterial({
-      color: 0xffffff,
-      metalness: 0,
-      roughness: 0,
-      transmission: 1,
-      thickness: 0.06,
-      ior: 2.42,
-      dispersion: 6,
-      envMapIntensity: 2.4,
+      color: 0xeef3ff,
+      metalness: 1,
+      roughness: 0.02,
+      iridescence: 0.7,
+      iridescenceIOR: 1.8,
+      envMapIntensity: 2.6,
       flatShading: true,
     });
     for (const side of [1, -1] as const) {
@@ -773,19 +847,28 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
   const playIntro = !!opts.intro && !reducedMotion;
   const buildCase = async () => {
     if (!playIntro || !opts.intro) return;
-    const [felt] = await Promise.all([
+    const { slots, index } = opts.intro;
+    const artSrcs = [...new Set(slots.map((sl, i) => (i !== index ? sl?.art : null)).filter((a): a is string => !!a))];
+    const [felt, ...artImgs] = await Promise.all([
       loadImage(FELT_SRC),
+      ...artSrcs.map((src) => loadImage(src).catch(() => null)),
       document.fonts?.load(`800 72px ${COIN_FONT}`).catch(() => null),
       document.fonts?.load(`500 32px "JetBrains Mono"`).catch(() => null),
     ]);
-    cased = caseModel(felt, opts.intro.plate);
+    const arts = new Map<string, HTMLImageElement>();
+    artSrcs.forEach((src, i) => {
+      const img = artImgs[i];
+      if (img instanceof HTMLImageElement) arts.set(src, img);
+    });
+    cased = caseModel(felt as HTMLImageElement, slots, index, arts);
     scene.add(cased.group);
   };
 
   const ready = Promise.all([face(opts.front, 1), face(opts.back, -1, opts.inscription), buildCase()]).then(() => undefined);
 
   // ── motion ──
-  const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.22, 0.35, 0));
+  // Rest pose: face-on, with just enough tilt that the milled edge reads.
+  const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.07, 0.1, 0));
   const homeQ = q.clone();
   const omega = new THREE.Vector2(); // angular velocity, rad/frame (x: about world Y, y: about world X)
   const AX_X = new THREE.Vector3(1, 0, 0);
@@ -793,10 +876,9 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
   const AX_Z = new THREE.Vector3(0, 0, 1);
   const tmp = new THREE.Quaternion();
   let dragging = false;
-  let lastInput = performance.now();
   let toss: { t0: number; q0: THREE.Quaternion; turns: number } | null = null;
   let distTarget = dist;
-  if (playIntro) dist = distTarget = INTRO_DIST;
+  if (playIntro) dist = distTarget = INTRO_WIDE;
   const keyHome = key.position.clone();
   const keyAim = key.position.clone();
 
@@ -816,21 +898,24 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
     cased = null;
     q.copy(homeQ);
     holder.position.set(0, 0, 0);
-    if (distTarget === INTRO_DIST) distTarget = BASE_DIST;
-    lastInput = performance.now();
+    distTarget = BASE_DIST;
+    dist = BASE_DIST;
   };
   const introFrame = (now: number, c: CaseModel) => {
     introT += introLast ? Math.min(now - introLast, 34) : 0;
     introLast = now;
     const t = introT;
     const k = (a: number, b: number) => smooth(clamp01((t - a) / (b - a)));
-    const open = k(400, 1400);
-    const lift = k(1150, 2000);
-    const go = k(1700, INTRO_MS);
+    // The whole case first, then the lid, then close in on the chosen slot,
+    // lift the coin and bring it to you.
+    const open = k(350, 1350);
+    const focus = k(1000, 2150);
+    const lift = k(1750, 2550);
+    const go = k(2250, INTRO_MS);
     c.lid.rotation.x = -1.95 * open;
-    // The case slides down and away as the coin comes forward.
+    // The case pans so the chosen slot centres, then slides down and away.
     c.group.quaternion.copy(tiltQ);
-    c.group.position.set(0, 0.28 * (1 - go) - 3.4 * go * go, -1.6 * go * go);
+    c.group.position.set(-c.centreX * (1 - focus), 0.28 * (1 - go) - 3.4 * go * go, -1.6 * go * go);
     c.group.updateMatrixWorld();
     // The coin rises out of the well (a little rock as it frees), then swings
     // to face you.
@@ -843,7 +928,7 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
     const fadeOut = 1 - smooth(clamp01((go - 0.3) / 0.7));
     for (const f of c.fade) f.m.opacity = f.base * fadeOut;
     (c.shadow.material as THREE.Material).opacity = 0.9 * (1 - lift * 0.55) * fadeOut;
-    dist = INTRO_DIST + (BASE_DIST - INTRO_DIST) * go;
+    dist = INTRO_WIDE + (INTRO_CLOSE - INTRO_WIDE) * focus + (BASE_DIST - INTRO_CLOSE) * go;
     if (t >= INTRO_MS) endIntro();
   };
 
@@ -872,23 +957,53 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
         holder.position.y = 0;
       }
     } else if (!dragging) {
-      if (Math.abs(omega.x) + Math.abs(omega.y) > 1e-4) {
+      if (Math.abs(omega.x) + Math.abs(omega.y) > 8e-4) {
         rotateWorld(AX_Y, omega.x);
         rotateWorld(AX_X, omega.y);
         omega.multiplyScalar(0.965);
-      } else if (!reducedMotion && now - lastInput > 2500) {
-        rotateWorld(AX_Y, 0.0035); // idle turn so the light keeps moving across it
+      } else {
+        omega.set(0, 0);
       }
     }
     if (!cased) {
       coin.quaternion.copy(q);
       dist += (distTarget - dist) * 0.15;
+      if (Math.abs(distTarget - dist) < 1e-3) dist = distTarget;
     }
     camera.position.z = dist;
     key.position.lerp(keyAim, 0.08);
-    renderer.render(scene, camera);
+    if (key.position.distanceToSquared(keyAim) < 1e-6) key.position.copy(keyAim);
+
+    // Draw only when something changed. Moving: screen density, adapting
+    // down if frames are slow. Settled: one supersampled frame, then idle.
+    const moving =
+      !!cased || !!toss || dragging || omega.x !== 0 || omega.y !== 0 || dist !== distTarget || !key.position.equals(keyAim);
+    if (moving) {
+      if (lastFrame) {
+        frameMs = frameMs * 0.9 + (now - lastFrame) * 0.1;
+        if (frameMs > 26 && motionScale > 0.55 && now - lastScaleAt > 500) {
+          motionScale *= 0.85;
+          lastScaleAt = now;
+        }
+      }
+      lastFrame = now;
+      applyRatio(motionRatio());
+      renderer.render(scene, camera);
+      settled = false;
+    } else {
+      lastFrame = 0;
+      if (!settled) {
+        applyRatio(stillRatio());
+        renderer.render(scene, camera);
+        settled = true;
+      }
+    }
     raf = requestAnimationFrame(frame);
   };
+  let settled = false;
+  let lastFrame = 0;
+  let frameMs = 16;
+  let lastScaleAt = 0;
   ready.then(async () => {
     if (disposed) return;
     await renderer.compileAsync(scene, camera).catch(() => undefined);
@@ -898,16 +1013,17 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
   const api: CoinScene = {
     ready,
     resize(px) {
-      renderer.setPixelRatio(ssRatio(px));
-      renderer.setSize(px, px, false);
+      cssPx = px;
+      ratioNow = 0;
+      applyRatio(settled ? stillRatio() : motionRatio());
       camera.aspect = 1;
       camera.updateProjectionMatrix();
+      settled = false; // redraw at the new size
     },
     drag(dx, dy) {
       endIntro();
       dragging = true;
       toss = null;
-      lastInput = performance.now();
       const k = 0.0105;
       rotateWorld(AX_Y, dx * k);
       rotateWorld(AX_X, dy * k);
@@ -915,24 +1031,20 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
     },
     release() {
       dragging = false;
-      lastInput = performance.now();
     },
     flip() {
       endIntro();
       if (toss) return;
-      lastInput = performance.now();
       omega.set(0, 0);
       toss = { t0: performance.now(), q0: q.clone(), turns: reducedMotion ? 1 : 5 };
     },
     spin() {
       endIntro();
-      lastInput = performance.now();
       toss = null;
       omega.set(reducedMotion ? 0.12 : 0.55, 0);
     },
     zoom(f) {
       endIntro();
-      lastInput = performance.now();
       distTarget = Math.min(7, Math.max(2.1, distTarget * f));
     },
     skipIntro() {
@@ -945,9 +1057,9 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
       q.copy(homeQ);
       distTarget = BASE_DIST;
       holder.position.y = 0;
-      lastInput = performance.now();
     },
     aim(x, y) {
+      if (lowSpec) return; // a moving light means a redraw per pointer move
       keyAim.set(keyHome.x + x * 3.2, keyHome.y + y * 3.2, keyHome.z);
     },
     dispose() {

@@ -16,16 +16,25 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { coinArtSrc, coinBackSrc, coinMapPrefixes, finishLabel, type ChallengeCoin } from "@/lib/challenge-coin-core";
-import type { CoinScene } from "./coin-scene";
+import type { CaseSlot, CoinScene } from "./coin-scene";
+
+/** The case the coin is lifted out of: its row of four slots, and which one this coin is in. */
+export interface CaseView {
+  slots: CaseSlot[];
+  index: number;
+}
 
 /** Number of flat strips approximating the cylinder's reeded (ribbed) edge. */
 const EDGE_SEGMENTS = 90;
 
 export function CoinInspector({
   coin,
+  caseView,
   onClose,
 }: {
   coin: ChallengeCoin;
+  /** Defaults to a case holding just this coin, in the first slot. */
+  caseView?: CaseView | null;
   onClose: () => void;
 }) {
   const [mode, setMode] = useState<"loading" | "webgl" | "css">("loading");
@@ -39,6 +48,7 @@ export function CoinInspector({
   const finishLine = finishLabel(coin.finish, coin.fieldSize);
   const shortName = coin.name.replace(/\s+CS2 Major Championship$/i, "");
   const plateSub = [coin.tier, finishLine].filter(Boolean).join(" · ");
+  const caseKey = JSON.stringify(caseView ?? { slots: [{ plate: { title: shortName, sub: plateSub } }], index: 0 });
 
   // Size the stage to the viewport: big enough to read the strike.
   useEffect(() => {
@@ -62,7 +72,7 @@ export function CoinInspector({
           tier: coin.tier,
           reducedMotion: reduced,
           inscription: holder ? { name: holder, line: finishLine } : null,
-          intro: { plate: { title: shortName, sub: plateSub } },
+          intro: JSON.parse(caseKey) as CaseView,
           ...coinMapPrefixes(coin.slug, coin.tier),
         });
         sceneRef.current = scene;
@@ -79,7 +89,7 @@ export function CoinInspector({
       scene?.dispose();
       sceneRef.current = null;
     };
-  }, [coin.slug, coin.tier, holder, finishLine, shortName, plateSub]);
+  }, [coin.slug, coin.tier, holder, finishLine, caseKey]);
 
   useEffect(() => {
     sceneRef.current?.resize(px);
@@ -306,7 +316,6 @@ function CssCoin({ coin, holder, line }: { coin: ChallengeCoin; holder: string |
             <img src={back} alt="" width={DIAM} height={DIAM} draggable={false} />
             {holder && (
               <span className={`coin3d-engrave ${coin.tier}`}>
-                <small>Struck for</small>
                 <b style={{ fontSize: holder.length > 14 ? 15 : 24 }}>{holder}</b>
                 {line && <small>{line}</small>}
               </span>
@@ -340,7 +349,17 @@ function CssCoin({ coin, holder, line }: { coin: ChallengeCoin; holder: string |
  * staggers its one-shot strike-in so a shelf lands coin by coin. Transform/
  * opacity only (no blur/backdrop-filter, #1269), off under reduced-motion.
  */
-export function InspectableCoin({ coin, size = 112, delay = 0 }: { coin: ChallengeCoin; size?: number; delay?: number }) {
+export function InspectableCoin({
+  coin,
+  size = 112,
+  delay = 0,
+  caseView = null,
+}: {
+  coin: ChallengeCoin;
+  size?: number;
+  delay?: number;
+  caseView?: CaseView | null;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -358,7 +377,7 @@ export function InspectableCoin({ coin, size = 112, delay = 0 }: { coin: Challen
           <img src={coinArtSrc(coin.slug, coin.tier)} alt={`${coin.name} challenge coin (${coin.tier})`} width={size} height={size} />
         </span>
       </button>
-      {open && <CoinInspector coin={coin} onClose={() => setOpen(false)} />}
+      {open && <CoinInspector coin={coin} caseView={caseView} onClose={() => setOpen(false)} />}
     </>
   );
 }
