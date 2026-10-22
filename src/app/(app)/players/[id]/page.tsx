@@ -718,7 +718,7 @@ export default async function PlayerProfilePage({
         isSelf={isSelf}
         pending={
           !isEventArchived(resolveEffectiveStatus(live, nowMs))
-            ? { name: liveName, note: "Mints at the Grand Final" }
+            ? { name: liveName }
             : null
         }
       />

@@ -76,13 +76,6 @@
 .cc-coin { position: absolute; left: 50%; top: 38.46%; width: 76%; aspect-ratio: 1; transform: translate(-50%, -50%); }
 .cc-coin .coin-collectible-trigger { box-shadow: 0 7px 12px rgba(0,0,0,0.6), 0 2px 3px rgba(0,0,0,0.75); }
 .cc-coin .coin-collectible-trigger:hover { transform: translateY(-4px) scale(1.015); box-shadow: 0 14px 18px rgba(0,0,0,0.55), 0 3px 5px rgba(0,0,0,0.7); }
-/* an empty recess: the note is stitched into the felt */
-.cc-empty {
-  position: absolute; left: 50%; top: 38.46%; width: 56%; transform: translate(-50%, -50%);
-  text-align: center; font-family: var(--font-mono); font-size: 9px; line-height: 1.5;
-  letter-spacing: 0.18em; text-transform: uppercase; color: rgba(170, 190, 220, 0.5);
-  text-shadow: 0 -1px 0 rgba(0,0,0,0.6);
-}
 /* engraved plate on the felt apron */
 .cc-plate {
   position: absolute; left: 11%; right: 11%; bottom: 7.5%;
@@ -125,7 +118,6 @@
   .cc-plate { left: 7%; right: 7%; padding: 6px 10px 5px; }
   .cc-plate-nm { font-size: 12px; }
   .cc-plate-sub { font-size: 8px; letter-spacing: 0.12em; }
-  .cc-empty { font-size: 8px; width: 62%; }
 }
 
 /* ── coin-holders page (/coins) ── */
@@ -240,7 +232,6 @@
 .coin3d-edge.bronze { background-color: #a0673f; }
 /* WebGL coin: the canvas fades in over the rendered face once it's struck. */
 .coin-inspect-gl { position: relative; display: grid; place-items: center; }
-.coin-inspect-poster { position: absolute; width: 62%; height: 62%; object-fit: contain; opacity: 0.55; }
 .coin-inspect-canvas { display: block; cursor: grab; touch-action: none; opacity: 0; transition: opacity 400ms ease; }
 .coin-inspect-canvas.on { opacity: 1; }
 .coin-inspect-canvas:active { cursor: grabbing; }

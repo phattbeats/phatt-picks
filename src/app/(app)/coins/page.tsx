@@ -135,7 +135,7 @@ function PendingMajor({ roll }: { roll: MajorCoinRoll }) {
       </div>
       <div className="ch-pending">
         <CoinCase slots={1}>
-          <CoinSlot title={short} sub="To be minted" emptyNote="Mints at the Grand Final" />
+          <CoinSlot title={short} />
         </CoinCase>
         <p>
           Make at least one pick and your {short} coin is struck the moment its Grand Final ends.{" "}

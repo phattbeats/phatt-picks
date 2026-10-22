@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Coin inspector (#1278). Tap a coin and a lightbox opens with the coin in real
- * 3D: WebGL, built from the same struck relief as the Blender renders, with
+ * Coin inspector (#1278). Tap a coin and a lightbox opens on its case: the
+ * glass lid swings up and the coin lifts off the felt toward you, in real 3D: WebGL, built from the same struck relief as the Blender renders, with
  * reflective tier metal, glossy enamel, a reeded edge and (diamond) cut stones
  * (coin-scene.ts, loaded only when a coin is opened). Drag to turn it, flick to
  * set it spinning, double-tap or Flip to toss it, scroll or pinch to zoom in on
@@ -37,6 +37,8 @@ export function CoinInspector({
   const lastTap = useRef(0);
   const holder = coin.holder?.trim() || null;
   const finishLine = finishLabel(coin.finish, coin.fieldSize);
+  const shortName = coin.name.replace(/\s+CS2 Major Championship$/i, "");
+  const plateSub = [coin.tier, finishLine].filter(Boolean).join(" · ");
 
   // Size the stage to the viewport: big enough to read the strike.
   useEffect(() => {
@@ -60,6 +62,7 @@ export function CoinInspector({
           tier: coin.tier,
           reducedMotion: reduced,
           inscription: holder ? { name: holder, line: finishLine } : null,
+          intro: { plate: { title: shortName, sub: plateSub } },
           ...coinMapPrefixes(coin.slug, coin.tier),
         });
         sceneRef.current = scene;
@@ -76,7 +79,7 @@ export function CoinInspector({
       scene?.dispose();
       sceneRef.current = null;
     };
-  }, [coin.slug, coin.tier, holder, finishLine]);
+  }, [coin.slug, coin.tier, holder, finishLine, shortName, plateSub]);
 
   useEffect(() => {
     sceneRef.current?.resize(px);
@@ -117,6 +120,7 @@ export function CoinInspector({
   const onDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     e.currentTarget.setPointerCapture?.(e.pointerId);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    sceneRef.current?.skipIntro();
     if (pointers.current.size === 1) {
       const now = performance.now();
       if (now - lastTap.current < 300) sceneRef.current?.flip();
@@ -155,10 +159,6 @@ export function CoinInspector({
           <CssCoin coin={coin} holder={holder} line={finishLine} />
         ) : (
           <div className="coin-inspect-gl" style={{ width: px, height: px }}>
-            {mode === "loading" && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img className="coin-inspect-poster" src={coinArtSrc(coin.slug, coin.tier)} alt="" />
-            )}
             <canvas
               ref={canvasRef}
               className={`coin-inspect-canvas${mode === "webgl" ? " on" : ""}`}
@@ -174,7 +174,7 @@ export function CoinInspector({
 
         <div className="coin-inspect-meta">
           <span className={`coin-collectible-tier ${coin.tier}`}>{coin.tier}</span>
-          <span className="coin-inspect-name">{coin.name.replace(/\s+CS2 Major Championship$/i, "")}</span>
+          <span className="coin-inspect-name">{shortName}</span>
           {coin.finish != null && (
             <span className="coin-inspect-finish">
               Finished {coin.finish} of {coin.fieldSize}
@@ -194,7 +194,7 @@ export function CoinInspector({
               </span>
             </>
           ) : (
-            <span className="coin-inspect-hint">{mode === "loading" ? "Striking the coin…" : "Drag to rotate"}</span>
+            <span className="coin-inspect-hint">{mode === "loading" ? "Opening the case…" : "Drag to rotate"}</span>
           )}
         </div>
       </div>

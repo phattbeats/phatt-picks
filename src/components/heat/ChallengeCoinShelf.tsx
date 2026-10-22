@@ -9,8 +9,8 @@
  * Empty by design until a Major concludes (coins mint at the Grand Final). On
  * your own profile the case still shows with empty slots — an obvious home for
  * coins to land (#1283). On someone else's it stays hidden so a fresh profile
- * isn't cluttered. `pending` adds the live Major's empty recess ("Mints at the
- * Grand Final").
+ * isn't cluttered. `pending` adds the live Major's empty recess: just the bare
+ * well and its plate, no caption (the empty felt says it).
  *
  * Styles: src/app/styles/sg-coins.css (.cc-*). The felt is a rendered tile
  * (/coins/felt-slot.webp) — no blur / backdrop-filter anywhere (#1269).
@@ -29,14 +29,13 @@ export function coinShortName(name: string): string {
 
 /**
  * One felt compartment. With a `coin` it holds the struck, inspectable coin;
- * without one it's the bare recess (`emptyNote` is stitched into the well).
+ * without one it's the bare recess.
  */
 export function CoinSlot({
   coin = null,
   title,
   sub,
   subTier,
-  emptyNote,
   delay = 0,
 }: {
   coin?: ChallengeCoin | null;
@@ -44,17 +43,14 @@ export function CoinSlot({
   sub?: string | null;
   /** Colours the plate's second line in the coin's metal. */
   subTier?: ChallengeCoin["tier"];
-  emptyNote?: string;
   delay?: number;
 }) {
   return (
     <div className={`cc-slot${coin ? "" : " empty"}`}>
-      {coin ? (
+      {coin && (
         <div className="cc-coin">
           <InspectableCoin coin={coin} size={240} delay={delay} />
         </div>
-      ) : (
-        emptyNote && <span className="cc-empty">{emptyNote}</span>
       )}
       <div className="cc-plate">
         <span className="cc-plate-nm">{title}</span>
@@ -87,7 +83,7 @@ export function ChallengeCoinShelf({
   coins: ChallengeCoin[];
   isSelf: boolean;
   /** The live Major's coin-to-be: an empty recess awaiting its strike. */
-  pending?: { name: string; note: string } | null;
+  pending?: { name: string } | null;
 }) {
   if (coins.length === 0 && !isSelf) return null;
 
@@ -118,7 +114,7 @@ export function ChallengeCoinShelf({
           />
         ))}
         {showPending && pending && (
-          <CoinSlot title={pending.name} sub="To be minted" emptyNote={pending.note} />
+          <CoinSlot title={pending.name} />
         )}
         {Array.from({ length: empties }).map((_, i) => (
           <CoinSlot key={`empty-${i}`} title="Next Major" sub="Empty slot" />
