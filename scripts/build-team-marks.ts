@@ -16,12 +16,15 @@
  * carbon-dark), then all-mode, then light-mode; never the wide "full" wordmark
  * when an icon exists.
  *
- * Run:  node --experimental-strip-types scripts/build-team-marks.ts [layout-fixture-basename]
+ * Run:  node --experimental-strip-types scripts/build-team-marks.ts [fixture-basename] [--missing]
  *       (defaults to cologne-layout). Re-run for the next Major once its
- *       layout fixture lands; existing files are overwritten.
+ *       layout fixture lands; existing files are overwritten unless
+ *       `--missing` is passed (then only slugs without a PNG are fetched).
+ *       The fixture is a pick'em layout (`result.teams`) or a plain
+ *       `{ teams: [{ logo, name }] }` list such as `contenders` (home wall).
  */
 
-import { readFileSync, readdirSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -43,6 +46,7 @@ const TITLE_OVERRIDES: Record<string, string> = {
   Parivision: "PARIVISION",
   FUT: "FUT Esports",
   Sinners: "SINNERS Esports",
+  FaZe: "FaZe Clan",
 };
 
 /** Explicit file candidates for teams whose page image is wrong/missing. */
@@ -56,7 +60,8 @@ const FILE_OVERRIDES: Record<string, string[]> = {
 };
 
 interface LayoutTeam {
-  pickid: number;
+  /** Absent for plain team lists (contenders); 0 = a TBD layout slot. */
+  pickid?: number;
   logo: string;
   name: string;
 }
@@ -94,11 +99,15 @@ function chunk<T>(xs: T[], n: number): T[][] {
 }
 
 async function main() {
-  const fixture = process.argv[2] ?? "cologne-layout";
-  const layout = JSON.parse(readFileSync(join(ROOT, `src/fixtures/${fixture}.json`), "utf8")).result as {
-    teams: LayoutTeam[];
-  };
-  const teams = layout.teams.filter((t) => t.pickid !== 0 && t.logo);
+  const args = process.argv.slice(2);
+  const onlyMissing = args.includes("--missing");
+  const fixture = args.find((a) => !a.startsWith("--")) ?? "cologne-layout";
+  const json = JSON.parse(readFileSync(join(ROOT, `src/fixtures/${fixture}.json`), "utf8"));
+  const list = (json.result ?? json) as { teams: LayoutTeam[] };
+  const teams = list.teams.filter(
+    (t) => t.pickid !== 0 && t.logo && !(onlyMissing && existsSync(join(ROOT, `public/logos/${t.logo}.png`))),
+  );
+  if (teams.length === 0) process.stdout.write("Every team already has a mark; nothing to fetch.\n");
   const titleOf = (t: LayoutTeam) => TITLE_OVERRIDES[t.name] ?? t.name;
 
   // 1. Infobox image per team page (one batched call; ≤50 titles).

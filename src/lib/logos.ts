@@ -26,3 +26,8 @@ const MARKS: ReadonlySet<string> = new Set((teamMarks as { marks: string[] }).ma
 export function resolveLogoTiers(team: ResolvableTeam): LogoTier[] {
   return resolveLogoTiersCore(team, LOGOS, MARKS);
 }
+
+/** True when public/logos/<slug>.png ships (so an <img> for it never 404s). */
+export function hasTeamMark(slug: string): boolean {
+  return MARKS.has(slug);
+}

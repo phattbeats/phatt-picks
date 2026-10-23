@@ -75,17 +75,22 @@ a.hm-getin:hover{border-color:var(--hair-3);color:var(--ink-hi)}
 .hm-prev{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:12px 0 0;border-top:1px solid var(--hair-2);font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-hi);text-decoration:none}
 .hm-prev:hover{color:var(--heat)}
 
-/* ── The field: photographic team row ── */
-.hm-field{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-@media(min-width:1024px){.hm-field{grid-template-columns:repeat(4,minmax(0,1fr))}}
-.hm-field-card{position:relative;aspect-ratio:3/4;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--hair);display:flex;flex-direction:column;justify-content:flex-end;padding:16px;color:var(--ink-hi);text-decoration:none;background:radial-gradient(ellipse at 50% 90%,var(--c,var(--surf-2)),var(--surf-1) 70%)}
-.hm-field-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:bottom;filter:saturate(.85);transition:transform .5s var(--ease)}
-.hm-field-card:hover img{transform:scale(1.04)}
-.hm-field-card:hover{color:var(--ink-hi);border-color:var(--hair-2)}
-.hm-field-card::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,rgba(7,7,8,.95));pointer-events:none}
-.hm-field-card>span{position:relative;z-index:1}
-.hm-field-card .nm{font-family:var(--font-display);font-weight:900;font-size:clamp(24px,3vw,38px);text-transform:uppercase;line-height:.9;overflow-wrap:anywhere}
-.hm-field-card .pc{font-family:var(--font-mono);font-size:11px;color:var(--ink-mid);margin-top:6px}
+/* ── The contenders: a wall of team marks that dissolves into the page ──
+   Hairline cells (inset shadows, so the cells stay transparent), marks in
+   monochrome at low ink that come up to full colour on hover, a faint heat
+   glow at the centre and a radial mask fading every edge. Decorative: the
+   slow light sweep stands down under prefers-reduced-motion. */
+.hm-field{--cols:5;position:relative;display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));margin:0;padding:0;list-style:none;box-shadow:inset 1px 1px 0 var(--hair);background:radial-gradient(ellipse 45% 55% at 50% 50%,rgba(240,163,0,.07),transparent 72%);-webkit-mask-image:radial-gradient(ellipse 62% 72% at 50% 50%,#000 22%,rgba(0,0,0,.5) 56%,transparent 100%);mask-image:radial-gradient(ellipse 62% 72% at 50% 50%,#000 22%,rgba(0,0,0,.5) 56%,transparent 100%)}
+@media(min-width:560px){.hm-field{--cols:8}}
+@media(min-width:1024px){.hm-field{--cols:10}}
+.hm-field li{aspect-ratio:1;display:grid;place-items:center;box-shadow:inset -1px -1px 0 var(--hair);transition:background-color .35s var(--ease)}
+.hm-field img{width:54%;height:54%;object-fit:contain;opacity:.72;filter:grayscale(1) brightness(1.55) contrast(.88);transition:opacity .35s var(--ease),filter .35s var(--ease),transform .5s var(--ease)}
+@media(min-width:1024px){.hm-field img{width:46%;height:46%}}
+.hm-field li:hover{background-color:rgba(255,255,255,.025)}
+.hm-field li:hover img{opacity:1;filter:none;transform:scale(1.08)}
+.hm-field::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.05) 50%,transparent 60%) no-repeat;background-size:250% 100%;animation:hm-sweep 14s linear infinite}
+@keyframes hm-sweep{from{background-position:130% 0}to{background-position:-30% 0}}
+@media (prefers-reduced-motion: reduce){.hm-field::after{animation:none;display:none}.hm-field img,.hm-field li{transition:none}}
 
 /* ── Latest: hairline wire list ── */
 .hm-wire{display:grid}

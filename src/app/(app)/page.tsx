@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getCommittedLayout, type Layout, type TeamDef } from "@/lib/layout";
+import { type Layout } from "@/lib/layout";
 import { getEffectiveLayout } from "@/lib/layout-state";
 import { prisma } from "@/lib/db";
 import { isStagePickable, selectCurrentStageIndex, PICKEM_NOT_OPEN } from "@/lib/stage-gate-core";
@@ -20,11 +20,12 @@ import {
   type EventConfig,
 } from "@/lib/events-core";
 import { majorChampion, majorWrappedStageKey, type MajorChampion } from "@/lib/stage-wrapped-launch";
-import { statsForPickid, TEAM_STATS_AS_OF } from "@/lib/team-stats-core";
 import { StageWrappedReplay } from "@/components/heat/StageWrappedReplay";
 import { StageCountdown } from "@/components/sg/home/StageCountdown";
 import { PHOTOS } from "@/lib/photos";
 import { eventBrand } from "@/lib/event-brand";
+import { hasTeamMark, selfHostUrl } from "@/lib/logos";
+import contenders from "@/fixtures/contenders.json";
 
 export const dynamic = "force-dynamic";
 
@@ -56,19 +57,11 @@ function venueDay(iso: string, event: EventConfig | null): string {
 }
 
 /**
- * Field-row photography (/public/wrapped). Presentation only: the row shows
- * whichever of these teams are in the committed layout, ordered by HLTV rank.
+ * "The contenders" wall: teams that could make a Major field, by prominence
+ * (src/fixtures/contenders.json). Presentation only, never the event's pick
+ * pool; a slug without a shipped mark is skipped rather than 404ing.
  */
-const FIELD_PHOTOS: Record<string, { src: string; tint: string }> = {
-  Falcons: { src: "/wrapped/player-139.webp", tint: "#0d3b2e" },
-  Vitality: { src: "/wrapped/player-89.webp", tint: "#3a2a00" },
-  "Team Spirit": { src: "/wrapped/player-81.webp", tint: "#1c1c1c" },
-  "G2 Esports": { src: "/wrapped/player-59.webp", tint: "#2a2a2a" },
-  FURIA: { src: "/wrapped/player-85.webp", tint: "#141414" },
-  Aurora: { src: "/wrapped/player-134.webp", tint: "#0c2a3a" },
-  BetBoom: { src: "/wrapped/player-137.webp", tint: "#3a1a00" },
-  "9z Team": { src: "/wrapped/player-112.webp", tint: "#2a0a3a" },
-};
+const CONTENDERS: { logo: string; name: string }[] = contenders.teams.filter((t) => hasTeamMark(t.logo));
 
 const PHOTO_CREDIT = "IEM Cologne 2026 · HLTV";
 
@@ -335,18 +328,6 @@ export default async function DashboardPage() {
         ? `${NUM[pathCells.length] ?? pathCells.length} stages, one run`
         : `${NUM[scoredCount] ?? scoredCount} down, ${(NUM[pathCells.length - scoredCount] ?? pathCells.length - scoredCount).toLowerCase()} to go`;
 
-  // Field row: photographed teams present in the committed layout, by HLTV rank.
-  // A contenders preview ("ranked by HLTV"), not the event's pick pool, so it
-  // keeps reading the committed roster while the event has no layout.
-  const fieldTeams = (preOpen ? getCommittedLayout() : layout).teams
-    .filter((t) => FIELD_PHOTOS[t.name])
-    .map((t) => ({ team: t, rank: statsForPickid(t.pickid)?.worldRank ?? null }))
-    .sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999))
-    .slice(0, 4);
-  const statsAsOf = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).format(
-    new Date(`${TEAM_STATS_AS_OF}T00:00:00Z`),
-  );
-
   return (
     <div className="hm">
       {/* Hero — stage briefing (with the Stage I countdown pre-event), or the
@@ -578,25 +559,34 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* The field — photographic team row */}
-      {fieldTeams.length > 0 && (
+      {/* The contenders — a faded wall of the teams in contention, not the seeded field */}
+      {CONTENDERS.length > 0 && (
         <section className="chap">
           <div className="chap-h row2">
             <div>
               <h2>The contenders</h2>
               <p>
-                Ranked by HLTV as of <b>{statsAsOf}</b>. {city}&apos;s field is set when Valve seeds Stage I.
+                {preOpen ? (
+                  <>
+                    {CONTENDERS.length} teams with a shot. {city}&apos;s field is set when Valve seeds Stage I.
+                  </>
+                ) : (
+                  <>The wider scene. {city}&apos;s seeded field is in Pick&apos;Em.</>
+                )}
               </p>
             </div>
             <Link className="eyebrow" href={preOpen ? "/teams" : "/picks"} prefetch={false}>
               {preOpen ? "Teams →" : "Open Pick'Em →"}
             </Link>
           </div>
-          <div className="hm-field">
-            {fieldTeams.map(({ team, rank }) => (
-              <FieldCard key={team.pickid} team={team} rank={rank} />
+          <ul className="hm-field" aria-label="Teams in contention">
+            {CONTENDERS.map((t, i) => (
+              <li key={t.logo} style={{ ["--i" as string]: i }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={selfHostUrl(t.logo)} alt={t.name} title={t.name} loading="lazy" decoding="async" />
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       )}
 
@@ -821,24 +811,6 @@ function LeaderRow({
         {row.isSelf && <span className="you">You</span>}
       </span>
       <span className="p">{row.score}</span>
-    </Link>
-  );
-}
-
-function FieldCard({ team, rank }: { team: TeamDef; rank: number | null }) {
-  const photo = FIELD_PHOTOS[team.name];
-  return (
-    <Link
-      href="/picks"
-      prefetch={false}
-      className="hm-field-card"
-      style={{ ["--c" as string]: photo.tint }}
-      aria-label={`${team.name}${rank ? `, HLTV world #${rank}` : ""}`}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={photo.src} alt="" loading="lazy" />
-      <span className="nm">{team.name.replace(/^Team /, "").replace(/ (Esports|Team)$/, "")}</span>
-      <span className="pc">{rank ? `HLTV world #${rank}` : "Unranked"}</span>
     </Link>
   );
 }
