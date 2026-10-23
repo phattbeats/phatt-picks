@@ -26,6 +26,9 @@
  */
 
 import * as THREE from "three";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
+import { SSAARenderPass } from "three/examples/jsm/postprocessing/SSAARenderPass.js";
 import type { CoinTier } from "@/lib/challenge-coin-core";
 
 const R = 1.0; // coin radius
@@ -164,6 +167,43 @@ function toCanvas(img: HTMLImageElement, size?: number): HTMLCanvasElement {
   c.height = size ?? img.naturalHeight;
   c.getContext("2d", { willReadFrequently: true })!.drawImage(img, 0, 0, c.width, c.height);
   return c;
+}
+
+/**
+ * The height field the mesh is displaced by: band-limited to the vertex grid.
+ * Vertices sample the full-res map point-blank (no mip in the vertex stage),
+ * so a sharp letter wall lands on some vertices and not their neighbours and
+ * the relief comes out as zig-zag spikes. Softened, the mesh carries smooth
+ * shoulders and the normal map draws the crisp edge.
+ */
+function displacementCanvas(height: HTMLCanvasElement, size: number): HTMLCanvasElement {
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const ctx = c.getContext("2d")!;
+  ctx.filter = `blur(${(size / 512) * 1.5}px)`; // ignored where unsupported: the downscale still filters
+  ctx.drawImage(height, 0, 0, size, size);
+  return c;
+}
+
+/**
+ * Specular anti-aliasing (Tokuyoshi & Kaplanyan): widen roughness where the
+ * mapped normal changes faster than a pixel can show, so letter walls and
+ * reeds read as clean lines instead of crawling sparkles.
+ */
+function specularAA(m: THREE.MeshPhysicalMaterial) {
+  m.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader.replace(
+      "#include <normal_fragment_maps>",
+      `#include <normal_fragment_maps>
+      {
+        vec3 dnx = dFdx(normal);
+        vec3 dny = dFdy(normal);
+        float k = min(0.5 * (dot(dnx, dnx) + dot(dny, dny)), 0.18);
+        roughnessFactor = sqrt(min(roughnessFactor * roughnessFactor + k, 1.0));
+      }`,
+    );
+  };
+  m.customProgramCacheKey = () => "coin-specaa";
 }
 
 /** Phones, tablets and small machines: fewer cores, little memory, or touch-first. */
@@ -594,9 +634,22 @@ function caseModel(felt: HTMLImageElement, slots: CaseSlot[], index: number, art
     owned.push(m);
     return m;
   };
-  const add = (geo: THREE.BufferGeometry, m: THREE.Material | THREE.Material[], x: number, y: number, z: number, parent: THREE.Object3D = group) => {
+  // Every part is transparent (the case fades out), and three sorts transparent
+  // meshes by distance, which reshuffles the near-coplanar felt, shadows and
+  // plates from frame to frame: the felt flickered. Layers draw in a fixed order.
+  const LAYER = { shell: 0, felt: 1, shadow: 2, onFelt: 3, glass: 4 } as const;
+  const add = (
+    geo: THREE.BufferGeometry,
+    m: THREE.Material | THREE.Material[],
+    x: number,
+    y: number,
+    z: number,
+    layer: number,
+    parent: THREE.Object3D = group,
+  ) => {
     const mesh = new THREE.Mesh(geo, m);
     mesh.position.set(x, y, z);
+    mesh.renderOrder = layer;
     parent.add(mesh);
     owned.push(geo);
     return mesh;
@@ -637,11 +690,17 @@ function caseModel(felt: HTMLImageElement, slots: CaseSlot[], index: number, art
     const slot = slots[i] ?? null;
     const tile = new THREE.Mesh(tileGeo, feltMat);
     tile.position.set(x, cy, FELT_Z);
+    tile.renderOrder = LAYER.felt;
     group.add(tile);
     const filled = i === index || !!(slot?.art && arts.get(slot.art));
     if (filled) {
-      const sh = new THREE.Mesh(shGeo, mat(new THREE.MeshBasicMaterial({ map: shTex, depthWrite: false, opacity: 0.9 })));
+      const shMat = mat(new THREE.MeshBasicMaterial({ map: shTex, depthWrite: false, opacity: 0.9 }));
+      shMat.polygonOffset = true; // sits on the felt without fighting it for depth
+      shMat.polygonOffsetFactor = -1;
+      shMat.polygonOffsetUnits = -4;
+      const sh = new THREE.Mesh(shGeo, shMat);
       sh.position.set(x, 0, FELT_Z + 0.002);
+      sh.renderOrder = LAYER.shadow;
       group.add(sh);
       if (i === index) shadow = sh;
     }
@@ -649,7 +708,7 @@ function caseModel(felt: HTMLImageElement, slots: CaseSlot[], index: number, art
       const art = arts.get(slot.art);
       if (art) {
         const face = mat(new THREE.MeshBasicMaterial({ map: tex(art), toneMapped: false }));
-        add(restGeo, [restEdge, face, face], x, 0, 0);
+        add(restGeo, [restEdge, face, face], x, 0, 0, LAYER.onFelt);
       }
     }
     if (slot?.plate) {
@@ -666,6 +725,7 @@ function caseModel(felt: HTMLImageElement, slots: CaseSlot[], index: number, art
         x,
         cy - TILE_H / 2 + TILE_H * 0.075 + plH / 2,
         FELT_Z + 0.01,
+        LAYER.onFelt,
       );
     }
   }
@@ -673,18 +733,23 @@ function caseModel(felt: HTMLImageElement, slots: CaseSlot[], index: number, art
   const shell = mat(new THREE.MeshStandardMaterial({ color: 0x141418, roughness: 0.36, metalness: 0.4 }));
   const wallH = LID_Z - FELT_Z;
   const wz = (FELT_Z + LID_Z) / 2;
-  add(new THREE.BoxGeometry(W, H, 0.2), shell, centreX, cy, FELT_Z - 0.1);
-  for (const sx of [-1, 1]) add(new THREE.BoxGeometry(CASE_M, H, wallH), shell, centreX + sx * (bedW / 2 + CASE_M / 2), cy, wz);
-  for (const sy of [-1, 1]) add(new THREE.BoxGeometry(bedW, CASE_M, wallH), shell, centreX, cy + sy * (TILE_H / 2 + CASE_M / 2), wz);
+  // The base's top face sits just under the felt; level with it, the two
+  // fought for depth and the shell showed through the felt in flickers.
+  add(new THREE.BoxGeometry(W, H, 0.2), shell, centreX, cy, FELT_Z - 0.1 - 0.012, LAYER.shell);
+  for (const sx of [-1, 1])
+    add(new THREE.BoxGeometry(CASE_M, H, wallH), shell, centreX + sx * (bedW / 2 + CASE_M / 2), cy, wz, LAYER.shell);
+  for (const sy of [-1, 1])
+    add(new THREE.BoxGeometry(bedW, CASE_M, wallH), shell, centreX, cy + sy * (TILE_H / 2 + CASE_M / 2), wz, LAYER.shell);
 
   // Lid, hinged along the far edge; its children hang down from the hinge.
   const lid = new THREE.Group();
   lid.position.set(centreX, cy + H / 2, LID_Z);
   group.add(lid);
   const rim = mat(new THREE.MeshStandardMaterial({ color: 0x232328, roughness: 0.24, metalness: 0.85 }));
-  add(new THREE.BoxGeometry(W, CASE_M, 0.05), rim, 0, -CASE_M / 2, 0.025, lid);
-  add(new THREE.BoxGeometry(W, CASE_M, 0.05), rim, 0, -H + CASE_M / 2, 0.025, lid);
-  for (const sx of [-1, 1]) add(new THREE.BoxGeometry(CASE_M, H - 2 * CASE_M, 0.05), rim, sx * (W / 2 - CASE_M / 2), -H / 2, 0.025, lid);
+  add(new THREE.BoxGeometry(W, CASE_M, 0.05), rim, 0, -CASE_M / 2, 0.025, LAYER.shell, lid);
+  add(new THREE.BoxGeometry(W, CASE_M, 0.05), rim, 0, -H + CASE_M / 2, 0.025, LAYER.shell, lid);
+  for (const sx of [-1, 1])
+    add(new THREE.BoxGeometry(CASE_M, H - 2 * CASE_M, 0.05), rim, sx * (W / 2 - CASE_M / 2), -H / 2, 0.025, LAYER.shell, lid);
   // Glass: only its reflections show (additive), so the softboxes streak
   // across it as it swings.
   add(
@@ -702,12 +767,13 @@ function caseModel(felt: HTMLImageElement, slots: CaseSlot[], index: number, art
     0,
     -H / 2,
     0.02,
+    LAYER.glass,
     lid,
   );
   const knuckle = mat(new THREE.MeshStandardMaterial({ color: 0x55555c, roughness: 0.2, metalness: 1 }));
   const knGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.6, 20);
   knGeo.rotateZ(Math.PI / 2);
-  for (const sx of [-1, 1]) add(knGeo.clone(), knuckle, centreX + sx * W * 0.32, cy + H / 2, LID_Z);
+  for (const sx of [-1, 1]) add(knGeo.clone(), knuckle, centreX + sx * W * 0.32, cy + H / 2, LID_Z, LAYER.shell);
   owned.push(knGeo);
 
   return { group, lid, shadow: shadow!, centreX, fade, dispose: () => owned.forEach((o) => o.dispose()) };
@@ -723,19 +789,23 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
   maxAniso = Math.min(renderer.capabilities.getMaxAnisotropy(), lowSpec ? 4 : 16);
   const mapSize = lowSpec ? 1024 : undefined; // 2048 maps otherwise
   // Resolution: while it moves, screen density (stepped down further if frames
-  // run slow); at rest, one supersampled frame (1.5× density, at least 2×, up
-  // to a 2400px buffer) the browser filters down, so the still coin is crisp.
+  // run slow) with MSAA; at rest, one frame at screen density accumulated
+  // from 16 jittered renders (8 on low-spec). Pixel for pixel, so the browser
+  // never resamples it: a filtered downscale of an oversized buffer was what
+  // left the still coin's lines stepped.
   const dpr = window.devicePixelRatio || 1;
   let cssPx = 560;
   let motionScale = 1;
   const motionRatio = () => Math.min(dpr, 2, 1600 / cssPx) * motionScale;
-  const stillRatio = () => Math.min(Math.max(2, dpr * 1.5), lowSpec ? 2 : 3, (lowSpec ? 1800 : 2400) / cssPx);
+  const stillRatio = () => Math.min(dpr, lowSpec ? 2 : 3, (lowSpec ? 1800 : 2400) / cssPx);
   let ratioNow = 0;
   const applyRatio = (r: number) => {
     if (Math.abs(r - ratioNow) < 1e-3) return;
     ratioNow = r;
     renderer.setPixelRatio(r);
     renderer.setSize(cssPx, cssPx, false);
+    composer.setPixelRatio(r);
+    composer.setSize(cssPx, cssPx);
   };
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -747,7 +817,14 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
   const envTex = pmrem.fromScene(room.scene, 0.02).texture;
   scene.environment = envTex;
 
-  const camera = new THREE.PerspectiveCamera(28, 1, 0.05, 50);
+  // Near plane well clear of the lens: the case is drawn from 24 units out,
+  // and depth precision there decides whether felt, shadow and shell stay put.
+  const camera = new THREE.PerspectiveCamera(28, 1, 0.5, 40);
+  const composer = new EffectComposer(renderer);
+  const ssaa = new SSAARenderPass(scene, camera, 0x000000, 0);
+  ssaa.sampleLevel = lowSpec ? 3 : 4;
+  composer.addPass(ssaa);
+  composer.addPass(new OutputPass()); // tone mapping + sRGB, as a direct render applies them
   const BASE_DIST = 4.6;
   let dist = BASE_DIST;
   camera.position.set(0, 0, dist);
@@ -779,6 +856,7 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
     normalMap: reed,
     normalScale: new THREE.Vector2(1.2, 1.2),
   });
+  specularAA(wallMat);
   coin.add(new THREE.Mesh(wallGeo, wallMat));
   disposables.push(wallGeo, wallMat, reed);
 
@@ -800,7 +878,7 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
     const nCan = toCanvas(nImg, mapSize);
     const sCan = toCanvas(sImg, mapSize);
     if (inscription?.name.trim()) engrave(hCan, nCan, sCan, inscription);
-    const height = new THREE.CanvasTexture(hCan);
+    const height = new THREE.CanvasTexture(displacementCanvas(hCan, lowSpec ? 384 : 512));
     const normal = new THREE.CanvasTexture(nCan);
     height.colorSpace = THREE.NoColorSpace;
     normal.colorSpace = THREE.NoColorSpace;
@@ -821,6 +899,7 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
       clearcoatRoughness: 0.05,
       envMapIntensity: 1.25,
     });
+    specularAA(mat);
     const mesh = new THREE.Mesh(discGeo, mat);
     mesh.position.z = side * (T / 2);
     if (side === -1) mesh.rotation.y = Math.PI;
@@ -1008,7 +1087,7 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
       lastFrame = 0;
       if (!settled) {
         applyRatio(stillRatio());
-        renderer.render(scene, camera);
+        composer.render();
         settled = true;
       }
     }
@@ -1082,6 +1161,8 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
       cased?.dispose();
       for (const d of disposables) d.dispose();
       room.dispose();
+      ssaa.dispose();
+      composer.dispose();
       renderer.dispose();
       renderer.forceContextLoss();
     },
