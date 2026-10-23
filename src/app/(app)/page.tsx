@@ -559,26 +559,10 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* The contenders — a faded wall of the teams in contention, not the seeded field */}
+      {/* The contenders — a faded wall of the teams in contention, not the seeded field.
+          No heading or copy: the wall speaks for itself. */}
       {CONTENDERS.length > 0 && (
-        <section className="chap">
-          <div className="chap-h row2">
-            <div>
-              <h2>The contenders</h2>
-              <p>
-                {preOpen ? (
-                  <>
-                    {CONTENDERS.length} teams with a shot. {city}&apos;s field is set when Valve seeds Stage I.
-                  </>
-                ) : (
-                  <>The wider scene. {city}&apos;s seeded field is in Pick&apos;Em.</>
-                )}
-              </p>
-            </div>
-            <Link className="eyebrow" href={preOpen ? "/teams" : "/picks"} prefetch={false}>
-              {preOpen ? "Teams →" : "Open Pick'Em →"}
-            </Link>
-          </div>
+        <section className="chap" aria-label="The contenders">
           <ul className="hm-field" aria-label="Teams in contention">
             {CONTENDERS.map((t, i) => (
               <li key={t.logo} style={{ ["--i" as string]: i }}>
