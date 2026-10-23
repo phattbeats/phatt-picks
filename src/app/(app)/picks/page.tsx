@@ -95,9 +95,9 @@ export default async function PicksPage({
   // Signed in via Steam but no auth code yet: picks save in HOTLINE, but we
   // can't push them to the official in-game CS2 Pick'Em until they connect a
   // Game Authentication Code. Surface that gap up front with a link (#891).
-  // A code saved for an earlier Major counts as missing too (each Major needs
-  // its own code, and sync won't use an old one); the notice asks for this
-  // Major's code.
+  // A code saved for an earlier Major counts as missing too until Valve
+  // accepts it for this one (the mirror above checks); the notice asks for
+  // this Major's code.
   const code = session?.steamId ? await authCodeStatus(session.playerId, EVENT_ID) : null;
   const needsSteamLink = !!code && code.status !== "current";
   const staleCodeFor = code?.status === "stale" ? savedForLabel(code.savedForEventId) : null;
@@ -846,7 +846,7 @@ function SteamLinkNotice({ staleFor }: { staleFor: string | null }) {
         <h2>{staleFor ? "Add this Major's auth code" : "Your picks are saved in HOTLINE"}</h2>
         {staleFor ? (
           <p>
-            {`Your saved code is from ${staleFor}. Each Major needs its own Game Authentication Code, so syncing to the official in-game Pick'Em is paused until you paste this Major's code.`}
+            {`Your saved code is from ${staleFor}, and Valve hasn't accepted it for this Major, so syncing to the official in-game Pick'Em is paused until you paste this Major's Game Authentication Code.`}
           </p>
         ) : (
           <p>

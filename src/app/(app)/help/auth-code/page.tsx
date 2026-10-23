@@ -35,7 +35,7 @@ export default async function AuthCodeHelpPage() {
         </h1>
         <p>
           One code mirrors your official Valve Pick&apos;Em into HOTLINE and lets the app{" "}
-          <b>set picks back in-game</b>. Each Major needs its own code, so add this Major&apos;s code when
+          <b>set picks back in-game</b>. If Steam gives you a new code for this Major, paste it here when
           Pick&apos;Em opens.
         </p>
       </div>

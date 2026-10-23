@@ -46,8 +46,8 @@ export async function POST(req: NextRequest) {
 
   await prisma.player.update({
     where: { id: session.playerId },
-    // Remember which Major the code was saved for: each Major needs its own
-    // code, and sync never sends a code saved for another one.
+    // Remember which Major the code was saved for: a code saved for another
+    // Major is only used once Valve accepts it for this one (lib/authcode.ts).
     data: { authCode: encryptAuthCode(authCode), authCodeEventId: EVENT_ID },
   });
 

@@ -7,7 +7,7 @@ import { useState } from "react";
  * /api/auth/steam/authcode (M2), which encrypts it at rest and records the
  * Major it was saved for. Only rendered for signed-in Steam players; validates
  * the 4-5-4 shape before sending. A code saved for an earlier Major shows as
- * stale (each Major needs its own code; sync pauses) and asks for this Major's.
+ * stale (sync waits until Valve accepts it for this Major) and asks for this Major's.
  * Styled by `.sg-authform` in sg-auth.css.
  */
 
@@ -89,7 +89,7 @@ export function AuthCodeForm({
       )}
       {status === "stale" && (
         <p className="stale">
-          {`Your code on file is from ${staleFor ?? "an earlier Major"}. Each Major needs its own code, so syncing is paused until you paste your ${majorName} code.`}
+          {`Your code on file is from ${staleFor ?? "an earlier Major"}. If Steam gave you a new code for ${majorName}, paste it here. Otherwise, when Pick'Em opens, HOTLINE asks Valve once whether your old code still works: if it does, syncing carries on; if not, syncing stays paused until you paste a new one.`}
         </p>
       )}
       <div className="field">
