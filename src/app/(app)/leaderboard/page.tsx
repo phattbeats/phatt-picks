@@ -185,9 +185,6 @@ async function LiveBoard() {
 
           <section className="chap">
             <div className="chap-h row2">
-              <div>
-                <h2>The field</h2>
-              </div>
               <nav className="rk-links" aria-label="Leaderboard links">
                 {rows.length >= 2 && (
                   <Link href="/leaderboard/compare" prefetch={false} data-tip="lb-compare">
