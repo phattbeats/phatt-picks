@@ -19,6 +19,10 @@ import { getEventConfig } from "./events-core";
 import { lockTimeForSection } from "./lock-schedule-core";
 import { bucketSwissSlots, isSwissSection } from "./swiss-bucket-core";
 import { coinMintAtMs } from "./event-freeze";
+import { ACHIEVEMENTS_LAUNCH_MS } from "./notifications-core";
+
+/** The feed roll-up entry the welcome card shares its read state with. */
+export const WELCOME_ENTRY_ID = "ach:launch";
 import {
   evaluateAchievements,
   ledgerFor,
@@ -303,5 +307,39 @@ export async function getPlayerProgression(
     level,
     felts: FELTS.map((f) => ({ ...f, unlocked: f.level <= level })),
     loadout: effectiveLoadout(parseLoadout(json), level, unlocked),
+  };
+}
+
+/** The PHATT ID welcome card's contents, or null once seen / for a player with no history. */
+export interface WelcomeSummary {
+  entryId: string;
+  majors: string[];
+  keys: AchievementKey[];
+  /** XP banked before launch (the retroactive credit). */
+  xp: number;
+}
+
+/**
+ * The once-per-account welcome (PHA-4477): shown to players whose achievements
+ * predate the launch (the Cologne accounts) until they dismiss it. The read
+ * check comes first, so a player who has seen it costs one indexed lookup.
+ */
+export async function getWelcomeSummary(playerId: string, nowMs: number = Date.now()): Promise<WelcomeSummary | null> {
+  const seen = await prisma.notificationRead.findUnique({
+    where: { playerId_entryId: { playerId, entryId: WELCOME_ENTRY_ID } },
+    select: { entryId: true },
+  });
+  if (seen) return null;
+  const p = await getPlayerProgression(playerId, nowMs, null);
+  const before = p.unlocks.filter((u) => u.atMs < ACHIEVEMENTS_LAUNCH_MS);
+  if (before.length === 0) return null;
+  const majors = [...new Set(before.map((u) => u.eventId).filter((e): e is number => e !== null))]
+    .map((e) => getEventConfig(e)?.name.replace(/\s+CS2 Major Championship$/i, "") ?? null)
+    .filter((n): n is string => !!n);
+  return {
+    entryId: WELCOME_ENTRY_ID,
+    majors,
+    keys: before.map((u) => u.key),
+    xp: p.ledger.filter((r) => r.atMs < ACHIEVEMENTS_LAUNCH_MS).reduce((n, r) => n + r.credited, 0),
   };
 }

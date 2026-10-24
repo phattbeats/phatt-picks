@@ -8,6 +8,8 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { resolveTopbarYou } from "@/lib/topbar-you-core";
 import { latestActiveAnnouncement } from "@/lib/announcements-core";
+import { PhattIdWelcome } from "@/components/heat/PhattIdWelcome";
+import { getWelcomeSummary } from "@/lib/progression";
 
 export const dynamic = "force-dynamic";
 
@@ -32,13 +34,25 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // every signed-in player. Derived from the clock; null when none is live.
   // eslint-disable-next-line react-hooks/purity
   const announcement = session ? latestActiveAnnouncement(Date.now()) : null;
+  // PHATT ID welcome (PHA-4477) — once per account for players with history
+  // from before achievements launched. Holds back the broadcast while it's up.
+  const welcome = session ? await getWelcomeSummary(session.playerId) : null;
 
   return (
     <>
       <HeatHeader topbar={topbar} profileHref={profileHref} />
       <main className="shell with-nav">
         {session && <HowToPlayAnnounce />}
-        {announcement && (
+        {welcome && session && (
+          <PhattIdWelcome
+            entryId={welcome.entryId}
+            majors={welcome.majors}
+            keys={welcome.keys}
+            xp={welcome.xp}
+            profileHref={`/players/${session.playerId}`}
+          />
+        )}
+        {announcement && !welcome && (
           <AnnouncePopup
             announcement={{
               id: announcement.id,
