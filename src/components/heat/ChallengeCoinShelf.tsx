@@ -20,6 +20,7 @@
 import Link from "next/link";
 import { coinArtSrc, finishLabel, type ChallengeCoin } from "@/lib/challenge-coin-core";
 import type { CaseView } from "@/components/heat/CoinInspector";
+import type { FeltDef } from "@/lib/progression-core";
 
 export { finishLabel };
 import { InspectableCoin } from "@/components/heat/CoinInspector";
@@ -82,10 +83,11 @@ export function fillRows(items: CaseItem[]): CaseItem[] {
 }
 
 /** The inspector's view of the row slot `i` sits in. */
-export function caseViewFor(items: CaseItem[], i: number): CaseView {
+export function caseViewFor(items: CaseItem[], i: number, felt: FeltDef | null = null): CaseView {
   const start = Math.floor(i / 4) * 4;
   return {
     index: i - start,
+    felt: felt && felt.key !== "navy" ? felt.tile : null,
     slots: items.slice(start, start + 4).map((it) => ({
       art: it.coin ? coinArtSrc(it.coin.slug, it.coin.tier) : null,
       plate: it.title ? { title: it.title, who: it.coin?.holder ?? null, sub: it.sub ?? null } : null,
@@ -94,12 +96,26 @@ export function caseViewFor(items: CaseItem[], i: number): CaseView {
 }
 
 /** The protective case shell: hinge, felt bed, glass sheen. Children = slots. */
-export function CoinCase({ slots, children }: { slots: number; children: React.ReactNode }) {
+export function CoinCase({
+  slots,
+  felt = null,
+  children,
+}: {
+  slots: number;
+  /** The owner's felt (PHA-4477 unlock); null = the navy default. */
+  felt?: FeltDef | null;
+  children: React.ReactNode;
+}) {
   const cols = Math.max(1, Math.min(slots, 4));
+  const custom = felt && felt.key !== "navy" ? felt : null;
   return (
     <div
-      className="cc-case"
-      style={{ ["--cols" as string]: cols, ["--cols-m" as string]: Math.min(cols, 2) } as React.CSSProperties}
+      className={`cc-case${custom ? ` felt-${custom.key}` : ""}`}
+      style={{
+        ["--cols" as string]: cols,
+        ["--cols-m" as string]: Math.min(cols, 2),
+        ...(custom ? { ["--felt" as string]: `${custom.bed} url(${custom.tile})` } : {}),
+      } as React.CSSProperties}
     >
       <span className="cc-hinge" aria-hidden="true"><i /><i /></span>
       <div className="cc-bed">{children}</div>
@@ -112,11 +128,14 @@ export function ChallengeCoinShelf({
   coins,
   isSelf,
   pending = null,
+  felt = null,
 }: {
   coins: ChallengeCoin[];
   isSelf: boolean;
   /** The live Major's coin-to-be: an empty recess awaiting its strike. */
   pending?: { name: string } | null;
+  /** The owner's felt (PHA-4477); null = navy. */
+  felt?: FeltDef | null;
 }) {
   if (coins.length === 0 && !isSelf) return null;
 
@@ -140,7 +159,7 @@ export function ChallengeCoinShelf({
           <Link href="/coins" prefetch={false} className="eyebrow">Coin holders →</Link>
         </span>
       </div>
-      <CoinCase slots={4}>
+      <CoinCase slots={4} felt={felt}>
         {items.map((it, i) => (
           <CoinSlot
             key={it.coin ? it.coin.eventId : `slot-${i}`}
@@ -149,7 +168,7 @@ export function ChallengeCoinShelf({
             sub={it.sub}
             subTier={it.coin?.tier}
             delay={i * 1.3}
-            caseView={it.coin ? caseViewFor(items, i) : null}
+            caseView={it.coin ? caseViewFor(items, i, felt) : null}
           />
         ))}
       </CoinCase>

@@ -22,6 +22,8 @@ import type { CaseSlot, CoinScene } from "./coin-scene";
 export interface CaseView {
   slots: CaseSlot[];
   index: number;
+  /** The case's felt tile (PHA-4477 felt unlocks); omit for the navy default. */
+  felt?: string | null;
 }
 
 /** Number of flat strips approximating the cylinder's reeded (ribbed) edge. */

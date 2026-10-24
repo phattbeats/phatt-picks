@@ -12,6 +12,10 @@ import { prisma } from "@/lib/db";
 import { getReferralStats } from "@/lib/invite";
 import { isOwner } from "@/lib/owner";
 import { parseNotifPrefs } from "@/lib/notifications-core";
+import { CustomizePanel } from "@/components/CustomizePanel";
+import { getPlayerProgression } from "@/lib/progression";
+import { ACHIEVEMENTS } from "@/lib/progression-core";
+import { profilePhoto } from "@/lib/photos";
 
 /**
  * Settings — every account control, reached by the gear cog on your profile
@@ -32,8 +36,9 @@ export default async function SettingsPage() {
   // Local players can set a photo; Steam players show their Steam avatar.
   const playerRow = await prisma.player.findUnique({
     where: { id: session.playerId },
-    select: { avatarUrl: true, loginToken: true, notifPrefs: true },
+    select: { avatarUrl: true, loginToken: true, notifPrefs: true, loadout: true },
   });
+  const progression = await getPlayerProgression(session.playerId, undefined, playerRow?.loadout ?? null);
   const hasPushSubscription = (await prisma.pushSubscription.count({
     where: { playerId: session.playerId },
   })) > 0;
@@ -88,6 +93,7 @@ export default async function SettingsPage() {
 
       <div className="lay rise d2">
         <nav className="toc" aria-label="Settings sections">
+          <a href="#customize">Customize</a>
           <a href="#alerts">Alerts</a>
           <a href="#invite">Invite</a>
           <a href="#account">Account &amp; devices</a>
@@ -96,6 +102,27 @@ export default async function SettingsPage() {
         </nav>
 
         <div className="secs">
+          {/* Customize (PHA-4477) — cosmetic unlocks: case felt, profile banner */}
+          <section className="sec" id="customize">
+            <div className="chap-h">
+              <h2>Customize</h2>
+              <p>Line your coin case and pick the photo behind your profile. Unlocks are cosmetic only.</p>
+            </div>
+            <CustomizePanel
+              felts={progression.felts.map((f) => ({ key: f.key, name: f.name, tile: f.tile, bed: f.bed, unlocked: f.unlocked }))}
+              banners={ACHIEVEMENTS.map((a) => ({
+                key: a.key,
+                label: a.bannerLabel,
+                src: a.banner,
+                achievement: a.name,
+                unlocked: progression.unlocked.has(a.key),
+              }))}
+              initialFelt={progression.loadout.felt ?? "navy"}
+              initialBanner={progression.loadout.banner}
+              defaultBanner={profilePhoto(session.playerId)}
+            />
+          </section>
+
           {/* Alerts */}
           <section className="sec" id="alerts">
             <div className="chap-h">

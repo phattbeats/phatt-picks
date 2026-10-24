@@ -34,7 +34,7 @@ import { refreshOutcomesOnRead } from "@/lib/outcomes";
 import { getSwissRecords } from "@/lib/swiss-results";
 import { buildBucketConsensus, bucketShareFor } from "@/lib/consensus-core";
 import type { Section } from "@/lib/layout";
-import { currentEvent } from "@/lib/events-core";
+import { currentEvent, getEventConfig } from "@/lib/events-core";
 import { resolveEffectiveStatus } from "@/lib/event-lifecycle-core";
 import { isRevealForcedById } from "@/lib/event-freeze";
 import { isEventArchived } from "@/lib/majors-core";
@@ -56,6 +56,10 @@ import {
   requestedEvent,
 } from "@/components/sg/people/people-data";
 import { profilePhoto } from "@/lib/photos";
+import { getPlayerProgression } from "@/lib/progression";
+import { ACHIEVEMENT_BY_KEY, feltByKey } from "@/lib/progression-core";
+import { PinRow, AchievementWall } from "@/components/sg/people/Achievements";
+import { coinShortName } from "@/components/heat/ChallengeCoinShelf";
 
 /** Short pick-type tag for a slot (3:0 / 3:1·3:2 / 0:3 for Swiss; — otherwise). */
 function bucketLabelFor(sectionId: number, group: Section["groups"][number], slotIndex: number): string | null {
@@ -167,6 +171,18 @@ export default async function PlayerProfilePage({
   // per event this player took part in, minted when the Major concludes. Empty
   // while the live event is still in flight (adds no DB work until it archives).
   const challengeCoins = await getPlayerChallengeCoins(player.id, nowMs);
+
+  // PHATT ID progression (PHA-4477): achievements, pins, and the cosmetic
+  // loadout (banner photo, case felt). Derived like the coins; the level is
+  // computed for the felt unlocks but not shown until PHATT ID sign-in is live.
+  const progression = await getPlayerProgression(player.id, nowMs, player.loadout);
+  const bannerDef = progression.loadout.banner ? ACHIEVEMENT_BY_KEY.get(progression.loadout.banner) : null;
+  const heroPhoto = bannerDef?.banner ?? profilePhoto(player.id);
+  const caseFelt = progression.loadout.felt ? feltByKey(progression.loadout.felt) : null;
+  const majorName = (eid: number) => {
+    const cfg = getEventConfig(eid);
+    return cfg ? coinShortName(cfg.name) : null;
+  };
 
   // Majors history — every Major this player has played, newest first.
   const history = await playerMajorsHistory(player.id, nowMs);
@@ -324,7 +340,7 @@ export default async function PlayerProfilePage({
           profile is the clean stat card, the gear is the one door to settings. */}
       <section className={`bleed pp-hero${isSelf ? " self" : ""}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={profilePhoto(player.id)} alt="" />
+        <img src={heroPhoto} alt="" />
         <span className="credit">Photo · HLTV</span>
         {isSelf && gear}
         <div className="in">
@@ -343,6 +359,7 @@ export default async function PlayerProfilePage({
             <h1 className={heroFit.className} style={heroFit.style}>
               {player.displayName}
             </h1>
+            <PinRow unlocks={progression.unlocks} />
           </div>
           <nav className="pp-hero-links rise d2" aria-label="Profile links">
             <Link className="eyebrow" href="/leaderboard" prefetch={false}>← Leaderboard</Link>
@@ -712,10 +729,14 @@ export default async function PlayerProfilePage({
         </section>
       )}
 
+      {/* Achievements (PHA-4477) — the wall of twelve, each with its trinket pin */}
+      <AchievementWall unlocks={progression.unlocks} isSelf={isSelf} majorName={majorName} />
+
       {/* Challenge coins (#1278) — the coin case */}
       <ChallengeCoinShelf
         coins={challengeCoins}
         isSelf={isSelf}
+        felt={caseFelt}
         pending={
           !isEventArchived(resolveEffectiveStatus(live, nowMs))
             ? { name: liveName }

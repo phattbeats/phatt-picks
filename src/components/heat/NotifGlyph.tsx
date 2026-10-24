@@ -12,7 +12,7 @@
 import { getEventConfig } from "@/lib/events-core";
 import { COIN_TIERS, coinArtSrc, type CoinTier } from "@/lib/challenge-coin-core";
 
-export type NotifGlyphKind = "reaction" | "stage" | "recap" | "announcement" | "coin";
+export type NotifGlyphKind = "reaction" | "stage" | "recap" | "announcement" | "coin" | "achievement";
 
 /** Resolve the struck-coin art for a coin-earned feed entry, or null. */
 export function coinArtForEntry(id: string, title: string): { src: string; tier: CoinTier } | null {
@@ -54,6 +54,13 @@ function Icon({ kind }: { kind: NotifGlyphKind }) {
           <path d="M17 9a4 4 0 010 6" />
         </svg>
       );
+    case "achievement":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="10" r="6" />
+          <path d="M9 15.2 8 21l4-2 4 2-1-5.8" />
+        </svg>
+      );
     case "coin":
     default:
       return (
@@ -81,7 +88,7 @@ export function NotifGlyph({
   size?: "lg" | "sm";
 }) {
   const k: NotifGlyphKind =
-    kind === "stage" || kind === "recap" || kind === "reaction" || kind === "announcement" || kind === "coin"
+    kind === "stage" || kind === "recap" || kind === "reaction" || kind === "announcement" || kind === "coin" || kind === "achievement"
       ? kind
       : "announcement";
   const art = k === "coin" ? coinArtForEntry(id, title) : null;

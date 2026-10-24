@@ -24,6 +24,7 @@ model Player {
   loginToken    String?  @unique   // opaque token for cross-device login (local players only)
   notificationsSeenAt DateTime?    // #1211: last time this player opened the notifications panel; anything newer is "unread"
   notifPrefs    String?           // #1240: JSON NotifPrefs — per-type in-app + push toggles
+  loadout       String?           // PHA-4477: JSON Loadout — cosmetic choices (case felt, banner); unlocks are derived
   invitedById   String?           // referral attribution: the player whose invite link onboarded this one
   createdFromIp String?           // captured at local-account creation for IP rate-limit enforcement
   createdAt     DateTime @default(now())

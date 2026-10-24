@@ -26,6 +26,7 @@ import {
   stageLockEntry,
   recapEntry,
   coinEarnedEntry,
+  achievementEntries,
   assembleFeed,
   filterEntriesByPrefs,
   parseNotifPrefs,
@@ -35,6 +36,8 @@ import {
   type ReadContext,
 } from "@/lib/notifications-core";
 import { getPlayerChallengeCoins } from "@/lib/challenge-coins";
+import { getPlayerProgression } from "@/lib/progression";
+import { ACHIEVEMENT_BY_KEY } from "@/lib/progression-core";
 
 export const DEFAULT_FEED_LIMIT = 8;
 
@@ -171,6 +174,20 @@ export async function buildPlayerFeed(
     );
     if (e) rawEntries.push(e);
   }
+
+  // Achievements (PHA-4477) — derived like the coins; the field scoring is
+  // memoised for 30s, so the bell, the stream and the inbox share it.
+  const progression = await getPlayerProgression(playerId, nowMs, null);
+  rawEntries.push(
+    ...achievementEntries(
+      progression.unlocks.map((u) => {
+        const def = ACHIEVEMENT_BY_KEY.get(u.key)!;
+        return { key: u.key, name: def.name, trinket: def.trinket, atMs: u.atMs };
+      }),
+      `/players/${encodeURIComponent(playerId)}`,
+      nowMs,
+    ),
+  );
 
   return assembleFeed(filterEntriesByPrefs(rawEntries, prefs), rc, limit, nowMs);
 }

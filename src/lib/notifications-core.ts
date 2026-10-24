@@ -35,7 +35,7 @@ import { getStamp } from "./bleachers-core";
 import { humanizeLockEta, DEFAULT_REMINDER_OFFSETS_MS } from "./notify-core";
 import type { CoinTier } from "./challenge-coin-core";
 
-export type NotifKind = "reaction" | "stage" | "recap" | "announcement" | "coin";
+export type NotifKind = "reaction" | "stage" | "recap" | "announcement" | "coin" | "achievement";
 
 // ── NOTIFICATION PREFERENCES (#1240) ──────────────────────────────────────
 
@@ -51,6 +51,8 @@ export interface NotifPrefs {
   recap: NotifTypePrefs;
   announce: NotifTypePrefs;
   coin: NotifTypePrefs;
+  /** PHA-4477: an achievement unlocked. In-app only for now (no push sender yet). */
+  achievement: NotifTypePrefs;
 }
 
 export const DEFAULT_NOTIF_PREFS: NotifPrefs = {
@@ -61,6 +63,7 @@ export const DEFAULT_NOTIF_PREFS: NotifPrefs = {
   // Earning a Major coin is a rare, celebratory moment — push on by default so
   // it "pings" (#1278, Brandon).
   coin:      { inApp: true, push: true },
+  achievement: { inApp: true, push: false },
 };
 
 /** Parse and normalise Player.notifPrefs JSON. Missing keys fall back to defaults. */
@@ -74,6 +77,7 @@ export function parseNotifPrefs(json: string | null | undefined): NotifPrefs {
       recap:     { ...DEFAULT_NOTIF_PREFS.recap,      ...(p.recap ?? {}) },
       announce:  { ...DEFAULT_NOTIF_PREFS.announce,  ...(p.announce ?? {}) },
       coin:      { ...DEFAULT_NOTIF_PREFS.coin,       ...(p.coin ?? {}) },
+      achievement: { ...DEFAULT_NOTIF_PREFS.achievement, ...(p.achievement ?? {}) },
     };
   } catch {
     return DEFAULT_NOTIF_PREFS;
@@ -91,6 +95,7 @@ export function filterEntriesByPrefs(
     if (e.kind === "recap")        return prefs.recap.inApp;
     if (e.kind === "announcement") return prefs.announce.inApp;
     if (e.kind === "coin")         return prefs.coin.inApp;
+    if (e.kind === "achievement")  return prefs.achievement.inApp;
     return true;
   });
 }
@@ -397,6 +402,64 @@ export function coinEarnedEntry(
     href: "/majors",
     atMs: earnedAtMs,
   };
+}
+
+// ── ACHIEVEMENT UNLOCKED (PHA-4477) ──────────────────────────────────────
+
+/**
+ * When achievements arrived on Hotline. Unlocks earned before this (Cologne,
+ * backfilled) are announced once, in a single "from earlier Majors" entry,
+ * instead of one stale entry per achievement.
+ */
+export const ACHIEVEMENTS_LAUNCH_MS = Date.parse("2026-10-24T12:00:00Z");
+
+export interface AchievementUnlockInput {
+  key: string;
+  name: string;
+  trinket: string;
+  atMs: number;
+}
+
+/**
+ * One entry per achievement unlocked since launch (capped at maxAgeMs like the
+ * coin), plus one roll-up entry for everything earned before launch. `href`
+ * lands on the achievement wall on the player's own profile.
+ */
+export function achievementEntries(
+  unlocks: readonly AchievementUnlockInput[],
+  profileHref: string,
+  nowMs: number,
+  maxAgeMs: number = 30 * DAY_MS,
+  launchMs: number = ACHIEVEMENTS_LAUNCH_MS,
+): Omit<NotifEntry, "isNew" | "readAt">[] {
+  const out: Omit<NotifEntry, "isNew" | "readAt">[] = [];
+  const href = `${profileHref}#achievements`;
+  const before = unlocks.filter((u) => u.atMs < launchMs);
+  if (before.length > 0 && launchMs <= nowMs && nowMs - launchMs <= maxAgeMs) {
+    const n = before.length;
+    out.push({
+      id: "ach:launch",
+      kind: "achievement",
+      icon: "📌",
+      title: `${n} achievement${n === 1 ? "" : "s"} from earlier Majors`,
+      body: `Your past calls earned ${n === 1 ? "a trinket pin" : `${n} trinket pins`} and banner photos. See them on your profile.`,
+      href,
+      atMs: launchMs,
+    });
+  }
+  for (const u of unlocks) {
+    if (u.atMs < launchMs || u.atMs > nowMs || nowMs - u.atMs > maxAgeMs) continue;
+    out.push({
+      id: `ach:${u.key}`,
+      kind: "achievement",
+      icon: "📌",
+      title: `Achievement unlocked: ${u.name}`,
+      body: `The ${u.trinket.toLowerCase()} pin is on your profile, and a new banner photo is waiting in Settings.`,
+      href,
+      atMs: u.atMs,
+    });
+  }
+  return out;
 }
 
 // ── ASSEMBLY ─────────────────────────────────────────────────────────────────

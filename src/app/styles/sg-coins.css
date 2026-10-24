@@ -69,7 +69,7 @@
 }
 .cc-slot {
   position: relative; aspect-ratio: 600 / 780; border-radius: 2px; overflow: hidden;
-  background: #0a1626 url(/coins/felt-slot.webp) center / 100% 100% no-repeat;
+  background: var(--felt, #0a1626 url(/coins/felt-slot.webp)) center / 100% 100% no-repeat;
   box-shadow: inset 0 0 0 1px rgba(0,0,0,0.55), inset 0 8px 14px -6px rgba(0,0,0,0.6);
 }
 /* the coin rests in the well (well ⌀ = 80% of the tile; coin a hair smaller) */

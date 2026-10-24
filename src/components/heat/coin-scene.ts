@@ -83,7 +83,7 @@ export interface CoinSceneOptions {
   /** Struck into the reverse below the CS2 mark; omit for an unnamed coin. */
   inscription?: { name: string; line?: string | null } | null;
   /** Open the coin from its case: the four slots as on the profile, and which one holds this coin. */
-  intro?: { slots: CaseSlot[]; index: number } | null;
+  intro?: { slots: CaseSlot[]; index: number; felt?: string | null } | null;
   reducedMotion: boolean;
 }
 
@@ -624,7 +624,7 @@ interface CaseModel {
  * is the origin, so it rests in its well as built; the other coins are flat
  * discs wearing their rendered art (they never come close to the camera).
  */
-function caseModel(felt: HTMLImageElement, slots: CaseSlot[], index: number, arts: Map<string, HTMLImageElement>): CaseModel {
+function caseModel(felt: HTMLImageElement, slots: CaseSlot[], index: number, arts: Map<string, HTMLImageElement>, customFelt = false): CaseModel {
   const group = new THREE.Group();
   const owned: { dispose(): void }[] = [];
   const fade: { m: THREE.Material; base: number }[] = [];
@@ -671,7 +671,7 @@ function caseModel(felt: HTMLImageElement, slots: CaseSlot[], index: number, art
   const W = bedW + 2 * CASE_M;
   const H = TILE_H + 2 * CASE_M;
 
-  const feltMat = mat(new THREE.MeshStandardMaterial({ map: tex(felt), color: 0x8c96a8, roughness: 1, metalness: 0 }));
+  const feltMat = mat(new THREE.MeshStandardMaterial({ map: tex(felt), color: customFelt ? 0x9a9a9a : 0x8c96a8, roughness: 1, metalness: 0 }));
   const tileGeo = new THREE.PlaneGeometry(TILE_W, TILE_H);
   owned.push(tileGeo);
   const shTex = new THREE.CanvasTexture(shadowCanvas());
@@ -941,9 +941,10 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
   const buildCase = async () => {
     if (!playIntro || !opts.intro) return;
     const { slots, index } = opts.intro;
+    const feltSrc = opts.intro.felt || FELT_SRC;
     const artSrcs = [...new Set(slots.map((sl, i) => (i !== index ? sl?.art : null)).filter((a): a is string => !!a))];
     const [felt, ...artImgs] = await Promise.all([
-      loadImage(FELT_SRC),
+      loadImage(feltSrc),
       ...artSrcs.map((src) => loadImage(src).catch(() => null)),
       document.fonts?.load(`800 72px ${COIN_FONT}`).catch(() => null),
       document.fonts?.load(`500 32px "JetBrains Mono"`).catch(() => null),
@@ -953,7 +954,7 @@ export function createCoinScene(opts: CoinSceneOptions): CoinScene {
       const img = artImgs[i];
       if (img instanceof HTMLImageElement) arts.set(src, img);
     });
-    cased = caseModel(felt as HTMLImageElement, slots, index, arts);
+    cased = caseModel(felt as HTMLImageElement, slots, index, arts, feltSrc !== FELT_SRC);
     scene.add(cased.group);
   };
 

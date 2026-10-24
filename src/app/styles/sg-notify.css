@@ -490,3 +490,4 @@
   .notiftoast, .announce-pop { animation: none; }
   .nf-av-spin { animation-duration: 2s; }
 }
+.notif-pref-sws .nf-na { color: var(--dim); font-family: var(--font-mono); font-size: 13px; line-height: 28px; }

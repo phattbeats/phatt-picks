@@ -38,6 +38,8 @@ interface RowProps {
   hint: string;
   pref: { inApp: boolean; push: boolean };
   showPush: boolean;
+  /** This kind has no push sender yet: show a dash instead of a dead switch. */
+  pushNA?: boolean;
   disabled?: boolean;
   onToggle: (channel: PrefChannel) => void;
 }
@@ -58,7 +60,7 @@ function Switch({ on, label, disabled, onClick }: { on: boolean; label: string; 
   );
 }
 
-function PrefRow({ label, hint, pref, showPush, disabled, onToggle }: RowProps) {
+function PrefRow({ label, hint, pref, showPush, pushNA, disabled, onToggle }: RowProps) {
   return (
     <div className="row notif-pref-row">
       <div className="notif-pref-label">
@@ -72,7 +74,8 @@ function PrefRow({ label, hint, pref, showPush, disabled, onToggle }: RowProps) 
           disabled={disabled}
           onClick={() => onToggle("inApp")}
         />
-        {showPush && (
+        {showPush && pushNA && <span className="nf-na" aria-label="No push for this kind yet">—</span>}
+        {showPush && !pushNA && (
           <Switch
             on={pref.push}
             label={`${label} push notifications`}
@@ -85,11 +88,12 @@ function PrefRow({ label, hint, pref, showPush, disabled, onToggle }: RowProps) 
   );
 }
 
-const ROWS: ReadonlyArray<{ kind: PrefKind; label: string; hint: string }> = [
+const ROWS: ReadonlyArray<{ kind: PrefKind; label: string; hint: string; inAppOnly?: boolean }> = [
   { kind: "stage", label: "Stage locks", hint: "24 hours and 1 hour before picks lock" },
   { kind: "recap", label: "Stage results", hint: "When your recap is ready" },
   { kind: "reactions", label: "Reactions", hint: "When someone stamps one of your picks" },
   { kind: "coin", label: "Coin minted", hint: "When a Major concludes" },
+  { kind: "achievement", label: "Achievements", hint: "When you unlock one (in-app only for now)", inAppOnly: true },
   { kind: "announce", label: "Broadcasts", hint: "The occasional word from HOTLINE" },
 ];
 
@@ -124,6 +128,7 @@ export function NotifPrefsPanel({ initialPrefs, hasPushSubscription }: Props) {
           hint={r.hint}
           pref={prefs[r.kind]}
           showPush={hasPushSubscription}
+          pushNA={r.inAppOnly}
           onToggle={(ch) => toggle(r.kind, ch)}
         />
       ))}
