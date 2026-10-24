@@ -124,7 +124,7 @@ export default async function SettingsPage() {
               showcaseOptions={ACHIEVEMENTS.filter((a) => progression.unlocked.has(a.key)).map((a) => ({
                 key: a.key,
                 name: a.name,
-                trinket: a.trinket,
+                description: a.description,
                 pin: <TrinketPin def={a} earned size={36} />,
               }))}
               initialShowcase={progression.loadout.showcase}

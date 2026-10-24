@@ -15,7 +15,14 @@
  * POST /api/notifications  { action: "read", entryId: string }
  *   → per-entry explicit read: upserts a NotificationRead row (#1237).
  *
- * Both POST variants are same-origin guarded (isSameOrigin).
+ * POST /api/notifications  { action: "delete", entryIds: string[] }
+ *   → removes entries from the bell and inbox (NotificationRead.dismissedAt);
+ *   new activity on the same entry brings it back.
+ *
+ * POST /api/notifications  { action: "deleteRead" }
+ *   → deletes every entry the player has already read.
+ *
+ * All POST variants are same-origin guarded (isSameOrigin).
  *
  * The feed assembler lives in @/lib/notifications-feed (shared with the SSE
  * stream and the /notifications inbox page so all three stay identical).
@@ -64,6 +71,31 @@ export async function POST(req: NextRequest) {
       update: { readAt: new Date() },
     });
     return NextResponse.json({ ok: true });
+  }
+
+  if (action === "delete" || action === "deleteRead") {
+    let ids: string[];
+    if (action === "delete") {
+      const raw = (body as Record<string, unknown>)?.entryIds;
+      if (!Array.isArray(raw) || raw.length === 0 || raw.length > 200 || !raw.every((x) => typeof x === "string" && x && x.length <= 200)) {
+        return NextResponse.json({ ok: false, reason: "bad-entryIds" }, { status: 400 });
+      }
+      ids = [...new Set(raw as string[])];
+    } else {
+      const feed = await buildPlayerFeed(session.playerId, 200);
+      ids = feed.items.filter((i) => !i.isNew).map((i) => i.id);
+    }
+    const now = new Date();
+    await prisma.$transaction(
+      ids.map((entryId) =>
+        prisma.notificationRead.upsert({
+          where: { playerId_entryId: { playerId: session.playerId, entryId } },
+          create: { playerId: session.playerId, entryId, readAt: now, dismissedAt: now },
+          update: { readAt: now, dismissedAt: now },
+        }),
+      ),
+    );
+    return NextResponse.json({ ok: true, deleted: ids.length });
   }
 
   // "readAll" (or bare POST for legacy bell behaviour) → watermark bulk-clear.

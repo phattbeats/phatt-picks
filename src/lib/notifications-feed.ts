@@ -36,7 +36,7 @@ import {
   type ReadContext,
 } from "@/lib/notifications-core";
 import { getPlayerChallengeCoins } from "@/lib/challenge-coins";
-import { getPlayerProgression, prelaunchXp } from "@/lib/progression";
+import { getPlayerProgression, prelaunchXp, prelaunchMajorName } from "@/lib/progression";
 import { ACHIEVEMENT_BY_KEY } from "@/lib/progression-core";
 
 export const DEFAULT_FEED_LIMIT = 8;
@@ -68,18 +68,20 @@ export async function buildPlayerFeed(
     }),
     prisma.notificationRead.findMany({
       where: { playerId },
-      select: { entryId: true, readAt: true },
+      select: { entryId: true, readAt: true, dismissedAt: true },
     }),
   ]);
 
   const seenAtMs = player?.notificationsSeenAt ? player.notificationsSeenAt.getTime() : 0;
   const readSet = new Set<string>();
   const readAtByEntry = new Map<string, number>();
+  const dismissedAtByEntry = new Map<string, number>();
   for (const r of reads) {
     readSet.add(r.entryId);
     readAtByEntry.set(r.entryId, r.readAt.getTime());
+    if (r.dismissedAt) dismissedAtByEntry.set(r.entryId, r.dismissedAt.getTime());
   }
-  const rc: ReadContext = { seenAtMs, readSet, readAtByEntry };
+  const rc: ReadContext = { seenAtMs, readSet, readAtByEntry, dismissedAtByEntry };
   const prefs = parseNotifPrefs(player?.notifPrefs);
 
   const layout = getCommittedLayout();
@@ -176,18 +178,18 @@ export async function buildPlayerFeed(
   }
 
   // Achievements (PHA-4477) — derived like the coins; the Cologne accounts get
-  // one PHATT ID welcome for their retroactive haul. the field scoring is
+  // one entry for their retroactive haul ("Your achievements from …"). the field scoring is
   // memoised for 30s, so the bell, the stream and the inbox share it.
   const progression = await getPlayerProgression(playerId, nowMs, null);
   rawEntries.push(
     ...achievementEntries(
       progression.unlocks.map((u) => {
         const def = ACHIEVEMENT_BY_KEY.get(u.key)!;
-        return { key: u.key, name: def.name, trinket: def.trinket, atMs: u.atMs };
+        return { key: u.key, name: def.name, atMs: u.atMs };
       }),
       `/players/${encodeURIComponent(playerId)}`,
       nowMs,
-      { prelaunchXp: prelaunchXp(progression.ledger) },
+      { prelaunchXp: prelaunchXp(progression.ledger), prelaunchMajor: prelaunchMajorName(progression.unlocks) },
     ),
   );
 

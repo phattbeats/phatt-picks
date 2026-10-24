@@ -30,7 +30,7 @@ export interface BannerOption {
 export interface ShowcaseOption {
   key: string;
   name: string;
-  trinket: string;
+  description: string;
   /** The pin, rendered on the server. */
   pin: React.ReactNode;
 }
@@ -126,7 +126,7 @@ export function CustomizePanel({
                   disabled={full}
                   className={`cz-ach${at >= 0 ? " on" : ""}`}
                   onClick={() => toggleShowcase(a.key)}
-                  title={full ? `Take one out first: the showcase holds ${showcaseSize}` : a.trinket}
+                  title={full ? `Take one out first: the showcase holds ${showcaseSize}` : a.description}
                 >
                   {a.pin}
                   <span className="cz-ach-nm">{a.name}</span>

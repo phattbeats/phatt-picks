@@ -266,10 +266,8 @@
 /* The hero showcase: three pins a player shows off (Brandon 10/24). */
 .ach-show { display: flex; flex-wrap: wrap; gap: 10px 22px; list-style: none; margin: 4px 0 0; padding: 0; }
 .ach-show li { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.ach-show-t { display: grid; gap: 1px; min-width: 0; }
 .ach-show-nm { font-family: var(--font-display); font-weight: 800; font-size: 16px; letter-spacing: .01em; text-transform: uppercase; color: var(--ink-hi); line-height: 1.05; text-shadow: 0 1px 8px rgba(0,0,0,.7); }
-.ach-show-tr { font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--heat); }
-@media (max-width: 560px) { .ach-show { gap: 8px 14px; } .ach-show-nm { font-size: 13px; } .ach-show-tr { display: none; } }
+@media (max-width: 560px) { .ach-show { gap: 8px 14px; } .ach-show-nm { font-size: 13px; } }
 
 /* The rest: one row each, earned (newest first) then locked. */
 .ach-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--hair); }

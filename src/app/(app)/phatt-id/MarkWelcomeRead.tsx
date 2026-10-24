@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Opening /phatt-id counts as reading the bell's "Welcome to PHATT ID" entry,
+ * Opening /phatt-id counts as reading the bell's "Your achievements from …" entry,
  * so it stops showing as new however the player got here.
  */
 

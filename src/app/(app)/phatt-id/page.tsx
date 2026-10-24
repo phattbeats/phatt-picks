@@ -1,8 +1,8 @@
 /* eslint-disable @next/next/no-img-element -- editorial photo from /public. */
 
 /**
- * PHATT ID welcome (PHA-4477) — where the bell's "Welcome to PHATT ID" entry
- * lands. Brandon 10/24: an actual notification, not a popup over the page, so a
+ * PHATT ID haul (PHA-4477) — where the bell's "Your achievements from IEM
+ * Cologne 2026" entry lands. Brandon 10/24: an actual notification, not a popup over the page, so a
  * player who just came back isn't overloaded and can go through it at their
  * own pace. Walks them through what HOTLINE credited them from earlier Majors
  * (achievements as pins, the XP banked) and what it unlocks. XP, never the
@@ -49,7 +49,7 @@ export default async function PhattIdPage() {
           <span className="eyebrow rise">
             <b>PHATT ID</b> · New on HOTLINE
           </span>
-          <h1 className="display rise d1">{n > 0 ? "Your calls count" : "Welcome to PHATT ID"}</h1>
+          <h1 className="display rise d1">{n > 0 ? "Your calls count" : "Achievements"}</h1>
           <p className="rise d2">
             HOTLINE is part of PHATT ID now: one account that levels up across the PHATT arcade.
             {n > 0 ? (
@@ -99,9 +99,12 @@ export default async function PhattIdPage() {
                     <span className="ach-desc">{def.description}</span>
                   </div>
                   <span className="ach-meta">
-                    {def.trinket}
-                    <br />
-                    {major ? `${major} · ` : ""}
+                    {major && (
+                      <>
+                        {major}
+                        <br />
+                      </>
+                    )}
                     {dateLabel(u.atMs)}
                   </span>
                 </li>

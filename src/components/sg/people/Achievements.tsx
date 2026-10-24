@@ -2,7 +2,8 @@
  * Hotline achievements (PHA-4477): the trinket pins, the hero showcase and the list.
  *
  * Every achievement drops a trinket (PHA-4103); on Hotline it's an enamel pin —
- * gilt rim, dark enamel in the achievement's colour, the trinket struck in gold.
+ * gilt rim, dark enamel in the achievement's colour, the glyph struck in gold.
+ * Only the pin is shown; the trinket's name stays internal (Brandon 10/24).
  * Three of them are shown off in the profile hero; the list under it has the
  * rest, earned ones dated, locked ones dim with how to earn them. Server
  * components, pure SVG + CSS (sg-people.css .ach-*), no images to load.
@@ -157,10 +158,7 @@ export function Showcase({ keys }: { keys: readonly AchievementKey[] }) {
         return a ? (
           <li key={k} title={`${a.name} · ${a.description}`}>
             <TrinketPin def={a} earned size={46} />
-            <span className="ach-show-t">
-              <span className="ach-show-nm">{a.name}</span>
-              <span className="ach-show-tr">{a.trinket}</span>
-            </span>
+            <span className="ach-show-nm">{a.name}</span>
           </li>
         ) : null;
       })}
@@ -228,9 +226,12 @@ export function AchievementList({
                   <span className="ach-desc">{a.description}</span>
                 </div>
                 <span className="ach-meta">
-                  {a.trinket}
-                  <br />
-                  {where ? `${where} · ` : ""}
+                  {where && (
+                    <>
+                      {where}
+                      <br />
+                    </>
+                  )}
                   {earnedLabel(u.atMs)}
                 </span>
               </li>

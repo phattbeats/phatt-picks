@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * Inbox controls (#1237): All/Unread tabs and Mark-all-read, plus
- * per-row click-to-mark-read via event delegation on the inbox page.
+ * Inbox controls (#1237): All/Unread tabs, Mark-all-read and Delete-read, plus
+ * per-row click-to-mark-read and the per-row delete (×) via event delegation
+ * on the inbox page.
  *
  * The page is server-rendered; this client component owns the small set of
  * mutations that need to hit POST /api/notifications and the optimistic UI
@@ -27,6 +28,18 @@ async function postMarkOne(entryId: string) {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ action: "read", entryId }),
+    });
+  } catch {
+    /* will reconcile on next page load */
+  }
+}
+
+async function postDelete(payload: { action: "delete"; entryIds: string[] } | { action: "deleteRead" }) {
+  try {
+    await fetch("/api/notifications", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
     });
   } catch {
     /* will reconcile on next page load */
@@ -73,6 +86,16 @@ export function InboxControls({ filter, unread, page }: Props) {
     function onClick(e: MouseEvent) {
       const target = e.target as HTMLElement | null;
       if (!target) return;
+      const del = target.closest<HTMLButtonElement>("button.inbox-del");
+      if (del) {
+        const row = del.closest<HTMLLIElement>("li.inbox-row");
+        const id = row?.dataset.entryId;
+        if (!row || !id) return;
+        if (row.classList.contains("fresh")) setOptimisticUnread((n) => Math.max(0, n - 1));
+        row.remove();
+        void postDelete({ action: "delete", entryIds: [id] }).then(() => router.refresh());
+        return;
+      }
       const link = target.closest<HTMLAnchorElement>("a.inbox-link");
       if (!link) return;
       if (link.dataset.markOnClick !== "true") return;
@@ -90,7 +113,15 @@ export function InboxControls({ filter, unread, page }: Props) {
     }
     document.addEventListener("click", onClick);
     return () => document.removeEventListener("click", onClick);
-  }, []);
+  }, [router]);
+
+  function onDeleteRead() {
+    startTransition(async () => {
+      document.querySelectorAll<HTMLLIElement>("li.inbox-row:not(.fresh)").forEach((li) => li.remove());
+      await postDelete({ action: "deleteRead" });
+      router.refresh();
+    });
+  }
 
   function onMarkAll() {
     if (optimisticUnread === 0) return;
@@ -143,6 +174,9 @@ export function InboxControls({ filter, unread, page }: Props) {
           disabled={pending || optimisticUnread === 0}
         >
           {pending ? "Marking…" : "Mark all as read"}
+        </button>
+        <button type="button" className="inbox-markall" onClick={onDeleteRead} disabled={pending}>
+          Delete read
         </button>
       </div>
     </div>

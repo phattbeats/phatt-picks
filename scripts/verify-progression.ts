@@ -209,20 +209,22 @@ console.log("notifications");
   const now = ACHIEVEMENTS_LAUNCH_MS + 2 * H;
   const e = achievementEntries(
     [
-      { key: "first_call", name: "First Call", trinket: "Rotary handset", atMs: ACHIEVEMENTS_LAUNCH_MS - 120 * D },
-      { key: "called_it", name: "Called It", trinket: "Crown", atMs: ACHIEVEMENTS_LAUNCH_MS - 100 * D },
-      { key: "veteran", name: "Veteran", trinket: "Twin stars", atMs: ACHIEVEMENTS_LAUNCH_MS + H },
+      { key: "first_call", name: "First Call", atMs: ACHIEVEMENTS_LAUNCH_MS - 120 * D },
+      { key: "called_it", name: "Called It", atMs: ACHIEVEMENTS_LAUNCH_MS - 100 * D },
+      { key: "veteran", name: "Veteran", atMs: ACHIEVEMENTS_LAUNCH_MS + H },
     ],
     "/players/x",
     now,
   );
-  check("pre-launch unlocks roll up into one welcome", e.filter((x) => x.id === "ach:launch").length === 1 && e[0].title === "Welcome to PHATT ID");
+  check("pre-launch unlocks roll up into one welcome", e.filter((x) => x.id === "ach:launch").length === 1 && e[0].title === "Your achievements from the last Major");
   check("the welcome opens the PHATT ID page", e[0].href === "/phatt-id");
   check("post-launch unlock gets its own entry", e.some((x) => x.id === "ach:veteran"));
   check("new unlocks land on the profile list", e.filter((x) => x.id !== "ach:launch").every((x) => x.href === "/players/x#achievements"));
-  const withXp = achievementEntries([{ key: "a", name: "A", trinket: "T", atMs: 0 }], "/p", ACHIEVEMENTS_LAUNCH_MS + H, { prelaunchXp: 1418 });
+  const withXp = achievementEntries([{ key: "a", name: "A", atMs: 0 }], "/p", ACHIEVEMENTS_LAUNCH_MS + H, { prelaunchXp: 1418 });
   check("the welcome names the XP banked", withXp[0].body.includes("1 achievement and 1,418 XP"));
-  const old = (days: number) => achievementEntries([{ key: "a", name: "A", trinket: "T", atMs: 0 }], "/p", ACHIEVEMENTS_LAUNCH_MS + days * D).length;
+  const named = achievementEntries([{ key: "a", name: "A", atMs: 0 }], "/p", ACHIEVEMENTS_LAUNCH_MS + H, { prelaunchMajor: "IEM Cologne 2026" });
+  check("the welcome names the Major", named[0].title === "Your achievements from IEM Cologne 2026");
+  const old = (days: number) => achievementEntries([{ key: "a", name: "A", atMs: 0 }], "/p", ACHIEVEMENTS_LAUNCH_MS + days * D).length;
   check("the welcome waits for players who come back for the next Major", old(45) === 1);
   check("the welcome ages out after 180 days", old(181) === 0);
 }

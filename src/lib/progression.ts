@@ -315,6 +315,19 @@ export function prelaunchXp(ledger: readonly LedgerRow[]): number {
   return ledger.filter((r) => r.atMs < ACHIEVEMENTS_LAUNCH_MS).reduce((n, r) => n + r.credited, 0);
 }
 
+/** Short names of the Majors behind the pre-launch unlocks, e.g. ["IEM Cologne 2026"]. */
+function prelaunchMajors(unlocks: readonly Unlock[]): string[] {
+  return [...new Set(unlocks.filter((u) => u.atMs < ACHIEVEMENTS_LAUNCH_MS).map((u) => u.eventId).filter((e): e is number => e !== null))]
+    .map((e) => getEventConfig(e)?.name.replace(/\s+CS2 Major Championship$/i, "") ?? null)
+    .filter((n): n is string => !!n);
+}
+
+/** The one Major the retroactive haul came from, or null when it spans several (or none is recorded). */
+export function prelaunchMajorName(unlocks: readonly Unlock[]): string | null {
+  const m = prelaunchMajors(unlocks);
+  return m.length === 1 ? m[0] : null;
+}
+
 /** What the PHATT ID welcome page (/phatt-id) walks a player through. */
 export interface WelcomeHaul {
   entryId: string;
@@ -329,20 +342,17 @@ export interface WelcomeHaul {
 }
 
 /**
- * The PHATT ID welcome (PHA-4477): the Cologne accounts' retroactive haul.
- * Announced once in the bell ("Welcome to PHATT ID", entry `ach:launch`) and
+ * The Cologne accounts' retroactive haul (PHA-4477). Announced once in the
+ * bell ("Your achievements from IEM Cologne 2026", entry `ach:launch`) and
  * opened at the player's own pace on /phatt-id, never pushed over the page
  * (Brandon 10/24). Not gated on read state: the page stays reachable.
  */
 export async function getWelcomeHaul(playerId: string, nowMs: number = Date.now()): Promise<WelcomeHaul> {
   const p = await getPlayerProgression(playerId, nowMs, null);
   const unlocks = p.unlocks.filter((u) => u.atMs < ACHIEVEMENTS_LAUNCH_MS).sort((a, b) => a.atMs - b.atMs);
-  const majors = [...new Set(unlocks.map((u) => u.eventId).filter((e): e is number => e !== null))]
-    .map((e) => getEventConfig(e)?.name.replace(/\s+CS2 Major Championship$/i, "") ?? null)
-    .filter((n): n is string => !!n);
   return {
     entryId: WELCOME_ENTRY_ID,
-    majors,
+    majors: prelaunchMajors(unlocks),
     unlocks,
     xp: prelaunchXp(p.ledger),
     feltsUnlocked: p.felts.filter((f) => f.unlocked).length,

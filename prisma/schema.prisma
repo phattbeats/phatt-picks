@@ -289,6 +289,9 @@ model NotificationRead {
   player   Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
   entryId  String // stable id from notifications-core.assembleFeed
   readAt   DateTime @default(now())
+  // Deleted from the bell/inbox by the player. Hidden while it's newer than
+  // the entry; fresh activity on the same entry (a new reaction) brings it back.
+  dismissedAt DateTime?
 
   @@id([playerId, entryId])
   @@index([playerId, readAt])

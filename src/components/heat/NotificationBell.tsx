@@ -324,6 +324,18 @@ export function NotificationBell() {
     return () => root.removeEventListener("mousedown", onMouseDown);
   }, []);
 
+  // Delete one entry from the bell (and the inbox): optimistic, then persist.
+  function deleteOne(id: string, wasNew: boolean) {
+    setItems((prev) => prev.filter((x) => x.id !== id));
+    knownIdsRef.current.delete(id);
+    if (wasNew) setUnread((n) => Math.max(0, n - 1));
+    void fetch("/api/notifications", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "delete", entryIds: [id] }),
+    }).catch(() => {});
+  }
+
   async function toggle() {
     const next = !open;
     setOpen(next);
@@ -411,6 +423,17 @@ export function NotificationBell() {
                       </span>
                       <span className="notifbell-meta">{timeAgo(it.atMs)}</span>
                     </Link>
+                    <button
+                      type="button"
+                      className="notifbell-del"
+                      aria-label={`Delete: ${it.title}`}
+                      title="Delete"
+                      onClick={() => deleteOne(it.id, it.isNew)}
+                    >
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                        <path d="M6 6l12 12M18 6L6 18" />
+                      </svg>
+                    </button>
                   </li>
                 ))}
               </ul>

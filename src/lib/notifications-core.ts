@@ -158,6 +158,14 @@ export interface ReadContext {
   readSet: ReadonlySet<string>;
   /** epoch ms of each explicit read, keyed by entryId — drives readAt. */
   readAtByEntry: ReadonlyMap<string, number>;
+  /** epoch ms each entry was deleted by the player, keyed by entryId. */
+  dismissedAtByEntry?: ReadonlyMap<string, number>;
+}
+
+/** True if the player deleted this entry and nothing has happened on it since. */
+export function isDismissed(entry: Pick<NotifEntry, "id" | "atMs">, rc: ReadContext): boolean {
+  const at = rc.dismissedAtByEntry?.get(entry.id);
+  return at !== undefined && at >= entry.atMs;
 }
 
 export function emptyReadContext(seenAtMs: number = 0): ReadContext {
@@ -416,17 +424,16 @@ export const ACHIEVEMENTS_LAUNCH_MS = Date.parse("2026-10-24T12:00:00Z");
 export interface AchievementUnlockInput {
   key: string;
   name: string;
-  trinket: string;
   atMs: number;
 }
 
-/** How long the PHATT ID welcome stays in the feed: long enough to greet a player who only comes back for the next Major. */
+/** How long the retroactive-haul entry stays in the feed: long enough to greet a player who only comes back for the next Major. */
 export const WELCOME_MAX_AGE_MS = 180 * DAY_MS;
 
 /**
  * One entry per achievement unlocked since launch (capped at maxAgeMs like the
- * coin), plus one PHATT ID welcome for everything earned before launch: the
- * Cologne accounts' retroactive haul. The welcome opens /phatt-id, where they
+ * coin), plus one entry for everything earned before launch: the Cologne
+ * accounts' retroactive haul ("Your achievements from IEM Cologne 2026"). The welcome opens /phatt-id, where they
  * can go through it at their own pace (Brandon 10/24: a notification, not a
  * popup over the page). The rest land on the achievement list on the profile.
  */
@@ -434,9 +441,9 @@ export function achievementEntries(
   unlocks: readonly AchievementUnlockInput[],
   profileHref: string,
   nowMs: number,
-  opts: { prelaunchXp?: number; maxAgeMs?: number; launchMs?: number } = {},
+  opts: { prelaunchXp?: number; prelaunchMajor?: string | null; maxAgeMs?: number; launchMs?: number } = {},
 ): Omit<NotifEntry, "isNew" | "readAt">[] {
-  const { prelaunchXp, maxAgeMs = 30 * DAY_MS, launchMs = ACHIEVEMENTS_LAUNCH_MS } = opts;
+  const { prelaunchXp, prelaunchMajor, maxAgeMs = 30 * DAY_MS, launchMs = ACHIEVEMENTS_LAUNCH_MS } = opts;
   const out: Omit<NotifEntry, "isNew" | "readAt">[] = [];
   const href = `${profileHref}#achievements`;
   const before = unlocks.filter((u) => u.atMs < launchMs);
@@ -447,8 +454,8 @@ export function achievementEntries(
       id: "ach:launch",
       kind: "achievement",
       icon: "📌",
-      title: "Welcome to PHATT ID",
-      body: `Your calls from earlier Majors earned ${haul}. Open it to see everything.`,
+      title: `Your achievements from ${prelaunchMajor ?? "the last Major"}`,
+      body: `Your calls there earned ${haul}. Open it to see them all.`,
       href: "/phatt-id",
       atMs: launchMs,
     });
@@ -460,7 +467,7 @@ export function achievementEntries(
       kind: "achievement",
       icon: "📌",
       title: `Achievement unlocked: ${u.name}`,
-      body: `The ${u.trinket.toLowerCase()} pin is on your profile, and a new banner photo is waiting in Settings.`,
+      body: "Its pin is on your profile, and a new banner photo is waiting in Settings.",
       href,
       atMs: u.atMs,
     });
@@ -483,9 +490,9 @@ export function assembleFeed(
   limit: number = DEFAULT_LIMIT,
   nowMs: number = Date.now(),
 ): FeedView {
-  // Apply read state first; sort and slice after. Stable secondary order on
+  // Drop deleted entries, apply read state; sort and slice after. Stable secondary order on
   // atMs keeps tie-breaks deterministic across the bell and the inbox page.
-  const items: NotifEntry[] = rawEntries.map((r) => withReadState(r, rc));
+  const items: NotifEntry[] = rawEntries.filter((r) => !isDismissed(r, rc)).map((r) => withReadState(r, rc));
   items.sort(
     (a, b) => Number(b.isNew) - Number(a.isNew) || b.atMs - a.atMs || a.id.localeCompare(b.id),
   );

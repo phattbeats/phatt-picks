@@ -241,5 +241,21 @@ check("parseNotifPrefs: coin falls back to defaults when absent", (() => {
   return p.coin.inApp === true && p.coin.push === true;
 })());
 
+// ── delete (dismissedAt) ──
+{
+  const e = { id: "x", kind: "announcement" as const, icon: "", title: "X", body: "", href: "/", atMs: NOW - HOUR };
+  const keep = { ...e, id: "y" };
+  const rc = (dismissedAt: number): ReadContext => ({
+    ...emptyReadContext(0),
+    readSet: new Set(["x"]),
+    readAtByEntry: new Map([["x", dismissedAt]]),
+    dismissedAtByEntry: new Map([["x", dismissedAt]]),
+  });
+  const gone = assembleFeed([e, keep], rc(NOW), 30, NOW);
+  check("delete: a deleted entry leaves the feed", gone.total === 1 && gone.items[0].id === "y");
+  const back = assembleFeed([{ ...e, atMs: NOW }], rc(NOW - HOUR / 2), 30, NOW);
+  check("delete: new activity on a deleted entry brings it back, unread", back.total === 1 && back.items[0].isNew);
+}
+
 console.log(`\nverify-notifications: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);
