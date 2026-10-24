@@ -7,7 +7,7 @@
  *     300/week caps, 50 per Major finished and 25 per achievement outside caps;
  *   • a stage counts only once it has LOCKED with a full set of picks;
  *   • each of the 12 achievement rules, at the earliest instant it was earned;
- *   • felts unlock at the title levels; a stale loadout falls back to default.
+ *   • felts unlock at levels 5/10/15/30/50; a stale loadout falls back to default.
  *
  * Pure-only (no prisma). Run: node scripts/verify-progression.ts
  */
@@ -22,6 +22,8 @@ import {
   ledgerFor,
   parseLoadout,
   effectiveLoadout,
+  showcaseFor,
+  cleanShowcase,
   FELTS,
   ACHIEVEMENTS,
   coinItemKey,
@@ -186,18 +188,18 @@ console.log("ledger from facts");
 }
 
 console.log("unlockables");
-check("felts unlock at the title levels", FELTS.map((f) => f.level).join() === "1,10,20,30,40,50");
+check("felts unlock at 5/10/15/30/50", FELTS.map((f) => f.level).join() === "1,5,10,15,30,50");
 check("bad loadout JSON is empty", parseLoadout("{oops").felt === null);
 check("unknown keys are dropped", parseLoadout(JSON.stringify({ felt: "plaid", banner: "nope" })).banner === null);
 check(
   "a felt above your level falls back",
-  effectiveLoadout({ felt: "forest", banner: null }, 12, new Set()).felt === null &&
-    effectiveLoadout({ felt: "oxblood", banner: null }, 12, new Set()).felt === "oxblood",
+  effectiveLoadout({ felt: "velvet", banner: null, showcase: [] }, 12, new Set()).felt === null &&
+    effectiveLoadout({ felt: "forest", banner: null, showcase: [] }, 12, new Set()).felt === "forest",
 );
 check(
   "a banner you don't hold falls back",
-  effectiveLoadout({ felt: null, banner: "called_it" }, 1, new Set()).banner === null &&
-    effectiveLoadout({ felt: null, banner: "called_it" }, 1, new Set<AchievementKey>(["called_it"])).banner === "called_it",
+  effectiveLoadout({ felt: null, banner: "called_it", showcase: [] }, 1, new Set()).banner === null &&
+    effectiveLoadout({ felt: null, banner: "called_it", showcase: [] }, 1, new Set<AchievementKey>(["called_it"])).banner === "called_it",
 );
 check("coin item key", coinItemKey("iem-cologne-2026", "gold") === "hotline/coin.iem-cologne-2026.gold");
 check("12 achievements, 12 distinct banners", ACHIEVEMENTS.length === 12 && new Set(ACHIEVEMENTS.map((a) => a.banner)).size === 12);
@@ -214,10 +216,27 @@ console.log("notifications");
     "/players/x",
     now,
   );
-  check("pre-launch unlocks roll up into one entry", e.filter((x) => x.id === "ach:launch").length === 1 && e[0].title.startsWith("2 "));
+  check("pre-launch unlocks roll up into one welcome", e.filter((x) => x.id === "ach:launch").length === 1 && e[0].title === "Welcome to PHATT ID");
+  check("the welcome opens the PHATT ID page", e[0].href === "/phatt-id");
   check("post-launch unlock gets its own entry", e.some((x) => x.id === "ach:veteran"));
-  check("entries land on the wall", e.every((x) => x.href === "/players/x#achievements"));
-  check("roll-up ages out after 30 days", achievementEntries([{ key: "a", name: "A", trinket: "T", atMs: 0 }], "/p", ACHIEVEMENTS_LAUNCH_MS + 31 * D).length === 0);
+  check("new unlocks land on the profile list", e.filter((x) => x.id !== "ach:launch").every((x) => x.href === "/players/x#achievements"));
+  const withXp = achievementEntries([{ key: "a", name: "A", trinket: "T", atMs: 0 }], "/p", ACHIEVEMENTS_LAUNCH_MS + H, { prelaunchXp: 1418 });
+  check("the welcome names the XP banked", withXp[0].body.includes("1 achievement and 1,418 XP"));
+  const old = (days: number) => achievementEntries([{ key: "a", name: "A", trinket: "T", atMs: 0 }], "/p", ACHIEVEMENTS_LAUNCH_MS + days * D).length;
+  check("the welcome waits for players who come back for the next Major", old(45) === 1);
+  check("the welcome ages out after 180 days", old(181) === 0);
+}
+
+console.log("showcase");
+{
+  const held = new Set<AchievementKey>(["first_call", "full_card", "called_it", "clean_sweep", "bleachers"]);
+  check("default showcase is the hardest three", showcaseFor([], held).join() === "called_it,clean_sweep,bleachers");
+  check("the player's picks come first, in their order", showcaseFor(["first_call", "full_card"], held).join() === "first_call,full_card,called_it");
+  check("a pick you don't hold is skipped", showcaseFor(["veteran"], held)[0] === "called_it");
+  check("fewer than three unlocks shows what there is", showcaseFor([], new Set<AchievementKey>(["first_call"])).join() === "first_call");
+  check("showcase parse caps at three and drops repeats/unknowns", cleanShowcase(["called_it", "called_it", "nope", "veteran", "climber", "synced"]).join() === "called_it,veteran,climber");
+  check("old loadout JSON gets an empty showcase", parseLoadout(JSON.stringify({ felt: "oxblood" })).showcase.length === 0);
+  check("a showcase pick you don't hold isn't worn", effectiveLoadout({ felt: null, banner: null, showcase: ["veteran", "called_it"] }, 1, held).showcase.join() === "called_it");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

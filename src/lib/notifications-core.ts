@@ -420,30 +420,36 @@ export interface AchievementUnlockInput {
   atMs: number;
 }
 
+/** How long the PHATT ID welcome stays in the feed: long enough to greet a player who only comes back for the next Major. */
+export const WELCOME_MAX_AGE_MS = 180 * DAY_MS;
+
 /**
  * One entry per achievement unlocked since launch (capped at maxAgeMs like the
- * coin), plus one roll-up entry for everything earned before launch. `href`
- * lands on the achievement wall on the player's own profile.
+ * coin), plus one PHATT ID welcome for everything earned before launch: the
+ * Cologne accounts' retroactive haul. The welcome opens /phatt-id, where they
+ * can go through it at their own pace (Brandon 10/24: a notification, not a
+ * popup over the page). The rest land on the achievement list on the profile.
  */
 export function achievementEntries(
   unlocks: readonly AchievementUnlockInput[],
   profileHref: string,
   nowMs: number,
-  maxAgeMs: number = 30 * DAY_MS,
-  launchMs: number = ACHIEVEMENTS_LAUNCH_MS,
+  opts: { prelaunchXp?: number; maxAgeMs?: number; launchMs?: number } = {},
 ): Omit<NotifEntry, "isNew" | "readAt">[] {
+  const { prelaunchXp, maxAgeMs = 30 * DAY_MS, launchMs = ACHIEVEMENTS_LAUNCH_MS } = opts;
   const out: Omit<NotifEntry, "isNew" | "readAt">[] = [];
   const href = `${profileHref}#achievements`;
   const before = unlocks.filter((u) => u.atMs < launchMs);
-  if (before.length > 0 && launchMs <= nowMs && nowMs - launchMs <= maxAgeMs) {
+  if (before.length > 0 && launchMs <= nowMs && nowMs - launchMs <= WELCOME_MAX_AGE_MS) {
     const n = before.length;
+    const haul = `${n} achievement${n === 1 ? "" : "s"}${prelaunchXp ? ` and ${prelaunchXp.toLocaleString("en-US")} XP` : ""}`;
     out.push({
       id: "ach:launch",
       kind: "achievement",
       icon: "📌",
-      title: `${n} achievement${n === 1 ? "" : "s"} from earlier Majors`,
-      body: `Your past calls earned ${n === 1 ? "a trinket pin" : `${n} trinket pins`} and banner photos. See them on your profile.`,
-      href,
+      title: "Welcome to PHATT ID",
+      body: `Your calls from earlier Majors earned ${haul}. Open it to see everything.`,
+      href: "/phatt-id",
       atMs: launchMs,
     });
   }

@@ -328,7 +328,7 @@ export type FeltKey = "navy" | "oxblood" | "forest" | "velvet" | "royal" | "gold
 export interface FeltDef {
   key: FeltKey;
   name: string;
-  /** The PHATT ID level it unlocks at (the title levels). Never shown as a number until sign-in is live. */
+  /** The PHATT ID level it unlocks at (Brandon 10/24: sooner than the title levels). Never shown as a number until sign-in is live. */
   level: number;
   /** Rendered tile under public/coins/ (recoloured from the navy Blender render). */
   tile: string;
@@ -338,10 +338,10 @@ export interface FeltDef {
 
 export const FELTS: readonly FeltDef[] = [
   { key: "navy", name: "Navy", level: 1, tile: "/coins/felt-slot.webp", bed: "#0a1626" },
-  { key: "oxblood", name: "Oxblood", level: 10, tile: "/coins/felt-oxblood.webp", bed: "#1e0a0d" },
-  { key: "forest", name: "Forest", level: 20, tile: "/coins/felt-forest.webp", bed: "#0a1a12" },
-  { key: "velvet", name: "Black velvet", level: 30, tile: "/coins/felt-velvet.webp", bed: "#0b0b0d" },
-  { key: "royal", name: "Royal purple", level: 40, tile: "/coins/felt-royal.webp", bed: "#160c24" },
+  { key: "oxblood", name: "Oxblood", level: 5, tile: "/coins/felt-oxblood.webp", bed: "#1e0a0d" },
+  { key: "forest", name: "Forest", level: 10, tile: "/coins/felt-forest.webp", bed: "#0a1a12" },
+  { key: "velvet", name: "Black velvet", level: 15, tile: "/coins/felt-velvet.webp", bed: "#0b0b0d" },
+  { key: "royal", name: "Royal purple", level: 30, tile: "/coins/felt-royal.webp", bed: "#160c24" },
   { key: "gold", name: "Gold-trim black", level: 50, tile: "/coins/felt-gold.webp", bed: "#0d0b08" },
 ];
 
@@ -353,9 +353,40 @@ export interface Loadout {
   felt: FeltKey | null;
   /** The achievement whose banner photo is on the profile hero (null = the default rotation). */
   banner: AchievementKey | null;
+  /** Up to three achievements shown off in the profile hero, in the player's order ([] = the default pick). */
+  showcase: AchievementKey[];
 }
 
-export const EMPTY_LOADOUT: Loadout = { felt: null, banner: null };
+export const SHOWCASE_SIZE = 3;
+
+export const EMPTY_LOADOUT: Loadout = { felt: null, banner: null, showcase: [] };
+
+/** Hardest first: what the hero shows when a player hasn't picked their own three. */
+const SHOWCASE_RANK: readonly AchievementKey[] = [
+  "perfect_swiss",
+  "called_it",
+  "poker_face",
+  "clean_sweep",
+  "stage_topper",
+  "veteran",
+  "climber",
+  "show_your_hand",
+  "synced",
+  "bleachers",
+  "full_card",
+  "first_call",
+];
+
+/** Keep known keys only, drop repeats, cap at three. */
+export function cleanShowcase(raw: unknown): AchievementKey[] {
+  if (!Array.isArray(raw)) return [];
+  const out: AchievementKey[] = [];
+  for (const k of raw) {
+    if (ACHIEVEMENT_BY_KEY.has(k as AchievementKey) && !out.includes(k as AchievementKey)) out.push(k as AchievementKey);
+    if (out.length === SHOWCASE_SIZE) break;
+  }
+  return out;
+}
 
 export function parseLoadout(json: string | null | undefined): Loadout {
   if (!json) return EMPTY_LOADOUT;
@@ -363,7 +394,7 @@ export function parseLoadout(json: string | null | undefined): Loadout {
     const raw = JSON.parse(json) as Partial<Record<keyof Loadout, unknown>>;
     const felt = FELTS.some((f) => f.key === raw.felt) ? (raw.felt as FeltKey) : null;
     const banner = ACHIEVEMENT_BY_KEY.has(raw.banner as AchievementKey) ? (raw.banner as AchievementKey) : null;
-    return { felt, banner };
+    return { felt, banner, showcase: cleanShowcase(raw.showcase) };
   } catch {
     return EMPTY_LOADOUT;
   }
@@ -371,13 +402,26 @@ export function parseLoadout(json: string | null | undefined): Loadout {
 
 /**
  * The loadout as it may actually be worn: a felt above the player's level or a
- * banner from an achievement they don't hold falls back to the default, so a
- * stale choice (e.g. after a delete-means-start-over) can never show.
+ * banner/showcase pick from an achievement they don't hold falls back to the
+ * default, so a stale choice (e.g. after a delete-means-start-over) can never show.
  */
 export function effectiveLoadout(l: Loadout, level: number, unlocked: ReadonlySet<AchievementKey>): Loadout {
   const felt = l.felt && feltByKey(l.felt).level <= level ? l.felt : null;
   const banner = l.banner && unlocked.has(l.banner) ? l.banner : null;
-  return { felt, banner };
+  return { felt, banner, showcase: l.showcase.filter((k) => unlocked.has(k)) };
+}
+
+/**
+ * The three achievements in the profile hero: the player's own picks, topped up
+ * with their hardest other unlocks when they've picked fewer than three (or none).
+ */
+export function showcaseFor(picked: readonly AchievementKey[], unlocked: ReadonlySet<AchievementKey>): AchievementKey[] {
+  const out = picked.filter((k) => unlocked.has(k)).slice(0, SHOWCASE_SIZE);
+  for (const k of SHOWCASE_RANK) {
+    if (out.length === SHOWCASE_SIZE) break;
+    if (unlocked.has(k) && !out.includes(k)) out.push(k);
+  }
+  return out;
 }
 
 // ── PHATT ID items (Phase 2/3 contract) ──────────────────────────────────────

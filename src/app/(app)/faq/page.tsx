@@ -194,13 +194,14 @@ const CATEGORIES = [
             <p>
               Twelve of them, from <b>First Call</b> (a full set of picks for a stage) to <b>Called It</b>{" "}
               (the champion) and <b>Poker Face</b> (seal a stage Hidden, then top it). Each one drops a
-              trinket pin on your profile and unlocks a banner photo you can put behind it in Settings.
+              trinket pin and unlocks a banner photo you can put behind your profile. Pick three to show
+              off in your profile banner (Settings → Customize); the rest are listed underneath.
             </p>
             <p>
               They count toward your <b>PHATT ID</b>, the one account and level across the PHATT arcade.
               Playing Pick&apos;Em earns XP too, and new case felts unlock as your PHATT ID levels up.
               Everything is cosmetic: nothing changes your points. Past Majors count, so Cologne calls
-              are already on your wall.
+              are already on your profile.
             </p>
           </>
         ),

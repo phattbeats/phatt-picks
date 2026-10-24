@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * Settings → Customize (PHA-4477): pick the felt your coin case is lined with
- * and the banner photo behind your profile. Felts unlock as your PHATT ID levels
+ * Settings → Customize (PHA-4477): pick the three achievements shown off in
+ * your profile banner, the felt your coin case is lined with and the banner
+ * photo behind your profile. Felts unlock as your PHATT ID levels
  * up (the level number itself stays hidden until PHATT ID sign-in is live);
  * banners unlock with achievements. Optimistic: the choice shows at once, the
  * PATCH to /api/loadout follows, and a refusal puts the old choice back.
@@ -26,7 +27,15 @@ export interface BannerOption {
   unlocked: boolean;
 }
 
-async function save(patch: { felt?: string | null; banner?: string | null }): Promise<boolean> {
+export interface ShowcaseOption {
+  key: string;
+  name: string;
+  trinket: string;
+  /** The pin, rendered on the server. */
+  pin: React.ReactNode;
+}
+
+async function save(patch: { felt?: string | null; banner?: string | null; showcase?: string[] }): Promise<boolean> {
   try {
     const r = await fetch("/api/loadout", {
       method: "PATCH",
@@ -45,17 +54,37 @@ export function CustomizePanel({
   initialFelt,
   initialBanner,
   defaultBanner,
+  showcaseOptions,
+  initialShowcase,
+  showcaseSize,
 }: {
   felts: FeltOption[];
   banners: BannerOption[];
   initialFelt: string;
   initialBanner: string | null;
   defaultBanner: string;
+  /** Earned achievements, the only ones that can go in the showcase. */
+  showcaseOptions: ShowcaseOption[];
+  /** The player's own picks ([] = the default: their hardest unlocks). */
+  initialShowcase: string[];
+  showcaseSize: number;
 }) {
+  const [showcase, setShowcase] = useState<string[]>(initialShowcase);
   const [felt, setFelt] = useState(initialFelt);
   const [banner, setBanner] = useState<string | null>(initialBanner);
   const [err, setErr] = useState<string | null>(null);
 
+  const toggleShowcase = async (key: string) => {
+    const prev = showcase;
+    const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
+    if (next.length > showcaseSize) return;
+    setShowcase(next);
+    setErr(null);
+    if (!(await save({ showcase: next }))) {
+      setShowcase(prev);
+      setErr("Couldn't save your showcase. Try again.");
+    }
+  };
   const pickFelt = async (key: string) => {
     const prev = felt;
     setFelt(key);
@@ -80,6 +109,40 @@ export function CustomizePanel({
 
   return (
     <div className="cz">
+      {showcaseOptions.length > 0 && (
+        <div className="cz-group">
+          <span className="eyebrow">
+            Showcase · {showcase.length} of {showcaseSize}
+          </span>
+          <div className="cz-show" role="group" aria-label={`Showcase: pick up to ${showcaseSize}`}>
+            {showcaseOptions.map((a) => {
+              const at = showcase.indexOf(a.key);
+              const full = at < 0 && showcase.length >= showcaseSize;
+              return (
+                <button
+                  key={a.key}
+                  type="button"
+                  aria-pressed={at >= 0}
+                  disabled={full}
+                  className={`cz-ach${at >= 0 ? " on" : ""}`}
+                  onClick={() => toggleShowcase(a.key)}
+                  title={full ? `Take one out first: the showcase holds ${showcaseSize}` : a.trinket}
+                >
+                  {a.pin}
+                  <span className="cz-ach-nm">{a.name}</span>
+                  {at >= 0 && <span className="cz-ach-n">{at + 1}</span>}
+                </button>
+              );
+            })}
+          </div>
+          <p className="nf-meta">
+            {showcase.length === 0
+              ? `These sit in your profile banner. Until you pick, it shows your hardest ${showcaseSize}.`
+              : "These sit in your profile banner, in this order. The rest are listed underneath."}
+          </p>
+        </div>
+      )}
+
       <div className="cz-group">
         <span className="eyebrow">Case felt</span>
         <div className="cz-felts" role="radiogroup" aria-label="Case felt">

@@ -36,7 +36,7 @@ import {
   type ReadContext,
 } from "@/lib/notifications-core";
 import { getPlayerChallengeCoins } from "@/lib/challenge-coins";
-import { getPlayerProgression } from "@/lib/progression";
+import { getPlayerProgression, prelaunchXp } from "@/lib/progression";
 import { ACHIEVEMENT_BY_KEY } from "@/lib/progression-core";
 
 export const DEFAULT_FEED_LIMIT = 8;
@@ -175,7 +175,8 @@ export async function buildPlayerFeed(
     if (e) rawEntries.push(e);
   }
 
-  // Achievements (PHA-4477) — derived like the coins; the field scoring is
+  // Achievements (PHA-4477) — derived like the coins; the Cologne accounts get
+  // one PHATT ID welcome for their retroactive haul. the field scoring is
   // memoised for 30s, so the bell, the stream and the inbox share it.
   const progression = await getPlayerProgression(playerId, nowMs, null);
   rawEntries.push(
@@ -186,6 +187,7 @@ export async function buildPlayerFeed(
       }),
       `/players/${encodeURIComponent(playerId)}`,
       nowMs,
+      { prelaunchXp: prelaunchXp(progression.ledger) },
     ),
   );
 

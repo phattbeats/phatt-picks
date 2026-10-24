@@ -1,10 +1,12 @@
 /**
  * PATCH /api/loadout — save the player's cosmetic choices (PHA-4477): the case
- * felt and the profile banner photo. Stored as JSON in Player.loadout.
+ * felt, the profile banner photo and the three showcase achievements in the
+ * profile hero. Stored as JSON in Player.loadout.
  *
  * Unlocks are derived, never trusted from the client: a felt above the player's
- * level or a banner from an achievement they don't hold is refused (403). `null`
- * for either field puts the default back (navy felt / the rotating backdrop).
+ * level, or a banner or showcase pick from an achievement they don't hold, is
+ * refused (403). `null` for felt/banner puts the default back (navy felt / the
+ * rotating backdrop); an empty showcase puts back the default pick.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -12,7 +14,7 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { isSameOrigin } from "@/lib/csrf";
 import { getPlayerProgression } from "@/lib/progression";
-import { ACHIEVEMENT_BY_KEY, FELTS, type AchievementKey, type FeltKey, type Loadout } from "@/lib/progression-core";
+import { ACHIEVEMENT_BY_KEY, FELTS, SHOWCASE_SIZE, cleanShowcase, type AchievementKey, type FeltKey, type Loadout } from "@/lib/progression-core";
 
 export async function PATCH(req: NextRequest) {
   if (!isSameOrigin(req)) {
@@ -21,7 +23,7 @@ export async function PATCH(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
-  let body: { felt?: unknown; banner?: unknown };
+  let body: { felt?: unknown; banner?: unknown; showcase?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -49,6 +51,18 @@ export async function PATCH(req: NextRequest) {
       if (!progression.unlocked.has(key)) return NextResponse.json({ error: "Banner not unlocked yet" }, { status: 403 });
       next.banner = key;
     }
+  }
+
+  if (body.showcase !== undefined) {
+    if (!Array.isArray(body.showcase) || body.showcase.length > SHOWCASE_SIZE) {
+      return NextResponse.json({ error: `Pick up to ${SHOWCASE_SIZE}` }, { status: 400 });
+    }
+    const keys = cleanShowcase(body.showcase);
+    if (keys.length !== body.showcase.length) return NextResponse.json({ error: "Unknown achievement" }, { status: 400 });
+    if (keys.some((k) => !progression.unlocked.has(k))) {
+      return NextResponse.json({ error: "Achievement not unlocked yet" }, { status: 403 });
+    }
+    next.showcase = keys;
   }
 
   await prisma.player.update({ where: { id: session.playerId }, data: { loadout: JSON.stringify(next) } });

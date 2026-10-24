@@ -1,11 +1,11 @@
 /**
- * Hotline achievements (PHA-4477): the trinket pins and the achievement wall.
+ * Hotline achievements (PHA-4477): the trinket pins, the hero showcase and the list.
  *
  * Every achievement drops a trinket (PHA-4103); on Hotline it's an enamel pin —
  * gilt rim, dark enamel in the achievement's colour, the trinket struck in gold.
- * Unlocked pins line the profile hero; the wall lists all twelve, earned ones
- * dated, locked ones dim with how to earn them. Server components, pure SVG +
- * CSS (sg-people.css .ach-*), no images to load.
+ * Three of them are shown off in the profile hero; the list under it has the
+ * rest, earned ones dated, locked ones dim with how to earn them. Server
+ * components, pure SVG + CSS (sg-people.css .ach-*), no images to load.
  */
 
 import { ACHIEVEMENTS, type AchievementDef, type AchievementKey, type Unlock } from "@/lib/progression-core";
@@ -143,17 +143,27 @@ export function TrinketPin({
   );
 }
 
-/** Earned pins along the profile hero, in registry order. */
-export function PinRow({ unlocks }: { unlocks: readonly Unlock[] }) {
-  if (unlocks.length === 0) return null;
-  const earned = new Set(unlocks.map((u) => u.key));
+/**
+ * The three achievements a player shows off in the profile hero (Brandon 10/24):
+ * their own picks from Settings → Customize, topped up with their hardest
+ * unlocks until they choose.
+ */
+export function Showcase({ keys }: { keys: readonly AchievementKey[] }) {
+  if (keys.length === 0) return null;
   return (
-    <ul className="ach-row" aria-label="Achievement pins">
-      {ACHIEVEMENTS.filter((a) => earned.has(a.key)).map((a) => (
-        <li key={a.key} title={`${a.name} · ${a.trinket}`}>
-          <TrinketPin def={a} earned size={34} />
-        </li>
-      ))}
+    <ul className="ach-show" aria-label="Showcase achievements">
+      {keys.map((k) => {
+        const a = ACHIEVEMENTS.find((d) => d.key === k);
+        return a ? (
+          <li key={k} title={`${a.name} · ${a.description}`}>
+            <TrinketPin def={a} earned size={46} />
+            <span className="ach-show-t">
+              <span className="ach-show-nm">{a.name}</span>
+              <span className="ach-show-tr">{a.trinket}</span>
+            </span>
+          </li>
+        ) : null;
+      })}
     </ul>
   );
 }
@@ -162,20 +172,27 @@ function earnedLabel(atMs: number): string {
   return new Date(atMs).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
-/** The achievement wall: all twelve, earned first in registry order, then locked. */
-export function AchievementWall({
+/**
+ * Everything below the hero showcase: the rest of the earned achievements, most
+ * recent first, then the locked ones with how to earn them. One row each.
+ */
+export function AchievementList({
   unlocks,
+  showcase,
   isSelf,
   majorName,
 }: {
   unlocks: readonly Unlock[];
+  showcase: readonly AchievementKey[];
   isSelf: boolean;
   /** Short Major name for an unlock's event id. */
   majorName: (eventId: number) => string | null;
 }) {
   if (unlocks.length === 0 && !isSelf) return null;
+  const shown = new Set(showcase);
   const byKey = new Map(unlocks.map((u) => [u.key, u] as const));
-  const ordered = [...ACHIEVEMENTS].sort((a, b) => Number(byKey.has(b.key)) - Number(byKey.has(a.key)));
+  const earned = [...unlocks].filter((u) => !shown.has(u.key)).sort((a, b) => b.atMs - a.atMs);
+  const locked = ACHIEVEMENTS.filter((a) => !byKey.has(a.key));
   return (
     <section className="chap ach-sect" id="achievements">
       <div className="chap-h row2">
@@ -183,39 +200,54 @@ export function AchievementWall({
           <h2>Achievements</h2>
           <p>
             {isSelf
-              ? "Each one drops a trinket pin and unlocks a banner photo for your profile, and all of it counts toward your PHATT ID."
+              ? `${showcase.length > 0 ? "Your best sit in the banner above. " : ""}Each one drops a trinket pin and a banner photo, and it all counts toward your PHATT ID.`
               : "Each one drops a trinket pin."}
           </p>
         </div>
         <span className="eyebrow">
           {unlocks.length} of {ACHIEVEMENTS.length}
+          {isSelf && unlocks.length > 0 && (
+            <>
+              {" · "}
+              <a href="/settings#customize">Pick your top 3</a>
+            </>
+          )}
         </span>
       </div>
-      <ul className="ach-wall">
-        {ordered.map((a) => {
-          const u = byKey.get(a.key);
-          const where = u?.eventId != null ? majorName(u.eventId) : null;
-          return (
-            <li key={a.key} className={`ach-card${u ? " on" : ""}`}>
-              <TrinketPin def={a} earned={!!u} />
+      {earned.length + locked.length > 0 && (
+        <ol className="ach-list">
+          {earned.map((u) => {
+            const a = ACHIEVEMENTS.find((d) => d.key === u.key);
+            if (!a) return null;
+            const where = u.eventId != null ? majorName(u.eventId) : null;
+            return (
+              <li key={a.key} className="ach-li on">
+                <TrinketPin def={a} earned size={40} />
+                <div className="ach-txt">
+                  <span className="ach-nm">{a.name}</span>
+                  <span className="ach-desc">{a.description}</span>
+                </div>
+                <span className="ach-meta">
+                  {a.trinket}
+                  <br />
+                  {where ? `${where} · ` : ""}
+                  {earnedLabel(u.atMs)}
+                </span>
+              </li>
+            );
+          })}
+          {locked.map((a) => (
+            <li key={a.key} className="ach-li">
+              <TrinketPin def={a} earned={false} size={40} />
               <div className="ach-txt">
                 <span className="ach-nm">{a.name}</span>
                 <span className="ach-desc">{a.description}</span>
-                <span className="ach-meta">
-                  {u ? (
-                    <>
-                      {a.trinket}
-                      {where ? ` · ${where}` : ""} · {earnedLabel(u.atMs)}
-                    </>
-                  ) : (
-                    "Locked"
-                  )}
-                </span>
               </div>
+              <span className="ach-meta">Locked</span>
             </li>
-          );
-        })}
-      </ul>
+          ))}
+        </ol>
+      )}
     </section>
   );
 }

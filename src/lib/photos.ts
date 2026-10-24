@@ -25,6 +25,7 @@ export const PHOTOS = {
   leaderboardFinal: p("energy-confetti"),
   compareHero: p("emotion-fist"),
   coinsHero: p("energy-trophy-red"),
+  phattIdHero: p("energy-sparks-crowd"),
   majorsHero: p("arena-walk"),
   playersHero: p("crowd-green"),
   pwaBackdrop: p("arena-tunnel"),

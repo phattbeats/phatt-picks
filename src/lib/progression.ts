@@ -21,7 +21,7 @@ import { bucketSwissSlots, isSwissSection } from "./swiss-bucket-core";
 import { coinMintAtMs } from "./event-freeze";
 import { ACHIEVEMENTS_LAUNCH_MS } from "./notifications-core";
 
-/** The feed roll-up entry the welcome card shares its read state with. */
+/** The feed entry for the PHATT ID welcome (the Cologne haul); /phatt-id marks it read. */
 export const WELCOME_ENTRY_ID = "ach:launch";
 import {
   evaluateAchievements,
@@ -310,36 +310,41 @@ export async function getPlayerProgression(
   };
 }
 
-/** The PHATT ID welcome card's contents, or null once seen / for a player with no history. */
-export interface WelcomeSummary {
+/** XP banked before achievements launched: the retroactive credit the welcome hands over. */
+export function prelaunchXp(ledger: readonly LedgerRow[]): number {
+  return ledger.filter((r) => r.atMs < ACHIEVEMENTS_LAUNCH_MS).reduce((n, r) => n + r.credited, 0);
+}
+
+/** What the PHATT ID welcome page (/phatt-id) walks a player through. */
+export interface WelcomeHaul {
   entryId: string;
+  /** Short names of the Majors the retroactive haul came from, e.g. ["IEM Cologne 2026"]. */
   majors: string[];
-  keys: AchievementKey[];
-  /** XP banked before launch (the retroactive credit). */
+  /** Achievements earned before launch, in the order they were earned. */
+  unlocks: Unlock[];
+  /** XP banked before launch. */
   xp: number;
+  /** Case felts open to them now (navy included). */
+  feltsUnlocked: number;
 }
 
 /**
- * The once-per-account welcome (PHA-4477): shown to players whose achievements
- * predate the launch (the Cologne accounts) until they dismiss it. The read
- * check comes first, so a player who has seen it costs one indexed lookup.
+ * The PHATT ID welcome (PHA-4477): the Cologne accounts' retroactive haul.
+ * Announced once in the bell ("Welcome to PHATT ID", entry `ach:launch`) and
+ * opened at the player's own pace on /phatt-id, never pushed over the page
+ * (Brandon 10/24). Not gated on read state: the page stays reachable.
  */
-export async function getWelcomeSummary(playerId: string, nowMs: number = Date.now()): Promise<WelcomeSummary | null> {
-  const seen = await prisma.notificationRead.findUnique({
-    where: { playerId_entryId: { playerId, entryId: WELCOME_ENTRY_ID } },
-    select: { entryId: true },
-  });
-  if (seen) return null;
+export async function getWelcomeHaul(playerId: string, nowMs: number = Date.now()): Promise<WelcomeHaul> {
   const p = await getPlayerProgression(playerId, nowMs, null);
-  const before = p.unlocks.filter((u) => u.atMs < ACHIEVEMENTS_LAUNCH_MS);
-  if (before.length === 0) return null;
-  const majors = [...new Set(before.map((u) => u.eventId).filter((e): e is number => e !== null))]
+  const unlocks = p.unlocks.filter((u) => u.atMs < ACHIEVEMENTS_LAUNCH_MS).sort((a, b) => a.atMs - b.atMs);
+  const majors = [...new Set(unlocks.map((u) => u.eventId).filter((e): e is number => e !== null))]
     .map((e) => getEventConfig(e)?.name.replace(/\s+CS2 Major Championship$/i, "") ?? null)
     .filter((n): n is string => !!n);
   return {
     entryId: WELCOME_ENTRY_ID,
     majors,
-    keys: before.map((u) => u.key),
-    xp: p.ledger.filter((r) => r.atMs < ACHIEVEMENTS_LAUNCH_MS).reduce((n, r) => n + r.credited, 0),
+    unlocks,
+    xp: prelaunchXp(p.ledger),
+    feltsUnlocked: p.felts.filter((f) => f.unlocked).length,
   };
 }

@@ -14,7 +14,8 @@ import { isOwner } from "@/lib/owner";
 import { parseNotifPrefs } from "@/lib/notifications-core";
 import { CustomizePanel } from "@/components/CustomizePanel";
 import { getPlayerProgression } from "@/lib/progression";
-import { ACHIEVEMENTS } from "@/lib/progression-core";
+import { ACHIEVEMENTS, SHOWCASE_SIZE } from "@/lib/progression-core";
+import { TrinketPin } from "@/components/sg/people/Achievements";
 import { profilePhoto } from "@/lib/photos";
 
 /**
@@ -102,11 +103,11 @@ export default async function SettingsPage() {
         </nav>
 
         <div className="secs">
-          {/* Customize (PHA-4477) — cosmetic unlocks: case felt, profile banner */}
+          {/* Customize (PHA-4477) — cosmetic unlocks: showcase, case felt, profile banner */}
           <section className="sec" id="customize">
             <div className="chap-h">
               <h2>Customize</h2>
-              <p>Line your coin case and pick the photo behind your profile. Unlocks are cosmetic only.</p>
+              <p>Pick the achievements you show off, line your coin case and choose the photo behind your profile. Unlocks are cosmetic only.</p>
             </div>
             <CustomizePanel
               felts={progression.felts.map((f) => ({ key: f.key, name: f.name, tile: f.tile, bed: f.bed, unlocked: f.unlocked }))}
@@ -120,6 +121,14 @@ export default async function SettingsPage() {
               initialFelt={progression.loadout.felt ?? "navy"}
               initialBanner={progression.loadout.banner}
               defaultBanner={profilePhoto(session.playerId)}
+              showcaseOptions={ACHIEVEMENTS.filter((a) => progression.unlocked.has(a.key)).map((a) => ({
+                key: a.key,
+                name: a.name,
+                trinket: a.trinket,
+                pin: <TrinketPin def={a} earned size={36} />,
+              }))}
+              initialShowcase={progression.loadout.showcase}
+              showcaseSize={SHOWCASE_SIZE}
             />
           </section>
 

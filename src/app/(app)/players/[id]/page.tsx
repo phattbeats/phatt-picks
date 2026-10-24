@@ -57,8 +57,8 @@ import {
 } from "@/components/sg/people/people-data";
 import { profilePhoto } from "@/lib/photos";
 import { getPlayerProgression } from "@/lib/progression";
-import { ACHIEVEMENT_BY_KEY, feltByKey } from "@/lib/progression-core";
-import { PinRow, AchievementWall } from "@/components/sg/people/Achievements";
+import { ACHIEVEMENT_BY_KEY, feltByKey, showcaseFor } from "@/lib/progression-core";
+import { Showcase, AchievementList } from "@/components/sg/people/Achievements";
 import { coinShortName } from "@/components/heat/ChallengeCoinShelf";
 
 /** Short pick-type tag for a slot (3:0 / 3:1·3:2 / 0:3 for Swiss; — otherwise). */
@@ -179,6 +179,8 @@ export default async function PlayerProfilePage({
   const bannerDef = progression.loadout.banner ? ACHIEVEMENT_BY_KEY.get(progression.loadout.banner) : null;
   const heroPhoto = bannerDef?.banner ?? profilePhoto(player.id);
   const caseFelt = progression.loadout.felt ? feltByKey(progression.loadout.felt) : null;
+  // The three in the hero (Brandon 10/24): their picks, else their hardest unlocks.
+  const showcase = showcaseFor(progression.loadout.showcase, progression.unlocked);
   const majorName = (eid: number) => {
     const cfg = getEventConfig(eid);
     return cfg ? coinShortName(cfg.name) : null;
@@ -359,7 +361,7 @@ export default async function PlayerProfilePage({
             <h1 className={heroFit.className} style={heroFit.style}>
               {player.displayName}
             </h1>
-            <PinRow unlocks={progression.unlocks} />
+            <Showcase keys={showcase} />
           </div>
           <nav className="pp-hero-links rise d2" aria-label="Profile links">
             <Link className="eyebrow" href="/leaderboard" prefetch={false}>← Leaderboard</Link>
@@ -729,8 +731,8 @@ export default async function PlayerProfilePage({
         </section>
       )}
 
-      {/* Achievements (PHA-4477) — the wall of twelve, each with its trinket pin */}
-      <AchievementWall unlocks={progression.unlocks} isSelf={isSelf} majorName={majorName} />
+      {/* Achievements (PHA-4477) — the rest after the hero showcase, then the locked ones */}
+      <AchievementList unlocks={progression.unlocks} showcase={showcase} isSelf={isSelf} majorName={majorName} />
 
       {/* Challenge coins (#1278) — the coin case */}
       <ChallengeCoinShelf

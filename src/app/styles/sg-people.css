@@ -259,25 +259,47 @@
 .sw-panel .tsd-close::after { content: ''; position: absolute; inset: -4px; }
 .sw-panel .tsd-close:hover { color: var(--ink-hi); border-color: var(--ink-hi); }
 
-/* ── PHA-4477 achievements: trinket pins + the wall ── */
+/* ── PHA-4477 achievements: trinket pins, the hero showcase + the list ── */
 .ach-pin { position: relative; display: inline-grid; place-items: center; flex-shrink: 0; border-radius: 50%; }
 .ach-pin svg { display: block; }
 .ach-pin:not(.locked) { filter: drop-shadow(0 3px 4px rgba(0,0,0,.6)); }
-.ach-row { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 2px 0 0; padding: 0; }
-.ach-row li { display: block; line-height: 0; }
-.ach-wall {
-  list-style: none; margin: 0; padding: 0; display: grid; gap: 1px;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  background: var(--hair); border: 1px solid var(--hair);
+/* The hero showcase: three pins a player shows off (Brandon 10/24). */
+.ach-show { display: flex; flex-wrap: wrap; gap: 10px 22px; list-style: none; margin: 4px 0 0; padding: 0; }
+.ach-show li { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ach-show-t { display: grid; gap: 1px; min-width: 0; }
+.ach-show-nm { font-family: var(--font-display); font-weight: 800; font-size: 16px; letter-spacing: .01em; text-transform: uppercase; color: var(--ink-hi); line-height: 1.05; text-shadow: 0 1px 8px rgba(0,0,0,.7); }
+.ach-show-tr { font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--heat); }
+@media (max-width: 560px) { .ach-show { gap: 8px 14px; } .ach-show-nm { font-size: 13px; } .ach-show-tr { display: none; } }
+
+/* The rest: one row each, earned (newest first) then locked. */
+.ach-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--hair); }
+.ach-li {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 16px;
+  padding: 14px 4px; border-bottom: 1px solid var(--hair); transition: background .2s var(--ease);
 }
-.ach-card { display: flex; gap: 14px; align-items: center; padding: 16px; background: var(--base); min-width: 0; }
-.ach-card.on { background: linear-gradient(180deg, var(--surf-1), var(--base)); }
+.ach-li.on { background: linear-gradient(90deg, rgba(255,255,255,.025), transparent 60%); }
+.ach-li.on:hover { background: linear-gradient(90deg, rgba(255,255,255,.05), transparent 70%); }
 .ach-txt { display: grid; gap: 3px; min-width: 0; }
-.ach-nm { font-family: var(--font-display); font-weight: 800; font-size: 20px; letter-spacing: .01em; text-transform: uppercase; color: var(--ink-hi); line-height: 1.05; }
-.ach-card:not(.on) .ach-nm { color: var(--ink-mid); }
+.ach-nm { font-family: var(--font-display); font-weight: 800; font-size: 19px; letter-spacing: .01em; text-transform: uppercase; color: var(--ink-hi); line-height: 1.05; }
+.ach-li:not(.on) .ach-nm { color: var(--ink-mid); }
 .ach-desc { font-size: 13px; color: var(--ink-mid); line-height: 1.4; }
-.ach-meta { font-family: var(--font-mono); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-low); }
-.ach-card.on .ach-meta { color: var(--heat); }
+.ach-meta { font-family: var(--font-mono); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-low); text-align: right; line-height: 1.6; }
+.ach-li.on .ach-meta { color: var(--heat); }
+@media (max-width: 560px) {
+  .ach-li { grid-template-columns: auto minmax(0, 1fr); }
+  .ach-meta { grid-column: 2; text-align: left; margin-top: -8px; }
+  .ach-meta br { display: none; }
+}
+.ach-sect .chap-h .eyebrow a { color: var(--heat); }
+
+/* /phatt-id — the PHATT ID welcome page */
+.pid-stats { display: flex; gap: 26px; margin-top: 14px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-mid); }
+.pid-stats b { font-family: var(--font-display); font-weight: 900; font-size: 34px; letter-spacing: 0; color: var(--heat); margin-right: 6px; vertical-align: -4px; }
+.pid-unlocks { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); background: var(--hair); border: 1px solid var(--hair); }
+.pid-unlocks li { display: grid; gap: 6px; align-content: start; padding: 18px; background: var(--base); }
+.pid-unlocks b { font-family: var(--font-display); font-weight: 800; font-size: 20px; text-transform: uppercase; color: var(--ink-hi); line-height: 1.05; }
+.pid-unlocks p { margin: 0; font-size: 13px; color: var(--ink-mid); line-height: 1.45; }
+.pid-ctas { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 0; }
 
 /* ── PHA-4477 Settings → Customize ── */
 .cz { display: grid; gap: 28px; }
@@ -303,4 +325,18 @@
 .cz-banner:hover { border-color: var(--hair-3); }
 .cz-banner.on { border-color: var(--heat); box-shadow: 0 0 0 1px var(--heat); }
 .cz-banner-nm { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 8px 6px; font-family: var(--font-mono); font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-hi); text-align: left; background: linear-gradient(0deg, rgba(0,0,0,.8), transparent); }
+.cz-show { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.cz-ach {
+  position: relative; display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 8px 10px; cursor: pointer;
+  border: 1px solid var(--hair-2); border-radius: var(--r-sm); background: var(--surf-1); color: var(--ink-mid); text-align: left;
+  transition: border-color .15s var(--ease), color .15s var(--ease);
+}
+.cz-ach:hover:not(:disabled) { border-color: var(--hair-3); color: var(--ink-hi); }
+.cz-ach.on { border-color: var(--heat); box-shadow: 0 0 0 1px var(--heat); color: var(--ink-hi); }
+.cz-ach:disabled { cursor: not-allowed; opacity: .45; }
+.cz-ach-nm { font-family: var(--font-mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; line-height: 1.3; }
+.cz-ach-n {
+  position: absolute; top: 6px; right: 6px; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%;
+  background: var(--heat); color: #1a1206; font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+}
 .cz-err { color: var(--ember); }
