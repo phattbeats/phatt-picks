@@ -57,8 +57,9 @@ import {
 } from "@/components/sg/people/people-data";
 import { profilePhoto } from "@/lib/photos";
 import { getPlayerProgression } from "@/lib/progression";
-import { ACHIEVEMENT_BY_KEY, feltByKey, showcaseFor } from "@/lib/progression-core";
+import { ACHIEVEMENT_BY_KEY, CHARM_BY_KEY, feltByKey, keyringFor, showcaseFor } from "@/lib/progression-core";
 import { Showcase, AchievementList } from "@/components/sg/people/Achievements";
+import { Keyring } from "@/components/Keyring";
 import { coinShortName } from "@/components/heat/ChallengeCoinShelf";
 
 /** Short pick-type tag for a slot (3:0 / 3:1·3:2 / 0:3 for Swiss; — otherwise). */
@@ -181,6 +182,10 @@ export default async function PlayerProfilePage({
   const caseFelt = progression.loadout.felt ? feltByKey(progression.loadout.felt) : null;
   // The three in the hero (Brandon 10/24): their picks, else their hardest unlocks.
   const showcase = showcaseFor(progression.loadout.showcase, progression.unlocked);
+  const keyring = keyringFor(progression.loadout.charms, progression.unlocked).map((k) => {
+    const c = CHARM_BY_KEY.get(k)!;
+    return { key: c.key, name: c.name, model: c.model, poster: c.poster };
+  });
   const majorName = (eid: number) => {
     const cfg = getEventConfig(eid);
     return cfg ? coinShortName(cfg.name) : null;
@@ -376,6 +381,8 @@ export default async function PlayerProfilePage({
           </nav>
         </div>
       </section>
+
+      <Keyring charms={keyring} />
 
       {!isLiveView && (
         <div className="pp-viewing" role="status">

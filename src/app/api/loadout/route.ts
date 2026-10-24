@@ -1,7 +1,7 @@
 /**
  * PATCH /api/loadout — save the player's cosmetic choices (PHA-4477): the case
  * felt, the profile banner photo and the three showcase achievements in the
- * profile hero. Stored as JSON in Player.loadout.
+ * profile hero and the (up to three) charms on the keyring (PHA-4505). Stored as JSON in Player.loadout.
  *
  * Unlocks are derived, never trusted from the client: a felt above the player's
  * level, or a banner or showcase pick from an achievement they don't hold, is
@@ -14,7 +14,7 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { isSameOrigin } from "@/lib/csrf";
 import { getPlayerProgression } from "@/lib/progression";
-import { ACHIEVEMENT_BY_KEY, FELTS, SHOWCASE_SIZE, cleanShowcase, type AchievementKey, type FeltKey, type Loadout } from "@/lib/progression-core";
+import { ACHIEVEMENT_BY_KEY, FELTS, KEYRING_SIZE, SHOWCASE_SIZE, charmsHeld, cleanCharms, cleanShowcase, type AchievementKey, type FeltKey, type Loadout } from "@/lib/progression-core";
 
 export async function PATCH(req: NextRequest) {
   if (!isSameOrigin(req)) {
@@ -23,7 +23,7 @@ export async function PATCH(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
-  let body: { felt?: unknown; banner?: unknown; showcase?: unknown };
+  let body: { felt?: unknown; banner?: unknown; showcase?: unknown; charms?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -63,6 +63,17 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Achievement not unlocked yet" }, { status: 403 });
     }
     next.showcase = keys;
+  }
+
+  if (body.charms !== undefined) {
+    if (!Array.isArray(body.charms) || body.charms.length > KEYRING_SIZE) {
+      return NextResponse.json({ error: `The keyring holds ${KEYRING_SIZE}` }, { status: 400 });
+    }
+    const keys = cleanCharms(body.charms);
+    if (keys.length !== body.charms.length) return NextResponse.json({ error: "Unknown charm" }, { status: 400 });
+    const held = charmsHeld(progression.unlocked);
+    if (keys.some((k) => !held.includes(k))) return NextResponse.json({ error: "Charm not unlocked yet" }, { status: 403 });
+    next.charms = keys;
   }
 
   await prisma.player.update({ where: { id: session.playerId }, data: { loadout: JSON.stringify(next) } });

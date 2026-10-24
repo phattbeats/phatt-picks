@@ -349,17 +349,70 @@ export function feltByKey(key: string | null | undefined): FeltDef {
   return FELTS.find((f) => f.key === key) ?? FELTS[0];
 }
 
+// ── Charms (PHA-4505): 3D keyring unlockables, cosmetic only ─────────────────
+
+export type CharmKey = "c4_plush" | "defuse_kit";
+
+export interface CharmDef {
+  key: CharmKey;
+  /** Accessible name only: the UI never spells out how a charm is earned. */
+  name: string;
+  /** glTF (meshopt, webp textures, well under 1 MB) and its transparent still. */
+  model: string;
+  poster: string;
+  /** Brandon 10/24: C4 plush = the first Hotline achievement; defuse kit = a perfect stage in a Major. */
+  earned: (unlocked: ReadonlySet<AchievementKey>) => boolean;
+}
+
+export const CHARMS: readonly CharmDef[] = [
+  { key: "c4_plush", name: "C4 plush", model: "/charms/c4-plush.glb", poster: "/charms/c4-plush.webp", earned: (u) => u.size > 0 },
+  { key: "defuse_kit", name: "Defuse kit", model: "/charms/defuse-kit.glb", poster: "/charms/defuse-kit.webp", earned: (u) => u.has("perfect_swiss") },
+];
+
+export const CHARM_BY_KEY: ReadonlyMap<CharmKey, CharmDef> = new Map(CHARMS.map((c) => [c.key, c] as const));
+
+export const KEYRING_SIZE = 3;
+
+/** Every charm the player's achievements have earned, in registry order. */
+export function charmsHeld(unlocked: ReadonlySet<AchievementKey>): CharmKey[] {
+  return CHARMS.filter((c) => c.earned(unlocked)).map((c) => c.key);
+}
+
+/** Keep known keys only, drop repeats, cap at the keyring's three slots. */
+export function cleanCharms(raw: unknown): CharmKey[] {
+  if (!Array.isArray(raw)) return [];
+  const out: CharmKey[] = [];
+  for (const k of raw) {
+    if (CHARM_BY_KEY.has(k as CharmKey) && !out.includes(k as CharmKey)) out.push(k as CharmKey);
+    if (out.length === KEYRING_SIZE) break;
+  }
+  return out;
+}
+
+/** The charms on the keyring: the player's own picks, topped up with other held ones. */
+export function keyringFor(picked: readonly CharmKey[], unlocked: ReadonlySet<AchievementKey>): CharmKey[] {
+  const held = charmsHeld(unlocked);
+  const out = picked.filter((k) => held.includes(k)).slice(0, KEYRING_SIZE);
+  for (const k of held) {
+    if (out.length === KEYRING_SIZE) break;
+    if (!out.includes(k)) out.push(k);
+  }
+  return out;
+}
+
 export interface Loadout {
   felt: FeltKey | null;
   /** The achievement whose banner photo is on the profile hero (null = the default rotation). */
   banner: AchievementKey | null;
   /** Up to three achievements shown off in the profile hero, in the player's order ([] = the default pick). */
   showcase: AchievementKey[];
+  /** Up to three charms on the keyring, in the player's order ([] = whatever they hold). */
+  charms: CharmKey[];
 }
 
 export const SHOWCASE_SIZE = 3;
 
-export const EMPTY_LOADOUT: Loadout = { felt: null, banner: null, showcase: [] };
+export const EMPTY_LOADOUT: Loadout = { felt: null, banner: null, showcase: [], charms: [] };
 
 /** Hardest first: what the hero shows when a player hasn't picked their own three. */
 const SHOWCASE_RANK: readonly AchievementKey[] = [
@@ -394,7 +447,7 @@ export function parseLoadout(json: string | null | undefined): Loadout {
     const raw = JSON.parse(json) as Partial<Record<keyof Loadout, unknown>>;
     const felt = FELTS.some((f) => f.key === raw.felt) ? (raw.felt as FeltKey) : null;
     const banner = ACHIEVEMENT_BY_KEY.has(raw.banner as AchievementKey) ? (raw.banner as AchievementKey) : null;
-    return { felt, banner, showcase: cleanShowcase(raw.showcase) };
+    return { felt, banner, showcase: cleanShowcase(raw.showcase), charms: cleanCharms(raw.charms) };
   } catch {
     return EMPTY_LOADOUT;
   }
@@ -408,7 +461,7 @@ export function parseLoadout(json: string | null | undefined): Loadout {
 export function effectiveLoadout(l: Loadout, level: number, unlocked: ReadonlySet<AchievementKey>): Loadout {
   const felt = l.felt && feltByKey(l.felt).level <= level ? l.felt : null;
   const banner = l.banner && unlocked.has(l.banner) ? l.banner : null;
-  return { felt, banner, showcase: l.showcase.filter((k) => unlocked.has(k)) };
+  return { felt, banner, showcase: l.showcase.filter((k) => unlocked.has(k)), charms: l.charms.filter((k) => charmsHeld(unlocked).includes(k)) };
 }
 
 /**
@@ -434,4 +487,9 @@ export function coinItemKey(slug: string, tier: string): string {
 /** An achievement's trinket as a PHATT ID inventory item. */
 export function trinketItemKey(key: AchievementKey): string {
   return `hotline/trinket.${key}`;
+}
+
+/** A charm as a PHATT ID inventory item (`charm`, cosmetic only). */
+export function charmItemKey(key: CharmKey): string {
+  return `hotline/charm.${key}`;
 }

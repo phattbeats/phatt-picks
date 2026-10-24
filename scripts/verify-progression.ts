@@ -27,6 +27,10 @@ import {
   FELTS,
   ACHIEVEMENTS,
   coinItemKey,
+  charmItemKey,
+  charmsHeld,
+  cleanCharms,
+  keyringFor,
   type StageFact,
   type PlayerFacts,
   type AchievementKey,
@@ -193,14 +197,28 @@ check("bad loadout JSON is empty", parseLoadout("{oops").felt === null);
 check("unknown keys are dropped", parseLoadout(JSON.stringify({ felt: "plaid", banner: "nope" })).banner === null);
 check(
   "a felt above your level falls back",
-  effectiveLoadout({ felt: "velvet", banner: null, showcase: [] }, 12, new Set()).felt === null &&
-    effectiveLoadout({ felt: "forest", banner: null, showcase: [] }, 12, new Set()).felt === "forest",
+  effectiveLoadout({ felt: "velvet", banner: null, showcase: [], charms: [] }, 12, new Set()).felt === null &&
+    effectiveLoadout({ felt: "forest", banner: null, showcase: [], charms: [] }, 12, new Set()).felt === "forest",
 );
 check(
   "a banner you don't hold falls back",
-  effectiveLoadout({ felt: null, banner: "called_it", showcase: [] }, 1, new Set()).banner === null &&
-    effectiveLoadout({ felt: null, banner: "called_it", showcase: [] }, 1, new Set<AchievementKey>(["called_it"])).banner === "called_it",
+  effectiveLoadout({ felt: null, banner: "called_it", showcase: [], charms: [] }, 1, new Set()).banner === null &&
+    effectiveLoadout({ felt: null, banner: "called_it", showcase: [], charms: [] }, 1, new Set<AchievementKey>(["called_it"])).banner === "called_it",
 );
+check(
+  "charms: C4 plush on any achievement, defuse kit on a perfect Swiss",
+  charmsHeld(new Set()).length === 0 &&
+    charmsHeld(new Set<AchievementKey>(["first_call"])).join() === "c4_plush" &&
+    charmsHeld(new Set<AchievementKey>(["first_call", "perfect_swiss"])).join() === "c4_plush,defuse_kit",
+);
+check(
+  "keyring: holds 3 max, unknown dropped, unheld refused, tops up with held",
+  cleanCharms(["c4_plush", "x", "c4_plush", "defuse_kit"]).join() === "c4_plush,defuse_kit" &&
+    keyringFor(["defuse_kit"], new Set<AchievementKey>(["first_call"])).join() === "c4_plush" &&
+    keyringFor(["defuse_kit"], new Set<AchievementKey>(["first_call", "perfect_swiss"])).join() === "defuse_kit,c4_plush" &&
+    effectiveLoadout({ felt: null, banner: null, showcase: [], charms: ["defuse_kit"] }, 1, new Set<AchievementKey>(["first_call"])).charms.length === 0,
+);
+check("charm item key", charmItemKey("c4_plush") === "hotline/charm.c4_plush");
 check("coin item key", coinItemKey("iem-cologne-2026", "gold") === "hotline/coin.iem-cologne-2026.gold");
 check("12 achievements, 12 distinct banners", ACHIEVEMENTS.length === 12 && new Set(ACHIEVEMENTS.map((a) => a.banner)).size === 12);
 
@@ -238,7 +256,7 @@ console.log("showcase");
   check("fewer than three unlocks shows what there is", showcaseFor([], new Set<AchievementKey>(["first_call"])).join() === "first_call");
   check("showcase parse caps at three and drops repeats/unknowns", cleanShowcase(["called_it", "called_it", "nope", "veteran", "climber", "synced"]).join() === "called_it,veteran,climber");
   check("old loadout JSON gets an empty showcase", parseLoadout(JSON.stringify({ felt: "oxblood" })).showcase.length === 0);
-  check("a showcase pick you don't hold isn't worn", effectiveLoadout({ felt: null, banner: null, showcase: ["veteran", "called_it"] }, 1, held).showcase.join() === "called_it");
+  check("a showcase pick you don't hold isn't worn", effectiveLoadout({ felt: null, banner: null, showcase: ["veteran", "called_it"], charms: [] }, 1, held).showcase.join() === "called_it");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

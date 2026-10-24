@@ -27,6 +27,12 @@ export interface BannerOption {
   unlocked: boolean;
 }
 
+export interface CharmOption {
+  key: string;
+  name: string;
+  poster: string;
+}
+
 export interface ShowcaseOption {
   key: string;
   name: string;
@@ -35,7 +41,7 @@ export interface ShowcaseOption {
   pin: React.ReactNode;
 }
 
-async function save(patch: { felt?: string | null; banner?: string | null; showcase?: string[] }): Promise<boolean> {
+async function save(patch: { felt?: string | null; banner?: string | null; showcase?: string[]; charms?: string[] }): Promise<boolean> {
   try {
     const r = await fetch("/api/loadout", {
       method: "PATCH",
@@ -57,6 +63,9 @@ export function CustomizePanel({
   showcaseOptions,
   initialShowcase,
   showcaseSize,
+  charmOptions,
+  initialCharms,
+  keyringSize,
 }: {
   felts: FeltOption[];
   banners: BannerOption[];
@@ -68,11 +77,28 @@ export function CustomizePanel({
   /** The player's own picks ([] = the default: their hardest unlocks). */
   initialShowcase: string[];
   showcaseSize: number;
+  /** Earned charms, the only ones that can hang on the keyring. */
+  charmOptions: CharmOption[];
+  initialCharms: string[];
+  keyringSize: number;
 }) {
+  const [charms, setCharms] = useState<string[]>(initialCharms);
   const [showcase, setShowcase] = useState<string[]>(initialShowcase);
   const [felt, setFelt] = useState(initialFelt);
   const [banner, setBanner] = useState<string | null>(initialBanner);
   const [err, setErr] = useState<string | null>(null);
+
+  const toggleCharm = async (key: string) => {
+    const prev = charms;
+    const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
+    if (next.length > keyringSize) return;
+    setCharms(next);
+    setErr(null);
+    if (!(await save({ charms: next }))) {
+      setCharms(prev);
+      setErr("Couldn't save your keyring. Try again.");
+    }
+  };
 
   const toggleShowcase = async (key: string) => {
     const prev = showcase;
@@ -139,6 +165,41 @@ export function CustomizePanel({
             {showcase.length === 0
               ? `These sit in your profile banner. Until you pick, it shows your hardest ${showcaseSize}.`
               : "These sit in your profile banner, in this order. The rest are listed underneath."}
+          </p>
+        </div>
+      )}
+
+      {charmOptions.length > 0 && (
+        <div className="cz-group">
+          <span className="eyebrow">
+            Keyring · {charms.length} of {keyringSize}
+          </span>
+          <div className="cz-show" role="group" aria-label={`Keyring: pick up to ${keyringSize}`}>
+            {charmOptions.map((c) => {
+              const at = charms.indexOf(c.key);
+              const full = at < 0 && charms.length >= keyringSize;
+              return (
+                <button
+                  key={c.key}
+                  type="button"
+                  aria-pressed={at >= 0}
+                  disabled={full}
+                  className={`cz-ach${at >= 0 ? " on" : ""}`}
+                  onClick={() => toggleCharm(c.key)}
+                  title={full ? `Take one off first: the keyring holds ${keyringSize}` : c.name}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={c.poster} alt="" width={36} height={36} className="cz-charm-img" />
+                  <span className="cz-ach-nm">{c.name}</span>
+                  {at >= 0 && <span className="cz-ach-n">{at + 1}</span>}
+                </button>
+              );
+            })}
+          </div>
+          <p className="nf-meta">
+            {charms.length === 0
+              ? "These hang on your profile. Until you pick, it shows the charms you hold."
+              : "These hang on your profile keyring, in this order."}
           </p>
         </div>
       )}

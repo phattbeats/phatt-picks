@@ -14,7 +14,7 @@ import { isOwner } from "@/lib/owner";
 import { parseNotifPrefs } from "@/lib/notifications-core";
 import { CustomizePanel } from "@/components/CustomizePanel";
 import { getPlayerProgression } from "@/lib/progression";
-import { ACHIEVEMENTS, SHOWCASE_SIZE } from "@/lib/progression-core";
+import { ACHIEVEMENTS, CHARMS, KEYRING_SIZE, SHOWCASE_SIZE } from "@/lib/progression-core";
 import { TrinketPin } from "@/components/sg/people/Achievements";
 import { profilePhoto } from "@/lib/photos";
 
@@ -129,6 +129,9 @@ export default async function SettingsPage() {
               }))}
               initialShowcase={progression.loadout.showcase}
               showcaseSize={SHOWCASE_SIZE}
+              charmOptions={CHARMS.filter((c) => c.earned(progression.unlocked)).map((c) => ({ key: c.key, name: c.name, poster: c.poster }))}
+              initialCharms={progression.loadout.charms}
+              keyringSize={KEYRING_SIZE}
             />
           </section>
 
