@@ -26,6 +26,7 @@ import { PHOTOS } from "@/lib/photos";
 import { eventBrand } from "@/lib/event-brand";
 import { hasTeamMark, selfHostUrl } from "@/lib/logos";
 import contenders from "@/fixtures/contenders.json";
+import singaporeField from "@/fixtures/singapore-field.json";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,9 @@ function venueDay(iso: string, event: EventConfig | null): string {
  */
 const CONTENDERS: { logo: string; name: string }[] = contenders.teams.filter((t) => hasTeamMark(t.logo));
 
+/** The locked 32-team Singapore field (src/fixtures/singapore-field.json): replaces the contenders wall once teams are set. */
+const SINGAPORE_FIELD: { logo: string; name: string }[] = singaporeField.teams.filter((t) => hasTeamMark(t.logo));
+
 const PHOTO_CREDIT = "IEM Cologne 2026 · HLTV";
 
 export default async function DashboardPage() {
@@ -85,6 +89,8 @@ export default async function DashboardPage() {
     teams: [],
   };
   const session = await getSession();
+  const fieldLocked = event?.slug === "pgl-singapore-2026" && SINGAPORE_FIELD.length === 32;
+  const wall = fieldLocked ? SINGAPORE_FIELD : CONTENDERS;
 
   // Live driver (#866): one atomic 30s claim gates a deferred background ingest
   // (via `after`), so "Live now" standings track each finished match with no cron
@@ -561,10 +567,10 @@ export default async function DashboardPage() {
 
       {/* The contenders — a faded wall of the teams in contention, not the seeded field.
           No heading or copy: the wall speaks for itself. */}
-      {CONTENDERS.length > 0 && (
-        <section className="chap" aria-label="The contenders">
-          <ul className="hm-field" aria-label="Teams in contention">
-            {CONTENDERS.map((t, i) => (
+      {wall.length > 0 && (
+        <section className="chap" aria-label={fieldLocked ? "The field" : "The contenders"}>
+          <ul className={fieldLocked ? "hm-field locked" : "hm-field"} aria-label={fieldLocked ? "Teams locked" : "Teams in contention"}>
+            {wall.map((t, i) => (
               <li key={t.logo} style={{ ["--i" as string]: i }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={selfHostUrl(t.logo)} alt={t.name} title={t.name} loading="lazy" decoding="async" />

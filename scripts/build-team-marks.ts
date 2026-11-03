@@ -47,10 +47,17 @@ const TITLE_OVERRIDES: Record<string, string> = {
   FUT: "FUT Esports",
   Sinners: "SINNERS Esports",
   FaZe: "FaZe Clan",
+  "BC.Game": "BC.Game Esports",
+  Wildcard: "Wildcard",
+  Imperial: "Imperial Esports",
+  "1win": "1win",
+  DENDELE: "DENDELE CS",
+  Nemiga: "Nemiga Gaming",
 };
 
 /** Explicit file candidates for teams whose page image is wrong/missing. */
 const FILE_OVERRIDES: Record<string, string[]> = {
+  "1win": ["1win 2024 darkmode.png"],
   // Liquipedia redirects "Sharks Esports" to its successor org; keep Sharks' own mark.
   "Sharks Esports": ["Sharks Esports 2026 allmode.png", "Sharks Esports 2024 allmode.png"],
   // Page title doesn't resolve; the files are under the run-together name.

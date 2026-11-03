@@ -55,6 +55,15 @@ const REACTIONS_LIVE_AT_PLACEHOLDER = "__REACTIONS_LIVE_AT__";
  */
 export const ANNOUNCEMENTS: readonly Announcement[] = [
   {
+    id: "teams-locked-singapore",
+    icon: "🔒",
+    title: "TEAMS LOCKED",
+    body: "All 32 teams for PGL Major Singapore are set. The field is on the home page.",
+    href: "/",
+    publishedAt: "2026-11-03T13:45:00Z",
+    expiresAt: "2026-11-27T00:00:00Z",
+  },
+  {
     id: "compare-surprise",
     icon: "📣",
     title: "Something's coming",

@@ -1,0 +1,165 @@
+{
+  "note": "PGL Major Singapore 2026 locked field (32 teams, HLTV event 9303, checked 2026-11-03). Home wall; `logo` is the public/logos/<slug>.png mark. Fetch missing marks: node --experimental-strip-types scripts/build-team-marks.ts singapore-field --missing",
+  "teams": [
+    {
+      "logo": "nip",
+      "name": "Ninjas in Pyjamas",
+      "hltvId": 4411
+    },
+    {
+      "logo": "pari",
+      "name": "PARIVISION",
+      "hltvId": 12467
+    },
+    {
+      "logo": "hero",
+      "name": "HEROIC",
+      "hltvId": 7175
+    },
+    {
+      "logo": "faze",
+      "name": "FaZe",
+      "hltvId": 6667
+    },
+    {
+      "logo": "eter",
+      "name": "Eternal Fire",
+      "hltvId": 11251
+    },
+    {
+      "logo": "100t",
+      "name": "100 Thieves",
+      "hltvId": 8474
+    },
+    {
+      "logo": "liq",
+      "name": "Liquid",
+      "hltvId": 5973
+    },
+    {
+      "logo": "nine",
+      "name": "9z",
+      "hltvId": 9996
+    },
+    {
+      "logo": "m80",
+      "name": "M80",
+      "hltvId": 12376
+    },
+    {
+      "logo": "dend",
+      "name": "DENDELE",
+      "hltvId": 13926
+    },
+    {
+      "logo": "imp",
+      "name": "Imperial",
+      "hltvId": 9455
+    },
+    {
+      "logo": "wild",
+      "name": "Wildcard",
+      "hltvId": 12257
+    },
+    {
+      "logo": "bcg",
+      "name": "BC.Game",
+      "hltvId": 12878
+    },
+    {
+      "logo": "chin",
+      "name": "Chinggis Warriors",
+      "hltvId": 12646
+    },
+    {
+      "logo": "fq",
+      "name": "FlyQuest",
+      "hltvId": 12774
+    },
+    {
+      "logo": "lynn",
+      "name": "Lynn Vision",
+      "hltvId": 8840
+    },
+    {
+      "logo": "fut",
+      "name": "FUT",
+      "hltvId": 13286
+    },
+    {
+      "logo": "nem",
+      "name": "Nemiga",
+      "hltvId": 7969
+    },
+    {
+      "logo": "navi",
+      "name": "Natus Vincere",
+      "hltvId": 4608
+    },
+    {
+      "logo": "g2",
+      "name": "G2",
+      "hltvId": 5995
+    },
+    {
+      "logo": "1win",
+      "name": "1win",
+      "hltvId": 10621
+    },
+    {
+      "logo": "astr",
+      "name": "Astralis",
+      "hltvId": 6665
+    },
+    {
+      "logo": "mibr",
+      "name": "MIBR",
+      "hltvId": 9215
+    },
+    {
+      "logo": "mngz",
+      "name": "The MongolZ",
+      "hltvId": 6248
+    },
+    {
+      "logo": "mouz",
+      "name": "MOUZ",
+      "hltvId": 4494
+    },
+    {
+      "logo": "vita",
+      "name": "Vitality",
+      "hltvId": 9565
+    },
+    {
+      "logo": "aura",
+      "name": "Aurora",
+      "hltvId": 11861
+    },
+    {
+      "logo": "spir",
+      "name": "Spirit",
+      "hltvId": 7020
+    },
+    {
+      "logo": "bb",
+      "name": "BETBOOM",
+      "hltvId": 12394
+    },
+    {
+      "logo": "fal",
+      "name": "Falcons",
+      "hltvId": 11283
+    },
+    {
+      "logo": "furi",
+      "name": "FURIA",
+      "hltvId": 8297
+    },
+    {
+      "logo": "lgcy",
+      "name": "Legacy",
+      "hltvId": 12468
+    }
+  ]
+}
