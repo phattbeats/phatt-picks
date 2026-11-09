@@ -8,8 +8,8 @@ First season, **IEM Cologne 2026**, is complete and archived. The next Major, **
 2026**, is already seeded in the event registry and will stand up automatically when it comes
 around.
 
-Next.js (App Router) + TypeScript + Prisma/SQLite. Deploys as a single container on the
-`phattvip` network behind SWAG at `pickems.phatt.vip`. The responsive **installable PWA** is the
+Next.js (App Router) + TypeScript + Prisma/SQLite. Deploys as a single container. Live on **vps1** at
+`hotline.phatt.vip` since 2026-11-09 (see Deployment); the generic recipe below is for any other host. The responsive **installable PWA** is the
 entire mobile story (no native apps).
 
 > **📚 Knowledge base → [`docs/`](docs/README.md)** — architecture, the
@@ -90,7 +90,25 @@ is in `src/lib/prelock-reminders.ts` and `src/lib/notify-core.ts`.
 Every player has a stable invite link (`/join/<code>`). Share it from **You → Invite friends**. The
 landing page onboards a friend in one tap — local play needs no Steam account.
 
-## Deployment (owner wires SWAG)
+## Deployment
+
+### Live: vps1 (PHA-4090, since 2026-11-09)
+
+Hotline (this app) runs on vps1 (`ssh -i /paperclip/.ssh/offbox_vps root@100.96.151.36`) as compose service `phatt-picks` in `/srv/compose.yml`:
+image `ghcr.io/phattbeats/phatt-picks:<tag>` pinned (no `:latest`; at the move `pha4090`), 0.30 CPU, 768m, env `/srv/games/env/phatt-picks.env` (0600),
+SQLite in `/srv/games/data/hotline` → `/data`. Public: `hotline.phatt.vip` (Cloudflare proxied A `199.246.88.221`) → Caddy on vps1 → `phatt-picks:3000`.
+- **Deploy:** `docker pull` (or load) the image on vps1, back up `/srv/compose.yml`, change the `image:` tag, `cd /srv && docker compose up -d phatt-picks`.
+  Rollback is the previous tag. Log it in `/root/vps1-changelog-pending.md`.
+- **Healthcheck must use `127.0.0.1`, not `localhost`.** The image's check hits `localhost`, which resolves to `::1` on vps1, while Next listens on
+  IPv4 only (`HOSTNAME=0.0.0.0`), so the container goes unhealthy. The compose service overrides it:
+  `wget -qO- http://127.0.0.1:3000/api/health || exit 1` (30 s interval, 30 s start period). Keep that override when editing the service.
+  The `curl http://localhost:3000/...` examples in `docs/OPERATIONS.md` are for a shell inside the container or an IPv4-only host: on vps1 use `127.0.0.1`.
+- **Only one copy may run.** Hotline sends web push; two copies would double every notification and split the SQLite file.
+  The RAID container (`phatt-picks`, data `/mnt/user/appdata/phatt-picks`) is stopped, out of Unraid autostart and **rollback only**; its DB is frozen at the cutover.
+  To roll back: stop the vps1 service, copy `/srv/games/data/hotline` over the RAID DB, start the RAID container, and point the Cloudflare record back to `CNAME phatt.vip`.
+- Overview and CPU budget (vps1 is suspended above 1.5 cores averaged over an hour): `/srv/games/README.md` on vps1.
+
+### Generic recipe (any host; this was the RAID setup, owner wires SWAG)
 
 Images are published to `ghcr.io/phattbeats/phatt-picks`. Pull `:latest` to track `main`, or pin to
 a release tag for rollback:
