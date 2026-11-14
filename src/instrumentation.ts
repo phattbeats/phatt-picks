@@ -103,6 +103,42 @@ export async function register(): Promise<void> {
     console.log(`[live-tick] live results driver armed — every ${TICK_MS / 60_000} min`);
   }
 
+  // PHA-4506 — PHATT ID progression sweep. Replays every linked player's
+  // Hotline XP, achievements, coins and charms to the arcade, hourly. Each
+  // replay is idempotent on the arcade side, so the sweep is also the retry for
+  // a failed sign-in sync and for members who had not opened the arcade yet.
+  // Off (one log line) until ARCADE_URL / ARCADE_SURFACE_KID / ARCADE_SURFACE_SECRET are set.
+  {
+    const { arcadeSyncConfig, syncAllToArcade } = await import("@/lib/arcade-sync");
+    if (!arcadeSyncConfig()) {
+      console.log("[arcade-sync] off — set ARCADE_URL, ARCADE_SURFACE_KID and ARCADE_SURFACE_SECRET to report to PHATT ID");
+    } else {
+      const SWEEP_MS = 60 * 60 * 1000;
+      let sweepInFlight = false;
+      const sweep = async (): Promise<void> => {
+        if (sweepInFlight) return;
+        sweepInFlight = true;
+        try {
+          const r = await syncAllToArcade();
+          console.log(
+            `[arcade-sync] ${r.players} linked player(s): sent ${r.report.sent}, new ${r.report.accepted}, ` +
+              `already there ${r.report.duplicate}, waiting on first arcade visit ${r.report.pending}` +
+              (r.report.rejected.length ? `, REJECTED ${JSON.stringify(r.report.rejected.slice(0, 5))}` : "") +
+              (r.failed ? `, ${r.failed} player(s) failed` : ""),
+          );
+        } catch (err) {
+          console.error("[arcade-sync] sweep failed:", err);
+        } finally {
+          sweepInFlight = false;
+        }
+      };
+      setTimeout(() => void sweep(), FIRST_TICK_DELAY_MS);
+      const sweepTimer = setInterval(() => void sweep(), SWEEP_MS);
+      if (typeof sweepTimer.unref === "function") sweepTimer.unref();
+      console.log("[arcade-sync] PHATT ID progression sweep armed — hourly");
+    }
+  }
+
   if (
     !prelockSchedulerEnabled(
       process.env.PRELOCK_REMINDERS_ENABLED,

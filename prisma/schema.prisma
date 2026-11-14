@@ -13,6 +13,7 @@ model Player {
   displayName   String
   avatarUrl     String?
   steamId       String?  @unique  // 17-digit SteamID64, stored as string
+  phattIdSub    String?  @unique  // PHA-4101: Authentik (PHATT ID) user UUID `sub`; linked once, permanently
   authCode      String?           // encrypted per-user auth code for Valve API
   authCodeEventId Int?            // the Major the code was saved for; Steam may issue a new code each Major
   isLocal       Boolean  @default(true)
