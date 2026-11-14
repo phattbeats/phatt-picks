@@ -9,6 +9,7 @@ import { attributeReferral } from "@/lib/invite";
 import { signSessionToken, sessionCookieOptions } from "@/lib/session-core";
 import { phattIdConfig, exchangeAndVerify } from "@/lib/phatt-id";
 import { decideLink, isPhattIdSub, phattIdDisplayName, steamClaim } from "@/lib/phatt-id-core";
+import { syncPlayerToArcade } from "@/lib/arcade-sync";
 
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 const fail = (code: string) => {
@@ -71,6 +72,9 @@ export async function GET(req: NextRequest) {
       });
       if (d.kind === "link-steam") console.log(`PHATT ID linked to existing Steam player ${player.id}`);
     }
+    // PHA-4506: bring this player's Hotline progression onto their PHATT ID now, not at the next hourly sweep.
+    // Fire-and-forget: sign-in never waits on the arcade, and a failure is retried by the sweep.
+    void syncPlayerToArcade(player.id).catch((e) => console.error("[arcade-sync] sign-in sync failed:", (e as Error).message));
 
     const token = await signSessionToken(
       player.steamId
