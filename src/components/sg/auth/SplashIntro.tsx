@@ -152,10 +152,6 @@ export function SplashIntro({
         <div ref={overlayRef} className={introCls} onClick={leave} aria-hidden>
           <div className="veil" />
           <div className="col">
-            <span className="boot">
-              <i />
-              Line open
-            </span>
             <div className="lkwrap">
               <div className="lk" ref={lkRef}>
                 <div className="sym">
