@@ -241,15 +241,36 @@ const SINGAPORE_2026: EventConfig = {
   // ceiling (mirrors Cologne's reasoning). Refine both dates when stage day-
   // splits publish.
   dates: { start: "2026-11-25T00:00:00Z", end: "2026-12-15T23:59:59Z" },
-  // Stage I opens 25 Nov in Singapore. PGL hasn't published match times yet, so
-  // this is the start of that day in SGT (UTC+8). Replace with the first
-  // match's instant (or fill lockSchedule) once the schedule is out.
-  stageOneStart: "2026-11-24T16:00:00Z",
-  sectionNames: {},
-  lockSchedule: {},
-  matchWindows: {},
+  // Stage I's first match: 24 Nov 19:00 SGT (UTC+8) = 11:00Z, per HLTV.
+  stageOneStart: "2026-11-24T11:00:00Z",
+  // Section ids from the Valve layout (event 27): 111-113 Swiss Stages I-III,
+  // 114/115/116 QF/SF/GF.
+  sectionNames: {
+    111: "Stage I",
+    112: "Stage II",
+    113: "Stage III",
+    114: "Quarterfinals",
+    115: "Semifinals",
+    116: "Grand Final",
+  },
+  // First-match instants (HLTV, 19:00 SGT = 11:00Z). Stage III's opener and the
+  // playoff games are unpublished; they stay dark until committed.
+  lockSchedule: {
+    111: "2026-11-24T11:00:00Z",
+    112: "2026-11-28T11:00:00Z",
+  },
+  matchWindows: {
+    111: { start: "2026-11-24T00:00:00Z", end: "2026-11-27T23:59:59Z" },
+    112: { start: "2026-11-28T00:00:00Z", end: "2026-12-01T23:59:59Z" },
+  },
   playoffSchedule: {},
-  sectionSources: {},
+  // Stage III + playoffs run under the hub (8302), as Cologne's did under 8301.
+  // 113 maps in once its first-match instant + window are published (the reveal
+  // guard requires lockSchedule/matchWindows for every sourced section).
+  sectionSources: {
+    111: { url: "https://www.hltv.org/events/9303/pgl-major-singapore-2026-stage-1", label: "HLTV" },
+    112: { url: "https://www.hltv.org/events/9304/pgl-major-singapore-2026-stage-2", label: "HLTV" },
+  },
   fixtures: { layout: "pgl-singapore-2026-layout", logos: "pgl-singapore-2026-logos" },
   teamMaps: {
     regions: "regions-core",

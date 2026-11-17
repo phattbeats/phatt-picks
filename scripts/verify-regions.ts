@@ -61,7 +61,9 @@ check(
 
 // 3. no orphans — the map shouldn't carry pickids outside the field.
 console.log("\n[3] no orphans");
-const fieldIds = new Set(real.map((t) => t.pickid));
+// Pickids are stable per team across Majors; the map spans every committed field.
+const sgLayout = (JSON.parse(read("src/fixtures/pgl-singapore-2026-layout.json")) as { result: { teams: { pickid: number }[] } }).result;
+const fieldIds = new Set([...real.map((t) => t.pickid), ...sgLayout.teams.map((t) => t.pickid)]);
 const orphans = Object.keys(TEAM_REGIONS)
   .map(Number)
   .filter((id) => !fieldIds.has(id));

@@ -108,12 +108,13 @@ check("Singapore dates parse and end after start",
   Date.parse(singapore.dates.end) > Date.parse(singapore.dates.start));
 check("Singapore start is Nov 25 2026 (main event opener)",
   singapore?.dates.start === "2026-11-25T00:00:00Z");
-check("Singapore section-keyed config is gated (empty until HLTV publishes)",
+// PHA-1056: wired from the published Valve layout (sections 111-116).
+check("Singapore section-keyed config is wired (Valve sections 111-116)",
   !!singapore &&
-  Object.keys(singapore.sectionNames).length === 0 &&
-  Object.keys(singapore.lockSchedule).length === 0 &&
-  Object.keys(singapore.matchWindows).length === 0 &&
-  Object.keys(singapore.sectionSources).length === 0);
+  Object.keys(singapore.sectionNames).length === 6 &&
+  Object.keys(singapore.lockSchedule).length > 0 &&
+  Object.keys(singapore.matchWindows).length > 0 &&
+  Object.keys(singapore.sectionSources).length > 0);
 check("Singapore records its fixture/teamMap bindings for the re-point",
   !!singapore && !!singapore.fixtures.layout && !!singapore.fixtures.logos &&
   !!singapore.teamMaps.regions && !!singapore.teamMaps.stats && !!singapore.teamMaps.sources);

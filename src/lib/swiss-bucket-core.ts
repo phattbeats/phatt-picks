@@ -51,7 +51,7 @@ export function bucketSwissSlots(slotCount: number): SwissBucket[] {
   ];
 }
 
-const SWISS_SECTION_IDS = new Set([105, 106, 107]);
+const SWISS_SECTION_IDS = new Set([105, 106, 107, 111, 112, 113]); // Cologne 105-107, Singapore 111-113
 
 export function isSwissSection(sectionId: number): boolean {
   return SWISS_SECTION_IDS.has(sectionId);

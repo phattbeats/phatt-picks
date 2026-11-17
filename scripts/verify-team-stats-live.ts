@@ -50,7 +50,7 @@ const FIELD = [
   122, 126, 127, 132, 134, 135, 137, 139, 140, 142, 145, 146, 147, 148,
 ];
 
-check("TEAM_SOURCES covers exactly 32 teams", Object.keys(TEAM_SOURCES).length === 32);
+check("TEAM_SOURCES covers the Cologne 32 (+ Singapore additions)", FIELD.every((p) => TEAM_SOURCES[p]) && Object.keys(TEAM_SOURCES).length >= 32);
 for (const pid of FIELD) {
   const s = TEAM_SOURCES[pid];
   check(`source ${pid}: present`, s != null);
@@ -70,10 +70,10 @@ for (const pid of FIELD) {
 }
 
 const targets = teamStatsCrawlTargets();
-check("crawl targets cover all 32 sources", targets.length === 32);
+check("crawl targets cover every source", targets.length === Object.keys(TEAM_SOURCES).length);
 check(
   "crawl targets all carry a pickid + HLTV url",
-  targets.every((t) => FIELD.includes(t.pickid) && t.url.startsWith("https://www.hltv.org/team/")),
+  targets.every((t) => !!TEAM_SOURCES[t.pickid] && t.url.startsWith("https://www.hltv.org/team/")),
 );
 
 // ── Result → team matching by HLTV id (#1044) ───────────────────────────────
@@ -93,8 +93,8 @@ check(
 );
 // Distinctness guard: the id→pickid map the chunk builds can't collide.
 check(
-  "all 32 source ids are distinct (id-keyed matching is unambiguous)",
-  new Set(Object.values(TEAM_SOURCES).map((s) => s.hltvId)).size === 32,
+  "all source ids are distinct (id-keyed matching is unambiguous)",
+  new Set(Object.values(TEAM_SOURCES).map((s) => s.hltvId)).size === Object.keys(TEAM_SOURCES).length,
 );
 
 // ── Recent-results parser ──────────────────────────────────────────────────────

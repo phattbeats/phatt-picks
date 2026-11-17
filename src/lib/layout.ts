@@ -5,6 +5,7 @@
  */
 
 import layoutFixture from "@/fixtures/cologne-layout.json";
+import singaporeLayoutFixture from "@/fixtures/pgl-singapore-2026-layout.json";
 
 export interface TeamSlot {
   pickid: number; // 0 = TBD
@@ -52,6 +53,11 @@ export interface LayoutEnvelope {
 // the fixture is the schema-defining snapshot.
 const COMMITTED: LayoutEnvelope = layoutFixture as LayoutEnvelope;
 
+/** Every committed fixture, keyed by Valve event id (one per Major in the registry). */
+const COMMITTED_BY_EVENT: ReadonlyMap<number, Layout> = new Map(
+  [layoutFixture as LayoutEnvelope, singaporeLayoutFixture as LayoutEnvelope].map((e) => [e.result.event, e.result]),
+);
+
 /**
  * The committed fixture — IEM Cologne 2026 (event 26), whatever event is being
  * served. Fine for Cologne's own archived views and for event-agnostic
@@ -70,7 +76,7 @@ export function getCommittedLayout(): Layout {
  * pre-open state). Never substitutes another event's fixture.
  */
 export function committedLayoutFor(eventId: number): Layout | null {
-  return COMMITTED.result.event === eventId ? COMMITTED.result : null;
+  return COMMITTED_BY_EVENT.get(eventId) ?? null;
 }
 
 /** Build a pickid → TeamDef lookup from the layout. */

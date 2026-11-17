@@ -60,6 +60,17 @@ export const TEAM_SOURCES: Readonly<Record<number, TeamSource>> = {
   146: { hltvId: 11571, slug: "gaimin-gladiators", name: "Gaimin Gladiators" },
   147: { hltvId: 10577, slug: "sinners", name: "SINNERS" },
   148: { hltvId: 13486, slug: "thunder-downunder", name: "THUNDER dOWNUNDER" },
+  // PGL Singapore 2026 additions (PHA-1056), HLTV ids from singapore-field.json.
+  // The One / GOSH / BB Team / PVISION have no confirmed HLTV id yet.
+  1: { hltvId: 4411, slug: "nip", name: "Ninjas in Pyjamas" },
+  61: { hltvId: 6667, slug: "faze", name: "FaZe" },
+  78: { hltvId: 8474, slug: "100-thieves", name: "100 Thieves" },
+  107: { hltvId: 7969, slug: "nemiga", name: "Nemiga" },
+  110: { hltvId: 11251, slug: "eternal-fire", name: "Eternal Fire" },
+  113: { hltvId: 9455, slug: "imperial", name: "Imperial" },
+  130: { hltvId: 12257, slug: "wildcard", name: "Wildcard" },
+  138: { hltvId: 12646, slug: "chinggis-warriors", name: "Chinggis Warriors" },
+  151: { hltvId: 13926, slug: "dendele", name: "DENDELE" },
 };
 
 import type { TeamStats } from "./team-stats-core";
