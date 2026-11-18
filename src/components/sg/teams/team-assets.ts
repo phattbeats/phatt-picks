@@ -5,6 +5,7 @@
  */
 
 import { TEAM_SOURCES } from "@/lib/team-stats-sources";
+import { statsForPickid } from "@/lib/team-stats-core";
 
 /** Lowercase, hyphenated, ASCII-only handle from a free-form name. */
 export function slugify(name: string): string {
@@ -31,12 +32,23 @@ export function teamHref(team: { pickid: number; name: string }): string {
 
 /**
  * Teams with a cleared HLTV player cutout at /public/wrapped/player-<pickid>.webp
- * (see /public/wrapped/CREDITS.md). Others fall back to the team logo.
+ * (see /public/wrapped/CREDITS.md).
  */
 const PORTRAIT_PICKIDS: ReadonlySet<number> = new Set([59, 81, 85, 89, 112, 134, 137, 139]);
 
+/**
+ * A team's hero cutout: the curated wrapped portrait, else its top-rated
+ * starter's self-hosted HLTV bodyshot (/players/*.webp, PHA-5255), else null
+ * (the caller falls back to the team logo).
+ */
 export function teamPortrait(pickid: number): string | null {
-  return PORTRAIT_PICKIDS.has(pickid) ? `/wrapped/player-${pickid}.webp` : null;
+  if (PORTRAIT_PICKIDS.has(pickid)) return `/wrapped/player-${pickid}.webp`;
+  const starters = (statsForPickid(pickid)?.roster ?? []).filter((p) => !p.standIn && p.photo?.startsWith("/players/"));
+  const star = starters.reduce<(typeof starters)[number] | null>(
+    (best, p) => (best == null || (p.rating ?? 0) > (best.rating ?? 0) ? p : best),
+    null,
+  );
+  return star?.photo ?? null;
 }
 
 /** Short broadcast code for the ghost type behind the hero ("NAVI", "G2"). */
