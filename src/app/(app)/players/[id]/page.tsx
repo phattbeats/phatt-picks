@@ -57,8 +57,8 @@ import {
 } from "@/components/sg/people/people-data";
 import { profilePhoto } from "@/lib/photos";
 import { getPlayerProgression } from "@/lib/progression";
-import { ACHIEVEMENT_BY_KEY, CHARMS, CHARM_BY_KEY, feltByKey, keyringFor, showcaseFor } from "@/lib/progression-core";
-import { Showcase, AchievementList } from "@/components/sg/people/Achievements";
+import { ACHIEVEMENT_BY_KEY, CHARMS, CHARM_BY_KEY, feltByKey, keyringFor, levelProgress, showcaseFor } from "@/lib/progression-core";
+import { Showcase, AchievementList, LevelBadge } from "@/components/sg/people/Achievements";
 import { Keyring } from "@/components/Keyring";
 import { coinShortName } from "@/components/heat/ChallengeCoinShelf";
 
@@ -173,10 +173,11 @@ export default async function PlayerProfilePage({
   // while the live event is still in flight (adds no DB work until it archives).
   const challengeCoins = await getPlayerChallengeCoins(player.id, nowMs);
 
-  // PHATT ID progression (PHA-4477): achievements, pins, and the cosmetic
-  // loadout (banner photo, case felt). Derived like the coins; the level is
-  // computed for the felt unlocks but not shown until PHATT ID sign-in is live.
+  // PHATT ID progression (PHA-4477): achievements, pins, the HOTLINE level
+  // (PHA-5265, the same number the felts unlock from) and the cosmetic loadout
+  // (banner photo, case felt). Derived like the coins.
   const progression = await getPlayerProgression(player.id, nowMs, player.loadout);
+  const levelProg = levelProgress(progression.xp);
   const bannerDef = progression.loadout.banner ? ACHIEVEMENT_BY_KEY.get(progression.loadout.banner) : null;
   const heroPhoto = bannerDef?.banner ?? profilePhoto(player.id);
   const caseFelt = progression.loadout.felt ? feltByKey(progression.loadout.felt) : null;
@@ -376,6 +377,7 @@ export default async function PlayerProfilePage({
             <h1 className={heroFit.className} style={heroFit.style}>
               {player.displayName}
             </h1>
+            <LevelBadge level={progression.level} />
             <Showcase keys={showcase} />
           </div>
           <nav className="pp-hero-links rise d2" aria-label="Profile links">
@@ -747,7 +749,7 @@ export default async function PlayerProfilePage({
       )}
 
       {/* Achievements (PHA-4477) — the rest after the hero showcase, then the locked ones */}
-      <AchievementList unlocks={progression.unlocks} showcase={showcase} isSelf={isSelf} majorName={majorName} />
+      <AchievementList unlocks={progression.unlocks} showcase={showcase} isSelf={isSelf} majorName={majorName} progress={levelProg} />
 
       {/* Challenge coins (#1278) — the coin case */}
       <ChallengeCoinShelf

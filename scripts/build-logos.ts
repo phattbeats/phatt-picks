@@ -30,7 +30,10 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 const SOURCE_URL =
   "https://raw.githubusercontent.com/ByMykel/CSGO-API/main/public/api/en/stickers.json";
-const TOURNAMENT = "IEM Cologne 2026";
+// Defaults are Cologne; re-point per Major:
+//   build-logos.ts pgl-singapore-2026-layout "PGL Singapore 2026" pgl-singapore-2026-logos
+const [LAYOUT_BASE = "cologne-layout", TOURNAMENT = "IEM Cologne 2026", LOGOS_BASE = "cologne-logos"] =
+  process.argv.slice(2);
 
 interface BymykelTeam {
   id: number;
@@ -64,7 +67,7 @@ function teamFromTitle(name: string): string {
 
 async function main() {
   const layout = JSON.parse(
-    readFileSync(join(ROOT, "src/fixtures/cologne-layout.json"), "utf8"),
+    readFileSync(join(ROOT, `src/fixtures/${LAYOUT_BASE}.json`), "utf8"),
   ).result as { event: number; name: string; teams: LayoutTeam[] };
 
   process.stderr.write(`Fetching ${SOURCE_URL} …\n`);
@@ -149,7 +152,7 @@ async function main() {
     logos,
   };
 
-  const out = join(ROOT, "src/fixtures/cologne-logos.json");
+  const out = join(ROOT, `src/fixtures/${LOGOS_BASE}.json`);
   writeFileSync(out, JSON.stringify(manifest, null, 2) + "\n");
   process.stderr.write(`Wrote ${out}\n`);
 }

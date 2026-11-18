@@ -43,7 +43,7 @@ const read = (p: string) => readFileSync(join(ROOT, p), "utf8");
 interface LayoutResult {
   result: { event: number; name: string };
 }
-const layout = (JSON.parse(read("src/fixtures/cologne-layout.json")) as LayoutResult)
+const layout = (JSON.parse(read("src/fixtures/pgl-singapore-2026-layout.json")) as LayoutResult)
   .result;
 
 let pass = 0;
@@ -63,36 +63,38 @@ check("exactly one live event in the registry", liveEntries.length === 1);
 
 const active = resolveActiveEvent();
 check("resolveActiveEvent() returns the live event", active.status === "live");
-check("active event id is 26 (Cologne — current behavior)", active.eventId === 26);
+check("active event id is 27 (Singapore — live since the PHA-1320 flip)", active.eventId === 27);
 check("currentEventId() === active.eventId (per-request, #1046)", currentEventId() === active.eventId);
-check("currentEventId() === 26 (the value pages resolve per request)", currentEventId() === 26);
+check("currentEventId() === 27 (the value pages resolve per request)", currentEventId() === 27);
 
 // — getEventConfig round-trips and is honest about misses —
-check("getEventConfig(26) returns the active event", getEventConfig(26) === active);
+check("getEventConfig(27) returns the active event", getEventConfig(27) === active);
 check("getEventConfig(999) is null for an unregistered id", getEventConfig(999) === null);
 check("getEventConfig(0) is null", getEventConfig(0) === null);
 
 // — registry identity matches the committed layout fixture —
 check("active.eventId === layout result.event", active.eventId === layout.event);
-check("active.name === layout result.name", active.name === layout.name);
+// Valve titles it "PGL Singapore 2026 CS2 Major Championship"; the registry keeps the house brand "PGL Major Singapore 2026" (page.tsx derives the host city from it).
+check("active.name and layout result.name name the same city + year", active.name.includes("Singapore") && layout.name.includes("Singapore") && active.name.includes("2026") && layout.name.includes("2026"));
 check("active.slug is a non-empty url-safe handle", /^[a-z0-9-]+$/.test(active.slug));
 
 // — the per-event config references the committed constants (no drift) —
-check("lockSchedule IS COLOGNE_LOCK_SCHEDULE", active.lockSchedule === COLOGNE_LOCK_SCHEDULE);
-check("matchWindows IS COLOGNE_MATCH_WINDOWS", active.matchWindows === COLOGNE_MATCH_WINDOWS);
-check("sectionNames IS COLOGNE_SECTION_NAMES", active.sectionNames === COLOGNE_SECTION_NAMES);
+const cologne = getEventConfig(26) as EventConfig;
+check("lockSchedule IS COLOGNE_LOCK_SCHEDULE (archived Cologne entry)", cologne.lockSchedule === COLOGNE_LOCK_SCHEDULE);
+check("matchWindows IS COLOGNE_MATCH_WINDOWS (archived Cologne entry)", cologne.matchWindows === COLOGNE_MATCH_WINDOWS);
+check("sectionNames IS COLOGNE_SECTION_NAMES (archived Cologne entry)", cologne.sectionNames === COLOGNE_SECTION_NAMES);
 
 // — sectionSources (resolved per-event by swiss-results via getEventConfig) —
 const sources = active.sectionSources;
-check("Stage I (105) maps to HLTV event 9028", sources[105]?.url.includes("/9028/") === true);
-check("Stage II (106) maps to HLTV event 9029", sources[106]?.url.includes("/9029/") === true);
+check("Stage I (111) maps to HLTV event 9303", sources[111]?.url.includes("/9303/") === true);
+check("Stage II (112) maps to HLTV event 9304", sources[112]?.url.includes("/9304/") === true);
 check("every section source has a label", Object.values(sources).every((s) => !!s.label));
 
 // — dates + resource bindings are present and well-formed —
 check("dates.start parses", !Number.isNaN(Date.parse(active.dates.start)));
 check("dates.end parses and is after start", Date.parse(active.dates.end) > Date.parse(active.dates.start));
-check("fixtures.layout names the committed fixture", active.fixtures.layout === "cologne-layout");
-check("fixtures.logos names the committed manifest", active.fixtures.logos === "cologne-logos");
+check("fixtures.layout names the committed fixture", active.fixtures.layout === "pgl-singapore-2026-layout");
+check("fixtures.logos names the committed manifest", active.fixtures.logos === "pgl-singapore-2026-logos");
 check("teamMaps record the owning modules", !!active.teamMaps.regions && !!active.teamMaps.stats && !!active.teamMaps.sources);
 
 // — #1055: the next Major (PGL Singapore 2026) is pre-seeded as `upcoming`,
@@ -100,7 +102,8 @@ check("teamMaps record the owning modules", !!active.teamMaps.regions && !!activ
 //   Cologne and both CI guards pass on an empty config. —
 const singapore = getEventConfig(27);
 check("Singapore 2026 is registered (eventId 27)", singapore !== null);
-check("Singapore is staged as upcoming", singapore?.status === "upcoming");
+check("Singapore is the baseline-live event", singapore?.status === "live");
+check("Cologne is archived", cologne.status === "archived");
 check("Singapore slug is pgl-singapore-2026", singapore?.slug === "pgl-singapore-2026");
 check("Singapore dates parse and end after start",
   !!singapore &&
@@ -108,18 +111,19 @@ check("Singapore dates parse and end after start",
   Date.parse(singapore.dates.end) > Date.parse(singapore.dates.start));
 check("Singapore start is Nov 25 2026 (main event opener)",
   singapore?.dates.start === "2026-11-25T00:00:00Z");
-check("Singapore section-keyed config is gated (empty until HLTV publishes)",
+// PHA-1056: wired from the published Valve layout (sections 111-116).
+check("Singapore section-keyed config is wired (Valve sections 111-116)",
   !!singapore &&
-  Object.keys(singapore.sectionNames).length === 0 &&
-  Object.keys(singapore.lockSchedule).length === 0 &&
-  Object.keys(singapore.matchWindows).length === 0 &&
-  Object.keys(singapore.sectionSources).length === 0);
+  Object.keys(singapore.sectionNames).length === 6 &&
+  Object.keys(singapore.lockSchedule).length > 0 &&
+  Object.keys(singapore.matchWindows).length > 0 &&
+  Object.keys(singapore.sectionSources).length > 0);
 check("Singapore records its fixture/teamMap bindings for the re-point",
   !!singapore && !!singapore.fixtures.layout && !!singapore.fixtures.logos &&
   !!singapore.teamMaps.regions && !!singapore.teamMaps.stats && !!singapore.teamMaps.sources);
-check("seeding Singapore did not disturb the single live event (Cologne)",
+check("Singapore is the single live event",
   Object.values(EVENTS).filter((e) => e.status === "live").length === 1 &&
-  resolveActiveEvent().eventId === 26);
+  resolveActiveEvent().eventId === 27);
 
 // — #1048: the off-season HANDOFF on the REAL registry. Singapore is seeded
 //   ~5 months before it opens with EMPTY section-keyed config. Without the
@@ -131,11 +135,11 @@ check("seeding Singapore did not disturb the single live event (Cologne)",
 //   dates.start Nov 25, no lock schedule → window opens ~Oct 11). These pin the
 //   real EVENTS through that arc so the imminent transition can't regress. —
 const offSeason = Date.parse("2026-08-01T00:00:00Z"); // Cologne archived, Singapore far out
-check("off-season: the site still serves archived Cologne, not the empty-config upcoming Singapore",
-  currentEvent(offSeason).eventId === 26);
+check("post-flip: a live-baseline Singapore is never demoted, even in Aug",
+  currentEvent(offSeason).eventId === 27);
 check("off-season served event is a real configured Major (non-empty sectionNames), never a gated upcoming",
   Object.keys(currentEvent(offSeason).sectionNames).length > 0);
-check("hand-off: once inside Singapore's anticipation window it becomes current, still pre-go-live upcoming",
+check("Singapore is current on 2026-11-01 (live baseline)",
   currentEvent(Date.parse("2026-11-01T00:00:00Z")).eventId === 27);
 
 // — config-sanity invariant: at most one BASELINE-live event. (resolveActiveEvent
@@ -243,14 +247,14 @@ check(
 );
 check(
   "guard flags a playoff round wrongly recognized as Swiss",
-  // 105 is a recognized Swiss id; naming it a playoff round must flag it.
+  // 111 is a recognized Swiss id; naming it a playoff round must flag it.
   validateSwissClassification({
     ...active,
-    sectionNames: { ...active.sectionNames, 105: "Quarterfinals" },
+    sectionNames: { ...active.sectionNames, 111: "Quarterfinals" },
   }).some((p) => p.includes("treats it as Swiss")),
 );
 check(
-  "guard passes the real Cologne sectionNames unchanged",
+  "guard passes the real Singapore sectionNames unchanged",
   validateSwissClassification(active).length === 0,
 );
 

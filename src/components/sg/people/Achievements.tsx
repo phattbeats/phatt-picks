@@ -9,7 +9,7 @@
  * components, pure SVG + CSS (sg-people.css .ach-*), no images to load.
  */
 
-import { ACHIEVEMENTS, type AchievementDef, type AchievementKey, type Unlock } from "@/lib/progression-core";
+import { ACHIEVEMENTS, type AchievementDef, type AchievementKey, type LevelProgress, type Unlock } from "@/lib/progression-core";
 
 /** Trinket glyphs on a 24-unit grid, stroked in gilt. */
 const GLYPHS: Record<AchievementKey, React.ReactNode> = {
@@ -166,6 +166,50 @@ export function Showcase({ keys }: { keys: readonly AchievementKey[] }) {
   );
 }
 
+/**
+ * The HOTLINE level (PHA-5265) next to a player's name: public, like the pins.
+ * Labelled HOTLINE because it is this game's track of PHATT ID, not the
+ * arcade-wide level.
+ */
+export function LevelBadge({ level }: { level: number }) {
+  return (
+    <span className="lvl-badge" title={`HOTLINE level ${level}`}>
+      <span className="lvl-badge-k">HOTLINE LVL</span>
+      <b>{level}</b>
+    </span>
+  );
+}
+
+const nf = (n: number) => n.toLocaleString("en-US");
+
+/** The level and the way to the next one, e.g. "140 / 202 XP to level 13". */
+export function LevelBar({ progress }: { progress: LevelProgress }) {
+  const { level, xp, into, span, next } = progress;
+  const pct = next === null ? 100 : span > 0 ? Math.round((into / span) * 1000) / 10 : 0;
+  return (
+    <div className="lvl-bar">
+      <div className="lvl-bar-h">
+        <span className="lvl-bar-l">
+          HOTLINE level <b>{level}</b>
+        </span>
+        <span className="lvl-bar-r">
+          {next === null ? `Max level · ${nf(xp)} XP` : `${nf(into)} / ${nf(span)} XP to level ${next}`}
+        </span>
+      </div>
+      <div
+        className={`lvl-track${next === null ? " max" : ""}`}
+        role="progressbar"
+        aria-label={next === null ? "Max level" : `XP to level ${next}`}
+        aria-valuemin={0}
+        aria-valuemax={next === null ? 1 : span}
+        aria-valuenow={next === null ? 1 : into}
+      >
+        <i style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
 function earnedLabel(atMs: number): string {
   return new Date(atMs).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
@@ -179,14 +223,17 @@ export function AchievementList({
   showcase,
   isSelf,
   majorName,
+  progress,
 }: {
   unlocks: readonly Unlock[];
+  /** Where the player sits on the HOTLINE level curve. */
+  progress: LevelProgress;
   showcase: readonly AchievementKey[];
   isSelf: boolean;
   /** Short Major name for an unlock's event id. */
   majorName: (eventId: number) => string | null;
 }) {
-  if (unlocks.length === 0 && !isSelf) return null;
+  if (unlocks.length === 0 && progress.xp === 0 && !isSelf) return null;
   const shown = new Set(showcase);
   const byKey = new Map(unlocks.map((u) => [u.key, u] as const));
   const earned = [...unlocks].filter((u) => !shown.has(u.key)).sort((a, b) => b.atMs - a.atMs);
@@ -212,6 +259,7 @@ export function AchievementList({
           )}
         </span>
       </div>
+      <LevelBar progress={progress} />
       {earned.length + locked.length > 0 && (
         <ol className="ach-list">
           {earned.map((u) => {

@@ -35,7 +35,7 @@ import {
   orderPicks,
   buildSteamStateMap,
   partitionBySteamState,
-  PLAYOFF_SECTION_IDS,
+  playoffSectionIdsForEvent,
   WriteShapeError,
   type LocalPick,
   type UploadPick,
@@ -210,8 +210,8 @@ export async function syncStageToValve(
 }
 
 /**
- * Sync the entire playoff bracket in one ordered call: Quarterfinals (108), then
- * Semifinals (109), then Grand Final (110) — the bracket is its own single
+ * Sync the entire playoff bracket in one ordered call: the event's Quarterfinals,
+ * then Semifinals, then Grand Final — the bracket is its own single
  * ordered submission (§0.1), distinct from the per-stage Swiss batches.
  */
 export async function syncPlayoffBracketToValve(
@@ -225,7 +225,7 @@ export async function syncPlayoffBracketToValve(
     where: {
       playerId,
       eventId,
-      sectionId: { in: [...PLAYOFF_SECTION_IDS] },
+      sectionId: { in: playoffSectionIdsForEvent(eventId) },
       pickId: { not: 0 },
     },
   });

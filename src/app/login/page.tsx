@@ -4,6 +4,7 @@ import { SplashIntro } from "@/components/sg/auth/SplashIntro";
 import { currentEventId } from "@/lib/events-core";
 import { isPickemOpen } from "@/lib/layout-state";
 import { PHOTOS } from "@/lib/photos";
+import { phattIdConfig } from "@/lib/phatt-id";
 
 /**
  * Signed-out landing AND sign-in (HANDOFF §5e) — the old splash gate and the
@@ -17,6 +18,8 @@ import { PHOTOS } from "@/lib/photos";
 
 const ERROR_MESSAGES: Record<string, string> = {
   steam_auth_failed: "Steam sign-in didn't complete. Please try again.",
+  phatt_id_auth_failed: "PHATT ID sign-in didn't complete. Please try again.",
+  steam_linked_elsewhere: "That Steam account is already linked to a different PHATT ID. Ask an admin to move it.",
   invalid_steam_id: "Steam returned an account we couldn't read. Please try again.",
   db_error: "Couldn't finish signing you in. Please try again.",
   local_create_failed: "Couldn't start a local profile. Please try again.",
@@ -35,6 +38,7 @@ export default async function LoginPage({
   // Bounced back with an error → don't replay the long intro.
   const override = intro === "first" || intro === "return" ? intro : errorMsg ? "return" : null;
   const open = await isPickemOpen(currentEventId());
+  const phattId = phattIdConfig() !== null;
 
   return (
     <>
@@ -53,17 +57,22 @@ export default async function LoginPage({
         <div className="body">
           <h1 className="display h1 rise d1">Call your shots.</h1>
           <p className="lede rise d2">
-            <b>HOTLINE</b> is the Pick&apos;Em arena for the Singapore Major. Call who runs the table at 3{"‑"}0,
-            who crashes out 0{"‑"}3, and who lifts the trophy.
+            <b>HOTLINE</b> is the Pick&apos;Em arena for the Singapore Major. Link your in-game picks and track your
+            progress throughout the event. Call who runs the table at 3{"‑"}0, who crashes out, and who lifts the
+            trophy.
           </p>
           {errorMsg && (
             <p className="err rise d2" role="alert">
               {errorMsg}
             </p>
           )}
-          <div className="notice rise d3">Early test build — things may break. Pick&apos;Ems will be made.</div>
           <div className="acts rise d3">
-            <a href="/api/auth/steam" className="btn-solid">
+            {phattId && (
+              <a href="/api/auth/authentik" className="btn-solid">
+                Sign in with PHATT ID
+              </a>
+            )}
+            <a href="/api/auth/steam" className={phattId ? "btn-ghost" : "btn-solid"}>
               Sign in with Steam
             </a>
             <Link href="/login/local" prefetch={false} className="btn-ghost">
@@ -75,6 +84,9 @@ export default async function LoginPage({
               ? "Steam syncs your official Valve picks and needs a CS2 Viewer Pass. Local mode is fully featured."
               : "Picks and Steam sync open when Valve opens Pick'Em. Sign in now and you're ready. Local mode is fully featured."}
           </span>
+          <Link href="/join" prefetch={false} className="fine rise d4">
+            New here? How to join HOTLINE for Singapore →
+          </Link>
         </div>
       </SplashIntro>
     </>

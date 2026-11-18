@@ -73,11 +73,12 @@ export interface TeamSpotlight {
 }
 
 /**
- * Authored drafts for likely qualifiers. Keyed by pickid. A team without an
+ * Authored drafts for likely qualifiers, per event (PHA-5275): pickids are
+ * per-layout, so Cologne's FURIA (85) must never caption another Major's 85. A team without an
  * entry falls back to the dossier-only view (no fabricated story), so this map
  * can fill in as the bracket seeds without shipping placeholder prose.
  */
-const SPOTLIGHTS: Record<number, TeamSpotlight> = {
+const COLOGNE_SPOTLIGHTS: Record<number, TeamSpotlight> = {
   // FURIA, pickid 85. FIRST REAL ENTRY (Brandon, 2026-06-13: "first team is
   // FURIA. good practice."). Narrative + highlight are sourced from this event,
   // not sample prose. FURIA clinched playoffs with a clean 3-0 Stage 3 Swiss run
@@ -281,9 +282,15 @@ const SPOTLIGHTS: Record<number, TeamSpotlight> = {
   // dossier-only fallback (roster + last 5), never a placeholder story.
 };
 
-/** The team's spotlight draft, or null if none authored (→ dossier fallback). */
-export function spotlightForPickid(pickid: number): TeamSpotlight | null {
-  return SPOTLIGHTS[pickid] ?? null;
+/** eventId → pickid → authored spotlight. Singapore (27) fills in as its field clinches. */
+const SPOTLIGHTS: Readonly<Record<number, Record<number, TeamSpotlight>>> = {
+  26: COLOGNE_SPOTLIGHTS,
+  27: {},
+};
+
+/** The team's spotlight draft for this event, or null if none authored (→ dossier fallback). */
+export function spotlightForPickid(eventId: number, pickid: number): TeamSpotlight | null {
+  return SPOTLIGHTS[eventId]?.[pickid] ?? null;
 }
 
 /**
@@ -293,8 +300,8 @@ export function spotlightForPickid(pickid: number): TeamSpotlight | null {
  * newly-clinched team, that team appears in the strip automatically. Once the
  * bracket seeds and real picker tiles exist, the strip yields to them.
  */
-export function authoredSpotlightPickids(): number[] {
-  return Object.keys(SPOTLIGHTS).map(Number);
+export function authoredSpotlightPickids(eventId: number): number[] {
+  return Object.keys(SPOTLIGHTS[eventId] ?? {}).map(Number);
 }
 
 /**

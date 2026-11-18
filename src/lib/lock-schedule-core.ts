@@ -101,7 +101,7 @@ export const COLOGNE_PLAYOFF_SCHEDULE: Readonly<Record<number, readonly string[]
  * (#1262). A section with no committed games contributes nothing (stays dark),
  * so an empty COLOGNE_PLAYOFF_SCHEDULE is still a no-op.
  */
-function derivePlayoffLocks(
+export function derivePlayoffLocks(
   schedule: Readonly<Record<number, readonly string[]>>,
 ): LockSchedule {
   // Find the single bracket-wide lock: earliest game across every playoff round.

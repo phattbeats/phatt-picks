@@ -21,7 +21,15 @@
  * fetch-handling SW and the app stays installable.
  */
 
+// True only when this install REPLACED a running worker (i.e. a deploy/update).
+// A first-ever install has no `registration.active`, and must not bounce the page
+// (PHA-5204: the bounce restarted the splash and left first-time visitors with a
+// tab spinner). Defaults to false if the worker was restarted between install and
+// activate — we'd rather skip one recovery bounce than bounce a first visit.
+let replacedWorker = false;
+
 self.addEventListener("install", () => {
+  replacedWorker = !!self.registration.active;
   // Activate this SW immediately on first install / update.
   self.skipWaiting();
 });
@@ -46,6 +54,7 @@ self.addEventListener("activate", (event) => {
       // current HTML from the network (bypassing a stale cached copy) rather than
       // re-serving the broken one. Once per activation (once per deploy) → no loop;
       // `_v` is ignored by the app and invisible in a standalone PWA (no URL bar).
+      if (!replacedWorker) return;
       try {
         const wins = await self.clients.matchAll({ type: "window" });
         await Promise.all(

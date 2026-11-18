@@ -28,7 +28,7 @@ import { resolveLogoTiers } from "@/lib/logos";
 import { SpotlightModal, type SpotlightMarketLine } from "@/components/ui/SpotlightModal";
 import { LockInStage } from "@/components/LockInStage";
 import { SealPicks, sealStatusText } from "@/components/sg/picks/SealPicks";
-import type { SealView } from "@/lib/pick-lock-core";
+import { playoffSealUnitFor, type SealView } from "@/lib/pick-lock-core";
 import { teamAccent } from "@/lib/playoff-spotlights";
 import { teamHref, teamPortrait } from "@/components/sg/teams/team-assets";
 import type { TeamDef } from "@/lib/layout";
@@ -215,7 +215,7 @@ export function PlayoffBracketPicker({
   // HOTLINE self-seal of the whole bracket (one unit, keyed on the QF section).
   const sealControl = (
     <SealPicks
-      sectionId={model.rounds[0]?.matches[0]?.sectionId ?? 108}
+      sectionId={model.rounds[0]?.sectionId ?? playoffSealUnitFor(eventId) ?? 0}
       stageLabel="Playoffs"
       total={totalMatches}
       ready={pickCount >= totalMatches && saveState !== "saving" && saveState !== "error"}
@@ -315,6 +315,7 @@ export function PlayoffBracketPicker({
 
       {statsTeam && (
         <SpotlightModal
+          eventId={eventId}
           team={statsTeam}
           onClose={() => setStatsTeam(null)}
           liveStats={liveTeamStats?.[statsTeam.pickid]}

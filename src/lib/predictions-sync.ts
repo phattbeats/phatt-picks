@@ -17,9 +17,9 @@ import { prisma } from "@/lib/db";
 import { getDecryptedAuthCode } from "@/lib/authcode";
 import { fetchTournamentPredictions, ValveApiError } from "@/lib/valve";
 import { parsePredictions } from "@/lib/predictions";
-import { getCommittedLayout, buildSectionByGroup } from "@/lib/layout";
+import { buildSectionByGroup } from "@/lib/layout";
 import { isEventFrozenById } from "@/lib/event-freeze";
-import { isPickemOpen } from "@/lib/layout-state";
+import { isPickemOpen, scoringLayoutFor } from "@/lib/layout-state";
 import { nextSteamState, partitionMirror, sealUnitFor, sectionsInUnit, slotKey } from "@/lib/pick-lock-core";
 
 export type MirrorSkip = "no-steam-id" | "no-auth-code" | "event-archived" | "pickem-not-open";
@@ -63,7 +63,7 @@ export async function mirrorPlayerPredictions(
     const envelope = await fetchTournamentPredictions(eventId, player.steamId, authCode);
     // Build groupid→sectionid map so parsePredictions can infer sectionId
     // when Valve's response omits the sectionid field (#875).
-    const layoutSectionByGroup = buildSectionByGroup(getCommittedLayout());
+    const layoutSectionByGroup = buildSectionByGroup(await scoringLayoutFor(eventId));
     const sectionByGroup = new Map<number, number>(
       [...layoutSectionByGroup.entries()].map(([gid, s]) => [gid, s.sectionid]),
     );

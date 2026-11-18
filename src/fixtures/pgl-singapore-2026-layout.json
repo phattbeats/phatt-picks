@@ -1,0 +1,803 @@
+{
+	"result": {
+		"event": 27,
+		"name": "PGL Singapore 2026 CS2 Major Championship",
+		"sections": [
+			{
+				"sectionid": 111,
+				"name": "Stage I | 1",
+				"groups": [
+					{
+						"groupid": 281,
+						"name": "Stage I | Stage I",
+						"points_per_pick": 1,
+						"picks_allowed": true,
+						"teams": [
+							{
+								"pickid": 1
+							},
+							{
+								"pickid": 153
+							},
+							{
+								"pickid": 95
+							},
+							{
+								"pickid": 61
+							},
+							{
+								"pickid": 48
+							},
+							{
+								"pickid": 110
+							},
+							{
+								"pickid": 78
+							},
+							{
+								"pickid": 112
+							},
+							{
+								"pickid": 140
+							},
+							{
+								"pickid": 151
+							},
+							{
+								"pickid": 113
+							},
+							{
+								"pickid": 130
+							},
+							{
+								"pickid": 150
+							},
+							{
+								"pickid": 132
+							},
+							{
+								"pickid": 138
+							},
+							{
+								"pickid": 127
+							}
+						]
+						,
+						"picks": [
+							{
+								"index": 0,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 1,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 2,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 3,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 4,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 5,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 6,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 7,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 8,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 9,
+								"pickids": [
+
+								]
+								
+							}
+						]
+						
+					}
+				]
+				
+			},
+			{
+				"sectionid": 112,
+				"name": "Stage II | 2",
+				"groups": [
+					{
+						"groupid": 282,
+						"name": "Stage II | Stage II",
+						"points_per_pick": 2,
+						"picks_allowed": true,
+						"teams": [
+							{
+								"pickid": 145
+							},
+							{
+								"pickid": 107
+							},
+							{
+								"pickid": 59
+							},
+							{
+								"pickid": 149
+							},
+							{
+								"pickid": 12
+							},
+							{
+								"pickid": 60
+							},
+							{
+								"pickid": 122
+							},
+							{
+								"pickid": 80
+							},
+							{
+								"pickid": 1
+							},
+							{
+								"pickid": 153
+							},
+							{
+								"pickid": 95
+							},
+							{
+								"pickid": 61
+							},
+							{
+								"pickid": 48
+							},
+							{
+								"pickid": 110
+							},
+							{
+								"pickid": 78
+							},
+							{
+								"pickid": 112
+							},
+							{
+								"pickid": 140
+							},
+							{
+								"pickid": 151
+							},
+							{
+								"pickid": 113
+							},
+							{
+								"pickid": 130
+							},
+							{
+								"pickid": 150
+							},
+							{
+								"pickid": 132
+							},
+							{
+								"pickid": 138
+							},
+							{
+								"pickid": 127
+							}
+						]
+						,
+						"picks": [
+							{
+								"index": 0,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 1,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 2,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 3,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 4,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 5,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 6,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 7,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 8,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 9,
+								"pickids": [
+
+								]
+								
+							}
+						]
+						
+					}
+				]
+				
+			},
+			{
+				"sectionid": 113,
+				"name": "Stage III | 3",
+				"groups": [
+					{
+						"groupid": 283,
+						"name": "Stage III | Stage III",
+						"points_per_pick": 3,
+						"picks_allowed": true,
+						"teams": [
+							{
+								"pickid": 106
+							},
+							{
+								"pickid": 89
+							},
+							{
+								"pickid": 85
+							},
+							{
+								"pickid": 134
+							},
+							{
+								"pickid": 81
+							},
+							{
+								"pickid": 152
+							},
+							{
+								"pickid": 139
+							},
+							{
+								"pickid": 126
+							},
+							{
+								"pickid": 0
+							},
+							{
+								"pickid": 0
+							},
+							{
+								"pickid": 0
+							},
+							{
+								"pickid": 0
+							},
+							{
+								"pickid": 0
+							},
+							{
+								"pickid": 0
+							},
+							{
+								"pickid": 0
+							},
+							{
+								"pickid": 0
+							}
+						]
+						,
+						"picks": [
+							{
+								"index": 0,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 1,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 2,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 3,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 4,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 5,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 6,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 7,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 8,
+								"pickids": [
+
+								]
+								
+							},
+							{
+								"index": 9,
+								"pickids": [
+
+								]
+								
+							}
+						]
+						
+					}
+				]
+				
+			},
+			{
+				"sectionid": 114,
+				"name": "Quarterfinals | 4",
+				"groups": [
+					{
+						"groupid": 284,
+						"name": "Quarterfinal | Match 1",
+						"points_per_pick": 12,
+						"picks_allowed": true,
+						"teams": [
+							{
+								"pickid": 0
+							},
+							{
+								"pickid": 0
+							}
+						]
+						,
+						"picks": [
+							{
+								"index": 0,
+								"pickids": [
+
+								]
+								
+							}
+						]
+						
+					},
+					{
+						"groupid": 285,
+						"name": "Quarterfinal | Match 2",
+						"points_per_pick": 12,
+						"picks_allowed": true,
+						"teams": [
+							{
+								"pickid": 0
+							},
+							{
+								"pickid": 0
+							}
+						]
+						,
+						"picks": [
+							{
+								"index": 0,
+								"pickids": [
+
+								]
+								
+							}
+						]
+						
+					},
+					{
+						"groupid": 286,
+						"name": "Quarterfinal | Match 3",
+						"points_per_pick": 12,
+						"picks_allowed": true,
+						"teams": [
+							{
+								"pickid": 0
+							},
+							{
+								"pickid": 0
+							}
+						]
+						,
+						"picks": [
+							{
+								"index": 0,
+								"pickids": [
+
+								]
+								
+							}
+						]
+						
+					},
+					{
+						"groupid": 287,
+						"name": "Quarterfinal | Match 4",
+						"points_per_pick": 12,
+						"picks_allowed": true,
+						"teams": [
+							{
+								"pickid": 0
+							},
+							{
+								"pickid": 0
+							}
+						]
+						,
+						"picks": [
+							{
+								"index": 0,
+								"pickids": [
+
+								]
+								
+							}
+						]
+						
+					}
+				]
+				
+			},
+			{
+				"sectionid": 115,
+				"name": "Semifinals | 5",
+				"groups": [
+					{
+						"groupid": 288,
+						"name": "Semifinal | Match 1",
+						"points_per_pick": 10,
+						"picks_allowed": true,
+						"teams": [
+							{
+								"pickid": 0
+							},
+							{
+								"pickid": 0
+							}
+						]
+						,
+						"picks": [
+							{
+								"index": 0,
+								"pickids": [
+
+								]
+								
+							}
+						]
+						
+					},
+					{
+						"groupid": 289,
+						"name": "Semifinal | Match 2",
+						"points_per_pick": 10,
+						"picks_allowed": true,
+						"teams": [
+							{
+								"pickid": 0
+							},
+							{
+								"pickid": 0
+							}
+						]
+						,
+						"picks": [
+							{
+								"index": 0,
+								"pickids": [
+
+								]
+								
+							}
+						]
+						
+					}
+				]
+				
+			},
+			{
+				"sectionid": 116,
+				"name": "Grand Final | 6",
+				"groups": [
+					{
+						"groupid": 290,
+						"name": "GrandFinal | Final",
+						"points_per_pick": 7,
+						"picks_allowed": true,
+						"teams": [
+							{
+								"pickid": 0
+							},
+							{
+								"pickid": 0
+							}
+						]
+						,
+						"picks": [
+							{
+								"index": 0,
+								"pickids": [
+
+								]
+								
+							}
+						]
+						
+					}
+				]
+				
+			}
+		]
+		,
+		"teams": [
+			{
+				"pickid": 1,
+				"logo": "nip",
+				"name": "Ninjas in Pyjamas"
+			},
+			{
+				"pickid": 12,
+				"logo": "navi",
+				"name": "Natus Vincere"
+			},
+			{
+				"pickid": 48,
+				"logo": "liq",
+				"name": "Team Liquid"
+			},
+			{
+				"pickid": 59,
+				"logo": "g2",
+				"name": "G2 Esports"
+			},
+			{
+				"pickid": 60,
+				"logo": "astr",
+				"name": "Astralis"
+			},
+			{
+				"pickid": 61,
+				"logo": "faze",
+				"name": "FaZe Clan"
+			},
+			{
+				"pickid": 78,
+				"logo": "thv",
+				"name": "100 Thieves"
+			},
+			{
+				"pickid": 80,
+				"logo": "mibr",
+				"name": "MIBR"
+			},
+			{
+				"pickid": 81,
+				"logo": "spir",
+				"name": "Team Spirit"
+			},
+			{
+				"pickid": 85,
+				"logo": "furi",
+				"name": "FURIA"
+			},
+			{
+				"pickid": 89,
+				"logo": "vita",
+				"name": "Vitality"
+			},
+			{
+				"pickid": 95,
+				"logo": "hero",
+				"name": "HEROIC"
+			},
+			{
+				"pickid": 106,
+				"logo": "mouz",
+				"name": "MOUZ"
+			},
+			{
+				"pickid": 107,
+				"logo": "nemi",
+				"name": "Nemiga"
+			},
+			{
+				"pickid": 110,
+				"logo": "eter",
+				"name": "Eternal Fire"
+			},
+			{
+				"pickid": 112,
+				"logo": "nine",
+				"name": "9z Team"
+			},
+			{
+				"pickid": 113,
+				"logo": "imp",
+				"name": "Imperial Esports"
+			},
+			{
+				"pickid": 122,
+				"logo": "mngz",
+				"name": "The MongolZ"
+			},
+			{
+				"pickid": 126,
+				"logo": "lgcy",
+				"name": "Legacy"
+			},
+			{
+				"pickid": 127,
+				"logo": "lynn",
+				"name": "Lynn Vision"
+			},
+			{
+				"pickid": 130,
+				"logo": "wcrd",
+				"name": "Wildcard"
+			},
+			{
+				"pickid": 132,
+				"logo": "fq",
+				"name": "Flyquest"
+			},
+			{
+				"pickid": 134,
+				"logo": "aura",
+				"name": "Aurora"
+			},
+			{
+				"pickid": 138,
+				"logo": "chin",
+				"name": "Chinggis Warriors"
+			},
+			{
+				"pickid": 139,
+				"logo": "fal",
+				"name": "Falcons"
+			},
+			{
+				"pickid": 140,
+				"logo": "m80",
+				"name": "M80"
+			},
+			{
+				"pickid": 145,
+				"logo": "fut",
+				"name": "FUT"
+			},
+			{
+				"pickid": 149,
+				"logo": "one",
+				"name": "The One"
+			},
+			{
+				"pickid": 150,
+				"logo": "gosh",
+				"name": "GOSH"
+			},
+			{
+				"pickid": 151,
+				"logo": "dend",
+				"name": "DENDELE"
+			},
+			{
+				"pickid": 152,
+				"logo": "bbt",
+				"name": "BB Team"
+			},
+			{
+				"pickid": 153,
+				"logo": "pvis",
+				"name": "PVISION"
+			}
+		]
+		
+	}
+}

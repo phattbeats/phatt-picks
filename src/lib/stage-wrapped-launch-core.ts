@@ -22,7 +22,7 @@ import type { OutcomeMap } from "./scoring";
 export function latestWrappedSectionId(layout: Layout, outcomeMap: OutcomeMap): number | null {
   for (let i = layout.sections.length - 1; i >= 0; i--) {
     const s = layout.sections[i];
-    if (outcomeMap[s.sectionid] && stageWrappedHasContent(s.sectionid)) return s.sectionid;
+    if (outcomeMap[s.sectionid] && stageWrappedHasContent(layout.event, s.sectionid)) return s.sectionid;
   }
   return null;
 }

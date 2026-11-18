@@ -47,6 +47,7 @@ import {
   COLOGNE_PLAYOFF_SCHEDULE,
   lockTimeForSection,
   bracketRevealTime,
+  derivePlayoffLocks,
   type LockSchedule,
   type MatchWindow,
 } from "./lock-schedule-core";
@@ -149,7 +150,7 @@ const COLOGNE_2026: EventConfig = {
   eventId: 26,
   slug: "iem-cologne-2026",
   name: "IEM Cologne 2026 CS2 Major Championship",
-  status: "live",
+  status: "archived",
   // `end` is the calendar BACKSTOP for the archive transition, not the real
   // trigger — that is the Grand Final StageOutcome resolving PLUS its 48h grace
   // window (#954, via `grandFinalResolvedAtMs` + GRAND_FINAL_ARCHIVE_GRACE_MS).
@@ -229,11 +230,17 @@ const COLOGNE_2026: EventConfig = {
  * Phase 1a of the runbook replaces it with the real id when the layout lands.
  * Likewise `fixtures`/`teamMaps` name the files/modules the re-point will fill.
  */
+/**
+ * Singapore's per-game playoff start instants (UTC), bracket order: 114 QF x4,
+ * 115 SF x2, 116 GF x1. Empty until PGL publishes them; never estimate.
+ */
+const SINGAPORE_PLAYOFF_SCHEDULE: Readonly<Record<number, readonly string[]>> = {};
+
 const SINGAPORE_2026: EventConfig = {
   eventId: 27,
   slug: "pgl-singapore-2026",
   name: "PGL Major Singapore 2026",
-  status: "upcoming",
+  status: "live",
   // Main event Nov 25 – Dec 13 2026 (playoffs/finals Dec 10–13, Singapore Indoor
   // Stadium). `end` is the calendar BACKSTOP for the archive transition, set a
   // touch past the Dec 13 finals so it sits comfortably beyond GF + the 48h grace
@@ -241,15 +248,40 @@ const SINGAPORE_2026: EventConfig = {
   // ceiling (mirrors Cologne's reasoning). Refine both dates when stage day-
   // splits publish.
   dates: { start: "2026-11-25T00:00:00Z", end: "2026-12-15T23:59:59Z" },
-  // Stage I opens 25 Nov in Singapore. PGL hasn't published match times yet, so
-  // this is the start of that day in SGT (UTC+8). Replace with the first
-  // match's instant (or fill lockSchedule) once the schedule is out.
-  stageOneStart: "2026-11-24T16:00:00Z",
-  sectionNames: {},
-  lockSchedule: {},
-  matchWindows: {},
-  playoffSchedule: {},
-  sectionSources: {},
+  // Stage I's first match: 24 Nov 19:00 SGT (UTC+8) = 11:00Z, per HLTV.
+  stageOneStart: "2026-11-24T11:00:00Z",
+  // Section ids from the Valve layout (event 27): 111-113 Swiss Stages I-III,
+  // 114/115/116 QF/SF/GF.
+  sectionNames: {
+    111: "Stage I",
+    112: "Stage II",
+    113: "Stage III",
+    114: "Quarterfinals",
+    115: "Semifinals",
+    116: "Grand Final",
+  },
+  // First-match instants (HLTV, 19:00 SGT = 11:00Z). Stage III's opener and the
+  // playoff games are unpublished; they stay dark until committed.
+  // Playoff locks are DERIVED from playoffSchedule (the whole bracket locks at
+  // its first game), so publishing the bracket is one edit: fill
+  // SINGAPORE_PLAYOFF_SCHEDULE and the bracket locks, reveals and reminds.
+  lockSchedule: {
+    111: "2026-11-24T11:00:00Z",
+    112: "2026-11-28T11:00:00Z",
+    ...derivePlayoffLocks(SINGAPORE_PLAYOFF_SCHEDULE),
+  },
+  matchWindows: {
+    111: { start: "2026-11-24T00:00:00Z", end: "2026-11-27T23:59:59Z" },
+    112: { start: "2026-11-28T00:00:00Z", end: "2026-12-01T23:59:59Z" },
+  },
+  playoffSchedule: SINGAPORE_PLAYOFF_SCHEDULE,
+  // Stage III + playoffs run under the hub (8302), as Cologne's did under 8301.
+  // 113 maps in once its first-match instant + window are published (the reveal
+  // guard requires lockSchedule/matchWindows for every sourced section).
+  sectionSources: {
+    111: { url: "https://www.hltv.org/events/9303/pgl-major-singapore-2026-stage-1", label: "HLTV" },
+    112: { url: "https://www.hltv.org/events/9304/pgl-major-singapore-2026-stage-2", label: "HLTV" },
+  },
   fixtures: { layout: "pgl-singapore-2026-layout", logos: "pgl-singapore-2026-logos" },
   teamMaps: {
     regions: "regions-core",
@@ -399,6 +431,8 @@ export function resolveActiveEvent(nowMs: number = Date.now()): EventConfig {
  *      schedule makes `goLiveMs` return +Infinity, so the lifecycle never flips
  *      the event to `live` — it silently never goes live. Catching it at CI is
  *      the difference between a loud build failure and a Major that no-shows.
+ *   F. every playoff section with published games carries the derived
+ *      bracket lock (`derivePlayoffLocks(playoffSchedule)`) in lockSchedule.
  *
  * Note these flow only FROM sources→lock/window and window→lock: a Swiss stage
  * with a lock+window but no source yet (Stage III today, source unpublished) and
@@ -444,6 +478,14 @@ export function validateEventRevealConfig(event: EventConfig): string[] {
     if (reveal === null || !(Date.parse(reveal) < Date.parse(iso)))
       problems.push(`${tag}: section ${key} reveal time does not resolve strictly before its lock`);
   }
+  // F. Published playoff games must lock the bracket (PHA-1406). A registry
+  // entry that fills playoffSchedule but not the derived locks shows game times
+  // while the bracket never locks, reveals or reminds by time.
+  const derived = derivePlayoffLocks(event.playoffSchedule);
+  for (const [key, iso] of Object.entries(derived)) {
+    if (event.lockSchedule[Number(key)] !== iso)
+      problems.push(`${tag}: playoff section ${key} has published games but lockSchedule[${key}] is not the bracket lock ${iso} (spread derivePlayoffLocks(playoffSchedule) into lockSchedule)`);
+  }
   return problems;
 }
 
@@ -456,6 +498,28 @@ export function validateEventRevealConfig(event: EventConfig): string[] {
  */
 function isStructurallySwiss(sectionName: string): boolean {
   return /^stage\b/i.test(sectionName.trim());
+}
+
+/**
+ * An event's sections in play order, each tagged Swiss or playoff from its
+ * registry name (the same structural rule `validateSwissClassification`
+ * guards). Unlike `playoffSectionIds(event.playoffSchedule)`, this does not
+ * need the playoff times to be published: Singapore's bracket is known to be
+ * 114/115/116 long before its games are scheduled. Pure; no I/O.
+ */
+export function sectionsInPlayOrder(event: EventConfig): { sectionId: number; name: string; kind: "swiss" | "playoff" }[] {
+  return Object.entries(event.sectionNames)
+    .map(([key, name]) => ({
+      sectionId: Number(key),
+      name,
+      kind: isStructurallySwiss(name) ? ("swiss" as const) : ("playoff" as const),
+    }))
+    .sort((a, b) => a.sectionId - b.sectionId);
+}
+
+/** An event's playoff section ids, from its registry names (known before its games publish). */
+export function playoffSectionIdsFor(event: EventConfig): Set<number> {
+  return new Set(sectionsInPlayOrder(event).filter((s) => s.kind === "playoff").map((s) => s.sectionId));
 }
 
 /**

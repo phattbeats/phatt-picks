@@ -110,7 +110,8 @@ export default async function SettingsPage() {
               <p>Pick the achievements you show off, line your coin case and choose the photo behind your profile. Unlocks are cosmetic only.</p>
             </div>
             <CustomizePanel
-              felts={progression.felts.map((f) => ({ key: f.key, name: f.name, tile: f.tile, bed: f.bed, unlocked: f.unlocked }))}
+              felts={progression.felts.map((f) => ({ key: f.key, name: f.name, tile: f.tile, bed: f.bed, level: f.level, unlocked: f.unlocked }))}
+              level={progression.level}
               banners={ACHIEVEMENTS.map((a) => ({
                 key: a.key,
                 label: a.bannerLabel,

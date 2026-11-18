@@ -205,6 +205,13 @@ Run their verifiers: `verify-regions.ts`, `verify-team-stats.ts`, `verify-m6-log
 
 ## Phase 4 — per-stage cadence (during the event)
 
+> **Mostly automatic now (PHA-1406).** Results, layout seeding, cache warming
+> after a deploy and the dossier/odds/news refresh all run on in-process timers.
+> The only per-stage human step left is committing a stage's time and HLTV page
+> once they publish, and the autopilot self-check pushes the owner when that is
+> due. [AUTOPILOT.md](AUTOPILOT.md) is the full map. The steps below are what to
+> check if something looks wrong.
+
 Once live, each stage start is a small recurring routine:
 
 1. **Stage opens** → confirm Valve has seeded the next section's `picks_allowed` and the
@@ -218,8 +225,8 @@ Once live, each stage start is a small recurring routine:
    fixture seeds. Full mechanism + the #1109 (Swiss) / #1273 (playoff) history in
    `docs/GOTCHAS.md` → "Playoff (and off-roster Swiss) winners never turn green".
 2. **Add the stage's HLTV URL** to `sectionSources` in the event registry entry (`events-core.ts`) if not already mapped.
-3. **Warm the caches** after any deploy during the stage — `GET /api/standings/refresh`
-   (standings + outcome resolve) **and** `GET /api/team-stats/refresh` (dossier Last-5).
+3. **Caches warm themselves** after a deploy (first tick 30s after boot). `GET /api/standings/refresh`
+   and `GET /api/team-stats/refresh` remain for an immediate manual warm.
 4. **Re-gather team stats** only for **roster/world-rank** moves (`TEAM_STATS_AS_OF` bump);
    the Last-5 results auto-refresh live, so you rarely need this mid-stage.
 5. **Verify the match window** covers the stage dates so the crawl actually fires.
@@ -236,8 +243,9 @@ Once live, each stage start is a small recurring routine:
 [ ] registry lockSchedule      → each Swiss stage's first-match instant, on the new
                                   EventConfig entry, NOT edited into COLOGNE_LOCK_SCHEDULE
                                   (Phase 1b, #1327)
-[ ] registry playoffSchedule   → per-game playoff times (derives locks), on the new
-                                  EventConfig entry                      (Phase 1b, #1327)
+[ ] registry playoffSchedule   → per-game playoff times, on the new EventConfig entry,
+                                  AND spread derivePlayoffLocks(schedule) into its
+                                  lockSchedule (invariant F fails CI otherwise) (PHA-1406)
 [ ] registry matchWindows      → each stage's played date-span, on the new
                                   EventConfig entry                      (Phase 1b, #1327)
 [ ] sectionSources (events-core.ts registry) → HLTV event URL per Swiss stage (Phase 2a)
@@ -246,6 +254,9 @@ Once live, each stage start is a small recurring routine:
 [ ] TEAM_REGIONS               → pickid → region                        (Phase 3)
 [ ] TEAM_STATS + AS_OF         → frozen HLTV snapshot                   (Phase 3)
 [ ] TEAM_SOURCES               → pickid → HLTV profile URL (live Last-5)(Phase 3)
+[ ] PLAYOFF_MARKET_SLUGS_BY_EVENT[eventId] → this event's Polymarket matchups (never another
+                                  event's: pickids collide)              (PHA-1406, optional)
+[ ] read docs/AUTOPILOT.md      → what runs itself once live, and what /api/autopilot will ask for
 [ ] public/coins/<slug>-*.png  → 4 coin front faces (shared backs reused) (Phase 3)
 [ ] public/coins/3d/<slug>-*   → inspector maps for the 4 fronts (build-inspect-maps.py) (Phase 3)
 [ ] run every scripts/verify-*.ts that touches the above

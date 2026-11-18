@@ -12,8 +12,8 @@
  * to ANNOUNCEMENTS with a publish/expiry window and ship it.
  */
 
-import { playoffLockTime, playoffSectionIds } from "./lock-schedule-core";
-import { currentEvent } from "./events-core";
+import { playoffLockTime } from "./lock-schedule-core";
+import { currentEvent, playoffSectionIdsFor, type EventConfig } from "./events-core";
 
 export interface Announcement {
   id: string;
@@ -34,34 +34,54 @@ export interface Announcement {
  * single static message (#1245 follow-up): the teaser window ends exactly
  * where the live window begins, so at lock the teaser drops and a fresh
  * "Reactions are live" announcement appears (a new unread item + popup + push,
- * since it's a distinct id). Derived from the ACTIVE event's committed schedule
- * (#1327: resolved per call via `currentEvent`, never cached at module load —
- * same class of bug #1046 fixed elsewhere) so it stays truthful across a
- * Major cutover; falls back to the committed Cologne first QF as a last resort.
+ * since it's a distinct id). All three instants derive from the ACTIVE event's
+ * registry (#1327: resolved per call via `currentEvent`, never cached at module
+ * load). PHA-5275: no Cologne fallback — an event whose bracket isn't scheduled
+ * yet simply has no reactions broadcast.
  */
-function reactionsLiveAt(nowMs: number): string {
-  const event = currentEvent(nowMs);
-  return (
-    playoffLockTime(event.lockSchedule, playoffSectionIds(event.playoffSchedule)) ??
-    "2026-06-18T13:45:00Z"
-  );
+const TEASER_LEAD_MS = 12 * 3_600_000;
+
+function reactionsWindow(event: EventConfig): Record<string, string> | null {
+  const lock = playoffLockTime(event.lockSchedule, playoffSectionIdsFor(event));
+  if (!lock) return null;
+  // Live until the UTC midnight after the last playoff game (Cologne: GF Jun 21 → Jun 22 00:00Z).
+  const games = Object.values(event.playoffSchedule).flat().map(Date.parse).filter(Number.isFinite);
+  const last = games.length ? Math.max(...games) : Date.parse(event.dates.end);
+  const end = new Date(last);
+  end.setUTCHours(24, 0, 0, 0);
+  return {
+    [TEASER_START]: new Date(Date.parse(lock) - TEASER_LEAD_MS).toISOString().replace(".000Z", "Z"),
+    [REACTIONS_LIVE_AT]: lock,
+    [REACTIONS_END]: end.toISOString().replace(".000Z", "Z"),
+  };
 }
 
-/** Placeholder swapped for `reactionsLiveAt(nowMs)` at read time (see below). */
-const REACTIONS_LIVE_AT_PLACEHOLDER = "__REACTIONS_LIVE_AT__";
+/** Placeholders swapped for the active event's reactions window at read time (see below). */
+const TEASER_START = "__TEASER_START__";
+const REACTIONS_LIVE_AT = "__REACTIONS_LIVE_AT__";
+const REACTIONS_END = "__REACTIONS_END__";
 
 /**
  * The live broadcast list. Keep it short — these are deliberate, app-wide pings.
  */
 export const ANNOUNCEMENTS: readonly Announcement[] = [
   {
+    id: "teams-locked-singapore",
+    icon: "🔒",
+    title: "TEAMS LOCKED",
+    body: "All 32 teams for PGL Major Singapore are set. The field is on the home page.",
+    href: "/",
+    publishedAt: "2026-11-03T13:45:00Z",
+    expiresAt: "2026-11-27T00:00:00Z",
+  },
+  {
     id: "compare-surprise",
     icon: "📣",
     title: "Something's coming",
     body: "Check the Compare page once the playoff matches go live — there's a surprise.",
     href: "/leaderboard/compare",
-    publishedAt: "2026-06-18T03:00:00Z",
-    expiresAt: REACTIONS_LIVE_AT_PLACEHOLDER, // teaser ends exactly when reactions unlock
+    publishedAt: TEASER_START,
+    expiresAt: REACTIONS_LIVE_AT, // teaser ends exactly when reactions unlock
   },
   {
     id: "reactions-live",
@@ -69,18 +89,19 @@ export const ANNOUNCEMENTS: readonly Announcement[] = [
     title: "Reactions are live",
     body: "Drop your take on everyone's playoff picks — open the Compare page and react.",
     href: "/leaderboard/compare",
-    publishedAt: REACTIONS_LIVE_AT_PLACEHOLDER, // unlocks the moment the bracket locks
-    expiresAt: "2026-06-22T00:00:00Z",
+    publishedAt: REACTIONS_LIVE_AT, // unlocks the moment the bracket locks
+    expiresAt: REACTIONS_END,
   },
 ];
 
 /** Announcements currently within their publish→expiry window, newest first. */
-export function activeAnnouncements(nowMs: number): Announcement[] {
-  const liveAt = reactionsLiveAt(nowMs);
+export function activeAnnouncements(nowMs: number, event: EventConfig = currentEvent(nowMs)): Announcement[] {
+  const window = reactionsWindow(event) ?? {};
+  const resolve = (v: string) => (v.startsWith("__") ? window[v] ?? "" : v);
   return ANNOUNCEMENTS.map((a) => ({
     ...a,
-    publishedAt: a.publishedAt === REACTIONS_LIVE_AT_PLACEHOLDER ? liveAt : a.publishedAt,
-    expiresAt: a.expiresAt === REACTIONS_LIVE_AT_PLACEHOLDER ? liveAt : a.expiresAt,
+    publishedAt: resolve(a.publishedAt),
+    expiresAt: resolve(a.expiresAt),
   })).filter((a) => {
     const start = Date.parse(a.publishedAt);
     const end = Date.parse(a.expiresAt);
@@ -89,14 +110,17 @@ export function activeAnnouncements(nowMs: number): Announcement[] {
 }
 
 /** The single most-recent active announcement (drives the one-time popup). */
-export function latestActiveAnnouncement(nowMs: number): Announcement | null {
-  return activeAnnouncements(nowMs)[0] ?? null;
+export function latestActiveAnnouncement(nowMs: number, event: EventConfig = currentEvent(nowMs)): Announcement | null {
+  return activeAnnouncements(nowMs, event)[0] ?? null;
 }
 
 /** Active announcements as universal-feed entries (no read state — the API
  *  layer applies withReadState after assembly). */
-export function announcementEntries(nowMs: number): Omit<import("./notifications-core").NotifEntry, "isNew" | "readAt">[] {
-  return activeAnnouncements(nowMs).map((a) => {
+export function announcementEntries(
+  nowMs: number,
+  event: EventConfig = currentEvent(nowMs),
+): Omit<import("./notifications-core").NotifEntry, "isNew" | "readAt">[] {
+  return activeAnnouncements(nowMs, event).map((a) => {
     const atMs = Date.parse(a.publishedAt);
     return {
       id: `announce:${a.id}`,

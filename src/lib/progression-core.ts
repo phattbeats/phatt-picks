@@ -13,8 +13,10 @@
  * coins. Rewards are cosmetic only: felt colours by level, banner photos by
  * achievement, trinket pins.
  *
- * Brandon, 2026-10-24: the level number itself stays hidden on Hotline until
- * PHATT ID sign-in is live — it is computed (felts unlock from it) but not shown.
+ * The level shown on Hotline (PHA-5265) is this HOTLINE track's level, the one
+ * felts unlock from and the arcade's `hotline` track also reports. It is not
+ * the arcade's global PHATT ID level (a different curve over every game), so
+ * the UI labels it "HOTLINE level" and never calls it the PHATT ID level.
  *
  * A "stage" is what the site calls a stage: each Swiss stage, and the Playoffs as
  * ONE stage (the bracket locks together at the first quarter-final, #1245).
@@ -36,6 +38,25 @@ export function xpForLevel(level: number): number {
 export function levelForXp(xp: number): number {
   if (!(xp > 0)) return 1;
   return Math.min(MAX_LEVEL, 1 + Math.floor((Math.sqrt(1521 + 4 * xp) - 39) / 2));
+}
+
+/** Where a lifetime XP total sits on the curve: the level and the way to the next one. */
+export interface LevelProgress {
+  level: number;
+  xp: number;
+  /** XP into the current level and the level's width (both 0 at max level). */
+  into: number;
+  span: number;
+  /** The next level, or null at max level. */
+  next: number | null;
+}
+
+export function levelProgress(xp: number): LevelProgress {
+  const total = xp > 0 ? Math.floor(xp) : 0;
+  const level = levelForXp(total);
+  if (level >= MAX_LEVEL) return { level, xp: total, into: 0, span: 0, next: null };
+  const floor = xpForLevel(level);
+  return { level, xp: total, into: total - floor, span: xpForLevel(level + 1) - floor, next: level + 1 };
 }
 
 // ── XP sources (PHA-4477 §2) ─────────────────────────────────────────────────
@@ -328,7 +349,7 @@ export type FeltKey = "navy" | "oxblood" | "forest" | "velvet" | "royal" | "gold
 export interface FeltDef {
   key: FeltKey;
   name: string;
-  /** The PHATT ID level it unlocks at (Brandon 10/24: sooner than the title levels). Never shown as a number until sign-in is live. */
+  /** The HOTLINE level it unlocks at (Brandon 10/24: sooner than the title levels). */
   level: number;
   /** Rendered tile under public/coins/ (recoloured from the navy Blender render). */
   tile: string;
@@ -347,6 +368,11 @@ export const FELTS: readonly FeltDef[] = [
 
 export function feltByKey(key: string | null | undefined): FeltDef {
   return FELTS.find((f) => f.key === key) ?? FELTS[0];
+}
+
+/** The next felt a player at `level` will unlock, or null once they hold them all. */
+export function nextFelt(level: number): FeltDef | null {
+  return FELTS.find((f) => f.level > level) ?? null;
 }
 
 // ── Charms (PHA-4505): 3D keyring unlockables, cosmetic only ─────────────────

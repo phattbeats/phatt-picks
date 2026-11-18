@@ -405,3 +405,22 @@ a.std-name:hover { color: var(--heat); }
 @media (prefers-reduced-motion: reduce) {
   .sgt-room .rb .b i { animation: none; }
 }
+
+/* Team story + clips (PHA-5256) */
+.sgt-story { display: grid; gap: 14px; max-width: 68ch; }
+.sgt-story .hl { font-family: var(--font-display); font-weight: 800; font-size: clamp(24px, 4vw, 38px); text-transform: uppercase; line-height: 1; text-wrap: balance; color: var(--c, var(--heat)); }
+.sgt-story .tx { font-size: 16px; line-height: 1.55; color: var(--ink-hi); }
+.sgt-story .srcs { font-size: 11px; }
+.sgt-story .srcs summary { cursor: pointer; }
+.sgt-story .srcs ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.sgt-story .srcs .d { white-space: nowrap; }
+.sgt-clips { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.sgt-clip { margin: 0; display: grid; gap: 8px; min-width: 0; }
+.sgt-clip .frame { position: relative; aspect-ratio: 16 / 9; background: var(--surf-2); border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--hair); }
+.sgt-clip .frame iframe, .sgt-clip .frame button { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; padding: 0; background: none; cursor: pointer; }
+.sgt-clip .frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sgt-clip .play { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: var(--c, var(--heat)); }
+.sgt-clip .play::after { content: ""; position: absolute; left: 22px; top: 17px; border-left: 17px solid #000; border-top: 11px solid transparent; border-bottom: 11px solid transparent; }
+.sgt-clip figcaption { display: grid; gap: 3px; font-size: 13px; min-width: 0; }
+.sgt-clip .t { color: var(--ink-hi); overflow-wrap: anywhere; }
+.sgt-clip .mono { font-size: 11px; }

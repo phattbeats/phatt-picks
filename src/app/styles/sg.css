@@ -5,7 +5,7 @@
    lists, .tag chips, .sw toggles, .field/.input forms, .tabs.
    Page-specific styles live next to this file as sg-<area>.css. */
 @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-.rise{animation:rise .6s var(--ease) both}.d1{animation-delay:.08s}.d2{animation-delay:.16s}.d3{animation-delay:.24s}.d4{animation-delay:.32s}
+.rise{animation:rise .6s var(--ease) backwards}/* backwards, not both: a held end-state transform makes .rise a containing block and drags position:fixed children (the picks action bar) off the viewport */.d1{animation-delay:.08s}.d2{animation-delay:.16s}.d3{animation-delay:.24s}.d4{animation-delay:.32s}
 @media (prefers-reduced-motion: reduce){.rise{animation:none}}
 .sect-head a,a.eyebrow{position:relative;padding:14px 0;margin:-14px 0}a.eyebrow{display:inline-block}
 .sync,.tag{font-size:10px}
@@ -82,6 +82,18 @@ main.shell{overflow-x:clip}
 .bleed .display{font-size:clamp(52px,10vw,132px);line-height:.84}
 .bleed p{font-size:clamp(16px,1.6vw,19px);color:var(--ink-mid);max-width:560px;text-wrap:pretty}.bleed p b{color:var(--ink-hi);font-weight:500}
 .bleed .credit{position:absolute;right:14px;top:14px;z-index:2;font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.45)}
+/* Wider than the 1240px shell, the photo used to stop in hard vertical edges at
+   the column. From 1300 the photo and its tint run out to the viewport edges; the
+   .bleed box, its text and the credit stay in the column. The side clip moves from
+   the shell to body so the photo can leave the column, and the bottom fades to
+   transparent instead of to --void so it melts into void + vignette in the gutters
+   with no seam. 1280 and below are untouched. */
+@media(min-width:1300px){
+  body{overflow-x:clip}
+  main.shell{overflow-x:visible}
+  .bleed{overflow:visible;clip-path:inset(0 -100vw)}
+  .bleed>img,.bleed::after{left:calc(50% - 50vw);right:auto;width:100vw;max-width:none;-webkit-mask-image:linear-gradient(180deg,#000 82%,transparent);mask-image:linear-gradient(180deg,#000 82%,transparent)}
+}
 .chap{display:grid;gap:22px}
 .chap-h{display:grid;gap:10px;max-width:720px}
 .chap-h .n{font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;color:var(--heat);text-transform:uppercase}

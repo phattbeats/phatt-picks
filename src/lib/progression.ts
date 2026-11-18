@@ -277,7 +277,7 @@ export interface PlayerProgression {
   unlocked: ReadonlySet<AchievementKey>;
   ledger: LedgerRow[];
   xp: number;
-  /** Computed for unlocks; NOT shown on Hotline until PHATT ID sign-in is live. */
+  /** The HOTLINE level: felts unlock from it and the profile shows it. */
   level: number;
   felts: (FeltDef & { unlocked: boolean })[];
   /** The saved choice, already checked against what the player holds. */
@@ -339,6 +339,9 @@ export interface WelcomeHaul {
   xp: number;
   /** Case felts open to them now (navy included). */
   feltsUnlocked: number;
+  /** Lifetime XP and the HOTLINE level it reaches (PHA-5265). */
+  totalXp: number;
+  level: number;
 }
 
 /**
@@ -356,5 +359,7 @@ export async function getWelcomeHaul(playerId: string, nowMs: number = Date.now(
     unlocks,
     xp: prelaunchXp(p.ledger),
     feltsUnlocked: p.felts.filter((f) => f.unlocked).length,
+    totalXp: p.xp,
+    level: p.level,
   };
 }

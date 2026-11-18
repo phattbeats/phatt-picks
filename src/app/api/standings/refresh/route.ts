@@ -37,7 +37,7 @@ import { NextResponse } from "next/server";
 import { warmStandings, standingsSectionIds } from "@/lib/swiss-results";
 import { bridgeSwissOutcomes } from "@/lib/outcomes";
 import { currentEventId } from "@/lib/events-core";
-import { getCommittedLayout } from "@/lib/layout";
+import { scoringLayoutFor } from "@/lib/layout-state";
 import { prisma } from "@/lib/db";
 import { bucketSwissSlots, isSwissSection } from "@/lib/swiss-bucket-core";
 
@@ -51,7 +51,7 @@ export const dynamic = "force-dynamic";
  * poke, which is exactly the question a frozen / mis-resolved clinch raises.
  */
 async function dumpAnswerKey(eventId: number) {
-  const layout = getCommittedLayout();
+  const layout = await scoringLayoutFor(eventId);
   const nameByPick = new Map(layout.teams.map((t) => [t.pickid, t.name]));
   const rows = await prisma.stageOutcome.findMany({
     where: { eventId },

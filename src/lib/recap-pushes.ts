@@ -15,7 +15,7 @@ import { sendPushToPlayer } from "@/lib/notify";
 import { buildRecapPayload } from "@/lib/notify-core";
 import { parseNotifPrefs } from "@/lib/notifications-core";
 import { latestWrappedSectionId } from "@/lib/stage-wrapped-launch-core";
-import { getCommittedLayout } from "@/lib/layout";
+import { scoringLayoutFor } from "@/lib/layout-state";
 import { currentEventId, currentEvent } from "@/lib/events-core";
 import type { OutcomeMap } from "@/lib/scoring";
 
@@ -23,8 +23,8 @@ import type { OutcomeMap } from "@/lib/scoring";
 const fired = new Set<number>();
 
 export async function runRecapPushes(now: number = Date.now()): Promise<void> {
-  const layout = getCommittedLayout();
   const eventId = currentEventId(now);
+  const layout = await scoringLayoutFor(eventId);
 
   const outcomes = await prisma.stageOutcome.findMany({
     where: { eventId },

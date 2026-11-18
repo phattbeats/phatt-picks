@@ -83,6 +83,10 @@ a.hm-getin:hover{border-color:var(--hair-3);color:var(--ink-hi)}
 .hm-field{--cols:5;position:relative;display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));margin:0;padding:0;list-style:none;box-shadow:inset 1px 1px 0 var(--hair);background:radial-gradient(ellipse 45% 55% at 50% 50%,rgba(240,163,0,.07),transparent 72%);-webkit-mask-image:radial-gradient(ellipse 62% 72% at 50% 50%,#000 22%,rgba(0,0,0,.5) 56%,transparent 100%);mask-image:radial-gradient(ellipse 62% 72% at 50% 50%,#000 22%,rgba(0,0,0,.5) 56%,transparent 100%)}
 @media(min-width:560px){.hm-field{--cols:8}}
 @media(min-width:1024px){.hm-field{--cols:10}}
+/* Locked 32-team field: 4 / 8 / 16 columns so the last row is never ragged. */
+.hm-field.locked{--cols:4}
+@media(min-width:560px){.hm-field.locked{--cols:8}}
+@media(min-width:1024px){.hm-field.locked{--cols:16}}
 .hm-field li{aspect-ratio:1;display:grid;place-items:center;box-shadow:inset -1px -1px 0 var(--hair);transition:background-color .35s var(--ease)}
 .hm-field img{width:54%;height:54%;object-fit:contain;opacity:.72;filter:grayscale(1) brightness(1.55) contrast(.88);transition:opacity .35s var(--ease),filter .35s var(--ease),transform .5s var(--ease)}
 @media(min-width:1024px){.hm-field img{width:46%;height:46%}}
@@ -130,3 +134,24 @@ a.hm-getin:hover{border-color:var(--hair-3);color:var(--ink-hi)}
   .hm-field-card img,a.hm-getin,.watch-tile{transition:none}
   .hm-field-card:hover img{transform:none}
 }
+
+/* ── The field (FieldGrid.tsx): the contenders wall at full size ──
+   Same ephemeral language as .hm-field (hairline cells, monochrome marks at
+   low ink, heat glow, faded edges, slow sweep) but big enough to read and tap:
+   4 cols phone / 8 desktop, name + region under each mark. Team colour is an
+   accent only: it comes up on hover/focus/tap. The edge mask floors at .38 so
+   corner tiles stay visible and clickable. */
+.hm-grid{--tc:#8a93a6;position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:0;padding:0;list-style:none;box-shadow:inset 1px 1px 0 var(--hair);background:radial-gradient(ellipse 50% 50% at 50% 50%,rgba(240,163,0,.07),transparent 72%);-webkit-mask-image:radial-gradient(ellipse 70% 70% at 50% 50%,#000 40%,rgba(0,0,0,.38) 100%);mask-image:radial-gradient(ellipse 70% 70% at 50% 50%,#000 40%,rgba(0,0,0,.38) 100%)}
+@media(min-width:560px){.hm-grid{grid-template-columns:repeat(8,minmax(0,1fr))}}
+.hm-grid li{box-shadow:inset -1px -1px 0 var(--hair)}
+.hm-tile{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:100%;min-height:104px;padding:14px 3px 18px;color:var(--ink-mid);text-decoration:none;background:radial-gradient(ellipse 70% 60% at 50% 40%,color-mix(in srgb,var(--tc) 0%,transparent),transparent 70%);transition:background .35s var(--ease),color .35s var(--ease)}
+.hm-tile img{width:52%;height:auto;aspect-ratio:1;object-fit:contain;opacity:.72;filter:grayscale(1) brightness(1.55) contrast(.88);transition:opacity .35s var(--ease),filter .35s var(--ease),transform .5s var(--ease)}
+.hm-tile-name{max-width:100%;padding:0 2px;font-family:var(--font-display);font-weight:800;font-size:10px;line-height:1.05;letter-spacing:.04em;text-transform:uppercase;text-align:center;overflow-wrap:anywhere;text-wrap:balance}
+.hm-tile-region{position:absolute;left:5px;bottom:4px;font-family:var(--font-mono);font-size:8px;letter-spacing:.12em;color:var(--ink-low);transition:color .35s var(--ease)}
+.hm-tile-badge{position:absolute;top:4px;right:5px;font-family:var(--font-mono);font-size:7px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-low)}
+@media(min-width:560px){.hm-tile{min-height:150px;padding:18px 6px 24px}.hm-tile-name{font-size:12px}.hm-tile-region{font-size:9px;left:8px;bottom:6px}.hm-tile-badge{font-size:8px;top:6px;right:8px}}
+.hm-tile:hover,.hm-tile:focus-visible,.hm-tile:active{color:var(--ink-hi);background:radial-gradient(ellipse 70% 60% at 50% 40%,color-mix(in srgb,var(--tc) 22%,transparent),transparent 70%)}
+.hm-tile:hover img,.hm-tile:focus-visible img,.hm-tile:active img{opacity:1;filter:none;transform:scale(1.08)}
+.hm-tile:hover .hm-tile-region,.hm-tile:focus-visible .hm-tile-region{color:var(--tc)}
+.hm-grid::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.05) 50%,transparent 60%) no-repeat;background-size:250% 100%;animation:hm-sweep 14s linear infinite}
+@media(prefers-reduced-motion:reduce){.hm-grid::after{animation:none;display:none}.hm-tile,.hm-tile img,.hm-tile-region{transition:none}.hm-tile:hover img,.hm-tile:active img{transform:none}}

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { getCommittedLayout } from "@/lib/layout";
+import { scoringLayoutFor } from "@/lib/layout-state";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
 import { visibleCoinTier } from "@/lib/coin-core";
 import { getSession } from "@/lib/session";
@@ -18,7 +18,7 @@ export default async function DirectoryPage() {
   const nowMs = Date.now();
   const event = currentEvent(nowMs);
   const EVENT_ID = event.eventId;
-  const layout = getCommittedLayout();
+  const layout = await scoringLayoutFor(EVENT_ID);
   const session = await getSession();
   await refreshOutcomesOnRead(EVENT_ID); // live driver (#866) — shared 30s claim
 

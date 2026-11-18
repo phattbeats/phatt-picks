@@ -22,7 +22,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCommittedLayout, buildTeamMap, type TeamDef } from "@/lib/layout";
+import { buildTeamMap, type TeamDef } from "@/lib/layout";
+import { scoringLayoutFor } from "@/lib/layout-state";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
 import { getSession } from "@/lib/session";
 import { TeamLogo } from "@/components/ui/TeamLogo";
@@ -40,7 +41,7 @@ import { StageWrappedReplay, WrappedReplayOnLoad } from "@/components/heat/Stage
 import { StageWrappedGate } from "@/components/heat/StageWrappedGate";
 import { stageWrappedKey } from "@/lib/stage-wrapped-core";
 import { buildStageWrappedDeck, stageWrappedHasContent, type StageWrappedBestCall } from "@/lib/stage-wrapped-content";
-import { isPlayoffSection, playoffRoundForSection, PLAYOFF_ROUNDS } from "@/lib/playoff-bracket-core";
+import { isPlayoffSection, playoffRoundForSection, playoffRoundsFor } from "@/lib/playoff-bracket-core";
 import { majorWrappedStageKey } from "@/lib/stage-wrapped-launch";
 import { majorShortName, ordSuffix, requestedEvent } from "@/components/sg/people/people-data";
 import { PHOTOS } from "@/lib/photos";
@@ -71,11 +72,12 @@ export default async function StageRevealPage({
   const sp = await searchParams;
   const wantsWrapped = sp.wrapped === "1";
 
-  const layout = getCommittedLayout();
   const liveId = currentEventId(); // per-request active event (#1046)
   const asked = requestedEvent(sp);
-  const EVENT_ID =
-    asked?.eventId ?? (layout.event !== liveId && getEventConfig(layout.event) ? layout.event : liveId);
+  // The requested Major, else the live one, against its own layout (PHA-1406):
+  // the old fallback read Cologne's fixture and so always served event 26.
+  const EVENT_ID = asked?.eventId ?? liveId;
+  const layout = await scoringLayoutFor(EVENT_ID);
   const eventCfg = getEventConfig(EVENT_ID);
   const isLiveEvent = EVENT_ID === liveId;
   const majorQ = isLiveEvent || !eventCfg ? "" : `?major=${encodeURIComponent(eventCfg.slug)}`;
@@ -108,10 +110,10 @@ export default async function StageRevealPage({
   // be all one stage reveal"). When the requested section is any playoff round,
   // the reveal spans every playoff section: one "Playoffs" heading, the whole
   // bracket of picks, and a single score/rank-move across the run. Mirrors how
-  // the picks page + home hero already consolidate 108/109/110 (#1007/1204).
+  // the picks page + home hero already consolidate QF/SF/GF (#1007/1204).
   const playoff = isPlayoffSection(sectionId);
   const groupSections = playoff
-    ? PLAYOFF_ROUNDS.map((r) => layout.sections.find((s) => s.sectionid === r.sectionId)).filter(
+    ? playoffRoundsFor(EVENT_ID).map((r) => layout.sections.find((s) => s.sectionid === r.sectionId)).filter(
         (s): s is Section => !!s,
       )
     : [sectionDef];
@@ -128,7 +130,7 @@ export default async function StageRevealPage({
   // The playoff reveal's recap IS the Major Wrapped deck (one bracket → one
   // cinematic), opened through the app-wide launcher's replay bus rather than a
   // per-round wrap. The per-round wrap ("Grand Final — nothing to wrap yet") is
-  // what the old /reveal/110?wrapped=1 deep link wrongly surfaced (#1274).
+  // what the old /reveal/<GF>?wrapped=1 deep link wrongly surfaced (#1274).
   const majorKey = majorWrappedStageKey(EVENT_ID);
 
   // The app-wide launcher only mounts the LIVE Major's deck. A previous Major's
@@ -263,7 +265,7 @@ export default async function StageRevealPage({
             stageKey={stageWrappedKey(EVENT_ID, sectionId)}
             eventId={EVENT_ID}
             sectionId={sectionId}
-            slides={buildStageWrappedDeck(sectionId, stageLabel, null, wrappedAssets)}
+            slides={buildStageWrappedDeck(EVENT_ID, sectionId, stageLabel, null, wrappedAssets)}
             title={stageLabel}
             resolved
             forceOpen={wantsWrapped}
@@ -401,7 +403,7 @@ export default async function StageRevealPage({
           stageKey={stageWrappedKey(EVENT_ID, sectionId)}
           eventId={EVENT_ID}
           sectionId={sectionId}
-          slides={buildStageWrappedDeck(sectionId, stageLabel, {
+          slides={buildStageWrappedDeck(EVENT_ID, sectionId, stageLabel, {
             displayName: subject.displayName,
             stagePoints,
             correct,
@@ -529,7 +531,7 @@ export default async function StageRevealPage({
         </Link>
         {playoff ? (
           <StageWrappedReplay stageKey={majorKey} label="Watch the Wrapped recap" />
-        ) : stageWrappedHasContent(sectionId) ? (
+        ) : stageWrappedHasContent(EVENT_ID, sectionId) ? (
           <StageWrappedReplay stageKey={stageWrappedKey(EVENT_ID, sectionId)} />
         ) : null}
       </section>

@@ -16,15 +16,16 @@
  */
 
 import { prisma } from "@/lib/db";
-import { getCommittedLayout, buildTeamMap } from "@/lib/layout";
+import { buildTeamMap } from "@/lib/layout";
+import { scoringLayoutFor } from "@/lib/layout-state";
 import { resolveLogoTiers } from "@/lib/logos";
 import { getEventConfig } from "@/lib/events-core";
 import { eventLogoSrc } from "@/lib/event-brand";
 import type { WrappedSlide } from "@/lib/stage-wrapped-core";
 import type { StageWrappedAssets } from "@/lib/stage-wrapped-content";
-import { buildPlayoffBracket, PLAYOFF_ROUNDS } from "@/lib/playoff-bracket-core";
+import { buildPlayoffBracket, playoffFieldTeams, playoffRoundsFor } from "@/lib/playoff-bracket-core";
 import { isPlayoffWrapped, derivePlayoffStorylines } from "@/lib/playoff-wrapped-derive";
-import { buildPlayoffWrappedDeck, COLOGNE_PLAYOFF_MOMENTS } from "@/lib/playoff-wrapped-core";
+import { buildPlayoffWrappedDeck, playoffWrappedEditionFor } from "@/lib/playoff-wrapped-core";
 
 export interface StageWrappedAutoDeck {
   /** Stable per-deck id (event:major-wrapped), drives the localStorage seen-key. */
@@ -59,30 +60,39 @@ function buildWrappedAssets(teamMap: ReturnType<typeof buildTeamMap>, eventId: n
 async function resolveWrappedFacts(eventId: number): Promise<{
   teamMap: ReturnType<typeof buildTeamMap>;
   facts: ReturnType<typeof derivePlayoffStorylines>;
+  edition: NonNullable<ReturnType<typeof playoffWrappedEditionFor>>;
 } | null> {
-  const layout = getCommittedLayout();
-  const playoffSectionIds = PLAYOFF_ROUNDS.map((r) => r.sectionId);
-  const playoffSections = layout.sections.filter((s) => playoffSectionIds.includes(s.sectionid));
-  if (playoffSections.length === 0) return null;
+  const playoffSectionIds = playoffRoundsFor(eventId).map((r) => r.sectionId);
+  if (playoffSectionIds.length === 0) return null;
 
-  // Cheap gate: one query scoped to the playoff sections.
+  // Cheap gate: one query scoped to the playoff sections, before any layout read.
   const outcomes = await prisma.stageOutcome.findMany({
     where: { eventId, sectionId: { in: playoffSectionIds } },
   });
   if (outcomes.length === 0) return null;
 
+  // The event's own seeded layout (PHA-5275): Cologne's committed fixture
+  // carries its final seeding, Singapore's seeds live from Valve.
+  const layout = await scoringLayoutFor(eventId);
+  const playoffSections = layout.sections.filter((s) => playoffSectionIds.includes(s.sectionid));
+  if (playoffSections.length === 0) return null;
+
   const winnerByGroup = new Map<number, number>();
   for (const o of outcomes) if (o.slotIndex === 0) winnerByGroup.set(o.groupId, o.winnerPickId);
 
   const bracket = buildPlayoffBracket({ sections: playoffSections, winnerByGroup });
+  const edition = playoffWrappedEditionFor(eventId);
+  if (!edition) return null;
   // THE GATE: nothing until the Grand Final has a champion.
   if (!isPlayoffWrapped(bracket)) return null;
 
   const teamMap = buildTeamMap(layout);
   const facts = derivePlayoffStorylines(bracket, {
     nameOf: (pid: number) => teamMap.get(pid)?.name ?? null,
+    edition,
   });
-  return { teamMap, facts };
+  facts.fieldPickIds = [...playoffFieldTeams(playoffSections)];
+  return { teamMap, facts, edition };
 }
 
 /**
@@ -99,23 +109,25 @@ export async function prepareMajorWrappedAutoDeck(
 ): Promise<StageWrappedAutoDeck | null> {
   const resolved = await resolveWrappedFacts(eventId);
   if (!resolved) return null;
-  const { teamMap, facts } = resolved;
+  const { teamMap, facts, edition } = resolved;
 
   const assets = buildWrappedAssets(teamMap, eventId);
-  // Lead with the curated historic-moment photo beats (cathedral, donk, woxic,
-  // the Cinderellas, magixx) rather than the seed-derived stub; the champion /
-  // road / runner-up stay computed from the bracket.
-  facts.moments = COLOGNE_PLAYOFF_MOMENTS;
+  // Lead with the edition's curated historic-moment photo beats (Cologne: the
+  // cathedral, donk, woxic, the Cinderellas, magixx) rather than the
+  // seed-derived stub; the champion / road / runner-up stay computed from the
+  // bracket. An edition with none keeps the derived beats.
+  if (edition.moments.length > 0) facts.moments = edition.moments;
 
-  const slides = buildPlayoffWrappedDeck(facts, null, assets);
+  const slides = buildPlayoffWrappedDeck(facts, null, assets, edition);
   if (slides.length === 0) return null;
 
-  const gfSectionId = PLAYOFF_ROUNDS.find((r) => r.key === "GF")?.sectionId ?? 110;
+  const gfSectionId = playoffRoundsFor(eventId).find((r) => r.key === "GF")?.sectionId;
+  if (gfSectionId == null) return null;
   return {
     stageKey: majorWrappedStageKey(eventId),
     eventId,
     sectionId: gfSectionId,
-    title: "Cologne Major",
+    title: `${edition.city.charAt(0)}${edition.city.slice(1).toLowerCase()} Major`,
     slides,
   };
 }

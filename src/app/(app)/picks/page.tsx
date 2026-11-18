@@ -6,6 +6,7 @@ import { authCodeStatus, savedForLabel } from "@/lib/authcode";
 import { prisma } from "@/lib/db";
 import { mirrorPlayerPredictionsThrottled } from "@/lib/predictions-sync";
 import { PicksBoard } from "@/components/PicksBoard";
+import { SignInBar } from "@/components/sg/picks/ActionBar";
 import {
   isStagePickable,
   selectCurrentStageIndex,
@@ -20,7 +21,7 @@ import {
   isPlayoffSection,
   buildPlayoffBracket,
   buildPlayoffPickTree,
-  PLAYOFF_ROUNDS,
+  playoffRoundsFor,
 } from "@/lib/playoff-bracket-core";
 import { LockIcon } from "@/components/ui/LockIcon";
 import { LivePlayoffBracket } from "@/components/heat/LivePlayoffBracket";
@@ -101,6 +102,7 @@ export default async function PicksPage({
   const code = session?.steamId ? await authCodeStatus(session.playerId, EVENT_ID) : null;
   const needsSteamLink = !!code && code.status !== "current";
   const staleCodeFor = code?.status === "stale" ? savedForLabel(code.savedForEventId) : null;
+  const codeRejected = code?.rejected ?? false;
 
   // Scheduled hard lock (#886/898): once a stage's first match starts, its
   // pick window is closed — even though the committed layout still says
@@ -140,7 +142,8 @@ export default async function PicksPage({
   // Grand Final all open and lock together when Valve seeds the bracket. The
   // UI matches that truth: a single "Playoffs" tab covering all three layout
   // sections, with the round pickers stacked above the full bracket.
-  const playoffSectionIds = PLAYOFF_ROUNDS.map((r) => r.sectionId);
+  const playoffRounds = playoffRoundsFor(EVENT_ID);
+  const playoffSectionIds = playoffRounds.map((r) => r.sectionId);
   const playoffSections = layout.sections.filter((s) =>
     playoffSectionIds.includes(s.sectionid),
   );
@@ -157,9 +160,9 @@ export default async function PicksPage({
   });
 
   // Per-game playoff schedule (#1007): each round's games with their committed
-  // date/time, fed to the schedule strip. Dark until COLOGNE_PLAYOFF_SCHEDULE is
-  // filled (the strip renders nothing while every iso is null).
-  const playoffScheduleRounds = PLAYOFF_ROUNDS.map((def) => {
+  // date/time, fed to the schedule strip. Dark until the event's playoffSchedule
+  // is filled (the strip renders nothing while every iso is null).
+  const playoffScheduleRounds = playoffRounds.map((def) => {
     const sec = playoffSections.find((s) => s.sectionid === def.sectionId);
     const games = (sec?.groups ?? []).map((_g, i) => ({
       label: def.key === "GF" ? "Grand Final" : `Match ${i + 1}`,
@@ -529,7 +532,7 @@ export default async function PicksPage({
 
       {/* Steam-connected but no auth code: picks live in HOTLINE, not yet
           pushed to the official in-game Pick'Em. Point them at the page. */}
-      {needsSteamLink && <SteamLinkNotice staleFor={staleCodeFor} />}
+      {needsSteamLink && <SteamLinkNotice staleFor={staleCodeFor} rejected={codeRejected} />}
 
       {/* Sealed, then changed in the CS2 client (pick-lock-core): HOTLINE keeps
           the sealed set; say so plainly. Shown publicly next to the seal too. */}
@@ -616,6 +619,7 @@ export default async function PicksPage({
                   teams' Spotlights to build anticipation as the field is named.
                   The read-only bracket below shows the tree filling in live. */}
               <QualifiedStrip
+                eventId={EVENT_ID}
                 teams={layout.teams}
                 liveTeamStats={liveTeamStats?.byPickid}
                 liveStatsAsOf={liveTeamStats?.asOf}
@@ -699,7 +703,7 @@ export default async function PicksPage({
           {/* Stage Wrapped entry (#1054) — once the stage is OVER, the recap
               is the headline action here, right where the player lands. Opens the
               full personal deck on the stage reveal. */}
-          {stageComplete && stageWrappedHasContent(activeSectionId) && (
+          {stageComplete && stageWrappedHasContent(EVENT_ID, activeSectionId) && (
             <Link href={`/reveal/${activeSectionId}`} className="sgp-wrapped" prefetch={false}>
               <span className="num" aria-hidden="true">
                 {stageNumeral(activeLabel)}
@@ -758,20 +762,7 @@ export default async function PicksPage({
         <LockedStageCard pickability={activePickability} />
       )}
 
-      {!session && (
-        <div className="sgp-action" role="region" aria-label="Sign in">
-          <div className="sgp-action-in">
-            <div className="sgp-prog">
-              <div className="c">
-                <span className="s">Sign in to save your calls.</span>
-              </div>
-            </div>
-            <Link href="/login" className="btn-solid" prefetch={false}>
-              Sign in to Save
-            </Link>
-          </div>
-        </div>
-      )}
+      {!session && <SignInBar />}
     </div>
   );
 }
@@ -838,16 +829,30 @@ function PicksNotOpen({
   );
 }
 
-function SteamLinkNotice({ staleFor }: { staleFor: string | null }) {
+function SteamLinkNotice({ staleFor, rejected }: { staleFor: string | null; rejected: boolean }) {
   return (
     <Link href="/help/auth-code" className="sgp-note solo" prefetch={false}>
       <div>
-        <span className="tag warn">{staleFor ? "New Major, new code" : "Saved here — not on Steam yet"}</span>
-        <h2>{staleFor ? "Add this Major's auth code" : "Your picks are saved in HOTLINE"}</h2>
+        <span className="tag warn">
+          {staleFor ? (rejected ? "New Major, new code" : "Saved code on file") : "Saved here — not on Steam yet"}
+        </span>
+        <h2>
+          {staleFor
+            ? rejected
+              ? "Add this Major's auth code"
+              : "We'll check your saved code"
+            : "Your picks are saved in HOTLINE"}
+        </h2>
         {staleFor ? (
-          <p>
-            {`Your saved code is from ${staleFor}, and Valve hasn't accepted it for this Major, so syncing to the official in-game Pick'Em is paused until you paste this Major's Game Authentication Code.`}
-          </p>
+          rejected ? (
+            <p>
+              {`Your saved code is from ${staleFor}, and Valve didn't accept it for this Major, so syncing to the official in-game Pick'Em is paused until you paste this Major's Game Authentication Code.`}
+            </p>
+          ) : (
+            <p>
+              {`Your saved code is from ${staleFor}. We'll check it when Valve opens Pick'Em for this Major. If it still works, syncing just carries on; if not, we'll ask you for a new one.`}
+            </p>
+          )
         ) : (
           <p>
             To push them to your <b>official in-game CS2 Pick&apos;Em</b>, connect your Steam Game

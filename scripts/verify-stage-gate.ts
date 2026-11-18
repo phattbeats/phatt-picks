@@ -258,17 +258,18 @@ check("resolveEventLayout: fixture present -> fixture (Cologne archive keeps res
   resolveEventLayout(layout, null)?.event === 26 && resolveEventLayout(layout, null)?.sections.length === layout.sections.length);
 
 // Registry facts the runtime rule leans on: Cologne's fixture IS event 26, and
-// Singapore (upcoming) has no committed layout fixture in this build.
+// Singapore's fixture IS event 27 (committed by PHA-1056 once Valve published it).
 const sg = getEventConfig(27);
 check("committed fixture describes Cologne (event 26)", layout.event === 26 && getEventConfig(26)?.fixtures.layout === "cologne-layout");
-check("Singapore (27) is registered with a layout fixture name that isn't committed",
-  !!sg && !existsSync(join(ROOT, `src/fixtures/${sg.fixtures.layout}.json`)));
+check("Singapore (27) names a committed layout fixture that describes event 27",
+  !!sg && existsSync(join(ROOT, `src/fixtures/${sg.fixtures.layout}.json`)) &&
+  (JSON.parse(read(`src/fixtures/${sg.fixtures.layout}.json`)) as { result: { event: number } }).result.event === 27);
 
 // Source pins for the server-only modules (prisma imports keep them out of
 // plain node): the lookup is event-keyed, and every write/sync path refuses.
 const layoutSrc = read("src/lib/layout.ts");
 check("layout.ts committedLayoutFor matches on the fixture's own event id",
-  /export function committedLayoutFor\(eventId: number\): Layout \| null \{\s*return COMMITTED\.result\.event === eventId \? COMMITTED\.result : null;/.test(layoutSrc));
+  /export function committedLayoutFor\(eventId: number\): Layout \| null \{\s*return COMMITTED_BY_EVENT\.get\(eventId\) \?\? null;/.test(layoutSrc));
 const stateSrc = read("src/lib/layout-state.ts");
 check("getEffectiveLayout resolves via committedLayoutFor(eventId), not the global fixture",
   /resolveEventLayout\(committedLayoutFor\(eventId\), live\)/.test(stateSrc) && !/import \{[^}]*getCommittedLayout/.test(stateSrc));

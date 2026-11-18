@@ -20,7 +20,8 @@
 
 import type { PlayoffBracket, PlayoffMatch, PlayoffSide } from "./playoff-bracket-core";
 import {
-  COLOGNE_PHOTOS,
+  COLOGNE_EDITION,
+  type PlayoffWrappedEdition,
   type PlayoffBracketBuster,
   type PlayoffMoment,
   type PlayoffRunLeg,
@@ -33,6 +34,8 @@ export interface DeriveOptions {
   seedOf?: (pickId: number) => number | null;
   /** Display name resolver, for derived-moment copy. */
   nameOf?: (pickId: number) => string | null;
+  /** The event's Wrapped edition (venue + photos for derived beats). Defaults to Cologne. */
+  edition?: PlayoffWrappedEdition;
 }
 
 /** "Is it wrapped?" — the Major is done once the Grand Final has crowned a champion. */
@@ -142,9 +145,9 @@ function deriveCinderella(bracket: PlayoffBracket, opts: DeriveOptions): Playoff
     headline: `${name} crashed the bracket.`,
     figure: `#${worst.seed}`,
     figureCaption: `the #${worst.seed} seed went on a run`,
-    body: `Nobody penciled in the #${worst.seed} seed. ${name} won a knockout match they had no business winning and turned the Cathedral upside down.`,
+    body: `Nobody penciled in the #${worst.seed} seed. ${name} won a knockout match they had no business winning and turned ${(opts.edition ?? COLOGNE_EDITION).venue} upside down.`,
     logoPickIds: [worst.pickId],
-    photo: COLOGNE_PHOTOS.cinderella,
+    photo: (opts.edition ?? COLOGNE_EDITION).photos.cinderella,
   };
 }
 
@@ -152,7 +155,7 @@ function deriveCinderella(bracket: PlayoffBracket, opts: DeriveOptions): Playoff
  * Derive the full `PlayoffWrappedFacts` from a resolved bracket — the "find the
  * storylines and go from there" step. When the bracket isn't wrapped yet, only
  * the cheap totals are filled (no champion, no derived moments); the caller then
- * leans on the curated `COLOGNE_PLAYOFF_MOMENTS` for the mid-bracket recap.
+ * leans on the edition's curated moments for the mid-bracket recap.
  */
 export function derivePlayoffStorylines(bracket: PlayoffBracket, opts: DeriveOptions = {}): PlayoffWrappedFacts {
   const decided = decidedMatches(bracket).length;

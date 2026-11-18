@@ -186,20 +186,20 @@ const badStart: LifecycleEvent = {
 check("an event with an unparseable start never wins the upcoming slot",
   selectCurrentEvent([badStart, sooner], beforeBoth)?.eventId === 30);
 
-// — events-core is now CLOCK-DERIVED but lands behind current behaviour —
-// (the live registry holds only Cologne, so these hold whenever verify runs).
-check("liveEvents(Jun6) is exactly [Cologne]", liveEvents(JUN6).length === 1 && liveEvents(JUN6)[0]?.eventId === 26);
-check("currentEvent(Jun6) is Cologne and effectively live", currentEvent(JUN6).eventId === 26 && currentEvent(JUN6).status === "live");
-check("currentEventId(Jun6) === 26", currentEventId(JUN6) === 26);
-check("resolveActiveEvent(Jun6) === 26 (clock-derived, same as before)", resolveActiveEvent(JUN6).eventId === 26);
-// #1046: pages/routes now resolve the event PER REQUEST via currentEventId(),
-// not a module-load-bound ACTIVE_EVENT_ID — so a between-Majors transition is
-// followed without a redeploy. currentEventId(now) is the value they read.
-check("currentEventId(Jun6) is 26 (the value pages read, per-request)", currentEventId(JUN6) === 26);
+// — events-core is CLOCK-DERIVED over the real registry. Since the PHA-1320
+//   baseline flip, Singapore (27) is the live event and Cologne (26) is archived. —
+const NOV30 = ms("2026-11-30T12:00:00Z"); // mid Singapore Stage II
+check("liveEvents(Nov30) is exactly [Singapore]", liveEvents(NOV30).length === 1 && liveEvents(NOV30)[0]?.eventId === 27);
+check("currentEvent(Nov30) is Singapore and effectively live", currentEvent(NOV30).eventId === 27 && currentEvent(NOV30).status === "live");
+check("currentEventId(Nov30) === 27", currentEventId(NOV30) === 27);
+check("resolveActiveEvent(Nov30) === 27", resolveActiveEvent(NOV30).eventId === 27);
+// #1046: pages/routes resolve the event PER REQUEST via currentEventId(now).
 // the reminder driver reads each live event's OWN schedule from the registry:
-check("live event exposes its own lockSchedule (drives reminders)", Object.keys(liveEvents(JUN6)[0]?.lockSchedule ?? {}).length >= 3);
-// pre-go-live: a far-earlier clock still serves Cologne (it never demotes below its live baseline)
-check("before go-live the live registry still serves Cologne", currentEventId(ms("2026-01-01T00:00:00Z")) === 26);
+check("live event exposes its own lockSchedule (drives reminders)", Object.keys(liveEvents(NOV30)[0]?.lockSchedule ?? {}).length >= 2);
+// a live baseline is never demoted: a far-earlier clock still serves Singapore
+check("before go-live the live registry still serves Singapore", currentEventId(ms("2026-06-01T00:00:00Z")) === 27);
+// archived Cologne stays terminal even when the clock is rewound into its run
+check("archived Cologne is never resurrected by the clock", liveEvents(JUN6).every((e) => e.eventId !== 26));
 
 console.log(`\nverify-event-lifecycle: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

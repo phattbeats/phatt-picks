@@ -24,7 +24,8 @@ import {
   nextSteamState,
   parseVisibility,
   partitionMirror,
-  PLAYOFF_SEAL_UNIT,
+  isPlayoffSealUnit,
+  playoffSealUnitFor,
   sealMetrics,
   sealUnitFor,
   sectionsInUnit,
@@ -47,8 +48,14 @@ const reason = (d: { ok: boolean; reason?: string }) => (d.ok ? "ok" : d.reason)
 
 console.log("\npick-lock - seal units");
 check("Swiss section is its own unit", sealUnitFor(105) === 105 && sealUnitFor(107) === 107);
-check("QF/SF/GF all collapse onto the QF unit", [108, 109, 110].every((s) => sealUnitFor(s) === PLAYOFF_SEAL_UNIT));
-check("playoff unit covers 108/109/110", sectionsInUnit(PLAYOFF_SEAL_UNIT).join(",") === "108,109,110");
+const PLAYOFF_SEAL_UNIT = playoffSealUnitFor(26)!;
+check("Cologne QF/SF/GF all collapse onto the QF unit", PLAYOFF_SEAL_UNIT === 108 && [108, 109, 110].every((s) => sealUnitFor(s) === PLAYOFF_SEAL_UNIT));
+check("Cologne playoff unit covers 108/109/110", sectionsInUnit(PLAYOFF_SEAL_UNIT).join(",") === "108,109,110");
+// PHA-5275: Singapore's bracket seals as ONE unit on its own QF, not three.
+check("Singapore QF/SF/GF all collapse onto 114", playoffSealUnitFor(27) === 114 && [114, 115, 116].every((s) => sealUnitFor(s) === 114));
+check("Singapore playoff unit covers 114/115/116", sectionsInUnit(114).join(",") === "114,115,116");
+check("SF/GF ids are not seal units themselves", !isPlayoffSealUnit(115) && !isPlayoffSealUnit(109) && isPlayoffSealUnit(114));
+check("Singapore Swiss stays its own unit", sealUnitFor(113) === 113 && sectionsInUnit(113).join(",") === "113");
 check("Swiss unit covers only itself", sectionsInUnit(106).join(",") === "106");
 check("parseVisibility strict", parseVisibility("public") === "public" && parseVisibility("hidden") === "hidden" && parseVisibility("PUBLIC") === null && parseVisibility(1) === null);
 

@@ -66,36 +66,20 @@ check(
 );
 check("rows close with </Link>", /<\/Link>/.test(rowsSrc));
 
-console.log("\nm8.4 - /profile graceful sign-in card (no redirect)");
+console.log("\nm8.4 - /profile is a thin redirect (PHA-1275 superseded the sign-in card)");
 
 const profileSrc = read("src/app/(app)/profile/page.tsx");
 check(
-  'profile no longer imports redirect from next/navigation',
-  !/from "next\/navigation"/.test(profileSrc),
+  "profile redirects via next/navigation",
+  /import \{ redirect \} from "next\/navigation"/.test(profileSrc),
 );
 check(
-  'profile no longer calls redirect("/login")',
-  !/redirect\("\/login"\)/.test(profileSrc),
+  "signed-in /profile goes to the player card",
+  /redirect\(session \? `\/players\/\$\{session\.playerId\}`/.test(profileSrc),
 );
 check(
-  "profile renders SignedOutProfile when session missing",
-  /if \(!session\) return <SignedOutProfile/.test(profileSrc),
-);
-check(
-  "SignedOutProfile component defined",
-  /function SignedOutProfile\(\)/.test(profileSrc),
-);
-check(
-  "SignedOutProfile offers Steam sign-in",
-  /\/api\/auth\/steam/.test(profileSrc),
-);
-check(
-  "SignedOutProfile offers local play",
-  /\/api\/auth\/local/.test(profileSrc),
-);
-check(
-  "SignedOutProfile mentions session expired copy",
-  /Session expired/i.test(profileSrc),
+  "signed-out /profile goes to the /settings sign-in surface",
+  /: "\/settings"\)/.test(profileSrc),
 );
 
 console.log("\nm8.4 - app header surfaces the 'You' chip next to the profile icon");

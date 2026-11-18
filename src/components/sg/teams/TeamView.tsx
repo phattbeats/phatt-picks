@@ -12,6 +12,8 @@ import { resolveLogoTiers } from "@/lib/logos";
 import { teamAccent } from "@/lib/playoff-spotlights";
 import type { TeamDef } from "@/lib/layout";
 import { teamCode, teamHref, teamPortrait } from "./team-assets";
+import { ClipEmbed } from "./ClipEmbed";
+import { hltvTeamUrl, storyForPickid } from "@/lib/team-stories";
 import type { Finish, StageCall, SwissResult, TeamPageData } from "./team-data";
 
 const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 100) : 0);
@@ -111,7 +113,8 @@ export function TeamStrip({ field, active }: { field: TeamDef[]; active?: number
 
 export function TeamView({ data }: { data: TeamPageData }) {
   const { team, stats, region, finish, stages, championShare } = data;
-  const accent = teamAccent(team);
+  const story = storyForPickid(team.pickid);
+  const accent = story?.color ?? teamAccent(team);
   const portrait = teamPortrait(team.pickid);
   const style = accent ? ({ "--c": accent } as CSSProperties) : undefined;
   const recent = stats?.recent ?? [];
@@ -161,6 +164,48 @@ export function TeamView({ data }: { data: TeamPageData }) {
           </div>
         </div>
       </section>
+
+      {/* Storyline + montage clips (PHA-5256) */}
+      {story && (
+        <section className="chap">
+          <div className="chap-h">
+            <span className="n">00 — The story</span>
+          </div>
+          <div className="sgt-story">
+            <h2 className="hl">{story.headline}</h2>
+            <p className="tx">{story.storyline}</p>
+            <details className="srcs mono muted">
+              <summary>
+                Sources ({story.sources.length})
+              </summary>
+              <ul>
+                {story.sources.map((src) => (
+                  <li key={src.url}>
+                    <a className="sgc-link" href={src.url} target="_blank" rel="noopener noreferrer">
+                      {src.label}
+                    </a>
+                    {src.date && <span className="d"> · {src.date}</span>}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          </div>
+          {story.clips.length > 0 && (
+            <div className="sgt-clips">
+              {story.clips.map((c) => (
+                <ClipEmbed key={c.id} clip={c} />
+              ))}
+            </div>
+          )}
+          {hltvTeamUrl(story) && (
+            <div className="cta">
+              <a className="btn btn-ghost" href={hltvTeamUrl(story)!} target="_blank" rel="noopener noreferrer">
+                {team.name} on HLTV
+              </a>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Statement + stat cells */}
       <section className="chap">

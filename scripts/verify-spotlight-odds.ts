@@ -16,7 +16,9 @@
  */
 
 import {
-  PLAYOFF_MARKET_SLUGS,
+  PLAYOFF_MARKET_SLUGS_BY_EVENT,
+  marketSlugsFor,
+  authoredLinesOnly,
   gammaEventUrl,
   parseMarketOutcomes,
   resolveMatchupOdds,
@@ -39,9 +41,22 @@ function check(name: string, cond: boolean) {
 }
 const near = (a: number, b: number) => Math.abs(a - b) < 1e-6;
 
+console.log("\nspotlight-odds - registry is per event (PHA-1406)");
+{
+  check("Singapore (27) is gated: no authored matchups", Object.keys(marketSlugsFor(27)).length === 0);
+  check("an unregistered event is gated", Object.keys(marketSlugsFor(999)).length === 0);
+  check("Cologne (26) keeps its QF matchups", Object.keys(marketSlugsFor(26)).length === 8);
+  check("every registry key is a positive integer event id", Object.keys(PLAYOFF_MARKET_SLUGS_BY_EVENT).every((k) => Number.isInteger(Number(k)) && Number(k) > 0));
+  // FURIA is pickid 85 in both Cologne and Singapore: a Cologne line cached under
+  // event 27 must not be served.
+  const leaked = { 85: "cologne-line", 59: "cologne-line" };
+  check("a cached line for a pickid the event did not author is dropped", Object.keys(authoredLinesOnly(27, leaked)).length === 0);
+  check("authored pickids are kept", Object.keys(authoredLinesOnly(26, leaked)).length === 2);
+}
+
 console.log("\nspotlight-odds - authored registry well-formed (#1066/993)");
 {
-  const entries = Object.entries(PLAYOFF_MARKET_SLUGS);
+  const entries = Object.entries(marketSlugsFor(26));
   check(
     "every entry has a non-empty slug + teamName",
     entries.length > 0 &&

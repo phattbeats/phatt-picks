@@ -45,12 +45,14 @@ function check(name: string, cond: boolean) {
 }
 
 // ── Source map covers the field, and agrees with the committed snapshot ────────
+// The live PGL Singapore 2026 field (PHA-5255). BB Team (152) / PVISION (153) took
+// over the BetBoom / PARIVISION HLTV ids from the archived Cologne pickids 137 / 142.
 const FIELD = [
-  12, 48, 59, 60, 69, 74, 80, 81, 85, 87, 89, 95, 102, 104, 106, 112, 115, 119,
-  122, 126, 127, 132, 134, 135, 137, 139, 140, 142, 145, 146, 147, 148,
+  1, 12, 48, 59, 60, 61, 78, 80, 81, 85, 89, 95, 106, 107, 110, 112, 113, 122,
+  126, 127, 130, 132, 134, 138, 139, 140, 145, 149, 150, 151, 152, 153,
 ];
 
-check("TEAM_SOURCES covers exactly 32 teams", Object.keys(TEAM_SOURCES).length === 32);
+check("TEAM_SOURCES covers the Singapore 32", FIELD.length === 32 && FIELD.every((p) => TEAM_SOURCES[p]));
 for (const pid of FIELD) {
   const s = TEAM_SOURCES[pid];
   check(`source ${pid}: present`, s != null);
@@ -70,10 +72,10 @@ for (const pid of FIELD) {
 }
 
 const targets = teamStatsCrawlTargets();
-check("crawl targets cover all 32 sources", targets.length === 32);
+check("crawl targets cover every source", targets.length === Object.keys(TEAM_SOURCES).length);
 check(
   "crawl targets all carry a pickid + HLTV url",
-  targets.every((t) => FIELD.includes(t.pickid) && t.url.startsWith("https://www.hltv.org/team/")),
+  targets.every((t) => !!TEAM_SOURCES[t.pickid] && t.url.startsWith("https://www.hltv.org/team/")),
 );
 
 // ── Result → team matching by HLTV id (#1044) ───────────────────────────────
@@ -93,8 +95,8 @@ check(
 );
 // Distinctness guard: the id→pickid map the chunk builds can't collide.
 check(
-  "all 32 source ids are distinct (id-keyed matching is unambiguous)",
-  new Set(Object.values(TEAM_SOURCES).map((s) => s.hltvId)).size === 32,
+  "all source ids are distinct (id-keyed matching is unambiguous)",
+  new Set(Object.values(TEAM_SOURCES).map((s) => s.hltvId)).size === Object.keys(TEAM_SOURCES).length,
 );
 
 // ── Recent-results parser ──────────────────────────────────────────────────────

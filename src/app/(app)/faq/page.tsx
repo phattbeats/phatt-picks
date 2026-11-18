@@ -199,7 +199,8 @@ const CATEGORIES = [
             </p>
             <p>
               They count toward your <b>PHATT ID</b>, the one account and level across the PHATT arcade.
-              Playing Pick&apos;Em earns XP too, and new case felts unlock as your PHATT ID levels up.
+              Playing Pick&apos;Em earns XP too. Your XP sets your <b>HOTLINE level</b> (on your profile),
+              and new case felts unlock as it goes up.
               Everything is cosmetic: nothing changes your points. Past Majors count, so Cologne calls
               are already on your profile.
             </p>

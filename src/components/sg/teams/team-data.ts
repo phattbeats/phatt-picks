@@ -12,13 +12,15 @@
  */
 
 import { prisma } from "@/lib/db";
-import { getCommittedLayout, type Layout, type Section, type TeamDef } from "@/lib/layout";
-import { getEventConfig } from "@/lib/events-core";
+import { getCommittedLayout, committedLayoutFor, type Layout, type Section, type TeamDef } from "@/lib/layout";
+import { currentEventId, getEventConfig } from "@/lib/events-core";
+import { getEffectiveLayout } from "@/lib/layout-state";
+import { storyForSlug } from "@/lib/team-stories";
 import { isRevealForcedById } from "@/lib/event-freeze";
 import { isLockTimePassed } from "@/lib/lock-schedule-core";
 import { arePicksRevealed } from "@/lib/reveal-core";
 import { bucketSwissSlots, isSwissSection, resolveBucketWinners } from "@/lib/swiss-bucket-core";
-import { PLAYOFF_ROUNDS } from "@/lib/playoff-bracket-core";
+import { playoffRoundsFor } from "@/lib/playoff-bracket-core";
 import { statsForPickid, TEAM_STATS_AS_OF, type TeamStats } from "@/lib/team-stats-core";
 import { getLiveTeamStats } from "@/lib/team-stats";
 import { regionMetaForPickid, type RegionMeta } from "@/lib/regions-core";
@@ -62,12 +64,18 @@ export interface TeamPageData {
 
 const CITY_BY_EVENT: Record<number, string> = { 26: "Cologne", 27: "Singapore" };
 
+/** The layout of the event being served (Singapore once current), else the committed default. */
+export function servedLayout(): Layout {
+  return committedLayoutFor(currentEventId()) ?? getCommittedLayout();
+}
+
 /** Resolve a URL slug to a layout team (HLTV slug, name slug or logo key). */
 export function findTeamBySlug(layout: Layout, slug: string): TeamDef | null {
   const s = decodeURIComponent(slug).toLowerCase();
   return (
     layout.teams.find((t) => t.pickid > 0 && teamSlug(t) === s) ??
     layout.teams.find((t) => t.pickid > 0 && t.logo.toLowerCase() === s) ??
+    layout.teams.find((t) => t.pickid === storyForSlug(s)?.pickid) ??
     null
   );
 }
@@ -78,7 +86,10 @@ export function fieldTeams(layout: Layout): TeamDef[] {
 }
 
 export async function loadTeamPage(slug: string, nowMs: number): Promise<TeamPageData | null> {
-  const layout = getCommittedLayout();
+  // Stage pools come from the same live-overlaid layout the picks page uses, so a
+  // stale fixture snapshot can't put a team in the wrong stage here.
+  const served = servedLayout();
+  const layout = (await getEffectiveLayout(served.event).catch(() => null)) ?? served;
   const team = findTeamBySlug(layout, slug);
   if (!team) return null;
 
@@ -140,9 +151,7 @@ export async function loadTeamPage(slug: string, nowMs: number): Promise<TeamPag
 
   // ── Playoffs ──
   const sectionById = new Map(layout.sections.map((s) => [s.sectionid, s]));
-  const qf = sectionById.get(PLAYOFF_ROUNDS[0].sectionId);
-  const sf = sectionById.get(PLAYOFF_ROUNDS[1].sectionId);
-  const gf = sectionById.get(PLAYOFF_ROUNDS[2].sectionId);
+  const [qf, sf, gf] = playoffRoundsFor(eventId).map((r) => sectionById.get(r.sectionId));
   const winnerOf = (s: Section | undefined, i: number) => {
     const g = s?.groups[i];
     if (!s || !g) return 0;
