@@ -174,17 +174,21 @@ export function TeamView({ data }: { data: TeamPageData }) {
           <div className="sgt-story">
             <h2 className="hl">{story.headline}</h2>
             <p className="tx">{story.storyline}</p>
-            <p className="srcs mono muted">
-              As of {STORIES_AS_OF} ·{" "}
-              {story.sources.map((src, i) => (
-                <span key={src.url}>
-                  {i > 0 ? " · " : ""}
-                  <a className="sgc-link" href={src.url} target="_blank" rel="noopener noreferrer">
-                    {src.label}
-                  </a>
-                </span>
-              ))}
-            </p>
+            <details className="srcs mono muted">
+              <summary>
+                As of {STORIES_AS_OF} · Sources ({story.sources.length})
+              </summary>
+              <ul>
+                {story.sources.map((src) => (
+                  <li key={src.url}>
+                    <a className="sgc-link" href={src.url} target="_blank" rel="noopener noreferrer">
+                      {src.label}
+                    </a>
+                    {src.date && <span className="d"> · {src.date}</span>}
+                  </li>
+                ))}
+              </ul>
+            </details>
           </div>
           {story.clips.length > 0 && (
             <div className="sgt-clips">

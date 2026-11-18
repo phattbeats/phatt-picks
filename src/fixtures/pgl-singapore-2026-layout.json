@@ -14,13 +14,13 @@
 						"picks_allowed": true,
 						"teams": [
 							{
+								"pickid": 1
+							},
+							{
 								"pickid": 153
 							},
 							{
 								"pickid": 95
-							},
-							{
-								"pickid": 80
 							},
 							{
 								"pickid": 61
@@ -151,7 +151,7 @@
 						"picks_allowed": true,
 						"teams": [
 							{
-								"pickid": 126
+								"pickid": 145
 							},
 							{
 								"pickid": 107
@@ -169,19 +169,19 @@
 								"pickid": 60
 							},
 							{
-								"pickid": 1
+								"pickid": 122
 							},
 							{
-								"pickid": 122
+								"pickid": 80
+							},
+							{
+								"pickid": 1
 							},
 							{
 								"pickid": 153
 							},
 							{
 								"pickid": 95
-							},
-							{
-								"pickid": 80
 							},
 							{
 								"pickid": 61
@@ -333,7 +333,7 @@
 								"pickid": 139
 							},
 							{
-								"pickid": 145
+								"pickid": 126
 							},
 							{
 								"pickid": 0

@@ -14,6 +14,7 @@
 import { prisma } from "@/lib/db";
 import { getCommittedLayout, committedLayoutFor, type Layout, type Section, type TeamDef } from "@/lib/layout";
 import { currentEventId, getEventConfig } from "@/lib/events-core";
+import { getEffectiveLayout } from "@/lib/layout-state";
 import { storyForSlug } from "@/lib/team-stories";
 import { isRevealForcedById } from "@/lib/event-freeze";
 import { isLockTimePassed } from "@/lib/lock-schedule-core";
@@ -85,7 +86,10 @@ export function fieldTeams(layout: Layout): TeamDef[] {
 }
 
 export async function loadTeamPage(slug: string, nowMs: number): Promise<TeamPageData | null> {
-  const layout = servedLayout();
+  // Stage pools come from the same live-overlaid layout the picks page uses, so a
+  // stale fixture snapshot can't put a team in the wrong stage here.
+  const served = servedLayout();
+  const layout = (await getEffectiveLayout(served.event).catch(() => null)) ?? served;
   const team = findTeamBySlug(layout, slug);
   if (!team) return null;
 
