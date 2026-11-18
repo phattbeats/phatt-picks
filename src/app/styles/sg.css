@@ -5,7 +5,7 @@
    lists, .tag chips, .sw toggles, .field/.input forms, .tabs.
    Page-specific styles live next to this file as sg-<area>.css. */
 @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-.rise{animation:rise .6s var(--ease) both}.d1{animation-delay:.08s}.d2{animation-delay:.16s}.d3{animation-delay:.24s}.d4{animation-delay:.32s}
+.rise{animation:rise .6s var(--ease) backwards}/* backwards, not both: a held end-state transform makes .rise a containing block and drags position:fixed children (the picks action bar) off the viewport */.d1{animation-delay:.08s}.d2{animation-delay:.16s}.d3{animation-delay:.24s}.d4{animation-delay:.32s}
 @media (prefers-reduced-motion: reduce){.rise{animation:none}}
 .sect-head a,a.eyebrow{position:relative;padding:14px 0;margin:-14px 0}a.eyebrow{display:inline-block}
 .sync,.tag{font-size:10px}
