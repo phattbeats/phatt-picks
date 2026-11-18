@@ -20,7 +20,7 @@ import { isRevealForcedById } from "@/lib/event-freeze";
 import { isLockTimePassed } from "@/lib/lock-schedule-core";
 import { arePicksRevealed } from "@/lib/reveal-core";
 import { bucketSwissSlots, isSwissSection, resolveBucketWinners } from "@/lib/swiss-bucket-core";
-import { PLAYOFF_ROUNDS } from "@/lib/playoff-bracket-core";
+import { playoffRoundsFor } from "@/lib/playoff-bracket-core";
 import { statsForPickid, TEAM_STATS_AS_OF, type TeamStats } from "@/lib/team-stats-core";
 import { getLiveTeamStats } from "@/lib/team-stats";
 import { regionMetaForPickid, type RegionMeta } from "@/lib/regions-core";
@@ -151,9 +151,7 @@ export async function loadTeamPage(slug: string, nowMs: number): Promise<TeamPag
 
   // ── Playoffs ──
   const sectionById = new Map(layout.sections.map((s) => [s.sectionid, s]));
-  const qf = sectionById.get(PLAYOFF_ROUNDS[0].sectionId);
-  const sf = sectionById.get(PLAYOFF_ROUNDS[1].sectionId);
-  const gf = sectionById.get(PLAYOFF_ROUNDS[2].sectionId);
+  const [qf, sf, gf] = playoffRoundsFor(eventId).map((r) => sectionById.get(r.sectionId));
   const winnerOf = (s: Section | undefined, i: number) => {
     const g = s?.groups[i];
     if (!s || !g) return 0;

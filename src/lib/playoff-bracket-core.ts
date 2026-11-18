@@ -9,7 +9,8 @@
  *
  * Unlike the Swiss bracket — which we lift wholesale from an HLTV crawl — the
  * playoff TREE is already fully described by our committed layout: sections
- *   108 Quarterfinals (4 match groups) · 109 Semifinals (2) · 110 Grand Final (1)
+ *   Quarterfinals (4 match groups) · Semifinals (2) · Grand Final (1)
+ * (the event's playoff sections from the registry, see `playoffRoundsFor`);
  * each group = one match with two team slots (pickid 0 = TBD) and one pick slot
  * (the team the viewer called to win). So this module builds the bracket from
  * the layout the app already has, enriched with two live facts the rest of the
@@ -35,6 +36,7 @@
 
 import type { Section } from "./layout";
 import { playoffGameTime } from "./lock-schedule-core";
+import { EVENTS, getEventConfig, sectionsInPlayOrder } from "./events-core";
 
 export type PlayoffRoundKey = "QF" | "SF" | "GF";
 
@@ -47,28 +49,58 @@ export interface PlayoffRoundDef {
   short: string;
 }
 
-/**
- * The committed IEM Cologne 2026 single-elim sections, in bracket order. These
- * section ids are the Valve layout's (see cologne-layout.json / stage-gate-core):
- * 108 Quarterfinals · 109 Semifinals · 110 Grand Final. Order is QF → SF → GF
- * so a left-to-right column render reads as the tree.
- */
-export const PLAYOFF_ROUNDS: readonly PlayoffRoundDef[] = [
-  { sectionId: 108, key: "QF", label: "QUARTERFINALS", short: "QF" },
-  { sectionId: 109, key: "SF", label: "SEMIFINALS", short: "SF" },
-  { sectionId: 110, key: "GF", label: "GRAND FINAL", short: "GF" },
+const ROUND_DEFS: readonly Omit<PlayoffRoundDef, "sectionId">[] = [
+  { key: "QF", label: "QUARTERFINALS", short: "QF" },
+  { key: "SF", label: "SEMIFINALS", short: "SF" },
+  { key: "GF", label: "GRAND FINAL", short: "GF" },
 ];
 
-const PLAYOFF_SECTION_IDS = new Set(PLAYOFF_ROUNDS.map((r) => r.sectionId));
+/**
+ * An event's single-elim rounds in bracket order, derived from the registry
+ * (PHA-5275): its playoff sections in play order map onto QF → SF → GF, so
+ * Cologne is 108/109/110 and Singapore 114/115/116 with no literal ids here.
+ * Order is QF → SF → GF so a left-to-right column render reads as the tree.
+ * Empty for an unregistered event.
+ */
+export function playoffRoundsFor(eventId: number): PlayoffRoundDef[] {
+  const event = getEventConfig(eventId);
+  if (!event) return [];
+  return sectionsInPlayOrder(event)
+    .filter((s) => s.kind === "playoff")
+    .slice(0, ROUND_DEFS.length)
+    .map((s, i) => ({ sectionId: s.sectionId, ...ROUND_DEFS[i] }));
+}
 
-/** Is this section one of the single-elim playoff rounds (108/109/110)? */
+/** Every registered event's playoff rounds, keyed by section id. Valve section ids are unique across events. */
+const ROUND_BY_SECTION = new Map<number, PlayoffRoundDef & { eventId: number }>(
+  Object.values(EVENTS).flatMap((e) =>
+    playoffRoundsFor(e.eventId).map((r) => [r.sectionId, { ...r, eventId: e.eventId }] as const),
+  ),
+);
+
+/** Is this section a single-elim playoff round of any registered event? */
 export function isPlayoffSection(sectionId: number): boolean {
-  return PLAYOFF_SECTION_IDS.has(sectionId);
+  return ROUND_BY_SECTION.has(sectionId);
 }
 
 /** The round definition for a section id, or null when it isn't a playoff round. */
 export function playoffRoundForSection(sectionId: number): PlayoffRoundDef | null {
-  return PLAYOFF_ROUNDS.find((r) => r.sectionId === sectionId) ?? null;
+  const r = ROUND_BY_SECTION.get(sectionId);
+  return r ? { sectionId: r.sectionId, key: r.key, label: r.label, short: r.short } : null;
+}
+
+/** The event that owns a playoff section, or null when it isn't one. */
+export function playoffEventForSection(sectionId: number): number | null {
+  return ROUND_BY_SECTION.get(sectionId)?.eventId ?? null;
+}
+
+/** The rounds of the event whose playoff sections appear in `sections` (a layout is one event's). */
+function roundsInSections(sections: readonly Section[]): PlayoffRoundDef[] {
+  for (const s of sections) {
+    const eventId = playoffEventForSection(s.sectionid);
+    if (eventId != null) return playoffRoundsFor(eventId);
+  }
+  return [];
 }
 
 /** Outcome of the viewer's call for a match, once it can be judged. */
@@ -138,7 +170,7 @@ export interface PlayoffBracket {
 }
 
 export interface PlayoffInputs {
-  /** The playoff sections present in the layout (108/109/110), any order. */
+  /** The playoff sections present in the layout (one event's QF/SF/GF), any order. */
   sections: readonly Section[];
   /** groupId → the pickid the viewer called to win that match. */
   userPickByGroup?: ReadonlyMap<number, number>;
@@ -154,8 +186,8 @@ export interface PlayoffInputs {
   nowMs?: number;
   /**
    * The active event's per-game playoff schedule (sectionId -> ISO start times,
-   * bracket order), used to derive `awaitingResult`. Omit to fall back to the
-   * committed Cologne schedule (#1327: callers thread their event's own
+   * bracket order), used to derive `awaitingResult`. Omit to fall back to
+   * lock-schedule-core's default schedule (#1327: callers thread their event's own
    * `playoffSchedule` from the registry; this stays a pure, injectable param).
    */
   playoffSchedule?: Readonly<Record<number, readonly string[]>>;
@@ -186,7 +218,7 @@ export function buildPlayoffBracket(inputs: PlayoffInputs): PlayoffBracket {
   let totalMatches = 0;
   let championPickid: number | null = null;
 
-  for (const def of PLAYOFF_ROUNDS) {
+  for (const def of roundsInSections(sections)) {
     const section = byId.get(def.sectionId);
     if (!section) continue;
 
@@ -266,7 +298,8 @@ export function buildPlayoffBracket(inputs: PlayoffInputs): PlayoffBracket {
  */
 export function playoffFieldTeams(sections: readonly Section[]): Set<number> {
   const field = new Set<number>();
-  const qf = sections.find((s) => s.sectionid === PLAYOFF_ROUNDS[0].sectionId);
+  const qfId = roundsInSections(sections)[0]?.sectionId;
+  const qf = sections.find((s) => s.sectionid === qfId);
   if (!qf) return field;
   for (const g of qf.groups) {
     for (const t of g.teams) {
@@ -340,7 +373,7 @@ export function buildPlayoffPickTree(sections: readonly Section[]): BracketPickM
   let prev: BracketPickMatch[] = [];
   let finalGroupId: number | null = null;
 
-  for (const def of PLAYOFF_ROUNDS) {
+  for (const def of roundsInSections(sections)) {
     const section = byId.get(def.sectionId);
     if (!section) {
       prev = [];

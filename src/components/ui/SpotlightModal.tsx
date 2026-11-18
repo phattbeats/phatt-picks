@@ -21,6 +21,8 @@ import type { SpotlightMarketLine } from "@/lib/spotlight-odds-core";
 export type { SpotlightMarketLine };
 
 interface Props {
+  /** The event whose authored spotlights apply (pickids are per-layout). */
+  eventId: number;
   team: TeamDef;
   onClose: () => void;
   /** Live per-stage dossier (#921); preferred over the frozen snapshot. */
@@ -41,7 +43,7 @@ interface Props {
  * Built on the same body-portal bottom-sheet pattern as TeamStatsDrawer so it
  * clears the z-index:3 `main.shell` stacking context and the botnav.
  */
-export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: Props) {
+export function SpotlightModal({ eventId, team, onClose, liveStats, liveAsOf, market }: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -50,7 +52,7 @@ export function SpotlightModal({ team, onClose, liveStats, liveAsOf, market }: P
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const spot = spotlightForPickid(team.pickid);
+  const spot = spotlightForPickid(eventId, team.pickid);
   const stats = liveStats ?? statsForPickid(team.pickid);
   const asOf = (liveStats && liveAsOf) || TEAM_STATS_AS_OF;
 

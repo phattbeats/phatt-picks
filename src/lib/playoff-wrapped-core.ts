@@ -24,6 +24,7 @@
 import type { WrappedPhoto, WrappedSlide, WrappedTeamLogo } from "./stage-wrapped-core";
 import type { StageWrappedRankMove } from "./stage-wrapped-content";
 import { regionMetaForPickid } from "./regions-core";
+import { SINGAPORE_TEAM_STATS } from "./team-stats-singapore";
 
 /** Per-slide auto-advance for the recap (floored by the shell to MIN_AUTO_ADVANCE_MS). */
 const AUTO_MS = 6000;
@@ -275,6 +276,94 @@ export const COLOGNE_PLAYOFF_TEAMS: readonly PlayoffTeamTribute[] = [
 ] as const;
 
 /**
+ * Everything about the Major Wrapped deck that belongs to ONE event (PHA-5275):
+ * the city/venue copy, the photo set, the curated moments and the team
+ * tributes. The builder is event-agnostic; Cologne's set is the original
+ * authored deck, Singapore's ships truthful-but-plain (no photos or tributes
+ * until its bracket plays out and they're curated) rather than borrowing
+ * Cologne's.
+ */
+export interface PlayoffWrappedEdition {
+  eventId: number;
+  /** Badge/eyebrow city, e.g. "COLOGNE". */
+  city: string;
+  /** Prose name, e.g. "the Cologne Major". */
+  majorPhrase: string;
+  /** Full event name for captions + the brand mark alt, e.g. "IEM Cologne 2026". */
+  majorName: string;
+  /** Where the bracket is played, e.g. "the Cathedral of Counter-Strike". */
+  venue: string;
+  /** Mid-bracket cover headline. */
+  liveHeadline: string;
+  /** "The Last Eight" bridge headline + body. */
+  nationsHeadline: string;
+  nationsBody: string;
+  /** Post-credits stinger body (the next Major). */
+  stingerBody: string;
+  photos: Partial<Record<"cover" | "champion" | "nations" | "thanks" | "cinderella", WrappedPhoto>>;
+  moments: readonly PlayoffMoment[];
+  /** Authored tributes; empty → one plain card per seeded QF team (`facts.fieldPickIds`). */
+  teams: readonly PlayoffTeamTribute[];
+  /** Cut-out player portrait for a team, or null when the event has none. */
+  portraitFor: (pickId: number) => string | null;
+}
+
+/** The original IEM Cologne 2026 deck. */
+export const COLOGNE_EDITION: PlayoffWrappedEdition = {
+  eventId: 26,
+  city: "COLOGNE",
+  majorPhrase: "the Cologne Major",
+  majorName: "IEM Cologne 2026",
+  venue: "the Cathedral of Counter-Strike",
+  liveHeadline: "Thirty-two walked in. The Cathedral is loud.",
+  nationsHeadline: "Thirty-two came. Eight made the Cathedral.",
+  nationsBody:
+    "Brazil and Argentina, France and Turkey, Russia and Kazakhstan, the rebuilt and the unheralded — the eight that walked out of the gauntlet came from every corner of the world. One bracket, one server, the planet watching the same rounds at once. This is what Counter-Strike does.",
+  stingerBody:
+    "Next stop: PGL Major Singapore 2026. New bracket, new Cinderellas, new history — same room, same game, same world. See you there. 🌏",
+  photos: COLOGNE_PHOTOS,
+  moments: COLOGNE_PLAYOFF_MOMENTS,
+  teams: COLOGNE_PLAYOFF_TEAMS,
+  portraitFor: (pickId) => `/wrapped/player-${pickId}.webp`,
+};
+
+/** The top-rated player's committed cut-out for a Singapore team (PHA-5253), or null. */
+function singaporePortrait(pickId: number): string | null {
+  const players = SINGAPORE_TEAM_STATS[pickId]?.roster ?? [];
+  const best = [...players].filter((p) => p.photo).sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))[0];
+  return best?.photo ?? null;
+}
+
+/** PGL Major Singapore 2026. No curated photos/moments/tributes yet — nothing Cologne's leaks in. */
+export const SINGAPORE_EDITION: PlayoffWrappedEdition = {
+  eventId: 27,
+  city: "SINGAPORE",
+  majorPhrase: "the Singapore Major",
+  majorName: "PGL Major Singapore 2026",
+  venue: "the Singapore Indoor Stadium",
+  liveHeadline: "Thirty-two walked in. Singapore is loud.",
+  nationsHeadline: "Thirty-two came. Eight made the bracket.",
+  nationsBody:
+    "Eight teams walked out of three Swiss gauntlets, from every corner of the world, into one bracket at the Singapore Indoor Stadium. One server, the planet watching the same rounds at once. This is what Counter-Strike does.",
+  stingerBody:
+    "The next Major is already on the horizon. New bracket, new Cinderellas, new history — same game, same world. See you there. 🌏",
+  photos: {},
+  moments: [],
+  teams: [],
+  portraitFor: singaporePortrait,
+};
+
+const EDITIONS: Readonly<Record<number, PlayoffWrappedEdition>> = {
+  [COLOGNE_EDITION.eventId]: COLOGNE_EDITION,
+  [SINGAPORE_EDITION.eventId]: SINGAPORE_EDITION,
+};
+
+/** The Wrapped edition for an event, or null when none is authored (no deck, never a borrowed one). */
+export function playoffWrappedEditionFor(eventId: number): PlayoffWrappedEdition | null {
+  return EDITIONS[eventId] ?? null;
+}
+
+/**
  * The hard, resolved facts of the bracket so far. The wiring layer (a sibling
  * of `stage-wrapped-launch.ts`) derives these from the committed playoff
  * sections + the live answer key; this module only assembles them into slides.
@@ -297,6 +386,8 @@ export interface PlayoffWrappedFacts {
   /** Total bracket matches (QF+SF+GF) and how many are decided — for honesty copy. */
   totalMatches: number;
   decidedMatches: number;
+  /** The seeded QF teams, for an edition with no authored tributes. */
+  fieldPickIds?: readonly number[];
 }
 
 /** The viewer's bracket performance, assembled by the caller from picks + outcomes. */
@@ -355,13 +446,15 @@ export function buildPlayoffWrappedDeck(
   facts: PlayoffWrappedFacts,
   personal: PlayoffWrappedPersonal | null,
   assets: PlayoffWrappedAssets = {},
+  edition: PlayoffWrappedEdition = COLOGNE_EDITION,
 ): WrappedSlide[] {
+  const ed = edition;
   if (!playoffWrappedHasContent(facts)) return [];
   const decided = hasChampion(facts);
   const champId = facts.championPickId ?? 0;
 
   const slides: WrappedSlide[] = [];
-  const eyebrow = "COLOGNE MAJOR · WRAPPED";
+  const eyebrow = `${ed.city} MAJOR · WRAPPED`;
 
   const logo = (pickId: number | null | undefined): WrappedTeamLogo[] | undefined => {
     if (pickId == null || pickId === 0 || !assets.resolveTeamLogo) return undefined;
@@ -377,8 +470,13 @@ export function buildPlayoffWrappedDeck(
     return row.length ? row : undefined;
   };
 
+  const portrait = (pickId: number, alt: string) => {
+    const src = ed.portraitFor(pickId);
+    return src ? { src, alt } : undefined;
+  };
+
   const majorBrand = assets.majorLogoSrc
-    ? { src: assets.majorLogoSrc, alt: "IEM Cologne 2026", invert: false }
+    ? { src: assets.majorLogoSrc, alt: ed.majorName, invert: false }
     : undefined;
   const gameBrand = assets.gameLogoSrc
     ? { src: assets.gameLogoSrc, alt: "Counter-Strike 2", invert: false }
@@ -387,7 +485,7 @@ export function buildPlayoffWrappedDeck(
   const championName = decided ? nameFor(champId, assets, facts.championName) : "";
 
   // 1 — Cover. This is the *Major* Wrapped (Brandon: "32 teams walked in, 1
-  // walked out") — the whole IEM Cologne run, three Swiss gauntlets and the
+  // walked out") — the whole Major run, three Swiss gauntlets and the
   // bracket, not just the Playoffs. Copy + closer adapt to whether the Final has
   // crowned a champion: mid-tournament it's a "so far" recap of the moments that
   // already made history; once decided it's the finale. Cathedral photo leads.
@@ -395,13 +493,13 @@ export function buildPlayoffWrappedDeck(
     id: "po-intro",
     kind: "intro",
     eyebrow,
-    headline: decided ? "Thirty-two walked in. One walked out." : "Thirty-two walked in. The Cathedral is loud.",
+    headline: decided ? "Thirty-two walked in. One walked out." : ed.liveHeadline,
     body: decided
-      ? "Three Swiss gauntlets, a single-elimination bracket, and the loudest building in Counter-Strike named its champion. Before you see how you called it — here's how the Cologne Major went down."
-      : "The Cologne Major is underway — thirty-two teams, three Swiss stages, and it's already made history. Here's the run so far.",
+      ? `Three Swiss gauntlets, a single-elimination bracket, and ${ed.venue} named its champion. Before you see how you called it — here's how ${ed.majorPhrase} went down.`
+      : `${capitalize(ed.majorPhrase)} is underway — thirty-two teams, three Swiss stages, and it's already made history. Here's the run so far.`,
     brandLogo: majorBrand,
-    photo: COLOGNE_PHOTOS.cover,
-    stageBadge: { numeral: "MAJOR", label: "COLOGNE", sub: "WRAPPED" },
+    photo: ed.photos.cover,
+    stageBadge: { numeral: "MAJOR", label: ed.city, sub: "WRAPPED" },
     autoAdvanceMs: AUTO_MS,
   });
 
@@ -433,21 +531,21 @@ export function buildPlayoffWrappedDeck(
     slides.push({
       id: "po-champion",
       kind: "moment",
-      eyebrow: "CHAMPION OF COLOGNE",
+      eyebrow: `CHAMPION OF ${ed.city}`,
       headline: `${championName} lifted the trophy.`,
       figure: "🏆",
       figureCaption: finalScore
         ? `Grand Final${overRunnerUp} · ${finalScore}`
         : overRunnerUp
           ? `Grand Final${overRunnerUp}`.trim()
-          : "Champions of IEM Cologne 2026",
-      body: `Eight teams entered the single-elim bracket. ${championName} ran the table${overRunnerUp} to be the last team standing in the Cathedral of Counter-Strike.`,
+          : `Champions of ${ed.majorName}`,
+      body: `Eight teams entered the single-elim bracket. ${championName} ran the table${overRunnerUp} to be the last team standing in ${ed.venue}.`,
       teamLogos: logo(champId),
       // The champion's marquee player as the hero (#1274) — the playoff field
       // all have a /wrapped/player-<pickid>.webp portrait; falls back to the
       // trophy still if absent.
-      portrait: { src: `/wrapped/player-${champId}.webp`, alt: championName },
-      photo: COLOGNE_PHOTOS.champion,
+      portrait: portrait(champId, championName),
+      photo: ed.photos.champion,
       autoAdvanceMs: AUTO_MS,
     });
   }
@@ -500,14 +598,18 @@ export function buildPlayoffWrappedDeck(
     id: "po-nations",
     kind: "moment",
     eyebrow: "THE LAST EIGHT",
-    headline: "Thirty-two came. Eight made the Cathedral.",
+    headline: ed.nationsHeadline,
     figure: "32 → 8",
     figureCaption: "three Swiss gauntlets, eight survivors",
-    body: "Brazil and Argentina, France and Turkey, Russia and Kazakhstan, the rebuilt and the unheralded — the eight that walked out of the gauntlet came from every corner of the world. One bracket, one server, the planet watching the same rounds at once. This is what Counter-Strike does.",
-    photo: COLOGNE_PHOTOS.nations,
+    body: ed.nationsBody,
+    photo: ed.photos.nations,
     autoAdvanceMs: AUTO_MS,
   });
-  for (const t of COLOGNE_PLAYOFF_TEAMS) {
+  const tributes: readonly PlayoffTeamTribute[] =
+    ed.teams.length > 0
+      ? ed.teams
+      : (facts.fieldPickIds ?? []).map((pickId) => ({ pickId, tag: "THE LAST EIGHT", blurb: "" }));
+  for (const t of tributes) {
     const region = regionMetaForPickid(t.pickId);
     slides.push({
       id: `po-team-${t.pickId}`,
@@ -515,10 +617,10 @@ export function buildPlayoffWrappedDeck(
       eyebrow: t.tag,
       headline: nameFor(t.pickId, assets),
       figureCaption: region ? region.label : undefined,
-      body: t.blurb,
+      body: t.blurb || undefined,
       // The team's marquee player as the slide picture (#1274) — cut-out
       // HLTV portrait at /wrapped/player-<pickId>.webp; hides itself if absent.
-      portrait: { src: `/wrapped/player-${t.pickId}.webp`, alt: nameFor(t.pickId, assets) },
+      portrait: portrait(t.pickId, nameFor(t.pickId, assets)),
       teamLogos: logo(t.pickId),
       autoAdvanceMs: AUTO_MS,
     });
@@ -553,7 +655,7 @@ export function buildPlayoffWrappedDeck(
             : `Your pick to lift it: ${yourChampName}.`,
         figure: matched ? "✓" : undefined,
         body: matched
-          ? `You called the Cathedral right — ${yourChampName} lifted the trophy exactly like you said.`
+          ? `You called it right — ${yourChampName} lifted the trophy exactly like you said.`
           : decided
             ? `Your title pick was ${yourChampName}; the bracket crowned ${championName}. Next Major.`
             : `You've got ${yourChampName} to win it all. They're still alive in the bracket — hold your breath.`,
@@ -598,7 +700,7 @@ export function buildPlayoffWrappedDeck(
     body: !personal
       ? "Every pick, every reaction, every 3am refresh to catch a clutch from the other side of the world — that's what makes this. Counter-Strike puts the whole planet in one room, and you were in it. Sign in next time and we'll keep your card. From all of us at phaTT: thank you. We love this game, and we love this community. ♥"
       : "Every pick you made, every reaction you dropped, every late night you spent watching strangers from across the world play the game we all love — thank you. Counter-Strike puts the whole planet in one room, and you spent this Major in it with us. From all of us at phaTT: we love this game, and we love you. ♥",
-    photo: COLOGNE_PHOTOS.thanks,
+    photo: ed.photos.thanks,
     stageBadge: { numeral: "♥", label: "FROM", sub: "phaTT" },
   });
 
@@ -610,7 +712,7 @@ export function buildPlayoffWrappedDeck(
     kind: "outro",
     eyebrow: "POST-CREDITS",
     headline: "Hotline will return.",
-    body: "Next stop: PGL Major Singapore 2026. New bracket, new Cinderellas, new history — same room, same game, same world. See you there. 🌏",
+    body: ed.stingerBody,
     brandLogo: gameBrand,
     stageBadge: { numeral: "?", label: "NEXT", sub: "MAJOR" },
   });
@@ -623,8 +725,8 @@ export function buildPlayoffWrappedDeck(
     id: "po-coin",
     kind: "moment",
     eyebrow: "YOUR CHALLENGE COIN",
-    headline: "You earned the Cologne coin.",
-    body: "Playing the Major mints you a collectible challenge coin — its tier set by where you finished. Cologne's is on your shelf now. Go give it a spin.",
+    headline: `You earned the ${capitalize(ed.city.toLowerCase())} coin.`,
+    body: `Playing the Major mints you a collectible challenge coin — its tier set by where you finished. ${capitalize(ed.city.toLowerCase())}'s is on your shelf now. Go give it a spin.`,
     brandLogo: majorBrand,
     cta: { href: "/profile", label: "See your coin →" },
     autoAdvanceMs: AUTO_MS,
@@ -665,4 +767,8 @@ function rankSlide(eyebrow: string, p: PlayoffWrappedPersonal, decided: boolean)
     figureCaption: caption,
     autoAdvanceMs: AUTO_MS,
   };
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }

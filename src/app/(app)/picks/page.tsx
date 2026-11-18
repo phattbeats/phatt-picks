@@ -21,7 +21,7 @@ import {
   isPlayoffSection,
   buildPlayoffBracket,
   buildPlayoffPickTree,
-  PLAYOFF_ROUNDS,
+  playoffRoundsFor,
 } from "@/lib/playoff-bracket-core";
 import { LockIcon } from "@/components/ui/LockIcon";
 import { LivePlayoffBracket } from "@/components/heat/LivePlayoffBracket";
@@ -142,7 +142,8 @@ export default async function PicksPage({
   // Grand Final all open and lock together when Valve seeds the bracket. The
   // UI matches that truth: a single "Playoffs" tab covering all three layout
   // sections, with the round pickers stacked above the full bracket.
-  const playoffSectionIds = PLAYOFF_ROUNDS.map((r) => r.sectionId);
+  const playoffRounds = playoffRoundsFor(EVENT_ID);
+  const playoffSectionIds = playoffRounds.map((r) => r.sectionId);
   const playoffSections = layout.sections.filter((s) =>
     playoffSectionIds.includes(s.sectionid),
   );
@@ -159,9 +160,9 @@ export default async function PicksPage({
   });
 
   // Per-game playoff schedule (#1007): each round's games with their committed
-  // date/time, fed to the schedule strip. Dark until COLOGNE_PLAYOFF_SCHEDULE is
-  // filled (the strip renders nothing while every iso is null).
-  const playoffScheduleRounds = PLAYOFF_ROUNDS.map((def) => {
+  // date/time, fed to the schedule strip. Dark until the event's playoffSchedule
+  // is filled (the strip renders nothing while every iso is null).
+  const playoffScheduleRounds = playoffRounds.map((def) => {
     const sec = playoffSections.find((s) => s.sectionid === def.sectionId);
     const games = (sec?.groups ?? []).map((_g, i) => ({
       label: def.key === "GF" ? "Grand Final" : `Match ${i + 1}`,
@@ -618,6 +619,7 @@ export default async function PicksPage({
                   teams' Spotlights to build anticipation as the field is named.
                   The read-only bracket below shows the tree filling in live. */}
               <QualifiedStrip
+                eventId={EVENT_ID}
                 teams={layout.teams}
                 liveTeamStats={liveTeamStats?.byPickid}
                 liveStatsAsOf={liveTeamStats?.asOf}
@@ -701,7 +703,7 @@ export default async function PicksPage({
           {/* Stage Wrapped entry (#1054) — once the stage is OVER, the recap
               is the headline action here, right where the player lands. Opens the
               full personal deck on the stage reveal. */}
-          {stageComplete && stageWrappedHasContent(activeSectionId) && (
+          {stageComplete && stageWrappedHasContent(EVENT_ID, activeSectionId) && (
             <Link href={`/reveal/${activeSectionId}`} className="sgp-wrapped" prefetch={false}>
               <span className="num" aria-hidden="true">
                 {stageNumeral(activeLabel)}

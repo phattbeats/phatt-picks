@@ -21,6 +21,7 @@
  */
 
 import { stageNumeral, type WrappedSlide, type WrappedSlideKind, type WrappedTeamLogo } from "./stage-wrapped-core";
+import { getEventConfig, sectionsInPlayOrder } from "./events-core";
 
 /** Per-slide auto-advance for the recap (floored by the shell to MIN_AUTO_ADVANCE_MS). */
 const AUTO_MS = 6000;
@@ -108,12 +109,11 @@ interface AuthoredStage {
 
 /**
  * Authored stage decks — real, sourced IEM Cologne 2026 beats. Keyed by Swiss
- * section id (105 = Stage I, 106 = Stage II, 107 = Stage III). A section absent
- * here has no recap yet, so `buildStageWrappedDeck` returns an empty deck for it
- * (the no-op). `logoPickIds` resolves to a `teamLogos` row on the rendered slide;
+ * section id (Stage I, II, III). A section absent here falls back to the plain
+ * deck (`stageContent`). `logoPickIds` resolves to a `teamLogos` row on the rendered slide;
  * the figure/caption copy still carries the matchup narrative.
  */
-const AUTHORED: Record<number, AuthoredStage> = {
+const COLOGNE_AUTHORED: Record<number, AuthoredStage> = {
   // Stage I (HLTV 9028) — the favorites fell and the impossible happened.
   105: {
     intro: {
@@ -308,9 +308,42 @@ const AUTHORED: Record<number, AuthoredStage> = {
   },
 };
 
-/** True when a stage has an authored recap (so a caller can skip work for unauthored stages). */
-export function stageWrappedHasContent(sectionId: number): boolean {
-  return (AUTHORED[sectionId]?.moments.length ?? 0) > 0;
+/**
+ * Authored decks per event (PHA-5275). Singapore has none yet: its stages get
+ * the plain deck below (intro + your score/rank + outro) until beats are
+ * authored, never Cologne's.
+ */
+const AUTHORED: Readonly<Record<number, Record<number, AuthoredStage>>> = {
+  26: COLOGNE_AUTHORED,
+  27: {},
+};
+
+/** Is `sectionId` a Swiss stage of `eventId` per the registry? */
+function isRegisteredSwissStage(eventId: number, sectionId: number): boolean {
+  const event = getEventConfig(eventId);
+  return !!event && sectionsInPlayOrder(event).some((s) => s.sectionId === sectionId && s.kind === "swiss");
+}
+
+/**
+ * The deck content for a stage: its authored beats, else (for a registered
+ * Swiss stage) a plain intro with no moments — the personal slides carry it.
+ */
+function stageContent(eventId: number, sectionId: number, stageName: string): AuthoredStage | null {
+  const authored = AUTHORED[eventId]?.[sectionId];
+  if (authored && authored.moments.length > 0) return authored;
+  if (!isRegisteredSwissStage(eventId, sectionId)) return null;
+  return {
+    intro: {
+      headline: "Sixteen walked in. Eight walked out.",
+      body: `${stageName} is in the books. Here's how your calls held up.`,
+    },
+    moments: [],
+  };
+}
+
+/** True when a stage has a recap (so a caller can skip work for stages without one). */
+export function stageWrappedHasContent(eventId: number, sectionId: number): boolean {
+  return stageContent(eventId, sectionId, "") !== null;
 }
 
 function rankSlide(eyebrow: string, p: StageWrappedPersonal): WrappedSlide {
@@ -355,13 +388,14 @@ function rankSlide(eyebrow: string, p: StageWrappedPersonal): WrappedSlide {
  * - `personal` supplied → intro + moments + score + rank (+ best call) + outro.
  */
 export function buildStageWrappedDeck(
+  eventId: number,
   sectionId: number,
   stageName: string,
   personal: StageWrappedPersonal | null,
   assets: StageWrappedAssets = {},
 ): WrappedSlide[] {
-  const authored = AUTHORED[sectionId];
-  if (!authored || authored.moments.length === 0) return [];
+  const authored = stageContent(eventId, sectionId, stageName);
+  if (!authored) return [];
 
   const eyebrow = `${stageName.toUpperCase()} · WRAPPED`;
   const numeral = stageNumeral(stageName);
@@ -383,7 +417,7 @@ export function buildStageWrappedDeck(
     return { label: "YOU CALLED IT", sub: "You saw the vision." };
   };
   const majorBrand = assets.majorLogoSrc
-    ? { src: assets.majorLogoSrc, alt: "IEM Cologne 2026", invert: false }
+    ? { src: assets.majorLogoSrc, alt: getEventConfig(eventId)?.name ?? "CS2 Major", invert: false }
     : undefined;
   const gameBrand = assets.gameLogoSrc
     ? { src: assets.gameLogoSrc, alt: "Counter-Strike 2", invert: false }
