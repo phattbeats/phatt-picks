@@ -19,7 +19,7 @@
 import { prisma } from "./db";
 import { claimRefreshSlot, runDeferred } from "./source-refresh";
 import { parseSafeJson } from "./bigint";
-import { committedLayoutFor, type Layout, type LayoutEnvelope } from "./layout";
+import { committedLayoutFor, emptyLayoutFor, type Layout, type LayoutEnvelope } from "./layout";
 import { resolveEventLayout } from "./layout-merge-core";
 import { fetchTournamentLayout, ValveApiError } from "./valve";
 import { isEventFrozenById } from "./event-freeze";
@@ -77,6 +77,20 @@ async function readCachedLayout(eventId: number): Promise<Layout | null> {
 export async function getEffectiveLayout(eventId: number): Promise<Layout | null> {
   const live = await readCachedLayout(eventId);
   return resolveEventLayout(committedLayoutFor(eventId), live);
+}
+
+/**
+ * The layout to score, validate and label event N against, server-side: its
+ * effective layout (committed fixture + Valve's live seeding), else an EMPTY
+ * layout for that event. Never another event's fixture. PHA-1406: seventeen
+ * call sites read getCommittedLayout(), which is Cologne's fixture whatever
+ * event is live, so Singapore's results were rejected as "unknown
+ * section/group", its leaderboard scored 0 and its Steam picks were dropped.
+ * An empty layout scores nothing and resolves nothing, which is the honest
+ * answer before Valve opens the Pick'Em.
+ */
+export async function scoringLayoutFor(eventId: number): Promise<Layout> {
+  return (await getEffectiveLayout(eventId)) ?? emptyLayoutFor(eventId);
 }
 
 /** Has Valve opened this event's Pick'Em (i.e. does it have a layout)? */

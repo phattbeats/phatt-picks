@@ -79,6 +79,11 @@ export function committedLayoutFor(eventId: number): Layout | null {
   return COMMITTED_BY_EVENT.get(eventId) ?? null;
 }
 
+/** A layout with no sections or teams for `eventId`: the pre-open state, safe to score against. */
+export function emptyLayoutFor(eventId: number): Layout {
+  return { event: eventId, name: "", sections: [], teams: [] };
+}
+
 /** Build a pickid → TeamDef lookup from the layout. */
 export function buildTeamMap(layout: Layout): Map<number, TeamDef> {
   const m = new Map<number, TeamDef>();

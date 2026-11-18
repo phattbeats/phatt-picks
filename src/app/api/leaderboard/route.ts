@@ -13,7 +13,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { getCommittedLayout } from "@/lib/layout";
+import { scoringLayoutFor } from "@/lib/layout-state";
 import { getSession } from "@/lib/session";
 import { currentEventId } from "@/lib/events-core";
 import { buildLeaderboard, layoutForEvent, resolveArchiveEvent } from "@/lib/leaderboard";
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
   const EVENT_ID = currentEventId(); // per-request active event (#1046)
   const { rows } = await buildLeaderboard({
     eventId: EVENT_ID,
-    layout: getCommittedLayout(),
+    layout: await scoringLayoutFor(EVENT_ID),
     sessionPlayerId: session?.playerId,
   });
   return NextResponse.json({ leaderboard: rows, eventId: EVENT_ID });

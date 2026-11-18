@@ -22,7 +22,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCommittedLayout, buildTeamMap, type TeamDef } from "@/lib/layout";
+import { buildTeamMap, type TeamDef } from "@/lib/layout";
+import { scoringLayoutFor } from "@/lib/layout-state";
 import { scorePlayer, type PlayerPickMap, type OutcomeMap } from "@/lib/scoring";
 import { getSession } from "@/lib/session";
 import { TeamLogo } from "@/components/ui/TeamLogo";
@@ -71,11 +72,12 @@ export default async function StageRevealPage({
   const sp = await searchParams;
   const wantsWrapped = sp.wrapped === "1";
 
-  const layout = getCommittedLayout();
   const liveId = currentEventId(); // per-request active event (#1046)
   const asked = requestedEvent(sp);
-  const EVENT_ID =
-    asked?.eventId ?? (layout.event !== liveId && getEventConfig(layout.event) ? layout.event : liveId);
+  // The requested Major, else the live one, against its own layout (PHA-1406):
+  // the old fallback read Cologne's fixture and so always served event 26.
+  const EVENT_ID = asked?.eventId ?? liveId;
+  const layout = await scoringLayoutFor(EVENT_ID);
   const eventCfg = getEventConfig(EVENT_ID);
   const isLiveEvent = EVENT_ID === liveId;
   const majorQ = isLiveEvent || !eventCfg ? "" : `?major=${encodeURIComponent(eventCfg.slug)}`;

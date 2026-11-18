@@ -6,7 +6,6 @@ import { prisma } from "@/lib/db";
 import { sessionize } from "@/lib/analytics-core";
 import { fmtLead, PLAYOFF_SEAL_UNIT, sealMetrics, sealUnitFor } from "@/lib/pick-lock-core";
 import { unitLockAtMs } from "@/lib/pick-lock";
-import { getCommittedLayout } from "@/lib/layout";
 import { getEventConfig } from "@/lib/events-core";
 import { eventShortName } from "@/lib/leaderboard";
 
@@ -84,14 +83,13 @@ async function sealedPicksReport() {
     const k = key(s.eventId, s.sectionId);
     sealsByUnit.set(k, [...(sealsByUnit.get(k) ?? []), s]);
   }
-  const committed = getCommittedLayout();
   const units = [...new Set([...playersByUnit.keys(), ...sealsByUnit.keys()])].map((k) => k.split(":").map(Number));
   return units
     .sort((x, y) => y[0] - x[0] || x[1] - y[1])
     .map(([eventId, unit]) => {
       const cfg = getEventConfig(eventId);
-      const section = committed.sections.find((s) => s.sectionid === unit);
-      const stage = unit === PLAYOFF_SEAL_UNIT ? "Playoffs" : section ? section.name.split(" | ")[0] : `Section ${unit}`;
+      const sectionName = cfg?.sectionNames[unit];
+      const stage = unit === PLAYOFF_SEAL_UNIT ? "Playoffs" : sectionName ?? `Section ${unit}`;
       const unitSeals = sealsByUnit.get(key(eventId, unit)) ?? [];
       return {
         eventId,

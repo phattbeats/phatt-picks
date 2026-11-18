@@ -16,7 +16,8 @@
 
 import { prisma } from "@/lib/db";
 import { currentEventId, currentEvent } from "@/lib/events-core";
-import { getCommittedLayout, buildTeamMap } from "@/lib/layout";
+import { buildTeamMap } from "@/lib/layout";
+import { scoringLayoutFor } from "@/lib/layout-state";
 import { lockTimeForSection, playoffSectionIds, PLAYOFF_STAGE_NAME } from "@/lib/lock-schedule-core";
 import { latestWrappedSectionId } from "@/lib/stage-wrapped-launch-core";
 import { announcementEntries } from "@/lib/announcements-core";
@@ -84,9 +85,9 @@ export async function buildPlayerFeed(
   const rc: ReadContext = { seenAtMs, readSet, readAtByEntry, dismissedAtByEntry };
   const prefs = parseNotifPrefs(player?.notifPrefs);
 
-  const layout = getCommittedLayout();
-  const teamMap = buildTeamMap(layout);
   const event = currentEvent(nowMs);
+  const layout = await scoringLayoutFor(event.eventId);
+  const teamMap = buildTeamMap(layout);
   const stageName = (sectionId: number): string =>
     event.sectionNames[sectionId] ??
     layout.sections.find((s) => s.sectionid === sectionId)?.name.split(" | ")[0] ??
