@@ -57,15 +57,15 @@ export default async function LoginPage({
         <div className="body">
           <h1 className="display h1 rise d1">Call your shots.</h1>
           <p className="lede rise d2">
-            <b>HOTLINE</b> is the Pick&apos;Em arena for the Singapore Major. Call who runs the table at 3{"‑"}0,
-            who crashes out 0{"‑"}3, and who lifts the trophy.
+            <b>HOTLINE</b> is the Pick&apos;Em arena for the Singapore Major. Link your in-game picks and track your
+            progress throughout the event. Call who runs the table at 3{"‑"}0, who crashes out, and who lifts the
+            trophy.
           </p>
           {errorMsg && (
             <p className="err rise d2" role="alert">
               {errorMsg}
             </p>
           )}
-          <div className="notice rise d3">Early test build — things may break. Pick&apos;Ems will be made.</div>
           <div className="acts rise d3">
             {phattId && (
               <a href="/api/auth/authentik" className="btn-solid">
@@ -84,6 +84,9 @@ export default async function LoginPage({
               ? "Steam syncs your official Valve picks and needs a CS2 Viewer Pass. Local mode is fully featured."
               : "Picks and Steam sync open when Valve opens Pick'Em. Sign in now and you're ready. Local mode is fully featured."}
           </span>
+          <Link href="/join" prefetch={false} className="fine rise d4">
+            New here? How to join HOTLINE for Singapore →
+          </Link>
         </div>
       </SplashIntro>
     </>

@@ -101,6 +101,7 @@ export default async function PicksPage({
   const code = session?.steamId ? await authCodeStatus(session.playerId, EVENT_ID) : null;
   const needsSteamLink = !!code && code.status !== "current";
   const staleCodeFor = code?.status === "stale" ? savedForLabel(code.savedForEventId) : null;
+  const codeRejected = code?.rejected ?? false;
 
   // Scheduled hard lock (#886/898): once a stage's first match starts, its
   // pick window is closed — even though the committed layout still says
@@ -529,7 +530,7 @@ export default async function PicksPage({
 
       {/* Steam-connected but no auth code: picks live in HOTLINE, not yet
           pushed to the official in-game Pick'Em. Point them at the page. */}
-      {needsSteamLink && <SteamLinkNotice staleFor={staleCodeFor} />}
+      {needsSteamLink && <SteamLinkNotice staleFor={staleCodeFor} rejected={codeRejected} />}
 
       {/* Sealed, then changed in the CS2 client (pick-lock-core): HOTLINE keeps
           the sealed set; say so plainly. Shown publicly next to the seal too. */}
@@ -838,16 +839,30 @@ function PicksNotOpen({
   );
 }
 
-function SteamLinkNotice({ staleFor }: { staleFor: string | null }) {
+function SteamLinkNotice({ staleFor, rejected }: { staleFor: string | null; rejected: boolean }) {
   return (
     <Link href="/help/auth-code" className="sgp-note solo" prefetch={false}>
       <div>
-        <span className="tag warn">{staleFor ? "New Major, new code" : "Saved here — not on Steam yet"}</span>
-        <h2>{staleFor ? "Add this Major's auth code" : "Your picks are saved in HOTLINE"}</h2>
+        <span className="tag warn">
+          {staleFor ? (rejected ? "New Major, new code" : "Saved code on file") : "Saved here — not on Steam yet"}
+        </span>
+        <h2>
+          {staleFor
+            ? rejected
+              ? "Add this Major's auth code"
+              : "We'll check your saved code"
+            : "Your picks are saved in HOTLINE"}
+        </h2>
         {staleFor ? (
-          <p>
-            {`Your saved code is from ${staleFor}, and Valve hasn't accepted it for this Major, so syncing to the official in-game Pick'Em is paused until you paste this Major's Game Authentication Code.`}
-          </p>
+          rejected ? (
+            <p>
+              {`Your saved code is from ${staleFor}, and Valve didn't accept it for this Major, so syncing to the official in-game Pick'Em is paused until you paste this Major's Game Authentication Code.`}
+            </p>
+          ) : (
+            <p>
+              {`Your saved code is from ${staleFor}. We'll check it when Valve opens Pick'Em for this Major. If it still works, syncing just carries on; if not, we'll ask you for a new one.`}
+            </p>
+          )
         ) : (
           <p>
             To push them to your <b>official in-game CS2 Pick&apos;Em</b>, connect your Steam Game

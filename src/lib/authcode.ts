@@ -31,6 +31,8 @@ function codeEventId(authCodeEventId: number | null): number {
  * bad steamidkeys gets the whole site 503'd), keyed `${playerId}:${eventId}`.
  */
 const carryRetryAt = new Map<string, number>();
+/** Keys where Valve really answered 403 (not a transient failure). */
+const carryRejected = new Set<string>();
 const CARRY_REJECTED_MS = 24 * 60 * 60 * 1000; // 403: Valve refused the code
 const CARRY_TRANSIENT_MS = 10 * 60 * 1000; // anything else: try again later
 
@@ -42,9 +44,11 @@ async function carryOver(playerId: string, eventId: number, steamId: string, cod
   } catch (e) {
     const rejected = e instanceof ValveApiError && e.status === 403;
     carryRetryAt.set(key, Date.now() + (rejected ? CARRY_REJECTED_MS : CARRY_TRANSIENT_MS));
+    if (rejected) carryRejected.add(key);
     return false;
   }
   carryRetryAt.delete(key);
+  carryRejected.delete(key);
   await prisma.player.update({ where: { id: playerId }, data: { authCodeEventId: eventId } });
   return true;
 }
@@ -84,14 +88,24 @@ export async function hasAuthCode(playerId: string): Promise<boolean> {
 export async function authCodeStatus(
   playerId: string,
   eventId: number,
-): Promise<{ status: "none" | "current" | "stale"; savedForEventId: number | null }> {
+): Promise<{
+  status: "none" | "current" | "stale";
+  savedForEventId: number | null;
+  /** True only once Valve has really answered 403 for the saved code (this process, within the back-off). */
+  rejected: boolean;
+}> {
   const player = await prisma.player.findUnique({
     where: { id: playerId },
     select: { authCode: true, authCodeEventId: true },
   });
-  if (!player?.authCode) return { status: "none", savedForEventId: null };
+  if (!player?.authCode) return { status: "none", savedForEventId: null, rejected: false };
   const savedFor = codeEventId(player.authCodeEventId);
-  return { status: savedFor === eventId ? "current" : "stale", savedForEventId: savedFor };
+  const current = savedFor === eventId;
+  return {
+    status: current ? "current" : "stale",
+    savedForEventId: savedFor,
+    rejected: !current && carryRejected.has(`${playerId}:${eventId}`) && (carryRetryAt.get(`${playerId}:${eventId}`) ?? 0) > Date.now(),
+  };
 }
 
 /** "IEM Cologne 2026" for the Major a stale code was saved for, or a fallback. */
