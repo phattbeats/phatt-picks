@@ -1,0 +1,1490 @@
+{
+ "asOf": "2026-11-17",
+ "teams": {
+  "1": {
+   "pickid": 1,
+   "slug": "nip",
+   "name": "Ninjas in Pyjamas",
+   "hltvId": 4411,
+   "hltvSlug": "nip",
+   "color": "#ff8a1f",
+   "headline": "NiP open Stage 1 as top seed with two fresh grand finals",
+   "storyline": "As of Nov 2026, Ninjas in Pyjamas enter Stage 1 as Seed 1 on a VRS invite (1,564 points), fielding sjuush, xKacpersky, stavn, Krimbo and adamb under coach Xizt. Autumn form is strong: video listings show grand finals at ROG JOURNEY Autumn 2026 (vs Eternal Fire) and Stake Pulse Beat III (vs MIBR). They open on Nov 24 against M80, a tough BO1 for a top seed.",
+   "sources": [
+    {
+     "label": "Pley.gg: Every team at the PGL Major Singapore",
+     "url": "https://pley.gg/cs2/every-team-at-the-pgl-major-singapore/",
+     "date": "2026-11"
+    },
+    {
+     "label": "Strafe: Singapore Major teams, stages, opening matches",
+     "url": "https://www.strafe.com/news/read/cs2-singapore-major-2026-format-teams-schedule-and-opening-matches/",
+     "date": "2026-11-12"
+    },
+    {
+     "label": "Insider Gaming: Opening matchups",
+     "url": "https://insider-gaming.com/pgl-singapore-major-2026-opening-matchups/",
+     "date": "2026-11"
+    },
+    {
+     "label": "YouTube: NiP vs MIBR, Stake Pulse Beat III GF",
+     "url": "https://www.youtube.com/watch?v=yUE0AGoTNtg",
+     "date": "2026-10"
+    },
+    {
+     "label": "YouTube: NiP vs Eternal Fire, ROG JOURNEY Autumn GF",
+     "url": "https://www.youtube.com/watch?v=pRW8cKQ0GOY",
+     "date": "2026-10"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "pRW8cKQ0GOY",
+     "title": "GRAND-FINAL! Ninjas in Pyjamas vs Eternal Fire - Highlights - ROG JOURNEY Autumn 2026 - CS2",
+     "channel": "LifeOfAPlayer",
+     "why": "NiP in the ROG JOURNEY Autumn 2026 grand final",
+     "source": "community editor"
+    },
+    {
+     "kind": "youtube",
+     "id": "yUE0AGoTNtg",
+     "title": "GRAND FINAL! Ninjas in Pyjamas vs MIBR - Highlights - Stake Pulse Beat III 2026 - CS2",
+     "channel": "LifeOfAPlayer",
+     "why": "NiP in the Stake Pulse Beat III grand final",
+     "source": "community editor"
+    }
+   ]
+  },
+  "12": {
+   "pickid": 12,
+   "slug": "natus-vincere",
+   "name": "Natus Vincere",
+   "hltvId": 4608,
+   "hltvSlug": "natus-vincere",
+   "color": "#ffe033",
+   "headline": "NAVI skip Stage 1 with a b1t, iM, Aleksib core",
+   "storyline": "As of Nov 2026, Natus Vincere start in Stage 2 on a VRS invite (1,589 points). The lineup is Aleksib, iM, b1t, w0nderful and makazze, coached by B1ad3. NAVI played decisive Stage 3 matches at the IEM Cologne Major 2026, including vs Falcons and G2, so they arrive with recent Major-level experience. Falcons, who swept FURIA 3-0 in Cologne, are the defending champions.",
+   "sources": [
+    {
+     "label": "Pley.gg: Every team at the PGL Major Singapore",
+     "url": "https://pley.gg/cs2/every-team-at-the-pgl-major-singapore/",
+     "date": "2026-11"
+    },
+    {
+     "label": "EsportNow: all 32 invites",
+     "url": "https://esportnow.gg/cs2/news/pgl-major-singapore-teams-all-32-invites",
+     "date": "2026-11"
+    },
+    {
+     "label": "YouTube/ESL: NAVI vs Falcons, Cologne Major Stage 3",
+     "url": "https://www.youtube.com/watch?v=t3-h7KOVqOM",
+     "date": "2026-06-14"
+    },
+    {
+     "label": "YouTube/ESL: NAVI vs G2, Cologne Major Stage 3",
+     "url": "https://www.youtube.com/watch?v=oVt4EwPR4Qo",
+     "date": "2026-06-15"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "t3-h7KOVqOM",
+     "title": "WINNER TO PLAYOFFS! NAVI vs Falcons - HIGHLIGHTS - IEM Cologne Major 2026 Stage 3 | CS2",
+     "channel": "ESL Counter-Strike Highlights",
+     "why": "NAVI's Cologne Major Stage 3 decider vs Falcons",
+     "source": "ESL/BLAST"
+    },
+    {
+     "kind": "youtube",
+     "id": "oVt4EwPR4Qo",
+     "title": "LAST SPOT FOR PLAYOFFS! NAVI vs G2 - HIGHLIGHTS - IEM Cologne Major 2026 Stage 3 | CS2",
+     "channel": "ESL Counter-Strike Highlights",
+     "why": "NAVI vs G2 for the last playoff spot in Cologne",
+     "source": "ESL/BLAST"
+    }
+   ]
+  },
+  "48": {
+   "pickid": 48,
+   "slug": "liquid",
+   "name": "Team Liquid",
+   "hltvId": 5973,
+   "hltvSlug": "liquid",
+   "color": "#4aa8ff",
+   "headline": "Liquid's NA core opens vs s1mple's GOSH in Stage 1",
+   "storyline": "As of Nov 2026, Team Liquid enter Stage 1 on a VRS invite (1,528 points) with NAF, EliGE, malbsMd, Jorko and JT, coached by flashie. Their Nov 24 opener is against GOSH (BC.Game), where s1mple faces his former organisation, who he helped reach the 2016 ESL One Cologne grand final. Liquid also reached IEM Beijing 2026 elimination-stage matches this autumn.",
+   "sources": [
+    {
+     "label": "Pley.gg: Every team at the PGL Major Singapore",
+     "url": "https://pley.gg/cs2/every-team-at-the-pgl-major-singapore/",
+     "date": "2026-11"
+    },
+    {
+     "label": "EsportNow: all 32 invites",
+     "url": "https://esportnow.gg/cs2/news/pgl-major-singapore-teams-all-32-invites",
+     "date": "2026-11"
+    },
+    {
+     "label": "Insider Gaming: Opening matchups",
+     "url": "https://insider-gaming.com/pgl-singapore-major-2026-opening-matchups/",
+     "date": "2026-11"
+    },
+    {
+     "label": "YouTube/ESL: Liquid vs BetBoom, IEM Beijing 2026",
+     "url": "https://www.youtube.com/watch?v=X_NE3rL_1kE",
+     "date": "2026-11"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "X_NE3rL_1kE",
+     "title": "LAST CHANCE! Team Liquid vs BetBoom Team - HIGHLIGHTS - IEM Beijing 2026 | CS2",
+     "channel": "ESL Counter-Strike Highlights",
+     "why": "Liquid in a must-win IEM Beijing 2026 match",
+     "source": "ESL/BLAST"
+    },
+    {
+     "kind": "youtube",
+     "id": "GPodb0Zxa3Q",
+     "title": "Team Liquid vs Legacy - HIGHLIGHTS - PGL Masters Bucharest 2026 | CS2",
+     "channel": "PGL Counter-Strike Highlights",
+     "why": "Liquid vs Legacy at PGL Masters Bucharest",
+     "source": "PGL"
+    }
+   ]
+  },
+  "59": {
+   "pickid": 59,
+   "slug": "g2",
+   "name": "G2 Esports",
+   "hltvId": 5995,
+   "hltvSlug": "g2",
+   "color": "#ff5a4f",
+   "headline": "G2 head into Stage 2 with the highest VRS of this group",
+   "storyline": "As of Nov 2026, G2 start in Stage 2 on a VRS invite with 1,616 points, the highest of the eight teams in this batch. The lineup is huNter-, HeavyGod, MATYS, NertZ and r1nkle, with sAw as coach. Recent events include PGL Masters Bucharest and IEM Beijing 2026, where they met Aurora and PARIVISION, and they faced NAVI at the Cologne Major in June.",
+   "sources": [
+    {
+     "label": "Pley.gg: Every team at the PGL Major Singapore",
+     "url": "https://pley.gg/cs2/every-team-at-the-pgl-major-singapore/",
+     "date": "2026-11"
+    },
+    {
+     "label": "EsportNow: all 32 invites",
+     "url": "https://esportnow.gg/cs2/news/pgl-major-singapore-teams-all-32-invites",
+     "date": "2026-11"
+    },
+    {
+     "label": "YouTube/PGL: G2 vs Aurora, Bucharest",
+     "url": "https://www.youtube.com/watch?v=y01qP_KcbVU",
+     "date": "2026-10"
+    },
+    {
+     "label": "YouTube/ESL: Aurora vs G2, IEM Beijing",
+     "url": "https://www.youtube.com/watch?v=XexZLeeO_4A",
+     "date": "2026-11-02"
+    },
+    {
+     "label": "YouTube/ESL: NAVI vs G2, Cologne Major",
+     "url": "https://www.youtube.com/watch?v=oVt4EwPR4Qo",
+     "date": "2026-06-15"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "y01qP_KcbVU",
+     "title": "G2 vs Aurora - HIGHLIGHTS - PGL Masters Bucharest 2026 | CS2",
+     "channel": "PGL Counter-Strike Highlights",
+     "why": "G2 vs Aurora at PGL Masters Bucharest",
+     "source": "PGL"
+    },
+    {
+     "kind": "youtube",
+     "id": "XexZLeeO_4A",
+     "title": "LOSER IS OUT! Aurora vs G2 - HIGHLIGHTS - IEM Beijing 2026 | CS2",
+     "channel": "ESL Counter-Strike Highlights",
+     "why": "G2 in an elimination match at IEM Beijing 2026",
+     "source": "ESL/BLAST"
+    }
+   ]
+  },
+  "60": {
+   "pickid": 60,
+   "slug": "astralis",
+   "name": "Astralis",
+   "hltvId": 6665,
+   "hltvSlug": "astralis",
+   "color": "#ff4d6a",
+   "headline": "Astralis skip Stage 1 after back-to-back grand finals",
+   "storyline": "As of Nov 2026, Astralis begin in Stage 2 on a VRS invite (1,572 points) with Staehr, phzy, ryu, siuhy and cmtry, coached by NEO. They have been in grand finals at PGL Bucharest 2026 (vs FUT) and Stake Ranked Episode 4 (vs Nemiga), per match-highlight listings. Both FUT and Nemiga are also in Stage 2.",
+   "sources": [
+    {
+     "label": "Pley.gg: Every team at the PGL Major Singapore",
+     "url": "https://pley.gg/cs2/every-team-at-the-pgl-major-singapore/",
+     "date": "2026-11"
+    },
+    {
+     "label": "Insider Gaming: all qualified teams",
+     "url": "https://insider-gaming.com/pgl-singapore-major-2026-all-qualified-teams/",
+     "date": "2026-11-02"
+    },
+    {
+     "label": "YouTube/PGL: Astralis vs FUT GF",
+     "url": "https://www.youtube.com/watch?v=L66qOhCoRFU",
+     "date": "2026-04"
+    },
+    {
+     "label": "YouTube: Astralis vs Nemiga GF",
+     "url": "https://www.youtube.com/watch?v=CQtCLlD6PN8",
+     "date": "2026-10"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "L66qOhCoRFU",
+     "title": "GRAND FINAL! Astralis vs FUT - HIGHLIGHTS - PGL Bucharest 2026 | CS2",
+     "channel": "PGL Counter-Strike Highlights",
+     "why": "Astralis in the PGL Bucharest 2026 grand final",
+     "source": "PGL"
+    },
+    {
+     "kind": "youtube",
+     "id": "CQtCLlD6PN8",
+     "title": "GRAND-FINAL! Astralis vs Nemiga - Highlights - Stake Ranked Episode 4 2026 - CS2",
+     "channel": "LifeOfAPlayer",
+     "why": "Astralis in the Stake Ranked Episode 4 grand final",
+     "source": "community editor"
+    }
+   ]
+  },
+  "61": {
+   "pickid": 61,
+   "slug": "faze",
+   "name": "FaZe Clan",
+   "hltvId": 6667,
+   "hltvSlug": "faze",
+   "color": "#ff3d3d",
+   "headline": "FaZe's rebuilt roster starts Stage 1 as Seed 4",
+   "storyline": "As of Nov 2026, FaZe enter Stage 1 as Seed 4 on a VRS invite (1,539 points). The lineup listed is frozen, jcobbb, Twistzz, JBOEN and Neityu, coached by enkay J. They open on Nov 24 against North American side Wildcard. FaZe also played the Esports World Cup 2026 group stage, including vs Legacy.",
+   "sources": [
+    {
+     "label": "Pley.gg: Every team at the PGL Major Singapore",
+     "url": "https://pley.gg/cs2/every-team-at-the-pgl-major-singapore/",
+     "date": "2026-11"
+    },
+    {
+     "label": "Strafe: Singapore Major teams, stages, opening matches",
+     "url": "https://www.strafe.com/news/read/cs2-singapore-major-2026-format-teams-schedule-and-opening-matches/",
+     "date": "2026-11-12"
+    },
+    {
+     "label": "Insider Gaming: Opening matchups",
+     "url": "https://insider-gaming.com/pgl-singapore-major-2026-opening-matchups/",
+     "date": "2026-11"
+    },
+    {
+     "label": "YouTube: FaZe vs Legacy, EWC 2026",
+     "url": "https://www.youtube.com/watch?v=95jZsBfUPJI",
+     "date": "2026"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "95jZsBfUPJI",
+     "title": "CRAZY MATCH! FaZe vs Legacy - Highlights - Esports World Cup 2026 Group Stage - CS2",
+     "channel": "LifeOfBPlayer",
+     "why": "FaZe vs Legacy at Esports World Cup 2026",
+     "source": "community editor"
+    },
+    {
+     "kind": "youtube",
+     "id": "8aB5v1zKa3g",
+     "title": "LOSER IS OUT! FaZe vs Astralis - HIGHLIGHTS - PGL Cluj-Napoca 2026 | CS2",
+     "channel": "PGL Counter-Strike Highlights",
+     "why": "FaZe vs Astralis at PGL Cluj-Napoca 2026",
+     "source": "PGL"
+    }
+   ]
+  },
+  "78": {
+   "pickid": 78,
+   "slug": "100-thieves",
+   "name": "100 Thieves",
+   "hltvId": 8474,
+   "hltvSlug": "100-thieves",
+   "color": "#ff4747",
+   "headline": "100 Thieves are Major debutants after winning FiRe Last Chance",
+   "storyline": "As of Nov 2026, 100 Thieves take the final Major spot by winning FiRe Last Chance 2026, beating Wildcard 2-0 in the grand final. It is their first Major ever, after visa issues and the pandemic blocked earlier chances. They enter Stage 1 as Seed 7 with rain, poiii, sirah, device and Gizmy, coached by gla1ve, and open against Chinggis Warriors.",
+   "sources": [
+    {
+     "label": "Insider Gaming: all qualified teams",
+     "url": "https://insider-gaming.com/pgl-singapore-major-2026-all-qualified-teams/",
+     "date": "2026-11-02"
+    },
+    {
+     "label": "Insider Gaming: Opening matchups",
+     "url": "https://insider-gaming.com/pgl-singapore-major-2026-opening-matchups/",
+     "date": "2026-11"
+    },
+    {
+     "label": "EsportNow: all 32 invites",
+     "url": "https://esportnow.gg/cs2/news/pgl-major-singapore-teams-all-32-invites",
+     "date": "2026-11"
+    },
+    {
+     "label": "Pley.gg: Every team at the PGL Major Singapore",
+     "url": "https://pley.gg/cs2/every-team-at-the-pgl-major-singapore/",
+     "date": "2026-11"
+    },
+    {
+     "label": "Strafe: Singapore Major teams, stages, opening matches",
+     "url": "https://www.strafe.com/news/read/cs2-singapore-major-2026-format-teams-schedule-and-opening-matches/",
+     "date": "2026-11-12"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "13hM8wp6d9k",
+     "title": "100 Thieves vs Wildcard - HIGHLIGHTS - FiRe Last Chance 2026 Grand Final",
+     "channel": "CS2 by Ra",
+     "why": "100T beat Wildcard in the FiRe Last Chance grand final",
+     "source": "community editor"
+    },
+    {
+     "kind": "youtube",
+     "id": "ljTYORc_AX4",
+     "title": "INSANE GRAND FINALS - 100 Thieves vs Wildcard | FiRe Last Chance 2026 | HIGHLIGHTS @TrottahCS #cs2",
+     "channel": "Trottah",
+     "why": "Alternate cut of the same grand final",
+     "source": "community editor"
+    }
+   ]
+  },
+  "80": {
+   "pickid": 80,
+   "slug": "mibr",
+   "name": "MIBR",
+   "hltvId": 9215,
+   "hltvSlug": "mibr",
+   "color": "#3ddc84",
+   "headline": "MIBR skip Stage 1 with a recent grand final run",
+   "storyline": "As of Nov 2026, MIBR start in Stage 2 on a VRS invite (1,547 points) with insani, LNZ, venomzera, nqz and tomaszin, coached by LETN1. They reached the Stake Pulse Beat III grand final against NiP, and earlier took part in the IEM Cologne Major 2026 Stage 2 and CS Asia Championships 2026, reaching its semi-finals.",
+   "sources": [
+    {
+     "label": "Pley.gg: Every team at the PGL Major Singapore",
+     "url": "https://pley.gg/cs2/every-team-at-the-pgl-major-singapore/",
+     "date": "2026-11"
+    },
+    {
+     "label": "Insider Gaming: all qualified teams",
+     "url": "https://insider-gaming.com/pgl-singapore-major-2026-all-qualified-teams/",
+     "date": "2026-11-02"
+    },
+    {
+     "label": "YouTube: NiP vs MIBR, Stake Pulse Beat III GF",
+     "url": "https://www.youtube.com/watch?v=yUE0AGoTNtg",
+     "date": "2026-10"
+    },
+    {
+     "label": "YouTube/PGL: MIBR vs Legacy, CS Asia Championships SF",
+     "url": "https://www.youtube.com/watch?v=5ENxsz9UQLQ",
+     "date": "2026-05"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "Fe0q0GES30A",
+     "title": "MIBR vs BIG - HIGHLIGHTS - IEM Cologne Major 2026 Stage 2 | CS2",
+     "channel": "ESL Counter-Strike Highlights",
+     "why": "MIBR at the IEM Cologne Major 2026 Stage 2",
+     "source": "ESL/BLAST"
+    },
+    {
+     "kind": "youtube",
+     "id": "5ENxsz9UQLQ",
+     "title": "SEMI-FINALS! MIBR vs Legacy - HIGHLIGHTS - CS Asia Championships 2026 | CS2",
+     "channel": "PGL Counter-Strike Highlights",
+     "why": "MIBR in the CS Asia Championships semi-final",
+     "source": "PGL"
+    }
+   ]
+  },
+  "81": {
+   "pickid": 81,
+   "slug": "spirit",
+   "name": "Team Spirit",
+   "hltvId": 7020,
+   "hltvSlug": "spirit",
+   "color": "#c7ced8",
+   "headline": "Porto champions, but swept in the Hong Kong final",
+   "storyline": "As of Nov 2026 Spirit field donk, sh1ro, magixx, tN1R and zont1x. They won BLAST Open Porto in September, beating MOUZ 3-1, then reached the BLAST Rivals Hong Kong final on Nov 15, where FURIA swept them 3-0 (they failed to win an attack round on Dust2). Spirit skip Stage 1 and enter the Singapore Major at Stage 3 as a top seed.",
+   "sources": [
+    {
+     "label": "eSportNow: PGL Major Singapore - all 32 invites",
+     "url": "https://esportnow.gg/cs2/news/pgl-major-singapore-teams-all-32-invites",
+     "date": "2026-11-06"
+    },
+    {
+     "label": "Insider Gaming: Singapore Major - all qualified teams",
+     "url": "https://insider-gaming.com/pgl-singapore-major-2026-all-qualified-teams/",
+     "date": "2026-11-02"
+    },
+    {
+     "label": "Players.com.ua: Spirit crowned BLAST Open Porto 2026 champions",
+     "url": "https://players.com.ua/en/news/team-spirit-crowned-cs2-blast-open-porto-2026-champions/?amp=1",
+     "date": "2026-09-06"
+    },
+    {
+     "label": "Strafe: FURIA sweeps Spirit at BLAST Rivals Hong Kong",
+     "url": "https://www.strafe.com/news/read/furia-sweeps-spirit-to-claim-blast-rivals-hong-kong/",
+     "date": "2026-11-15"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "cXUmsqtlpAw",
+     "title": "GRAND FINAL! Spirit vs FURIA - Official Highlights - BLAST Premier Rivals Hong Kong 2026",
+     "channel": "BLAST Premier CS2 Highlights",
+     "why": "Their most recent big match, days before the Major",
+     "source": "BLAST"
+    },
+    {
+     "kind": "youtube",
+     "id": "8QkRA11VBuk",
+     "title": "🔥 donk MVP Highlights – BLAST Open Porto 2026 Champion | Team Spirit (CS2)",
+     "channel": "CS2 Replays HUB",
+     "why": "donk's MVP run in Spirit's Porto title",
+     "source": "community editor"
+    }
+   ]
+  },
+  "85": {
+   "pickid": 85,
+   "slug": "furia",
+   "name": "FURIA",
+   "hltvId": 8297,
+   "hltvSlug": "furia",
+   "color": "#e8e8e8",
+   "headline": "Three titles in a month, and FalleN's farewell year",
+   "storyline": "FURIA (FalleN, yuurih, KSCERATO, YEKINDAR, molodoy; coach sidde) arrive as the hottest team in the field. They won Thunderpick World Championship, PGL Masters Bucharest (3-2 over Nemiga, Oct 31) and BLAST Rivals Hong Kong (3-0 over Spirit, Nov 15), with KSCERATO MVP in Hong Kong. FalleN is set to retire at the end of 2026. FURIA enter at Stage 3.",
+   "sources": [
+    {
+     "label": "eSportNow: PGL Major Singapore - all 32 invites",
+     "url": "https://esportnow.gg/cs2/news/pgl-major-singapore-teams-all-32-invites",
+     "date": "2026-11-06"
+    },
+    {
+     "label": "Insider Gaming: Singapore Major - all qualified teams",
+     "url": "https://insider-gaming.com/pgl-singapore-major-2026-all-qualified-teams/",
+     "date": "2026-11-02"
+    },
+    {
+     "label": "Strafe: FURIA sweeps Spirit at BLAST Rivals Hong Kong",
+     "url": "https://www.strafe.com/news/read/furia-sweeps-spirit-to-claim-blast-rivals-hong-kong/",
+     "date": "2026-11-15"
+    },
+    {
+     "label": "KeenGamer: PGL Masters Bucharest 2026 results, FURIA win grand final",
+     "url": "https://www.keengamer.com/articles/news/pgl-masters-bucharest-2026-results-furia-win-grand-final/",
+     "date": "2026-10-31"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "9Vut-wBOQDs",
+     "title": "GRAND FINAL! Nemiga vs FURIA - HIGHLIGHTS - PGL Masters Bucharest 2026 | CS2",
+     "channel": "PGL Counter-Strike Highlights",
+     "why": "Five-map final that kicked off their title run",
+     "source": "PGL"
+    }
+   ]
+  },
+  "89": {
+   "pickid": 89,
+   "slug": "vitality",
+   "name": "Vitality",
+   "hltvId": 9565,
+   "hltvSlug": "vitality",
+   "color": "#ffe500",
+   "headline": "Seven titles in 2026, then a wobble in Hong Kong",
+   "storyline": "Vitality won StarSeries Fall (Sept 20, 3-1 over Aurora) and ESL Pro League S24 (Oct 11, 3-0 over MOUZ), their seventh title of 2026, with ZywOo EPL MVP. Then came a stumble: FURIA beat them 13-0 on Mirage, and MOUZ knocked them out of BLAST Rivals Hong Kong 2-0 on Nov 13. apEX, back from paternity leave, called it his worst tournament. Vitality enter at Stage 3.",
+   "sources": [
+    {
+     "label": "Insider Gaming: Singapore Major - all qualified teams",
+     "url": "https://insider-gaming.com/pgl-singapore-major-2026-all-qualified-teams/",
+     "date": "2026-11-02"
+    },
+    {
+     "label": "Strafe: Vitality win ESL Pro League Season 24",
+     "url": "https://www.strafe.com/news/read/vitality-win-esl-pro-league-season-24-for-fourth-tournament-title/",
+     "date": "2026-10-11"
+    },
+    {
+     "label": "CryptoBriefing: Vitality StarSeries win, No. 2 in HLTV ranking",
+     "url": "https://cryptobriefing.com/vitality-hltv-ranking-starseries-win/",
+     "date": "2026-09-20"
+    },
+    {
+     "label": "Strafe: apEX calls BLAST Rivals his worst tournament ever",
+     "url": "https://www.strafe.com/news/read/apex-calls-blast-rivals-his-worst-tournament-ever-after-vitality-exit/",
+     "date": "2026-11-13"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "9MVib5ZyFps",
+     "title": "GRAND FINAL! Vitality vs MOUZ - HIGHLIGHTS - ESL Pro League Season 24 | CS2",
+     "channel": "ESL Counter-Strike Highlights",
+     "why": "Vitality's 3-0 EPL S24 final, ZywOo MVP",
+     "source": "ESL/BLAST"
+    }
+   ]
+  },
+  "95": {
+   "pickid": 95,
+   "slug": "heroic",
+   "name": "HEROIC",
+   "hltvId": 7175,
+   "hltvSlug": "heroic",
+   "color": "#ff9f1a",
+   "headline": "Pulse Beat champions who climbed into the Major",
+   "storyline": "HEROIC won Stake Pulse Beat II on Sept 27, beating 100 Thieves 2-1 after surviving two championship points on Ancient (19-17 in double overtime). The title lifted them ten places to 17th in the global VRS and they went on to secure a direct invite. They start in Stage 1 with a three-win-or-out Swiss path.",
+   "sources": [
+    {
+     "label": "Games.gg: HEROIC win Stake Pulse Beat II",
+     "url": "https://games.gg/news/heroic-win-stake-pulse-beat-ii/",
+     "date": "2026-09-27"
+    },
+    {
+     "label": "eSportNow: PGL Major Singapore - all 32 invites",
+     "url": "https://esportnow.gg/cs2/news/pgl-major-singapore-teams-all-32-invites",
+     "date": "2026-11-06"
+    },
+    {
+     "label": "Pley: Every team at the PGL Major Singapore",
+     "url": "https://pley.gg/cs2/every-team-at-the-pgl-major-singapore/",
+     "date": "2026-11-02"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "1x5TJEafNXQ",
+     "title": "100 Thieves vs HEROIC - Grand Final - HIGHLIGHTS | Stake Pulse Beat II",
+     "channel": "Life on Long",
+     "why": "The Pulse Beat II final that launched their Major push",
+     "source": "community editor"
+    }
+   ]
+  },
+  "106": {
+   "pickid": 106,
+   "slug": "mouz",
+   "name": "MOUZ",
+   "hltvId": 4494,
+   "hltvSlug": "mouz",
+   "color": "#ff4d5e",
+   "headline": "First IEM trophy ends the curse; top of Europe's VRS",
+   "storyline": "MOUZ (torzsi, Spinx, xertioN, PR, xelex) won IEM Beijing on Nov 8, sweeping The MongolZ 3-0 for their first IEM title and second trophy of 2026, without dropping a map. They also reached the EPL S24 and BLAST Open Porto finals (lost both) and beat Vitality 2-0 at BLAST Rivals on Nov 13. They top Europe's VRS at 1,960 points and enter at Stage 3.",
+   "sources": [
+    {
+     "label": "eSportNow: PGL Major Singapore - all 32 invites",
+     "url": "https://esportnow.gg/cs2/news/pgl-major-singapore-teams-all-32-invites",
+     "date": "2026-11-06"
+    },
+    {
+     "label": "Pley: Every team at the PGL Major Singapore",
+     "url": "https://pley.gg/cs2/every-team-at-the-pgl-major-singapore/",
+     "date": "2026-11-02"
+    },
+    {
+     "label": "KeenGamer: IEM Beijing 2026, MOUZ win grand final without dropping a map",
+     "url": "https://www.keengamer.com/articles/features/reportages/iem-beijing-2026-results-mouz-win-grand-final-without-dropping-a-map/",
+     "date": "2026-11-08"
+    },
+    {
+     "label": "Strafe: Vitality win ESL Pro League S24 (MOUZ runner-up)",
+     "url": "https://www.strafe.com/news/read/vitality-win-esl-pro-league-season-24-for-fourth-tournament-title/",
+     "date": "2026-10-11"
+    },
+    {
+     "label": "Players.com.ua: Spirit beat MOUZ in BLAST Open Porto final",
+     "url": "https://players.com.ua/en/news/team-spirit-crowned-cs2-blast-open-porto-2026-champions/?amp=1",
+     "date": "2026-09-06"
+    },
+    {
+     "label": "Strafe: apEX calls BLAST Rivals his worst tournament (MOUZ 2-0 Vitality)",
+     "url": "https://www.strafe.com/news/read/apex-calls-blast-rivals-his-worst-tournament-ever-after-vitality-exit/",
+     "date": "2026-11-13"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "y_DwBDOYEFs",
+     "title": "GRAND FINAL! TheMongolz vs MOUZ - HIGHLIGHTS - IEM Beijing 2026 | CS2",
+     "channel": "ESL Counter-Strike Highlights",
+     "why": "MOUZ's first IEM title, a 3-0 sweep",
+     "source": "ESL/BLAST"
+    }
+   ]
+  },
+  "107": {
+   "pickid": 107,
+   "slug": "nemiga",
+   "name": "Nemiga",
+   "hltvId": 7969,
+   "hltvSlug": "nemiga",
+   "color": "#4da3ff",
+   "headline": "Bucharest finalists crash the Major at Stage 2",
+   "storyline": "Nemiga (KaiR0N-, Xant3r, robo, khaN, syph0; coach boX) made a deep run at PGL Masters Bucharest, beating FUT in the quarter-final and Vitality in the semi before losing the Oct 31 final 3-2 to FURIA. They enter the Singapore Major at Stage 2, skipping Stage 1.",
+   "sources": [
+    {
+     "label": "eSportNow: PGL Major Singapore - all 32 invites",
+     "url": "https://esportnow.gg/cs2/news/pgl-major-singapore-teams-all-32-invites",
+     "date": "2026-11-06"
+    },
+    {
+     "label": "Pley: Every team at the PGL Major Singapore",
+     "url": "https://pley.gg/cs2/every-team-at-the-pgl-major-singapore/",
+     "date": "2026-11-02"
+    },
+    {
+     "label": "KeenGamer: PGL Masters Bucharest 2026 results, FURIA win grand final",
+     "url": "https://www.keengamer.com/articles/news/pgl-masters-bucharest-2026-results-furia-win-grand-final/",
+     "date": "2026-10-31"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "0kBYiZC6Amo",
+     "title": "SEMI-FINALS! Nemiga vs Vitality - HIGHLIGHTS - PGL Masters Bucharest 2026 | CS2",
+     "channel": "PGL Counter-Strike Highlights",
+     "why": "Nemiga's upset of Vitality on the way to the final",
+     "source": "PGL"
+    },
+    {
+     "kind": "youtube",
+     "id": "9Vut-wBOQDs",
+     "title": "GRAND FINAL! Nemiga vs FURIA - HIGHLIGHTS - PGL Masters Bucharest 2026 | CS2",
+     "channel": "PGL Counter-Strike Highlights",
+     "why": "The 3-2 final against FURIA",
+     "source": "PGL"
+    }
+   ]
+  },
+  "110": {
+   "pickid": 110,
+   "slug": "eternal-fire",
+   "name": "Eternal Fire",
+   "hltvId": 11251,
+   "hltvSlug": "eternal-fire",
+   "color": "#ff6a1a",
+   "headline": "Reverse-swept Fnatic to grab a Major spot",
+   "storyline": "Eternal Fire (MisteM, regali, soulfly, Kvem, jottAAA; coach Fabre) were given under 5% Major odds a week before the cutoff. Then they won Stake Ranked Episode 5, beating Fnatic 3-2 in the grand final after trailing 0-2, and booked Stage 1. Fnatic were left out. EF now play a three-wins-to-advance Swiss opening stage.",
+   "sources": [
+    {
+     "label": "eSportNow: PGL Major Singapore - all 32 invites",
+     "url": "https://esportnow.gg/cs2/news/pgl-major-singapore-teams-all-32-invites",
+     "date": "2026-11-06"
+    },
+    {
+     "label": "Pley: Every team at the PGL Major Singapore",
+     "url": "https://pley.gg/cs2/every-team-at-the-pgl-major-singapore/",
+     "date": "2026-11-02"
+    },
+    {
+     "label": "Insider Gaming: Singapore Major - all qualified teams",
+     "url": "https://insider-gaming.com/pgl-singapore-major-2026-all-qualified-teams/",
+     "date": "2026-11-02"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "hrBh_8gD_zo",
+     "title": "fnatic vs Eternal Fire - HIGHLIGHTS - Stake Ranked Episode 5 Grand Final",
+     "channel": "CS2 by Ra",
+     "why": "The 0-2 to 3-2 comeback that sent them to Singapore",
+     "source": "community editor"
+    }
+   ]
+  },
+  "112": {
+   "pickid": 112,
+   "slug": "9z",
+   "name": "9z Team",
+   "hltvId": 9996,
+   "hltvSlug": "9z",
+   "color": "#6cc4ff",
+   "headline": "Title winners with a slump and a late AWPer swap",
+   "storyline": "9z won XSE Pro League Guangzhou and made the IEM Cologne Major quarter-finals in 2026, but finished last at both PGL Masters Bucharest (15th-16th) and IEM Beijing (13th-16th). On Nov 7 they benched meyern and brought in Brazilian AWPer history for Singapore. Lineup: max, dgt, luchov, HUASOPEEK, history. They start in Stage 1.",
+   "sources": [
+    {
+     "label": "Games.gg: 9z bench meyern, history in for Singapore Major",
+     "url": "https://games.gg/news/9z-meyern-bench-history-singapore-major/",
+     "date": "2026-11-07"
+    },
+    {
+     "label": "eSportNow: PGL Major Singapore - all 32 invites",
+     "url": "https://esportnow.gg/cs2/news/pgl-major-singapore-teams-all-32-invites",
+     "date": "2026-11-06"
+    },
+    {
+     "label": "Pley: Every team at the PGL Major Singapore",
+     "url": "https://pley.gg/cs2/every-team-at-the-pgl-major-singapore/",
+     "date": "2026-11-02"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "dczHQPcczfA",
+     "title": "9Z vs PARIVISION || XSE Pro League Guangzhou 2026 || Gran Final || BO5 || HIGHLIGHTS",
+     "channel": "forg1",
+     "why": "9z's XSE Guangzhou title-winning final",
+     "source": "community editor"
+    }
+   ]
+  },
+  "113": {
+   "pickid": 113,
+   "slug": "imperial",
+   "name": "Imperial Esports",
+   "hltvId": 9455,
+   "hltvSlug": "imperial",
+   "color": "#f2b134",
+   "headline": "Brazil's Imperial open Stage 1 against HEROIC",
+   "storyline": "Imperial arrive as a Stage 1 invite from the Americas standings and open the Swiss against HEROIC on Nov 24. The Brazilian core of VINI, noway and chelo added decenty in February and saadzin from Legacy in July, with tacitus taking over as coach in August. Form is mixed: they went out of Gamers Club Masters VII playoffs to DENDELE 0-3 on Nov 1, and DENDELE are also in this Stage 1.",
+   "sources": [
+    {
+     "label": "Liquipedia: Imperial Esports",
+     "url": "https://liquipedia.net/counterstrike/Imperial_Esports",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "Liquipedia: PGL Major Singapore 2026",
+     "url": "https://liquipedia.net/counterstrike/PGL/2026/Singapore",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "Liquipedia: Stage 1",
+     "url": "https://liquipedia.net/counterstrike/PGL/2026/Singapore/Stage_1",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "HLTV: Imperial",
+     "url": "https://www.hltv.org/team/9455/imperial",
+     "date": "2026-11-17"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "59SSecan2-I",
+     "title": "Imperial vs FlyQuest - HIGHLIGHTS - StarLadder Budapest Major 2025 - STAGE 1 | CS2",
+     "channel": "StarLadder CS2 Highlights",
+     "why": "Imperial's Major Stage 1 meeting with FlyQuest in Budapest 2025",
+     "source": "StarLadder"
+    },
+    {
+     "kind": "youtube",
+     "id": "js2Op0M1cqk",
+     "title": "MIBR vs Imperial - HIGHLIGHTS - StarLadder Budapest Major 2025 - STAGE 2 | CS2",
+     "channel": "StarLadder CS2 Highlights",
+     "why": "Imperial vs MIBR, Stage 2 at the Budapest Major",
+     "source": "StarLadder"
+    }
+   ]
+  },
+  "122": {
+   "pickid": 122,
+   "slug": "the-mongolz",
+   "name": "The MongolZ",
+   "hltvId": 6248,
+   "hltvSlug": "the-mongolz",
+   "color": "#f25c54",
+   "headline": "Asia's flagbearers enter at Stage 2 after IEM Beijing final",
+   "storyline": "The MongolZ skip Stage 1, entering at Stage 2 as an Asia invite. Liquipedia lists them as Esports World Cup 2025 champions and the first Asian team to reach a Major grand final (Austin 2025). As of Nov 2026 they were runners-up at IEM Beijing, beating NAVI in the semi before a 0-3 final loss to MOUZ. The lineup is bLitz, Techno4K, 910, cobrazera and nin9, who joined on Oct 5.",
+   "sources": [
+    {
+     "label": "Liquipedia: The MongolZ",
+     "url": "https://liquipedia.net/counterstrike/The_MongolZ",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "Liquipedia: PGL Major Singapore 2026",
+     "url": "https://liquipedia.net/counterstrike/PGL/2026/Singapore",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "HLTV: The MongolZ",
+     "url": "https://www.hltv.org/team/6248/the-mongolz",
+     "date": "2026-11-17"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "0IgdnaBxOFk",
+     "title": "WINNER TO GRAND FINAL! TheMongolz vs NAVI - HIGHLIGHTS - IEM Beijing 2026 | CS2",
+     "channel": "ESL Counter-Strike Highlights",
+     "why": "Semi-final win over NAVI sends them to the IEM Beijing final",
+     "source": "ESL/BLAST"
+    },
+    {
+     "kind": "youtube",
+     "id": "7HTY3N5d86k",
+     "title": "Legacy vs TheMongolz - HIGHLIGHTS - IEM Beijing 2026 | CS2",
+     "channel": "ESL Counter-Strike Highlights",
+     "why": "Beat Legacy in IEM Beijing 2026 group stage",
+     "source": "ESL/BLAST"
+    }
+   ]
+  },
+  "126": {
+   "pickid": 126,
+   "slug": "legacy",
+   "name": "Legacy",
+   "hltvId": 12468,
+   "hltvSlug": "legacy",
+   "color": "#e5484d",
+   "headline": "Legacy bring title form into Stage 3, but cooled in November",
+   "storyline": "Legacy are a Stage 3 invite from the Americas standings. As of Nov 2026 they have won CS Asia Championships 2026 (3-1 over Falcons) and FISSURE Playground 3, and took third at Esports World Cup 2026. November was rougher: 7th-8th at BLAST Rivals Fall after 0-2 losses to FURIA and Falcons. try joined from Imperial in July, and ksloks was added as a stand-in on Oct 28.",
+   "sources": [
+    {
+     "label": "Liquipedia: Legacy",
+     "url": "https://liquipedia.net/counterstrike/Legacy",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "Liquipedia: PGL Major Singapore 2026",
+     "url": "https://liquipedia.net/counterstrike/PGL/2026/Singapore",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "HLTV: Legacy",
+     "url": "https://www.hltv.org/team/12468/legacy",
+     "date": "2026-11-17"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "u12JTXDRodY",
+     "title": "GRAND FINAL! Falcons vs Legacy - HIGHLIGHTS - CS Asia Championships 2026 | CS2",
+     "channel": "PGL Counter-Strike Highlights",
+     "why": "Their CS Asia Championships 2026 grand final against Falcons",
+     "source": "PGL"
+    },
+    {
+     "kind": "youtube",
+     "id": "qE_S8eoHzS0",
+     "title": "FURIA vs Legacy | CS2 at EWC 26 - Third Place Match - HIGHLIGHTS",
+     "channel": "EWC Extra",
+     "why": "EWC 2026 third-place match against FURIA",
+     "source": "ESL/BLAST"
+    }
+   ]
+  },
+  "127": {
+   "pickid": 127,
+   "slug": "lynn-vision",
+   "name": "Lynn Vision",
+   "hltvId": 8840,
+   "hltvSlug": "lynn-vision",
+   "color": "#ff7a45",
+   "headline": "China's Lynn Vision open against Argentina's 9z",
+   "storyline": "Lynn Vision are a Stage 1 invite from the Asia standings and open against 9z on Nov 24. Liquipedia lists them as Asian Champions League 2026 winners (3-1 over JiJieHao in May). The roster is westmelon, z4kr, EmiliaQAQ, Starry and C4LLM3SU3 under coach GUM. They beat fellow Stage 1 side Chinggis Warriors 3-0 and 2-1 at the C-tier VOID Autumn Cup in October.",
+   "sources": [
+    {
+     "label": "Liquipedia: Lynn Vision",
+     "url": "https://liquipedia.net/counterstrike/Lynn_Vision",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "Liquipedia: Stage 1",
+     "url": "https://liquipedia.net/counterstrike/PGL/2026/Singapore/Stage_1",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "Liquipedia: PGL Major Singapore 2026",
+     "url": "https://liquipedia.net/counterstrike/PGL/2026/Singapore",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "HLTV: Lynn Vision",
+     "url": "https://www.hltv.org/team/8840/lynn-vision",
+     "date": "2026-11-17"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "caIRJAVu8Sk",
+     "title": "TheMongolz vs Lynn Vision - HIGHLIGHTS - CS Asia Championships 2026 | CS2",
+     "channel": "PGL Counter-Strike Highlights",
+     "why": "Lynn Vision against The MongolZ at CS Asia Championships 2026",
+     "source": "PGL"
+    },
+    {
+     "kind": "youtube",
+     "id": "kBHgEmkLLQE",
+     "title": "FIRST MATCH! M80 vs Lynn Vision - HIGHLIGHTS - IEM Cologne Major 2026 Stage 1 | CS2",
+     "channel": "ESL Counter-Strike Highlights",
+     "why": "Their Stage 1 opener at the Cologne Major 2026",
+     "source": "ESL/BLAST"
+    }
+   ]
+  },
+  "130": {
+   "pickid": 130,
+   "slug": "wildcard",
+   "name": "Wildcard",
+   "hltvId": 12257,
+   "hltvSlug": "wildcard",
+   "color": "#a78bfa",
+   "headline": "Wildcard, hot on NA B-tier, face FaZe first",
+   "storyline": "Wildcard are a Stage 1 invite from the Americas standings and open against FaZe on Nov 24. Recent form is solid at B-tier level: they won FRAG University 2026 over DENDELE on Oct 11 and reached the FiReSPORTS Last Chance final on Nov 1, losing 0-2 to 100 Thieves. The lineup is reck, HexT, nEMANHA and Cxzi, plus fr3nd on loan from PURE since Sept 18, coached by splawik.",
+   "sources": [
+    {
+     "label": "Liquipedia: Wildcard",
+     "url": "https://liquipedia.net/counterstrike/Wildcard",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "Liquipedia: Stage 1",
+     "url": "https://liquipedia.net/counterstrike/PGL/2026/Singapore/Stage_1",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "Liquipedia: PGL Major Singapore 2026",
+     "url": "https://liquipedia.net/counterstrike/PGL/2026/Singapore",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "HLTV: Wildcard",
+     "url": "https://www.hltv.org/team/12257/wildcard",
+     "date": "2026-11-17"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "iaHggEcFk9k",
+     "title": "GRAND-FINALS! Wildcard vs DENDELE - Highlights - FRAG University 2026 - CS2",
+     "channel": "LifeOfAPlayer",
+     "why": "Wildcard take FRAG University 2026 over DENDELE",
+     "source": "community editor"
+    },
+    {
+     "kind": "youtube",
+     "id": "GCo6eq4GW1M",
+     "title": "Alliance vs Wildcard - Official Highlights - BLAST Premier Bounty S2 2026",
+     "channel": "BLAST Premier CS2 Highlights",
+     "why": "Wildcard vs Alliance at BLAST Bounty Season 2 2026",
+     "source": "ESL/BLAST"
+    }
+   ]
+  },
+  "132": {
+   "pickid": 132,
+   "slug": "flyquest",
+   "name": "FlyQuest",
+   "hltvId": 12774,
+   "hltvSlug": "flyquest",
+   "color": "#22c55e",
+   "headline": "FlyQuest return with aliStair, open against Eternal Fire",
+   "storyline": "FlyQuest are a Stage 1 invite and open against Eternal Fire on Nov 24. The Oceanic side re-signed aliStair on Sept 2, rejoining INS, Vexite, nettik and jks under coach AZR. As of Nov 2026 they won the DFRAG Invitational, beating Alter Ego 3-0 in the Nov 1 final. They also played the Cologne Major 2026 earlier this year; Liquipedia's results for that run are not confirmed here.",
+   "sources": [
+    {
+     "label": "Liquipedia: FlyQuest",
+     "url": "https://liquipedia.net/counterstrike/FlyQuest",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "Liquipedia: Stage 1",
+     "url": "https://liquipedia.net/counterstrike/PGL/2026/Singapore/Stage_1",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "Liquipedia: PGL Major Singapore 2026",
+     "url": "https://liquipedia.net/counterstrike/PGL/2026/Singapore",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "HLTV: FlyQuest",
+     "url": "https://www.hltv.org/team/12774/flyquest",
+     "date": "2026-11-17"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "_MdFdEmr2f0",
+     "title": "GRAND FINAL | Alter Ego vs FlyQuest | DFRAG Invitational 2026 - HiGHLiGHTS | CS2",
+     "channel": "ZumZik",
+     "why": "FlyQuest's DFRAG Invitational 2026 grand final win",
+     "source": "community editor"
+    },
+    {
+     "kind": "youtube",
+     "id": "pOme624cguA",
+     "title": "FlyQuest vs Legacy - HIGHLIGHTS - IEM Cologne Major 2026 Stage 2 | CS2",
+     "channel": "ESL Counter-Strike Highlights",
+     "why": "FlyQuest vs Legacy at Cologne Major 2026 Stage 2",
+     "source": "ESL/BLAST"
+    }
+   ]
+  },
+  "134": {
+   "pickid": 134,
+   "slug": "aurora",
+   "name": "Aurora",
+   "hltvId": 11861,
+   "hltvSlug": "aurora",
+   "color": "#b57cff",
+   "headline": "Cologne Major semi-finalists Aurora jump in at Stage 3",
+   "storyline": "Aurora skip to Stage 3 as a European invite. As of Nov 2026 they were 3rd-4th at the IEM Cologne Major 2026, losing the semi-final to FURIA, then took second at StarSeries Fall and third at ESL Pro League S24 and Thunderpick World Championship. The roster is XANTARES, Wicadia, woxic, Jimpphat and kyxsan, who joined in July with ashhh as coach. MAJ3R was benched on Jul 2.",
+   "sources": [
+    {
+     "label": "Liquipedia: Aurora Gaming",
+     "url": "https://liquipedia.net/counterstrike/Aurora_Gaming",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "Liquipedia: PGL Major Singapore 2026",
+     "url": "https://liquipedia.net/counterstrike/PGL/2026/Singapore",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "HLTV: Aurora",
+     "url": "https://www.hltv.org/team/11861/aurora",
+     "date": "2026-11-17"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "LmQm7kOR5FE",
+     "title": "SEMI-FINAL! Aurora vs FURIA - HIGHLIGHTS - IEM Cologne Major 2026 Playoff | CS2",
+     "channel": "ESL Counter-Strike Highlights",
+     "why": "Aurora's Cologne Major 2026 semi-final against FURIA",
+     "source": "ESL/BLAST"
+    },
+    {
+     "kind": "youtube",
+     "id": "fbpGt3yANsY",
+     "title": "Aurora vs. Furia | Highlights | IEM Cologne Major 2026",
+     "channel": "Aurora CS2",
+     "why": "Team-channel highlights from the same Cologne semi-final",
+     "source": "team channel"
+    }
+   ]
+  },
+  "138": {
+   "pickid": 138,
+   "slug": "chinggis-warriors",
+   "name": "Chinggis Warriors",
+   "hltvId": 12646,
+   "hltvSlug": "chinggis-warriors",
+   "color": "#e0b84a",
+   "headline": "Mongolia's second team face 100 Thieves in Round 1",
+   "storyline": "Chinggis Warriors are a Stage 1 invite from the Asia standings and open against 100 Thieves on Nov 24. The roster is ROUX, sk0R, fury5k, cool4st and tikuak, who returned from The MongolZ on Sept 27, with Redka coaching. They won ESN Fall Showdown 2026 (2-0 over The Huns) and MESA Pro Series Halloween (2-1 over Auda) in October, though both are C-tier events. At Austin 2025 they finished 28th-30th.",
+   "sources": [
+    {
+     "label": "Liquipedia: Chinggis Warriors",
+     "url": "https://liquipedia.net/counterstrike/Chinggis_Warriors",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "Liquipedia: Stage 1",
+     "url": "https://liquipedia.net/counterstrike/PGL/2026/Singapore/Stage_1",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "Liquipedia: PGL Major Singapore 2026",
+     "url": "https://liquipedia.net/counterstrike/PGL/2026/Singapore",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "HLTV: Chinggis Warriors",
+     "url": "https://www.hltv.org/team/12646/chinggis-warriors",
+     "date": "2026-11-17"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "1GNzgKwKzD0",
+     "title": "LOSER IS OUT! Chinggis Warriors vs Lynn Vision - Official Highlights - BLAST Austin Major 2025 S1",
+     "channel": "BLAST Premier CS2 Highlights",
+     "why": "Chinggis Warriors vs Lynn Vision at the Austin Major 2025",
+     "source": "ESL/BLAST"
+    },
+    {
+     "kind": "youtube",
+     "id": "uGDoOS4UeZs",
+     "title": "[CS2] Chinggis Warriors vs Audacity | MPS Halloween Edition | Grand Final",
+     "channel": "MESA TV",
+     "why": "Their MESA Pro Series Halloween 2026 grand final",
+     "source": "community editor"
+    }
+   ]
+  },
+  "139": {
+   "pickid": 139,
+   "slug": "falcons",
+   "name": "Falcons",
+   "hltvId": 11283,
+   "hltvSlug": "falcons",
+   "color": "#f5b21a",
+   "headline": "Cologne champions, but form since June has wobbled",
+   "storyline": "Falcons (karrigan, NiKo, TeSeS, m0NESY, kyousuke) are the reigning Major champions after beating FURIA 3-0 in the IEM Cologne final, NiKo's first Major. Since then no trophy: early BLAST Bounty exit, an EWC quarter-final loss to Legacy, and a 3rd-4th finish at BLAST Rivals Season 2 after losing to FURIA. As of Nov 2026 they skip straight to Stage 3 (Dec 2) as Europe's seed 7.",
+   "sources": [
+    {
+     "label": "HLTV: Falcons team page (roster, Stage 3 seed 7, Rivals S2 result)",
+     "url": "https://www.hltv.org/team/11283/falcons",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "DotGG: Five storylines that will define the Singapore Major",
+     "url": "https://dotgg.gg/five-storylines-that-will-define-the-singapore-major",
+     "date": "2026-10-01"
+    },
+    {
+     "label": "EsportNow: PGL Major Singapore teams, all 32 lineups",
+     "url": "https://esportnow.gg/cs2/news/pgl-major-singapore-teams-all-32-invites",
+     "date": "2026-11-06"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "VgNPKBGGdG0",
+     "title": "GRAND FINAL! FURIA vs Falcons - HIGHLIGHTS - IEM Cologne Major 2026 Playoff | CS2",
+     "channel": "ESL Counter-Strike Highlights",
+     "why": "The title run: Falcons sweep the Cologne final.",
+     "source": "ESL/BLAST"
+    }
+   ]
+  },
+  "140": {
+   "pickid": 140,
+   "slug": "m80",
+   "name": "M80",
+   "hltvId": 12376,
+   "hltvSlug": "m80",
+   "color": "#ff4a4a",
+   "headline": "Americas Stage 1 regulars open against NiP",
+   "storyline": "M80 (slaxz-, Swisher, s1n, JBa, Lake, coach dephh) enter at Stage 1 and open on Nov 24 in a best-of-one against Ninjas in Pyjamas. HLTV ranks them #24 as of Nov 17. Recent form is mixed: they beat NAVI and FURIA at BLAST Open Porto in August to make the playoffs, but went 0-2 against Spirit, MOUZ and BetBoom at ESL Pro League S24 in October.",
+   "sources": [
+    {
+     "label": "HLTV: M80 team page (roster, Stage 1 opener vs NiP)",
+     "url": "https://www.hltv.org/team/12376/m80",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "HLTV: M80 results",
+     "url": "https://www.hltv.org/results?team=12376",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "EsportNow: PGL Major Singapore teams, all 32 lineups",
+     "url": "https://esportnow.gg/cs2/news/pgl-major-singapore-teams-all-32-invites",
+     "date": "2026-11-06"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "eTP-jRqTC4M",
+     "title": "NAVI vs M80 - Official Highlights - BLAST Premier Open Porto 2026",
+     "channel": "BLAST Premier CS2 Highlights",
+     "why": "M80 upset NAVI at Porto in August.",
+     "source": "ESL/BLAST"
+    },
+    {
+     "kind": "youtube",
+     "id": "QVtafSZzQqw",
+     "title": "WINNER TO PLAYOFFS! M80 vs FURIA - Official Highlights - BLAST Premier Open Porto 2026",
+     "channel": "BLAST Premier CS2 Highlights",
+     "why": "They beat FURIA to reach Porto playoffs.",
+     "source": "ESL/BLAST"
+    }
+   ]
+  },
+  "145": {
+   "pickid": 145,
+   "slug": "fut",
+   "name": "FUT",
+   "hltvId": 13286,
+   "hltvSlug": "fut",
+   "color": "#ff6b2c",
+   "headline": "PGL Bucharest champs and EWC finalists, now cooling off",
+   "storyline": "FUT won PGL Bucharest in April (3-1 over Astralis, cmtry MVP) and reached the Esports World Cup grand final, losing to Spirit. HLTV ranks them #9 and lists them as the top European Stage 2 seed (Nov 28), but they are on a three-series losing streak, finishing 5th-8th at PGL Masters Bucharest and 7th-8th at BLAST Rivals S2. Roster: SunPayus, xfl0ud, dem0n, Krabeni, dziugss.",
+   "sources": [
+    {
+     "label": "HLTV: FUT team page (roster, Stage 2 seed, losing run)",
+     "url": "https://www.hltv.org/team/13286/fut",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "Fragster: FUT win PGL Bucharest 2026",
+     "url": "https://www.fragster.com/fut-esports-win-pgl-bucharest-2026-after-beating-astralis/",
+     "date": "2026-04-14"
+    },
+    {
+     "label": "EsportNow: PGL Major Singapore teams, all 32 lineups",
+     "url": "https://esportnow.gg/cs2/news/pgl-major-singapore-teams-all-32-invites",
+     "date": "2026-11-06"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "L66qOhCoRFU",
+     "title": "GRAND FINAL! Astralis vs FUT - HIGHLIGHTS - PGL Bucharest 2026 | CS2",
+     "channel": "PGL Counter-Strike Highlights",
+     "why": "FUT win their first big LAN trophy.",
+     "source": "PGL"
+    },
+    {
+     "kind": "youtube",
+     "id": "2OyP47fBf3Q",
+     "title": "GRAND FINAL! FUT vs Spirit | CS2 at EWC 26 - Grand Final - HIGHLIGHTS",
+     "channel": "EWC Extra",
+     "why": "Esports World Cup final against Spirit.",
+     "source": "ESL/BLAST"
+    }
+   ]
+  },
+  "149": {
+   "pickid": 149,
+   "slug": "1win",
+   "name": "The One",
+   "hltvId": 10621,
+   "hltvSlug": "1win",
+   "color": "#3ddc97",
+   "headline": "1win in disguise: Moscow champs debuting in Stage 2",
+   "storyline": "The One is the 1win roster (Ax1Le, nafany, BELCHONOKK, fame, ArtFr0st, coach groove), renamed for Singapore's gambling-advertising rules. They earned a Major debut by beating HOTU 2-0 in the GLuck Moscow Cyber Games final on Nov 1, and enter at Stage 2 (Nov 28) as the 4th invite seed. HLTV has them #15. The core has played together about three months.",
+   "sources": [
+    {
+     "label": "HLTV: 1win team page (roster, Stage 2 seed 4, Moscow final)",
+     "url": "https://www.hltv.org/team/10621/1win",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "Strafe: S1mple's BC.Game among teams rebranding for PGL Singapore Major",
+     "url": "https://www.strafe.com/news/read/s1mple-bc-game-among-teams-rebranding-for-pgl-singapore-major-2026",
+     "date": "2026-11-06"
+    },
+    {
+     "label": "EsportNow: PGL Major Singapore teams, all 32 lineups",
+     "url": "https://esportnow.gg/cs2/news/pgl-major-singapore-teams-all-32-invites",
+     "date": "2026-11-06"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "isZs4kUMOw0",
+     "title": "GRAND-FINAL! 1WiN vs HOTU – HIGHLIGHTS  | GLuck Moscow Cyber Games 2026 - CS2",
+     "channel": "eSportsTV",
+     "why": "The final that sent 1win to the Major.",
+     "source": "community editor"
+    }
+   ]
+  },
+  "150": {
+   "pickid": 150,
+   "slug": "bc-game",
+   "name": "GOSH",
+   "hltvId": 12878,
+   "hltvSlug": "bc-game",
+   "color": "#ffd23f",
+   "headline": "s1mple's BC.Game, competing as GOSH in Stage 1",
+   "storyline": "GOSH is the BC.Game roster: s1mple, Magisk, asap, Senzu and mzinho (coach TaZ), forced to rebrand for Singapore. Valve let them qualify through the Asian standings, and it is a Major debut for the org. HLTV ranks them #46 as of Nov 17, with recent losses to Eternal Fire and OG in October. They start in Stage 1 on Nov 24.",
+   "sources": [
+    {
+     "label": "HLTV: BC.Game team page (roster, VRS #3 Asia)",
+     "url": "https://www.hltv.org/team/12878/bc-game",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "Strafe: S1mple's BC.Game among teams rebranding for PGL Singapore Major",
+     "url": "https://www.strafe.com/news/read/s1mple-bc-game-among-teams-rebranding-for-pgl-singapore-major-2026",
+     "date": "2026-11-06"
+    },
+    {
+     "label": "EsportNow: PGL Major Singapore teams, all 32 lineups",
+     "url": "https://esportnow.gg/cs2/news/pgl-major-singapore-teams-all-32-invites",
+     "date": "2026-11-06"
+    },
+    {
+     "label": "HLTV: BC.Game results",
+     "url": "https://www.hltv.org/results?team=12878",
+     "date": "2026-11-17"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "q40x382i2SI",
+     "title": "S1MPLE! BC.Game vs OG – HIGHLIGHTS | HyperX Retake Season 13 - CS2",
+     "channel": "eSportsTV",
+     "why": "s1mple's recent form with the new BC.Game core.",
+     "source": "community editor"
+    },
+    {
+     "kind": "youtube",
+     "id": "d_WutTQfots",
+     "title": "NEW S1MPLE ROSTER! Vitality vs BC.Game - HIGHLIGHTS - IEM Atlanta 2026 | CS2",
+     "channel": "ESL Counter-Strike Highlights",
+     "why": "The new s1mple roster debuts against Vitality.",
+     "source": "ESL/BLAST"
+    }
+   ]
+  },
+  "151": {
+   "pickid": 151,
+   "slug": "dendele",
+   "name": "DENDELE",
+   "hltvId": 13926,
+   "hltvSlug": "dendele",
+   "color": "#b57bff",
+   "headline": "Brazil's former Sharks lineup, fresh off a GC Masters title run",
+   "storyline": "DENDELE (gafolo, koala, maxxkor, rdnzao, doc, coach coachi) are the former Sharks lineup and make their Major debut in Stage 1. HLTV ranks them #33 as of Nov 17. They opened Singapore prep with a 3-0 win over Imperial in the Gamers Club Masters VII final (early Nov, per HLTV results), after beating G2 2-1 at PGL Masters Bucharest. First match: PARIVISION on Nov 24.",
+   "sources": [
+    {
+     "label": "HLTV: DENDELE team page (roster, first match vs PARIVISION)",
+     "url": "https://www.hltv.org/team/13926/dendele",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "HLTV: DENDELE results",
+     "url": "https://www.hltv.org/results?team=13926",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "EsportNow: PGL Major Singapore teams, all 32 lineups",
+     "url": "https://esportnow.gg/cs2/news/pgl-major-singapore-teams-all-32-invites",
+     "date": "2026-11-06"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "YXffN_dHbO0",
+     "title": "LOSER IS OUT! G2 vs DENDELE - HIGHLIGHTS - PGL Masters Bucharest 2026 | CS2",
+     "channel": "PGL Counter-Strike Highlights",
+     "why": "DENDELE beat G2 in an elimination match.",
+     "source": "PGL"
+    },
+    {
+     "kind": "youtube",
+     "id": "A8xa7Ts9_Ak",
+     "title": "Legacy vs DENDELE - HIGHLIGHTS - PGL Masters Bucharest 2026 | CS2",
+     "channel": "PGL Counter-Strike Highlights",
+     "why": "Facing Legacy at Bucharest, a top Americas test.",
+     "source": "PGL"
+    }
+   ]
+  },
+  "152": {
+   "pickid": 152,
+   "slug": "betboom",
+   "name": "BB Team",
+   "hltvId": 12394,
+   "hltvSlug": "betboom",
+   "color": "#ff3df0",
+   "headline": "BetBoom as BB Team: Stage 3 entry after a deep Bucharest run",
+   "storyline": "BB Team is the BetBoom roster (Boombl4, zorte, S1ren, d1Ledez, Magnojez, coach Fierce), renamed for Singapore. As of Nov 2026 HLTV ranks them #7 and lists them as Europe's seed 6, starting directly in Stage 3 (Dec 2). Recent form: beat Spirit and NAVI at PGL Masters Bucharest before losing to FURIA, then finished 4th at IEM Beijing, beating FURIA but losing the third-place match to NAVI.",
+   "sources": [
+    {
+     "label": "HLTV: BETBOOM team page (roster, Stage 3 seed 6, IEM Beijing 4th)",
+     "url": "https://www.hltv.org/team/12394/betboom",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "Strafe: S1mple's BC.Game among teams rebranding for PGL Singapore Major",
+     "url": "https://www.strafe.com/news/read/s1mple-bc-game-among-teams-rebranding-for-pgl-singapore-major-2026",
+     "date": "2026-11-06"
+    },
+    {
+     "label": "EsportNow: PGL Major Singapore teams, all 32 lineups",
+     "url": "https://esportnow.gg/cs2/news/pgl-major-singapore-teams-all-32-invites",
+     "date": "2026-11-06"
+    },
+    {
+     "label": "HLTV: BETBOOM results",
+     "url": "https://www.hltv.org/results?team=12394",
+     "date": "2026-11-17"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "AOO33S4a10I",
+     "title": "Spirit vs BetBoom Team - HIGHLIGHTS - PGL Masters Bucharest 2026 | CS2",
+     "channel": "PGL Counter-Strike Highlights",
+     "why": "BetBoom topple Spirit at PGL Masters Bucharest.",
+     "source": "PGL"
+    }
+   ]
+  },
+  "153": {
+   "pickid": 153,
+   "slug": "parivision",
+   "name": "PVISION",
+   "hltvId": 12467,
+   "hltvSlug": "parivision",
+   "color": "#4fc3ff",
+   "headline": "PARIVISION as PVISION: Stage 1 star power with Jame and FL1T",
+   "storyline": "PVISION is PARIVISION (HObbit, FL1T, Jame, xiELO, zweih, coach dastan), renamed for Singapore. They start in Stage 1. HLTV ranks them #13 as of Nov 17. At IEM Beijing they beat G2 and Liquid before falling to NAVI on Nov 6, but lost 0-2 to HEROIC in a PGL Cluj-Napoca 2027 qualifier on Nov 16. They open Stage 1 against DENDELE on Nov 24.",
+   "sources": [
+    {
+     "label": "HLTV: PARIVISION team page (roster, Stage 1 opener vs DENDELE)",
+     "url": "https://www.hltv.org/team/12467/parivision",
+     "date": "2026-11-17"
+    },
+    {
+     "label": "Strafe: S1mple's BC.Game among teams rebranding for PGL Singapore Major",
+     "url": "https://www.strafe.com/news/read/s1mple-bc-game-among-teams-rebranding-for-pgl-singapore-major-2026",
+     "date": "2026-11-06"
+    },
+    {
+     "label": "EsportNow: PGL Major Singapore teams, all 32 lineups",
+     "url": "https://esportnow.gg/cs2/news/pgl-major-singapore-teams-all-32-invites",
+     "date": "2026-11-06"
+    },
+    {
+     "label": "HLTV: PARIVISION results",
+     "url": "https://www.hltv.org/results?team=12467",
+     "date": "2026-11-17"
+    }
+   ],
+   "clips": [
+    {
+     "kind": "youtube",
+     "id": "ydbcYOmJFt8",
+     "title": "PARIVISION vs G2 - HIGHLIGHTS - IEM Beijing 2026 | CS2",
+     "channel": "ESL Counter-Strike Highlights",
+     "why": "Recent LAN form: PARIVISION beat G2 in Beijing.",
+     "source": "ESL/BLAST"
+    }
+   ]
+  }
+ }
+}
