@@ -5,18 +5,18 @@
  * Cologne 2026" entry lands. Brandon 10/24: an actual notification, not a popup over the page, so a
  * player who just came back isn't overloaded and can go through it at their
  * own pace. Walks them through what HOTLINE credited them from earlier Majors
- * (achievements as pins, the XP banked) and what it unlocks. XP, never the
- * level number: that stays hidden until PHATT ID sign-in is live.
+ * (achievements as pins, the XP banked) and what it unlocks, and where they
+ * stand now: their HOTLINE level (PHA-5265) and the next felt it opens.
  */
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { getWelcomeHaul } from "@/lib/progression";
-import { ACHIEVEMENTS, ACHIEVEMENT_BY_KEY, FELTS, SHOWCASE_SIZE, XP } from "@/lib/progression-core";
+import { ACHIEVEMENTS, ACHIEVEMENT_BY_KEY, FELTS, SHOWCASE_SIZE, XP, levelProgress, nextFelt } from "@/lib/progression-core";
 import { getEventConfig } from "@/lib/events-core";
 import { majorShortName } from "@/components/sg/people/people-data";
-import { TrinketPin } from "@/components/sg/people/Achievements";
+import { LevelBar, TrinketPin } from "@/components/sg/people/Achievements";
 import { PHOTOS } from "@/lib/photos";
 import { MarkWelcomeRead } from "./MarkWelcomeRead";
 
@@ -33,6 +33,8 @@ export default async function PhattIdPage() {
   const haul = await getWelcomeHaul(session.playerId);
   const profile = `/players/${encodeURIComponent(session.playerId)}`;
   const n = haul.unlocks.length;
+  const progress = levelProgress(haul.totalXp);
+  const felt = nextFelt(haul.level);
   const where = haul.majors.length === 1 ? haul.majors[0] : "earlier Majors";
   const majorName = (eid: number | null) => {
     const cfg = eid != null ? getEventConfig(eid) : null;
@@ -61,16 +63,21 @@ export default async function PhattIdPage() {
               <> Your first picks start it.</>
             )}
           </p>
-          {n > 0 && (
-            <div className="pid-stats rise d2">
-              <span>
-                <b>{n}</b> achievement{n === 1 ? "" : "s"}
-              </span>
-              <span>
-                <b>{haul.xp.toLocaleString("en-US")}</b> XP banked
-              </span>
-            </div>
-          )}
+          <div className="pid-stats rise d2">
+            <span>
+              <b>{haul.level}</b> HOTLINE level
+            </span>
+            {n > 0 && (
+              <>
+                <span>
+                  <b>{n}</b> achievement{n === 1 ? "" : "s"}
+                </span>
+                <span>
+                  <b>{haul.xp.toLocaleString("en-US")}</b> XP banked
+                </span>
+              </>
+            )}
+          </div>
         </div>
       </section>
 
@@ -154,10 +161,23 @@ export default async function PhattIdPage() {
           <h2>How XP adds up</h2>
           <p>
             {`${XP.showingUp} for showing up, ${XP.stageEntered} for each stage you enter, ${XP.majorFinished} for finishing a Major and ${XP.achievement} for every achievement.`}{" "}
-            Points and rank don&apos;t earn XP; they earn coins and achievements. Your level shows once PHATT ID
-            sign-in goes live across the arcade.
+            Points and rank don&apos;t earn XP; they earn coins and achievements.
           </p>
         </div>
+        <LevelBar progress={progress} />
+        <p className="pid-next">
+          {progress.next === null ? (
+            <>You&apos;re at the top: HOTLINE level {haul.level}, every felt open.</>
+          ) : felt ? (
+            <>
+              You&apos;re HOTLINE level <b>{haul.level}</b>. Next felt: <b>{felt.name}</b> at level {felt.level}
+              {felt.level === progress.next ? ", the next level up." : "."}
+            </>
+          ) : (
+            <>You&apos;re HOTLINE level <b>{haul.level}</b>, with every felt open.</>
+          )}{" "}
+          HOTLINE is one track of your PHATT ID; your arcade-wide level adds up every PHATT game and lives on the arcade.
+        </p>
         <p className="pid-ctas">
           <Link href={`${profile}#achievements`} prefetch={false} className="btn-solid">
             See my profile

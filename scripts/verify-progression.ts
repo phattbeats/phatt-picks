@@ -7,7 +7,9 @@
  *     300/week caps, 50 per Major finished and 25 per achievement outside caps;
  *   • a stage counts only once it has LOCKED with a full set of picks;
  *   • each of the 12 achievement rules, at the earliest instant it was earned;
- *   • felts unlock at levels 5/10/15/30/50; a stale loadout falls back to default.
+ *   • felts unlock at levels 5/10/15/30/50; a stale loadout falls back to default;
+ *   • the HOTLINE level shown on the profile (PHA-5265): the bar's "into / span to
+ *     level N" at each curve edge, "max" at 50, and the next felt.
  *
  * Pure-only (no prisma). Run: node scripts/verify-progression.ts
  */
@@ -31,6 +33,8 @@ import {
   charmsHeld,
   cleanCharms,
   keyringFor,
+  levelProgress,
+  nextFelt,
   type StageFact,
   type PlayerFacts,
   type AchievementKey,
@@ -257,6 +261,29 @@ console.log("showcase");
   check("showcase parse caps at three and drops repeats/unknowns", cleanShowcase(["called_it", "called_it", "nope", "veteran", "climber", "synced"]).join() === "called_it,veteran,climber");
   check("old loadout JSON gets an empty showcase", parseLoadout(JSON.stringify({ felt: "oxblood" })).showcase.length === 0);
   check("a showcase pick you don't hold isn't worn", effectiveLoadout({ felt: null, banner: null, showcase: ["veteran", "called_it"], charms: [] }, 1, held).showcase.join() === "called_it");
+}
+
+console.log("level shown (PHA-5265)");
+{
+  const at = (xp: number) => levelProgress(xp);
+  const p0 = at(0);
+  check("0 XP: level 1, 0 / 40 to level 2", p0.level === 1 && p0.into === 0 && p0.span === 40 && p0.next === 2);
+  const p39 = at(39);
+  check("39 XP: level 1, 39 / 40", p39.level === 1 && p39.into === 39 && p39.span === 40);
+  const p40 = at(40);
+  check("40 XP: level 2, 0 / 42 to level 3", p40.level === 2 && p40.into === 0 && p40.span === 42 && p40.next === 3);
+  const p431 = at(431);
+  check("431 XP: level 9, 55 / 56 to level 10", p431.level === 9 && p431.into === 55 && p431.span === 56 && p431.next === 10);
+  check("432 XP: level 10", at(432).level === 10 && at(432).into === 0);
+  const pMax = at(4312);
+  check("4,312 XP: level 50, no next level", pMax.level === 50 && pMax.next === null && pMax.span === 0);
+  check("past the cap still reads max", at(99_999).level === 50 && at(99_999).next === null && at(99_999).xp === 99_999);
+  check("negative / NaN XP reads level 1", at(-5).level === 1 && at(NaN).level === 1 && at(NaN).xp === 0);
+  check("the bar's level is the felts' level at every XP", [0, 39, 40, 431, 432, 1000, 4311, 4312].every((x) => at(x).level === levelForXp(x)));
+  check("level 9 → next felt Forest at 10", nextFelt(9)?.key === "forest" && nextFelt(9)?.level === 10);
+  check("level 10 → next felt Black velvet at 15", nextFelt(10)?.key === "velvet");
+  check("level 50 → no next felt", nextFelt(50) === null);
+  check("one XP short of 10: Forest locked in the loadout", effectiveLoadout({ felt: "forest", banner: null, showcase: [], charms: [] }, levelForXp(431), new Set()).felt === null);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

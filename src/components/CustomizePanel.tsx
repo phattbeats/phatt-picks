@@ -3,9 +3,8 @@
 /**
  * Settings → Customize (PHA-4477): pick the three achievements shown off in
  * your profile banner, the felt your coin case is lined with and the banner
- * photo behind your profile. Felts unlock as your PHATT ID levels
- * up (the level number itself stays hidden until PHATT ID sign-in is live);
- * banners unlock with achievements. Optimistic: the choice shows at once, the
+ * photo behind your profile. Felts unlock with your HOTLINE level (shown here,
+ * PHA-5265); banners unlock with achievements. Optimistic: the choice shows at once, the
  * PATCH to /api/loadout follows, and a refusal puts the old choice back.
  */
 
@@ -16,6 +15,8 @@ export interface FeltOption {
   name: string;
   tile: string;
   bed: string;
+  /** The HOTLINE level it unlocks at. */
+  level: number;
   unlocked: boolean;
 }
 
@@ -66,6 +67,7 @@ export function CustomizePanel({
   charmOptions,
   initialCharms,
   keyringSize,
+  level,
 }: {
   felts: FeltOption[];
   banners: BannerOption[];
@@ -81,6 +83,8 @@ export function CustomizePanel({
   charmOptions: CharmOption[];
   initialCharms: string[];
   keyringSize: number;
+  /** The player's HOTLINE level, the number the felts unlock from. */
+  level: number;
 }) {
   const [charms, setCharms] = useState<string[]>(initialCharms);
   const [showcase, setShowcase] = useState<string[]>(initialShowcase);
@@ -205,7 +209,9 @@ export function CustomizePanel({
       )}
 
       <div className="cz-group">
-        <span className="eyebrow">Case felt</span>
+        <span className="eyebrow">
+          Case felt · HOTLINE level <b>{level}</b>
+        </span>
         <div className="cz-felts" role="radiogroup" aria-label="Case felt">
           {felts.map((f) => (
             <button
@@ -217,14 +223,18 @@ export function CustomizePanel({
               className={`cz-felt${felt === f.key ? " on" : ""}${f.unlocked ? "" : " locked"}`}
               style={{ background: `${f.bed} url(${f.tile}) center / cover no-repeat` }}
               onClick={() => f.unlocked && felt !== f.key && pickFelt(f.key)}
-              title={f.unlocked ? f.name : `${f.name}: unlocks as your PHATT ID levels up`}
+              title={f.unlocked ? f.name : `${f.name}: unlocks at HOTLINE level ${f.level}`}
             >
               <span className="cz-felt-nm">{f.name}</span>
-              {!f.unlocked && <span className="cz-lock">Locked</span>}
+              {!f.unlocked && <span className="cz-lock">Unlocks at level {f.level}</span>}
             </button>
           ))}
         </div>
-        <p className="nf-meta">New felts unlock as your PHATT ID levels up.</p>
+        <p className="nf-meta">
+          {felts.every((f) => f.unlocked)
+            ? "Every felt is yours."
+            : `New felts unlock as your HOTLINE level goes up. You're level ${level}.`}
+        </p>
       </div>
 
       <div className="cz-group">
