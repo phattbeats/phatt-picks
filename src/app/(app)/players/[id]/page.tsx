@@ -57,7 +57,7 @@ import {
 } from "@/components/sg/people/people-data";
 import { profilePhoto } from "@/lib/photos";
 import { getPlayerProgression } from "@/lib/progression";
-import { ACHIEVEMENT_BY_KEY, CHARM_BY_KEY, feltByKey, keyringFor, showcaseFor } from "@/lib/progression-core";
+import { ACHIEVEMENT_BY_KEY, CHARMS, CHARM_BY_KEY, feltByKey, keyringFor, showcaseFor } from "@/lib/progression-core";
 import { Showcase, AchievementList } from "@/components/sg/people/Achievements";
 import { Keyring } from "@/components/Keyring";
 import { coinShortName } from "@/components/heat/ChallengeCoinShelf";
@@ -186,6 +186,16 @@ export default async function PlayerProfilePage({
     const c = CHARM_BY_KEY.get(k)!;
     return { key: c.key, name: c.name, model: c.model, poster: c.poster };
   });
+  // PHA-5305: the keyring shows what is still missing — greyed out, so the
+  // collection reads whole. Your own profile only; nobody else's gaps.
+  const lockedCharms = isSelf
+    ? CHARMS.filter((c) => !keyring.some((k) => k.key === c.key)).map((c) => ({
+        key: c.key,
+        name: c.name,
+        model: c.model,
+        poster: c.poster,
+      }))
+    : [];
   const majorName = (eid: number) => {
     const cfg = getEventConfig(eid);
     return cfg ? coinShortName(cfg.name) : null;
@@ -381,8 +391,6 @@ export default async function PlayerProfilePage({
           </nav>
         </div>
       </section>
-
-      <Keyring charms={keyring} />
 
       {!isLiveView && (
         <div className="pp-viewing" role="status">
@@ -752,6 +760,10 @@ export default async function PlayerProfilePage({
             : null
         }
       />
+
+      {/* The keyring (PHA-4505, PHA-5305) — last on the page: the toys, the
+          collection, and what is still missing. */}
+      <Keyring charms={keyring} locked={lockedCharms} />
     </div>
   );
 }

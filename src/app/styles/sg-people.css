@@ -347,10 +347,37 @@
 .kr-slot { display: flex; flex-direction: column; align-items: center; }
 .kr-thread { width: 2px; height: 14px; background: linear-gradient(#aab2bd, #6b7380); }
 .kr-charm {
-  position: relative; display: block; width: clamp(96px, 22vw, 140px); aspect-ratio: 1; border-radius: var(--r-sm);
-  outline-offset: 3px; touch-action: manipulation;
+  position: relative; display: block; width: clamp(88px, 20vw, 124px); aspect-ratio: 1; border-radius: var(--r-sm);
+  outline-offset: 3px; touch-action: none; cursor: grab;
 }
 .kr-charm img, .kr-3d, .kr-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: contain; }
 .kr-charm img { transition: opacity .15s var(--ease); filter: drop-shadow(0 6px 8px rgba(0,0,0,.45)); }
 .kr-charm.live img { opacity: 0; }
 .cz-charm-img { object-fit: contain; flex: none; }
+
+/* ── PHA-5305: the keyring as a toy. Charms hang on threads and can be
+   picked up, swung and thrown; they knock into each other on the way. ── */
+.kr-stage { position: relative; height: 250px; margin-top: 4px; touch-action: none; }
+.kr-stage .kr-ring { position: absolute; left: 0; top: 0; margin: 0; }
+.kr-threads { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.kr-field { position: absolute; inset: 0; }
+.kr-body { position: absolute; left: 0; top: 0; will-change: transform; }
+.kr-body .kr-charm { cursor: grab; }
+.kr-body .kr-charm:active, .kr-body .kr-charm.dragging { cursor: grabbing; }
+.kr-body .kr-charm:focus-visible { outline: 2px solid var(--heat); }
+
+/* Less motion asked for: the charms hang in a row, no threads, no swinging. */
+@media (prefers-reduced-motion: reduce) {
+  .kr-stage { height: auto; display: flex; align-items: flex-start; gap: 6px; touch-action: auto; }
+  .kr-stage .kr-ring { position: static; flex: none; }
+  .kr-threads { display: none; }
+  .kr-field { position: static; display: flex; gap: 10px; flex-wrap: wrap; }
+  .kr-body { position: static; }
+  .kr-body .kr-charm { cursor: default; }
+}
+
+/* Charms you have not earned yet: greyed out, still part of the collection. */
+.kr-locked { list-style: none; display: flex; gap: 10px; margin: 4px 0 0; padding: 0; flex-wrap: wrap; }
+.kr-locked-item .kr-charm { width: clamp(58px, 13vw, 84px); cursor: default; }
+.kr-locked-item .kr-charm img { filter: grayscale(1) brightness(.6) contrast(.85); opacity: .5; }
+.kr-locked-item .kr-charm.empty { border: 1px dashed var(--hair-3); border-radius: 50%; background: rgba(255,255,255,.02); }
