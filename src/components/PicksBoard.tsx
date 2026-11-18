@@ -401,7 +401,7 @@ export function PicksBoard({
                                 : over
                                   ? "Drop to place"
                                   : enabled
-                                    ? "Tap a team, then here"
+                                    ? `${disp.title} · tap a team, then here`
                                     : "Empty"}
                             </span>
                           )}

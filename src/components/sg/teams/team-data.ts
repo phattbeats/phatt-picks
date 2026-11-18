@@ -12,8 +12,9 @@
  */
 
 import { prisma } from "@/lib/db";
-import { getCommittedLayout, type Layout, type Section, type TeamDef } from "@/lib/layout";
-import { getEventConfig } from "@/lib/events-core";
+import { getCommittedLayout, committedLayoutFor, type Layout, type Section, type TeamDef } from "@/lib/layout";
+import { currentEventId, getEventConfig } from "@/lib/events-core";
+import { storyForSlug } from "@/lib/team-stories";
 import { isRevealForcedById } from "@/lib/event-freeze";
 import { isLockTimePassed } from "@/lib/lock-schedule-core";
 import { arePicksRevealed } from "@/lib/reveal-core";
@@ -62,12 +63,18 @@ export interface TeamPageData {
 
 const CITY_BY_EVENT: Record<number, string> = { 26: "Cologne", 27: "Singapore" };
 
+/** The layout of the event being served (Singapore once current), else the committed default. */
+export function servedLayout(): Layout {
+  return committedLayoutFor(currentEventId()) ?? getCommittedLayout();
+}
+
 /** Resolve a URL slug to a layout team (HLTV slug, name slug or logo key). */
 export function findTeamBySlug(layout: Layout, slug: string): TeamDef | null {
   const s = decodeURIComponent(slug).toLowerCase();
   return (
     layout.teams.find((t) => t.pickid > 0 && teamSlug(t) === s) ??
     layout.teams.find((t) => t.pickid > 0 && t.logo.toLowerCase() === s) ??
+    layout.teams.find((t) => t.pickid === storyForSlug(s)?.pickid) ??
     null
   );
 }
@@ -78,7 +85,7 @@ export function fieldTeams(layout: Layout): TeamDef[] {
 }
 
 export async function loadTeamPage(slug: string, nowMs: number): Promise<TeamPageData | null> {
-  const layout = getCommittedLayout();
+  const layout = servedLayout();
   const team = findTeamBySlug(layout, slug);
   if (!team) return null;
 

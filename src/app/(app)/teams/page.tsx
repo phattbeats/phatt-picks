@@ -4,19 +4,18 @@
  */
 
 import Link from "next/link";
-import { getCommittedLayout } from "@/lib/layout";
 import { getEventConfig } from "@/lib/events-core";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
 import { regionMetaForPickid } from "@/lib/regions-core";
 import { statsForPickid } from "@/lib/team-stats-core";
-import { fieldTeams } from "@/components/sg/teams/team-data";
+import { fieldTeams, servedLayout } from "@/components/sg/teams/team-data";
 import { teamHref } from "@/components/sg/teams/team-assets";
 
 export const metadata = { title: "Teams · HOTLINE" };
 
 export default function TeamsIndexPage() {
-  const layout = getCommittedLayout();
+  const layout = servedLayout();
   const event = getEventConfig(layout.event);
   const field = fieldTeams(layout)
     .map((t) => ({ t, rank: statsForPickid(t.pickid)?.worldRank ?? null, region: regionMetaForPickid(t.pickid) }))

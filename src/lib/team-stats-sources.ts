@@ -60,6 +60,21 @@ export const TEAM_SOURCES: Readonly<Record<number, TeamSource>> = {
   146: { hltvId: 11571, slug: "gaimin-gladiators", name: "Gaimin Gladiators" },
   147: { hltvId: 10577, slug: "sinners", name: "SINNERS" },
   148: { hltvId: 13486, slug: "thunder-downunder", name: "THUNDER dOWNUNDER" },
+  // PGL Singapore 2026 additions (PHA-1056), HLTV ids from singapore-field.json.
+  // The One / GOSH are the Valve-layout names for 1win / BC.Game (PHA-5256). BB Team (152)
+  // and PVISION (153) share HLTV ids with BetBoom (137) / PARIVISION (142); ids must stay
+  // distinct (verify-team-stats-live), so they get no stats source until PHA-5255 maps them.
+  149: { hltvId: 10621, slug: "1win", name: "1win" },
+  150: { hltvId: 12878, slug: "bc-game", name: "BC.Game" },
+  1: { hltvId: 4411, slug: "nip", name: "Ninjas in Pyjamas" },
+  61: { hltvId: 6667, slug: "faze", name: "FaZe" },
+  78: { hltvId: 8474, slug: "100-thieves", name: "100 Thieves" },
+  107: { hltvId: 7969, slug: "nemiga", name: "Nemiga" },
+  110: { hltvId: 11251, slug: "eternal-fire", name: "Eternal Fire" },
+  113: { hltvId: 9455, slug: "imperial", name: "Imperial" },
+  130: { hltvId: 12257, slug: "wildcard", name: "Wildcard" },
+  138: { hltvId: 12646, slug: "chinggis-warriors", name: "Chinggis Warriors" },
+  151: { hltvId: 13926, slug: "dendele", name: "DENDELE" },
 };
 
 import type { TeamStats } from "./team-stats-core";

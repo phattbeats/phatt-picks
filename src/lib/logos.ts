@@ -7,6 +7,7 @@
  */
 
 import manifest from "@/fixtures/cologne-logos.json";
+import singaporeManifest from "@/fixtures/pgl-singapore-2026-logos.json";
 import teamMarks from "@/fixtures/team-marks.json";
 import {
   resolveLogoTiers as resolveLogoTiersCore,
@@ -18,7 +19,12 @@ import {
 export type { LogoTier, ResolvableTeam } from "./logos-core";
 export { selfHostUrl, monogramLabel } from "./logos-core";
 
-const LOGOS: LogoMap = (manifest as { logos: LogoMap }).logos;
+// Pickids are stable per team across Majors, so a later event overrides an earlier
+// one and teams without a new sticker keep the previous event's mark.
+const LOGOS: LogoMap = {
+  ...(manifest as { logos: LogoMap }).logos,
+  ...(singaporeManifest as { logos: LogoMap }).logos,
+};
 /** Slugs with a self-hosted team mark in public/logos (scripts/build-team-marks.ts). */
 const MARKS: ReadonlySet<string> = new Set((teamMarks as { marks: string[] }).marks);
 

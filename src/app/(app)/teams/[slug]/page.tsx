@@ -9,13 +9,12 @@
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getCommittedLayout } from "@/lib/layout";
-import { findTeamBySlug, loadTeamPage } from "@/components/sg/teams/team-data";
+import { findTeamBySlug, servedLayout, loadTeamPage } from "@/components/sg/teams/team-data";
 import { TeamView } from "@/components/sg/teams/TeamView";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const team = findTeamBySlug(getCommittedLayout(), slug);
+  const team = findTeamBySlug(servedLayout(), slug);
   return { title: team ? `${team.name} · HOTLINE` : "Team · HOTLINE" };
 }
 

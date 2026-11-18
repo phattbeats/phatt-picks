@@ -31,8 +31,8 @@ export function teamCode(team: Pick<TeamDef, "name" | "logo">): string {
 
 /** Bucket label from swiss-bucket-core → the Singapore board label. */
 export function bucketDisplay(label: string): { title: string; short: string } {
-  if (label === "3:0 ADVANCED") return { title: "Sweep · 3–0", short: "3–0" };
-  if (label.includes("0:3")) return { title: "Out · 0–3", short: "0–3" };
-  if (label.includes("3:1") || label.includes("3:2")) return { title: "Advance", short: "ADV" };
+  if (label === "3:0 ADVANCED") return { title: "3-0", short: "3-0" };
+  if (label.includes("0:3")) return { title: "0-3", short: "0-3" };
+  if (label.includes("3:1") || label.includes("3:2")) return { title: "Advancing", short: "ADV" };
   return { title: label, short: label };
 }

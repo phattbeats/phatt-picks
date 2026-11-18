@@ -62,6 +62,18 @@ export const TEAM_REGIONS: Record<number, Region> = {
   146: "EU", // Gaimin Gladiators (intl)
   147: "EU", // Sinners (CZ)
   148: "OCE", // THUNDER dOWNUNDER (AU)
+  // PGL Singapore 2026 additions (PHA-1056) — pickids new to the field. The One,
+  // GOSH and DENDELE are left untagged (null) until their region is confirmed.
+  1: "EU", // Ninjas in Pyjamas (SE)
+  61: "EU", // FaZe Clan (intl)
+  78: "NA", // 100 Thieves
+  107: "EU", // Nemiga (CIS)
+  110: "EU", // Eternal Fire (TR)
+  113: "SA", // Imperial Esports (BR)
+  130: "NA", // Wildcard
+  138: "ASIA", // Chinggis Warriors (MN)
+  152: "EU", // BB Team (CIS)
+  153: "EU", // PVISION (CIS)
 };
 
 /** Region code for a pickid, or null for TBD / unknown teams. */
