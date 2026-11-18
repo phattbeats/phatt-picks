@@ -1,20 +1,18 @@
 /**
  * Pick'Em board art helpers (Singapore skin, HANDOFF §3).
  *
- * Pool cards and the dossier use a player cutout when one ships in
- * /public/wrapped/player-<pickid>.webp; every other team falls back to its
- * colour + code. The set below mirrors the files actually committed — keep it in
- * sync when cutouts are added (an unlisted file simply isn't used).
+ * Pool cards and the dossier use the team's player cutout (teamPortrait: the
+ * curated wrapped portrait, else the top-rated starter's HLTV bodyshot); a team
+ * with neither falls back to its colour + code.
  */
 import type { TeamDef } from "@/lib/layout";
 import { teamAccent } from "@/lib/playoff-spotlights";
 import { monogramLabel } from "@/lib/logos";
+import { teamPortrait } from "@/components/sg/teams/team-assets";
 
-const PLAYER_CUTOUTS = new Set<number>([59, 81, 85, 89, 112, 134, 137, 139]);
-
-/** Cutout image for a team, or null when none is committed. */
+/** Cutout image for a team (shared with the team page), or null when none ships. */
 export function playerCutout(pickid: number): string | null {
-  return PLAYER_CUTOUTS.has(pickid) ? `/wrapped/player-${pickid}.webp` : null;
+  return teamPortrait(pickid);
 }
 
 /** The team's colour (hex) for tiles and radials, or null for the neutral surface. */
