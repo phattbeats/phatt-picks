@@ -16,7 +16,6 @@
 /* ── 06 player hero ── */
 .pp-hero .in { grid-template-columns: auto minmax(0, 1fr); align-items: end; gap: 20px; }
 .pp-hero.self .credit { right: auto; left: 14px; }
-@media (min-width: 1300px) { .pp-hero.self .credit { left: calc(var(--bleed-fade) + 14px); } }
 .pp-hero .profile-gear { top: 14px; right: 14px; }
 .pp-hero-av {
   width: 96px; height: 96px; border-radius: var(--r-md); overflow: hidden;
