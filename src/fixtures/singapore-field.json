@@ -1,165 +1,197 @@
 {
-  "note": "PGL Major Singapore 2026 locked field (32 teams, HLTV event 9303, checked 2026-11-03). Home wall; `logo` is the public/logos/<slug>.png mark. Fetch missing marks: node --experimental-strip-types scripts/build-team-marks.ts singapore-field --missing",
+  "note": "PGL Major Singapore 2026 locked field (32 teams, HLTV event 9303, checked 2026-11-03). Home wall; `logo` is the public/logos/<slug>.png mark. Fetch missing marks: node --experimental-strip-types scripts/build-team-marks.ts singapore-field --missing `pickid` is the team's id in the Valve layout (pgl-singapore-2026-layout.json); 1win plays as The One and BC.Game as GOSH (Singapore licensing), shown under their 1win/BC.Game marks.",
   "teams": [
     {
       "logo": "nip",
       "name": "Ninjas in Pyjamas",
-      "hltvId": 4411
+      "hltvId": 4411,
+      "pickid": 1
     },
     {
       "logo": "pari",
       "name": "PARIVISION",
-      "hltvId": 12467
+      "hltvId": 12467,
+      "pickid": 153
     },
     {
       "logo": "hero",
       "name": "HEROIC",
-      "hltvId": 7175
+      "hltvId": 7175,
+      "pickid": 95
     },
     {
       "logo": "faze",
       "name": "FaZe",
-      "hltvId": 6667
+      "hltvId": 6667,
+      "pickid": 61
     },
     {
       "logo": "eter",
       "name": "Eternal Fire",
-      "hltvId": 11251
+      "hltvId": 11251,
+      "pickid": 110
     },
     {
       "logo": "100t",
       "name": "100 Thieves",
-      "hltvId": 8474
+      "hltvId": 8474,
+      "pickid": 78
     },
     {
       "logo": "liq",
       "name": "Liquid",
-      "hltvId": 5973
+      "hltvId": 5973,
+      "pickid": 48
     },
     {
       "logo": "nine",
       "name": "9z",
-      "hltvId": 9996
+      "hltvId": 9996,
+      "pickid": 112
     },
     {
       "logo": "m80",
       "name": "M80",
-      "hltvId": 12376
+      "hltvId": 12376,
+      "pickid": 140
     },
     {
       "logo": "dend",
       "name": "DENDELE",
-      "hltvId": 13926
+      "hltvId": 13926,
+      "pickid": 151
     },
     {
       "logo": "imp",
       "name": "Imperial",
-      "hltvId": 9455
+      "hltvId": 9455,
+      "pickid": 113
     },
     {
       "logo": "wild",
       "name": "Wildcard",
-      "hltvId": 12257
+      "hltvId": 12257,
+      "pickid": 130
     },
     {
       "logo": "bcg",
-      "name": "BC.Game",
-      "hltvId": 12878
+      "name": "GOSH",
+      "hltvId": 12878,
+      "pickid": 150
     },
     {
       "logo": "chin",
       "name": "Chinggis Warriors",
-      "hltvId": 12646
+      "hltvId": 12646,
+      "pickid": 138
     },
     {
       "logo": "fq",
       "name": "FlyQuest",
-      "hltvId": 12774
+      "hltvId": 12774,
+      "pickid": 132
     },
     {
       "logo": "lynn",
       "name": "Lynn Vision",
-      "hltvId": 8840
+      "hltvId": 8840,
+      "pickid": 127
     },
     {
       "logo": "fut",
       "name": "FUT",
-      "hltvId": 13286
+      "hltvId": 13286,
+      "pickid": 145
     },
     {
       "logo": "nem",
       "name": "Nemiga",
-      "hltvId": 7969
+      "hltvId": 7969,
+      "pickid": 107
     },
     {
       "logo": "navi",
       "name": "Natus Vincere",
-      "hltvId": 4608
+      "hltvId": 4608,
+      "pickid": 12
     },
     {
       "logo": "g2",
       "name": "G2",
-      "hltvId": 5995
+      "hltvId": 5995,
+      "pickid": 59
     },
     {
       "logo": "1win",
-      "name": "1win",
-      "hltvId": 10621
+      "name": "The One",
+      "hltvId": 10621,
+      "pickid": 149
     },
     {
       "logo": "astr",
       "name": "Astralis",
-      "hltvId": 6665
+      "hltvId": 6665,
+      "pickid": 60
     },
     {
       "logo": "mibr",
       "name": "MIBR",
-      "hltvId": 9215
+      "hltvId": 9215,
+      "pickid": 80
     },
     {
       "logo": "mngz",
       "name": "The MongolZ",
-      "hltvId": 6248
+      "hltvId": 6248,
+      "pickid": 122
     },
     {
       "logo": "mouz",
       "name": "MOUZ",
-      "hltvId": 4494
+      "hltvId": 4494,
+      "pickid": 106
     },
     {
       "logo": "vita",
       "name": "Vitality",
-      "hltvId": 9565
+      "hltvId": 9565,
+      "pickid": 89
     },
     {
       "logo": "aura",
       "name": "Aurora",
-      "hltvId": 11861
+      "hltvId": 11861,
+      "pickid": 134
     },
     {
       "logo": "spir",
       "name": "Spirit",
-      "hltvId": 7020
+      "hltvId": 7020,
+      "pickid": 81
     },
     {
       "logo": "bb",
       "name": "BETBOOM",
-      "hltvId": 12394
+      "hltvId": 12394,
+      "pickid": 152
     },
     {
       "logo": "fal",
       "name": "Falcons",
-      "hltvId": 11283
+      "hltvId": 11283,
+      "pickid": 139
     },
     {
       "logo": "furi",
       "name": "FURIA",
-      "hltvId": 8297
+      "hltvId": 8297,
+      "pickid": 85
     },
     {
       "logo": "lgcy",
       "name": "Legacy",
-      "hltvId": 12468
+      "hltvId": 12468,
+      "pickid": 126
     }
   ]
 }
