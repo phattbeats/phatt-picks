@@ -21,6 +21,7 @@ import {
 } from "@/lib/events-core";
 import { majorChampion, majorWrappedStageKey, type MajorChampion } from "@/lib/stage-wrapped-launch";
 import { StageWrappedReplay } from "@/components/heat/StageWrappedReplay";
+import { FieldGrid } from "@/components/sg/home/FieldGrid";
 import { StageCountdown } from "@/components/sg/home/StageCountdown";
 import { PHOTOS } from "@/lib/photos";
 import { eventBrand } from "@/lib/event-brand";
@@ -569,14 +570,18 @@ export default async function DashboardPage() {
           No heading or copy: the wall speaks for itself. */}
       {wall.length > 0 && (
         <section className="chap" aria-label={fieldLocked ? "The field" : "The contenders"}>
-          <ul className={fieldLocked ? "hm-field locked" : "hm-field"} aria-label={fieldLocked ? "Teams locked" : "Teams in contention"}>
-            {wall.map((t, i) => (
-              <li key={t.logo} style={{ ["--i" as string]: i }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={selfHostUrl(t.logo)} alt={t.name} title={t.name} loading="lazy" decoding="async" />
-              </li>
-            ))}
-          </ul>
+          {fieldLocked ? (
+            <FieldGrid field={wall} />
+          ) : (
+            <ul className="hm-field" aria-label="Teams in contention">
+              {wall.map((t, i) => (
+                <li key={t.logo} style={{ ["--i" as string]: i }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={selfHostUrl(t.logo)} alt={t.name} title={t.name} loading="lazy" decoding="async" />
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
 

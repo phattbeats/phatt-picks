@@ -134,3 +134,17 @@ a.hm-getin:hover{border-color:var(--hair-3);color:var(--ink-hi)}
   .hm-field-card img,a.hm-getin,.watch-tile{transition:none}
   .hm-field-card:hover img{transform:none}
 }
+
+/* ── The field (FieldGrid.tsx): 32 big team-coloured tiles, 4 cols phone / 8 desktop ── */
+.hm-grid{--tc:#8a93a6;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0;padding:0;list-style:none}
+@media(min-width:560px){.hm-grid{grid-template-columns:repeat(8,minmax(0,1fr));gap:10px}}
+.hm-tile{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;height:100%;min-height:104px;padding:14px 3px 18px;overflow:hidden;color:var(--ink-hi);text-decoration:none;background:radial-gradient(ellipse 90% 80% at 50% 38%,color-mix(in srgb,var(--tc) 38%,transparent),transparent 72%),linear-gradient(180deg,color-mix(in srgb,var(--tc) 14%,var(--surf-1)),var(--surf-1));border:1px solid color-mix(in srgb,var(--tc) 42%,transparent);border-radius:var(--r-md);box-shadow:0 0 0 0 transparent;transition:transform .25s var(--ease),box-shadow .25s var(--ease),border-color .25s var(--ease)}
+.hm-tile img{width:58%;height:auto;aspect-ratio:1;object-fit:contain;filter:drop-shadow(0 4px 10px color-mix(in srgb,var(--tc) 55%,transparent));transition:transform .35s var(--ease)}
+.hm-tile-name{max-width:100%;padding:0 2px;font-family:var(--font-display);font-weight:800;font-size:10px;line-height:1.05;letter-spacing:.02em;text-transform:uppercase;text-align:center;overflow-wrap:anywhere;text-wrap:balance}
+.hm-tile-region{position:absolute;left:4px;bottom:3px;font-family:var(--font-mono);font-size:8px;letter-spacing:.1em;color:var(--tc)}
+.hm-tile-badge{position:absolute;top:0;right:0;padding:2px 5px;font-family:var(--font-mono);font-size:7px;letter-spacing:.1em;text-transform:uppercase;color:#0a0a0a;background:var(--tc);border-bottom-left-radius:var(--r-md)}
+@media(min-width:560px){.hm-tile{min-height:150px;padding:18px 6px 24px}.hm-tile-name{font-size:13px}.hm-tile-region{font-size:10px;left:8px;bottom:6px}.hm-tile-badge{font-size:9px;padding:3px 7px}}
+.hm-tile:hover,.hm-tile:focus-visible{transform:translateY(-4px) scale(1.03);border-color:var(--tc);box-shadow:0 10px 30px -8px color-mix(in srgb,var(--tc) 70%,transparent);z-index:1}
+.hm-tile:hover img,.hm-tile:focus-visible img{transform:scale(1.12) rotate(-3deg)}
+.hm-tile:active{transform:scale(.97)}
+@media(prefers-reduced-motion:reduce){.hm-tile,.hm-tile img{transition:none}.hm-tile:hover,.hm-tile:hover img,.hm-tile:active{transform:none}}
