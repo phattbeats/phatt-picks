@@ -480,6 +480,23 @@ function isStructurallySwiss(sectionName: string): boolean {
 }
 
 /**
+ * An event's sections in play order, each tagged Swiss or playoff from its
+ * registry name (the same structural rule `validateSwissClassification`
+ * guards). Unlike `playoffSectionIds(event.playoffSchedule)`, this does not
+ * need the playoff times to be published: Singapore's bracket is known to be
+ * 114/115/116 long before its games are scheduled. Pure; no I/O.
+ */
+export function sectionsInPlayOrder(event: EventConfig): { sectionId: number; name: string; kind: "swiss" | "playoff" }[] {
+  return Object.entries(event.sectionNames)
+    .map(([key, name]) => ({
+      sectionId: Number(key),
+      name,
+      kind: isStructurallySwiss(name) ? ("swiss" as const) : ("playoff" as const),
+    }))
+    .sort((a, b) => a.sectionId - b.sectionId);
+}
+
+/**
  * Future-proof guard for #946 (compare/scoring bucket grain). Returns the
  * list of sections where the structural Swiss-ness declared by the registry's
  * `sectionNames` disagrees with `isSwissSection`'s hardcoded id set. Empty = OK.

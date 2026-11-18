@@ -9,7 +9,7 @@
  * Intentionally UNAUTHENTICATED, safe by construction (mirrors
  * /api/standings/refresh and /api/team-stats/refresh):
  *   - takes NO user input — only fetches the hard-coded, committed matchup slugs
- *     in PLAYOFF_MARKET_SLUGS (no SSRF surface),
+ *     in PLAYOFF_MARKET_SLUGS_BY_EVENT (no SSRF surface),
  *   - only writes our own public-odds cache (no data exposure, nothing
  *     destructive),
  *   - rate-limited: gated/off-window no-ops, and a warm cache is bounded by the

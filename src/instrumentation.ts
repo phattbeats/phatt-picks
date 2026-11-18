@@ -103,6 +103,60 @@ export async function register(): Promise<void> {
     console.log(`[live-tick] live results driver armed — every ${TICK_MS / 60_000} min`);
   }
 
+  // PHA-1406 — the rest of the Major's sources, headless. The team dossier
+  // "Last 5", the playoff Spotlight odds and the news wire used to refresh only
+  // from a page render via after(), the same unreliable path #1109 replaced for
+  // standings, so they froze whenever nobody opened /picks. Driven here hourly
+  // (their source floor) on a separate in-flight guard, so a long 32-profile
+  // crawl never delays scoring. Each one keeps its own gates: frozen Major,
+  // off-day, empty odds registry → no-op. The first run lands ~30s after boot,
+  // which is also the post-deploy cache warm.
+  {
+    const { ingestTeamStatsNow } = await import("@/lib/team-stats");
+    const { ingestSpotlightOddsNow } = await import("@/lib/spotlight-odds");
+    const { refreshWireNow } = await import("@/lib/news");
+    const { currentEventId } = await import("@/lib/events-core");
+    const SLOW_MS = 60 * 60 * 1000;
+    let slowInFlight = false;
+    const slowTick = async (): Promise<void> => {
+      if (slowInFlight) return;
+      slowInFlight = true;
+      try {
+        const eventId = currentEventId();
+        const [teams, odds, wire] = await Promise.all([
+          ingestTeamStatsNow(eventId).catch((e) => (console.error("[slow-tick] team stats failed:", e), 0)),
+          ingestSpotlightOddsNow(eventId).catch((e) => (console.error("[slow-tick] odds failed:", e), 0)),
+          refreshWireNow().catch((e) => (console.error("[slow-tick] news wire failed:", e), 0)),
+        ]);
+        if (teams > 0 || odds > 0 || wire > 0) {
+          console.log(`[slow-tick] event ${eventId}: team stats ${teams}, odds lines ${odds}, wire items ${wire}`);
+        }
+      } finally {
+        slowInFlight = false;
+      }
+    };
+    setTimeout(() => void slowTick(), FIRST_TICK_DELAY_MS);
+    const slowTimer = setInterval(() => void slowTick(), SLOW_MS);
+    if (typeof slowTimer.unref === "function") slowTimer.unref();
+    console.log("[slow-tick] team stats + odds + news driver armed — hourly");
+  }
+
+  // PHA-1406 — the autopilot self-check: the deterministic replacement for the
+  // weekly LLM watchers. Every tick it derives each section's phase and names
+  // any config gap a human has to close (an undated next stage, a stage inside
+  // its reveal window with no HLTV source, our lock drifting from Valve's). Logs
+  // `[autopilot] NEEDS-HUMAN …` and pushes the owner, re-sent every 12h while it
+  // persists. Read the same state at GET /api/autopilot.
+  {
+    const { runAutopilotCheck } = await import("@/lib/autopilot");
+    const { currentEventId } = await import("@/lib/events-core");
+    const check = (): void => void runAutopilotCheck(currentEventId());
+    setTimeout(check, FIRST_TICK_DELAY_MS * 2);
+    const checkTimer = setInterval(check, TICK_MS);
+    if (typeof checkTimer.unref === "function") checkTimer.unref();
+    console.log(`[autopilot] self-check armed — every ${TICK_MS / 60_000} min`);
+  }
+
   // PHA-4506 — PHATT ID progression sweep. Replays every linked player's
   // Hotline XP, achievements, coins and charms to the arcade, hourly. Each
   // replay is idempotent on the arcade side, so the sweep is also the retry for

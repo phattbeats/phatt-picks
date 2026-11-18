@@ -14,7 +14,7 @@
  * outcomes `["FURIA","The MongolZ"]`, outcomePrices `["0.62","0.38"]`. The price
  * is the implied win probability (0..1). No auth, ~160ms.
  *
- * GATED BY DESIGN: {@link PLAYOFF_MARKET_SLUGS} starts empty until Valve seeds
+ * GATED BY DESIGN: {@link PLAYOFF_MARKET_SLUGS_BY_EVENT} starts empty until Valve seeds
  * the playoff bracket (#993). A team has no opponent — and so no matchup slug
  * to target — before then, so an empty registry means the refresh no-ops and the
  * modal keeps its honest "coming soon" state (zero live change). An editor fills
@@ -42,7 +42,7 @@ export interface SpotlightMarketLine {
 }
 
 /**
- * One authored matchup target, keyed by layout pickid in {@link PLAYOFF_MARKET_SLUGS}.
+ * One authored matchup target, keyed by layout pickid in {@link PLAYOFF_MARKET_SLUGS_BY_EVENT}.
  * Both teams in a match point at the SAME `slug`; each carries its own `teamName`
  * so the parser knows which of the two gamma outcomes is "this team" (the other
  * becomes the opponent). `teamName` is the name as it appears in the Polymarket
@@ -58,32 +58,61 @@ export interface MatchupMarketTarget {
 }
 
 /**
- * AUTHORED MATCHUP REGISTRY — keyed by layout pickid. Empty until Valve seeded
- * the IEM Cologne 2026 playoff bracket; filled at seeding (#1066 / #993,
- * 2026-06-16) with the four QF matchups. The two pickids in a match share the
- * slug; `teamName` matches that team's outcome string in the Polymarket moneyline
- * (verified live against gamma-api). `sportsMarketType: "moneyline"` selection in
- * resolveMatchupOdds picks the match-winner line out of each event's many markets.
+ * AUTHORED MATCHUP REGISTRY — keyed by Valve event id, then by that event's
+ * layout pickid. Pickids are per-event numbers that collide across Majors
+ * (FURIA is 85 in both Cologne and Singapore), so a flat pickid map leaked
+ * Cologne's June markets onto Singapore's Spotlight (PHA-1406). An event with
+ * no entry (or an empty one) is gated: no fetch, and the read path serves no
+ * lines for it.
+ *
+ * Within an event: empty until Valve seeds the playoff bracket. The two pickids
+ * in a match share the slug; `teamName` matches that team's outcome string in
+ * the Polymarket moneyline (verified live against gamma-api).
+ * `sportsMarketType: "moneyline"` selection in resolveMatchupOdds picks the
+ * match-winner line out of each event's many markets.
  *
  * Refill per round: when the QF resolves and SF pairings publish, repoint each
- * advancing team's pickid at its new `cs2-<a>-<b>-<date>` slug (alongside the
- * #1065 Spotlight authoring pass). A team with no entry falls back to the
- * modal's "coming soon" state — never a fabricated line.
+ * advancing team's pickid at its new `cs2-<a>-<b>-<date>` slug. A team with no
+ * entry falls back to the modal's "coming soon" state — never a fabricated line.
  */
-export const PLAYOFF_MARKET_SLUGS: Record<number, MatchupMarketTarget> = {
-  // QF1 — FURIA vs 9z (2026-06-18)
-  85: { slug: "cs2-furia-9z-2026-06-18", teamName: "FURIA" },
-  112: { slug: "cs2-furia-9z-2026-06-18", teamName: "9z" },
-  // QF2 — Spirit vs G2 (2026-06-19)
-  81: { slug: "cs2-ts7-g2-2026-06-19", teamName: "Spirit" },
-  59: { slug: "cs2-ts7-g2-2026-06-19", teamName: "G2" },
-  // QF3 — Aurora Gaming vs BetBoom Team (2026-06-18)
-  134: { slug: "cs2-aur1-bb3-2026-06-18", teamName: "Aurora Gaming" },
-  137: { slug: "cs2-aur1-bb3-2026-06-18", teamName: "BetBoom Team" },
-  // QF4 — Vitality vs Team Falcons (2026-06-19)
-  89: { slug: "cs2-vit-fal2-2026-06-19", teamName: "Vitality" },
-  139: { slug: "cs2-vit-fal2-2026-06-19", teamName: "Team Falcons" },
+export const PLAYOFF_MARKET_SLUGS_BY_EVENT: Readonly<Record<number, Readonly<Record<number, MatchupMarketTarget>>>> = {
+  // IEM Cologne 2026 (event 26) — filled at seeding (#1066 / #993, 2026-06-16).
+  26: {
+    // QF1 — FURIA vs 9z (2026-06-18)
+    85: { slug: "cs2-furia-9z-2026-06-18", teamName: "FURIA" },
+    112: { slug: "cs2-furia-9z-2026-06-18", teamName: "9z" },
+    // QF2 — Spirit vs G2 (2026-06-19)
+    81: { slug: "cs2-ts7-g2-2026-06-19", teamName: "Spirit" },
+    59: { slug: "cs2-ts7-g2-2026-06-19", teamName: "G2" },
+    // QF3 — Aurora Gaming vs BetBoom Team (2026-06-18)
+    134: { slug: "cs2-aur1-bb3-2026-06-18", teamName: "Aurora Gaming" },
+    137: { slug: "cs2-aur1-bb3-2026-06-18", teamName: "BetBoom Team" },
+    // QF4 — Vitality vs Team Falcons (2026-06-19)
+    89: { slug: "cs2-vit-fal2-2026-06-19", teamName: "Vitality" },
+    139: { slug: "cs2-vit-fal2-2026-06-19", teamName: "Team Falcons" },
+  },
+  // PGL Singapore 2026 (event 27) — gated until Valve seeds the bracket.
+  27: {},
 };
+
+/** The authored matchup targets for one event; {} (gated) when none. */
+export function marketSlugsFor(eventId: number): Readonly<Record<number, MatchupMarketTarget>> {
+  return PLAYOFF_MARKET_SLUGS_BY_EVENT[eventId] ?? {};
+}
+
+/**
+ * Keep only the cached lines this event authored. The read-path guard behind
+ * the per-event registry: a cache row written before the split (Cologne lines
+ * under event 27) or for a pickid since de-authored is never served.
+ */
+export function authoredLinesOnly<T>(eventId: number, lines: Record<number, T>): Record<number, T> {
+  const authored = marketSlugsFor(eventId);
+  const out: Record<number, T> = {};
+  for (const [pid, line] of Object.entries(lines)) {
+    if (Number(pid) in authored) out[Number(pid)] = line;
+  }
+  return out;
+}
 
 export const GAMMA_API_BASE = "https://gamma-api.polymarket.com";
 /** No auth, single small JSON — a tight timeout is plenty (~160ms measured). */
