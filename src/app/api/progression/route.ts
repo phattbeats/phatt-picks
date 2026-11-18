@@ -4,7 +4,8 @@
  * hold (struck coins + trinkets, keyed as the arcade inventory will key them).
  *
  * Self only. This is the record Phase 3 replays into the arcade service once
- * PHATT ID sign-in links Hotline accounts; the UI doesn't show the level yet.
+ * PHATT ID sign-in links Hotline accounts. `level` is the HOTLINE level the
+ * profile shows (PHA-5265), not the arcade's global one.
  */
 
 import { NextResponse } from "next/server";

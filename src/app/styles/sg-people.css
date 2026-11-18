@@ -290,14 +290,34 @@
 }
 .ach-sect .chap-h .eyebrow a { color: var(--heat); }
 
+/* ── PHA-5265 the HOTLINE level: hero badge (gilt rim, like the pins) + progress bar ── */
+.lvl-badge {
+  justify-self: start; display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px 4px 10px;
+  border-radius: 999px; background: linear-gradient(rgba(10,12,18,.82), rgba(10,12,18,.82)) padding-box,
+    linear-gradient(135deg, #fff0b8, #e3ad48 30%, #9c6a1c 62%, #f4d27a) border-box;
+  border: 1.5px solid transparent; box-shadow: 0 3px 10px rgba(0,0,0,.5);
+}
+.lvl-badge-k { font-family: var(--font-mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-mid); }
+.lvl-badge b { font-family: var(--font-mono); font-weight: 500; font-size: 17px; line-height: 1; font-variant-numeric: tabular-nums; color: var(--heat); }
+.lvl-bar { display: grid; gap: 8px; margin: 0 0 18px; }
+.lvl-bar-h { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 16px; }
+.lvl-bar-l { font-family: var(--font-display); font-weight: 800; font-size: 19px; text-transform: uppercase; color: var(--ink-hi); line-height: 1.05; }
+.lvl-bar-l b { font-family: var(--font-mono); font-weight: 500; color: var(--heat); font-variant-numeric: tabular-nums; }
+.lvl-bar-r { font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-mid); font-variant-numeric: tabular-nums; }
+.lvl-track { position: relative; height: 6px; border-radius: 3px; background: var(--hair-2); overflow: hidden; }
+.lvl-track i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: linear-gradient(90deg, var(--heat-deep), var(--heat) 70%, var(--heat-hot)); box-shadow: 0 0 10px var(--heat-glow); }
+.lvl-track.max i { background: linear-gradient(90deg, #9c6a1c, #f4d27a 50%, #e3ad48); }
+
 /* /phatt-id — the PHATT ID welcome page */
-.pid-stats { display: flex; gap: 26px; margin-top: 14px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-mid); }
+.pid-stats { display: flex; flex-wrap: wrap; gap: 10px 26px; margin-top: 14px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-mid); }
 .pid-stats b { font-family: var(--font-display); font-weight: 900; font-size: 34px; letter-spacing: 0; color: var(--heat); margin-right: 6px; vertical-align: -4px; }
 .pid-unlocks { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); background: var(--hair); border: 1px solid var(--hair); }
 .pid-unlocks li { display: grid; gap: 6px; align-content: start; padding: 18px; background: var(--base); }
 .pid-unlocks b { font-family: var(--font-display); font-weight: 800; font-size: 20px; text-transform: uppercase; color: var(--ink-hi); line-height: 1.05; }
 .pid-unlocks p { margin: 0; font-size: 13px; color: var(--ink-mid); line-height: 1.45; }
 .pid-ctas { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 0; }
+.pid-next { margin: 0; font-size: 14px; color: var(--ink-mid); line-height: 1.5; max-width: 640px; }
+.pid-next b { color: var(--ink-hi); }
 
 /* ── PHA-4477 Settings → Customize ── */
 .cz { display: grid; gap: 28px; }
@@ -312,7 +332,7 @@
 .cz-felt.on { border-color: var(--heat); box-shadow: 0 0 0 1px var(--heat), inset 0 0 0 1px rgba(0,0,0,.5); }
 .cz-felt.locked { cursor: not-allowed; filter: grayscale(.6) brightness(.55); }
 .cz-felt-nm { font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-hi); padding: 6px; background: linear-gradient(0deg, rgba(0,0,0,.75), transparent); text-align: left; }
-.cz-lock { position: absolute; top: 6px; left: 6px; font-family: var(--font-mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-mid); }
+.cz-lock { position: absolute; top: 6px; left: 6px; right: 6px; font-family: var(--font-mono); font-size: 9px; line-height: 1.35; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-hi); text-align: left; text-shadow: 0 1px 4px rgba(0,0,0,.9); }
 .cz-banners { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
 .cz-banner {
   position: relative; aspect-ratio: 16 / 9; overflow: hidden; padding: 0; cursor: pointer;
