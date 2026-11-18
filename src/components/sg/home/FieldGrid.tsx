@@ -1,7 +1,8 @@
 /**
- * The locked 32-team wall: big full-colour tiles in each team's colour, a
- * region chip and a form badge, every tile a link to /teams/[slug]. Pure
- * server markup — hover/tap motion is CSS only, no client JS.
+ * The locked 32-team wall: the faded contenders wall at full size, a region
+ * chip and a form badge under each mark, every tile a link to /teams/[slug].
+ * Marks come up in team colour on hover/tap. Pure server markup — motion is
+ * CSS only, no client JS.
  */
 import Link from "next/link";
 import { selfHostUrl } from "@/lib/logos";
@@ -14,12 +15,16 @@ import colors from "@/fixtures/team-colors.json";
 interface FieldEntry {
   logo: string;
   name: string;
+  /** The team's id in the Valve layout; logo keys differ between the two files. */
+  pickid?: number;
 }
 
 export function FieldGrid({ field }: { field: FieldEntry[] }) {
-  const byLogo = new Map(fieldTeams(servedLayout()).map((t) => [t.logo, t]));
+  const teams = fieldTeams(servedLayout());
+  const byPickid = new Map(teams.map((t) => [t.pickid, t]));
+  const byLogo = new Map(teams.map((t) => [t.logo, t]));
   const tiles = field.map((f) => {
-    const team = byLogo.get(f.logo);
+    const team = (f.pickid != null ? byPickid.get(f.pickid) : undefined) ?? byLogo.get(f.logo);
     const rank = team ? statsForPickid(team.pickid)?.worldRank ?? null : null;
     return {
       ...f,
