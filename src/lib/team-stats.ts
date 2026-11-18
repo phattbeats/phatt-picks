@@ -296,6 +296,27 @@ export async function refreshTeamStatsOnRead(
   runDeferred(() => ingestTeamStats(eventId), "team-stats");
 }
 
+/**
+ * Headless refresh for the in-process autopilot tick (PHA-1406). The on-read
+ * path defers its crawl via after(), which does not fire reliably in the
+ * standalone server (#1109), so the dossier "Last 5" only moved when someone
+ * opened /picks and the deferred crawl happened to land. This awaits the crawl;
+ * the tick's own cadence (hourly) is the rate limit, and it stamps the floor
+ * so the on-read path backs off. Same gates as the read path: frozen event or
+ * no stage being played → 0. Never throws (ingestTeamStats keeps the prior
+ * cache on any failure).
+ */
+export async function ingestTeamStatsNow(
+  eventId: number,
+  nowMs: number = Date.now(),
+): Promise<number> {
+  if (await isEventFrozenById(eventId, nowMs)) return 0;
+  if (!isWithinAnyMatchWindow(nowMs, getEventConfig(eventId)?.matchWindows)) return 0;
+  const teams = await ingestTeamStats(eventId);
+  await stampRefreshSlot();
+  return teams;
+}
+
 /** Is there already a cached blob for this event? (cheap existence check) */
 async function hasCache(eventId: number): Promise<boolean> {
   try {

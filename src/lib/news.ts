@@ -148,6 +148,20 @@ async function refreshWireOnRead(): Promise<void> {
 }
 
 /**
+ * Headless refresh for the in-process autopilot tick (PHA-1406). Same claim as
+ * the read path (5-min floor) so the two never double-pull, but the HLTV pull is
+ * awaited instead of deferred via after(), which does not fire reliably in the
+ * standalone server (#1109). Returns the number of wire items upserted (0 when
+ * the floor holds or the source is down). Never throws.
+ */
+export async function refreshWireNow(): Promise<number> {
+  if (!(await claimRefreshSlot())) return 0;
+  await upsertWireItems(seedWireItems()).catch(() => 0);
+  const pulled = await ingestAutomated();
+  return pulled.upserted;
+}
+
+/**
  * Force a full synchronous refresh: upsert the committed curated seed, then
  * attempt the automated HLTV pull, and stamp the floor so the read path backs
  * off afterward. Bypasses the floor on purpose — this is the owner-triggered

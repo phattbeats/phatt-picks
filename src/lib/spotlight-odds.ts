@@ -9,7 +9,7 @@
  * `spotlight-odds-core.ts` (verifiable offline); this file is just the I/O +
  * throttle + persistence shell.
  *
- * GATED: {@link PLAYOFF_MARKET_SLUGS} starts empty until Valve seeds the bracket
+ * GATED: {@link PLAYOFF_MARKET_SLUGS_BY_EVENT} starts empty per event until Valve seeds the bracket
  * (#993). Empty registry ⇒ every entry point no-ops, the cache stays empty,
  * and {@link getSpotlightMarket} returns {} so the modal keeps its "coming soon"
  * state. Zero live change until an editor fills a matchup.
@@ -26,7 +26,8 @@ import {
   runDeferred,
 } from "./source-refresh";
 import {
-  PLAYOFF_MARKET_SLUGS,
+  marketSlugsFor,
+  authoredLinesOnly,
   gammaEventUrl,
   resolveMatchupOdds,
   buildMarketLine,
@@ -115,7 +116,7 @@ async function readPriorBlob(
  */
 async function ingestSpotlightOdds(eventId: number, nowMs: number): Promise<number> {
   try {
-    const entries = Object.entries(PLAYOFF_MARKET_SLUGS);
+    const entries = Object.entries(marketSlugsFor(eventId));
     if (entries.length === 0) return 0; // gated — nothing authored yet
 
     const fresh: Record<number, SpotlightMarketLine> = {};
@@ -186,10 +187,29 @@ export async function refreshSpotlightOddsOnRead(
   eventId: number,
   nowMs: number = Date.now(),
 ): Promise<void> {
-  if (Object.keys(PLAYOFF_MARKET_SLUGS).length === 0) return; // gated — no matchups authored
+  if (Object.keys(marketSlugsFor(eventId)).length === 0) return; // gated — no matchups authored
   if (await isEventFrozenById(eventId, nowMs)) return; // archived Majors never re-fetch
   if (!(await claimRefreshSlot())) return; // within floor or lost the race
   runDeferred(() => ingestSpotlightOdds(eventId, nowMs), "spotlight-odds");
+}
+
+/**
+ * Headless refresh for the in-process autopilot tick (PHA-1406). The on-read
+ * path defers its fetch via after(), which does not fire reliably in the
+ * standalone server (#1109), so odds only moved when someone happened to open
+ * a page. This awaits the fetch instead; the tick's own cadence is the rate
+ * limit, and it stamps the floor so the on-read path backs off. Gated exactly
+ * like the read path: empty registry or frozen event → 0. Never throws.
+ */
+export async function ingestSpotlightOddsNow(
+  eventId: number,
+  nowMs: number = Date.now(),
+): Promise<number> {
+  if (Object.keys(marketSlugsFor(eventId)).length === 0) return 0;
+  if (await isEventFrozenById(eventId, nowMs)) return 0;
+  const lines = await ingestSpotlightOdds(eventId, nowMs);
+  await stampRefreshSlot();
+  return lines;
 }
 
 /** Is there already a cached blob for this event? (cheap existence check) */
@@ -222,7 +242,7 @@ export async function warmSpotlightOdds(
   eventId: number,
   nowMs: number = Date.now(),
 ): Promise<WarmSpotlightOddsResult> {
-  if (Object.keys(PLAYOFF_MARKET_SLUGS).length === 0) return { status: "gated", lines: 0 };
+  if (Object.keys(marketSlugsFor(eventId)).length === 0) return { status: "gated", lines: 0 };
   if (await isEventFrozenById(eventId, nowMs)) return { status: "frozen", lines: 0 };
   const cold = !(await hasCache(eventId));
   if (!cold && !(await claimRefreshSlot())) return { status: "fresh", lines: 0 };
@@ -255,8 +275,10 @@ export async function getSpotlightMarket(
   } catch {
     return {}; // corrupt blob
   }
-  const lines = blob.byPickid;
-  if (!lines || typeof lines !== "object") return {};
+  if (!blob.byPickid || typeof blob.byPickid !== "object") return {};
+  // Serve only this event's authored pickids (PHA-1406): pickids collide across
+  // Majors, so a row written from another event's registry must never render.
+  const lines = authoredLinesOnly(eventId, blob.byPickid);
   const blobFetchedAt = blob.fetchedAt ?? row.fetchedAt.getTime();
   const stamps = blob.fetchedAtByPickid ?? {};
   const out: Record<number, SpotlightMarketLine> = {};
