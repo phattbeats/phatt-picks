@@ -28,6 +28,13 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p: string) => readFileSync(join(ROOT, p), "utf8");
 
 const fixture = (JSON.parse(read("src/fixtures/cologne-layout.json")) as { result: Layout }).result;
+// The committed Cologne fixture is now a post-event snapshot with the playoff
+// bracket seeded. This suite proves the pre-seed bug, so blank QF/SF/GF back to
+// TBD (pickid 0) to recreate the mid-Swiss state it models.
+for (const s of fixture.sections) {
+  if (s.sectionid < 108) continue;
+  for (const g of s.groups) g.teams = g.teams.map((t) => ({ ...t, pickid: 0 }));
+}
 
 let pass = 0;
 let fail = 0;

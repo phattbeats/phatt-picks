@@ -55,7 +55,11 @@ function check(name: string, cond: boolean) {
 const ms = (iso: string) => Date.parse(iso);
 const TODAY = ms("2026-06-06T12:00:00Z"); // mid Stage I — the live event today
 
-const cologne = getEventConfig(currentEventId()) as EventConfig;
+// Cologne-shaped freeze proofs run over the archived Cologne registry entry
+// (the active event is Singapore since PHA-1320); its dates/GF are unchanged.
+const cologne = { ...(getEventConfig(26) as EventConfig), status: "live" } as EventConfig;
+const active = getEventConfig(currentEventId()) as EventConfig;
+check("active event is Singapore with a structural Grand Final (116)", active.eventId === 27 && grandFinalSectionId(active) === 116);
 check("registry resolves the active event", cologne != null);
 
 // ── grandFinalSectionId: structural Grand Final pick ────────────────────────

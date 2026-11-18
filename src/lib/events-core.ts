@@ -149,7 +149,7 @@ const COLOGNE_2026: EventConfig = {
   eventId: 26,
   slug: "iem-cologne-2026",
   name: "IEM Cologne 2026 CS2 Major Championship",
-  status: "live",
+  status: "archived",
   // `end` is the calendar BACKSTOP for the archive transition, not the real
   // trigger — that is the Grand Final StageOutcome resolving PLUS its 48h grace
   // window (#954, via `grandFinalResolvedAtMs` + GRAND_FINAL_ARCHIVE_GRACE_MS).
@@ -233,7 +233,7 @@ const SINGAPORE_2026: EventConfig = {
   eventId: 27,
   slug: "pgl-singapore-2026",
   name: "PGL Major Singapore 2026",
-  status: "upcoming",
+  status: "live",
   // Main event Nov 25 – Dec 13 2026 (playoffs/finals Dec 10–13, Singapore Indoor
   // Stadium). `end` is the calendar BACKSTOP for the archive transition, set a
   // touch past the Dec 13 finals so it sits comfortably beyond GF + the 48h grace
