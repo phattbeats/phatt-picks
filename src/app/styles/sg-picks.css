@@ -329,8 +329,26 @@ a.sgp-note:hover { border-color: var(--hair-3); color: var(--ink-hi); }
 .sgp-dsec > .eyebrow { padding-bottom: 8px; border-bottom: 1px solid var(--hair-2); }
 .sgp-roster, .sgp-matches { list-style: none; margin: 0; padding: 0; }
 .sgp-roster li, .sgp-matches li { display: grid; align-items: center; gap: 12px; min-height: 44px; border-bottom: 1px solid var(--hair); }
-.sgp-roster li { grid-template-columns: minmax(0, 1fr) auto auto; }
+.sgp-roster li { grid-template-columns: 44px minmax(0, 1fr) auto auto; padding: 6px 0; }
+.sgp-roster .face {
+  width: 44px; height: 44px; border-radius: 50%; overflow: hidden; display: block;
+  background: radial-gradient(circle at 50% 100%, var(--team, var(--surf-3)), var(--surf-2) 80%);
+  border: 1px solid var(--hair-2);
+}
+.sgp-roster .face img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 6%; transform: scale(1.35); transform-origin: 50% 0; display: block; }
+.sgp-roster .face.none { display: grid; place-items: center; }
+.sgp-roster .face svg { width: 100%; height: 100%; fill: rgba(255,255,255,.22); }
+.sgp-roster .who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.sgp-roster .si { font-family: var(--font-mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-mid); border: 1px solid var(--hair-3); border-radius: 3px; padding: 1px 4px; white-space: nowrap; }
 .sgp-roster a { font-family: var(--font-display); font-weight: 800; font-size: 18px; text-transform: uppercase; color: var(--ink-hi); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 10px 0; }
+.flag-img { display: inline-block; width: 16px; height: 12px; border-radius: 2px; object-fit: cover; flex: none; vertical-align: -1px; box-shadow: 0 0 0 1px rgba(255,255,255,.12); }
+.sgp-dflag .flag-img { margin-right: 6px; }
+.sgp-team .meta .flag-img { width: 14px; height: 10.5px; margin-right: 5px; vertical-align: -1px; }
+.sgp-story h3 { margin: 6px 0 0; font-family: var(--font-display); font-weight: 800; font-size: 19px; line-height: 1.15; text-transform: uppercase; color: var(--ink-hi); }
+.sgp-story p { margin: 4px 0 0; font-size: 14px; line-height: 1.55; color: var(--ink-mid); }
+.sgp-story .src { font-family: var(--font-mono); font-size: 10px; letter-spacing: .04em; }
+.sgp-story .src a { color: var(--ink-mid); }
+.sgp-story .src a:hover { color: var(--heat); }
 .sgp-roster a:hover { color: var(--heat); }
 .sgp-roster .rt { font-family: var(--font-mono); font-size: 13px; color: var(--ink-hi); min-width: 36px; text-align: right; }
 .sgp-matches li { grid-template-columns: 20px minmax(0, 1fr) auto auto; font-size: 14px; }
