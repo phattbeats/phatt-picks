@@ -13,7 +13,7 @@ import { teamAccent } from "@/lib/playoff-spotlights";
 import type { TeamDef } from "@/lib/layout";
 import { teamCode, teamHref, teamPortrait } from "./team-assets";
 import { ClipEmbed } from "./ClipEmbed";
-import { hltvTeamUrl, storyForPickid, STORIES_AS_OF } from "@/lib/team-stories";
+import { hltvTeamUrl, storyForPickid } from "@/lib/team-stories";
 import type { Finish, StageCall, SwissResult, TeamPageData } from "./team-data";
 
 const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 100) : 0);
@@ -176,7 +176,7 @@ export function TeamView({ data }: { data: TeamPageData }) {
             <p className="tx">{story.storyline}</p>
             <details className="srcs mono muted">
               <summary>
-                As of {STORIES_AS_OF} · Sources ({story.sources.length})
+                Sources ({story.sources.length})
               </summary>
               <ul>
                 {story.sources.map((src) => (
