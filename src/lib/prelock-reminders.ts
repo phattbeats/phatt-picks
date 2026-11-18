@@ -23,7 +23,7 @@ import { sendPushToPlayer } from "@/lib/notify";
 import { buildPreLockPayload, dueReminders, isReminderRecipient, reminderFireKey } from "@/lib/notify-core";
 import { parseNotifPrefs } from "@/lib/notifications-core";
 import { stageLocksFromSchedule, type StageLock } from "@/lib/lock-schedule-core";
-import { currentEventId, getEventConfig, liveEvents } from "@/lib/events-core";
+import { currentEventId, getEventConfig, liveEvents, playoffSectionIdsFor } from "@/lib/events-core";
 
 /** An event's id paired with the stage cutoffs its reminders should fire on. */
 interface ReminderTarget {
@@ -75,7 +75,7 @@ function reminderTargets(now: number = Date.now()): ReminderTarget[] {
   if (envPin !== null) {
     const pinned = getEventConfig(envPin);
     if (pinned) {
-      return [{ eventId: pinned.eventId, locks: stageLocksFromSchedule(pinned.lockSchedule, pinned.sectionNames) }];
+      return [{ eventId: pinned.eventId, locks: stageLocksFromSchedule(pinned.lockSchedule, pinned.sectionNames, playoffSectionIdsFor(pinned)) }];
     }
     // Pinned to an unregistered id → nothing to do rather than guess.
     return [];
@@ -83,7 +83,7 @@ function reminderTargets(now: number = Date.now()): ReminderTarget[] {
 
   return liveEvents(now).map((e) => ({
     eventId: e.eventId,
-    locks: stageLocksFromSchedule(e.lockSchedule, e.sectionNames),
+    locks: stageLocksFromSchedule(e.lockSchedule, e.sectionNames, playoffSectionIdsFor(e)),
   }));
 }
 

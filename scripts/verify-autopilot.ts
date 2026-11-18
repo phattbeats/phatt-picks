@@ -17,7 +17,8 @@ import {
   VALVE_LOCK_SLACK_MS,
   type SectionSnapshot,
 } from "../src/lib/autopilot-core.ts";
-import { EVENTS, sectionsInPlayOrder } from "../src/lib/events-core.ts";
+import { EVENTS, playoffSectionIdsFor, sectionsInPlayOrder, validateEventRevealConfig, type EventConfig } from "../src/lib/events-core.ts";
+import { derivePlayoffLocks, stageLocksFromSchedule } from "../src/lib/lock-schedule-core.ts";
 
 let pass = 0;
 let fail = 0;
@@ -31,7 +32,6 @@ function check(name: string, cond: boolean) {
   }
 }
 
-const H = 60 * 60_000;
 const at = (iso: string) => Date.parse(iso);
 
 function swiss(id: number, name: string, lockAt: string | null, extra: Partial<SectionSnapshot> = {}): SectionSnapshot {
@@ -88,6 +88,24 @@ console.log("\nautopilot - the registry classifies Singapore by name, not by pla
   check("111-113 are Swiss, 114-116 playoff (playoffSchedule still empty)", sg.map((s) => s.kind).join() === "swiss,swiss,swiss,playoff,playoff,playoff");
   const cg = sectionsInPlayOrder(EVENTS[26]);
   check("Cologne classifies the same way", cg.map((s) => s.kind).join() === "swiss,swiss,swiss,playoff,playoff,playoff");
+}
+
+console.log("\nautopilot - publishing the bracket is one edit (invariant F)");
+{
+  const sg = EVENTS[27];
+  const games = { 114: ["2026-12-10T08:00:00Z", "2026-12-10T11:30:00Z"], 115: ["2026-12-12T08:00:00Z"], 116: ["2026-12-13T09:00:00Z"] };
+  const forgot: EventConfig = { ...sg, playoffSchedule: games };
+  check("games without derived locks fail the registry check", validateEventRevealConfig(forgot).some((p) => p.includes("bracket lock")));
+  const done: EventConfig = { ...sg, playoffSchedule: games, lockSchedule: { ...sg.lockSchedule, ...derivePlayoffLocks(games) } };
+  check("spreading derivePlayoffLocks passes", validateEventRevealConfig(done).length === 0);
+  check("every round locks at the first quarterfinal", Object.values(derivePlayoffLocks(games)).every((iso) => iso === "2026-12-10T08:00:00Z"));
+  check("Singapore today passes (bracket unpublished)", validateEventRevealConfig(sg).length === 0);
+  // One "Playoffs" reminder, not three, for Singapore's 114-116 (#1245 rule).
+  const locks = stageLocksFromSchedule(done.lockSchedule, done.sectionNames, playoffSectionIdsFor(done));
+  const playoffLocks = Object.keys(locks).map(Number).filter((id) => id >= 114);
+  check("Singapore's playoff reminders collapse to one cutoff", playoffLocks.length === 1 && locks[playoffLocks[0]].name === "Playoffs");
+  const viaCologneDefault = stageLocksFromSchedule(done.lockSchedule, done.sectionNames);
+  check("(the Cologne default would have sent three)", Object.keys(viaCologneDefault).map(Number).filter((id) => id >= 114).length === 3);
 }
 
 console.log("\nautopilot - section phases");
