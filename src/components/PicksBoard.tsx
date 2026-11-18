@@ -6,6 +6,7 @@ import { TeamLogo } from "@/components/ui/TeamLogo";
 import { TeamStatsDrawer } from "@/components/ui/TeamStatsDrawer";
 import { SpotlightModal, type SpotlightMarketLine } from "@/components/ui/SpotlightModal";
 import { RegionBadge } from "@/components/ui/RegionBadge";
+import { Flag } from "@/components/ui/Flag";
 import { resolveLogoTiers } from "@/lib/logos";
 import { teamAccent } from "@/lib/playoff-spotlights";
 import type { Section, TeamDef } from "@/lib/layout";
@@ -468,7 +469,8 @@ export function PicksBoard({
                   const cls = ["sgp-team", cutout ? "cut" : "", isSelected ? "sel" : "", isUsed ? "used" : ""]
                     .filter(Boolean)
                     .join(" ");
-                  const rank = (liveTeamStats?.[t.pickid] ?? statsForPickid(t.pickid))?.worldRank;
+                  const tStats = liveTeamStats?.[t.pickid] ?? statsForPickid(t.pickid);
+                  const rank = tStats?.worldRank;
                   const region = regionForPickid(t.pickid);
                   const rec = fmtRecord(recordByTeam?.[t.pickid]);
                   const meta = [rank != null ? `#${rank}` : null, region].filter(Boolean).join(" · ");
@@ -514,6 +516,7 @@ export function PicksBoard({
                         )}
                         <span className="nm">{t.name}</span>
                         <span className="meta">
+                          <Flag country={tStats?.country} />
                           {rec && (
                             <>
                               <b>{rec}</b>

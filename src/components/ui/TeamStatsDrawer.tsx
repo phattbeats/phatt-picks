@@ -1,14 +1,39 @@
 "use client";
 
-import { useEffect, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { TeamLogo } from "@/components/ui/TeamLogo";
+import { Flag } from "@/components/ui/Flag";
 import { resolveLogoTiers } from "@/lib/logos";
 import type { TeamDef } from "@/lib/layout";
-import { statsForPickid, TEAM_STATS_AS_OF, type TeamStats } from "@/lib/team-stats-core";
+import { statsForPickid, TEAM_STATS_AS_OF, type RosterPlayer, type TeamStats } from "@/lib/team-stats-core";
 import { regionMetaForPickid } from "@/lib/regions-core";
+import { storyForPickid } from "@/lib/team-stories";
 import { playerCutout, teamCode, teamColor } from "@/components/sg/picks/team-art";
+
+/**
+ * Player portrait (PHA-5255): the self-hosted HLTV bodyshot, cropped to the
+ * head and shoulders. No photo, or one that fails to load, falls back to a
+ * styled silhouette — never a broken image. The nick sits beside it in the row.
+ */
+function PlayerFace({ player }: { player: RosterPlayer }) {
+  const [failed, setFailed] = useState(false);
+  const src = player.photo && !failed ? player.photo : null;
+  return (
+    <span className={`face${src ? "" : " none"}`} aria-hidden="true">
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element -- self-hosted 320px webp
+        <img src={src} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
+      ) : (
+        <svg viewBox="0 0 44 44">
+          <circle cx="22" cy="17" r="8" />
+          <path d="M6 44c1-10 7.5-15 16-15s15 5 16 15z" />
+        </svg>
+      )}
+    </span>
+  );
+}
 
 interface Props {
   team: TeamDef;
@@ -61,8 +86,10 @@ export function TeamStatsDrawer({ team, onClose, liveStats, liveAsOf, record }: 
 
   // Prefer the live per-stage dossier; fall back to the committed frozen snapshot.
   const stats = liveStats ?? statsForPickid(team.pickid);
-  const asOf = (liveStats && liveAsOf) || TEAM_STATS_AS_OF;
+  const asOf = (liveStats && liveAsOf) || stats?.asOf || TEAM_STATS_AS_OF;
   const region = regionMetaForPickid(team.pickid);
+  const story = storyForPickid(team.pickid);
+  const hasPhotos = (stats?.roster ?? []).some((p) => p.photo);
   const color = teamColor(team);
   const cutout = playerCutout(team.pickid);
   const ratings = (stats?.roster ?? []).map((p) => p.rating).filter((r): r is number => r != null);
@@ -103,7 +130,8 @@ export function TeamStatsDrawer({ team, onClose, liveStats, liveAsOf, record }: 
         </div>
 
         <div className="sgp-db">
-          <div className="eyebrow">
+          <div className="eyebrow sgp-dflag">
+            <Flag country={stats?.country} />
             {stats?.worldRank != null ? (
               <>
                 HLTV <b>#{stats.worldRank}</b>
@@ -151,9 +179,14 @@ export function TeamStatsDrawer({ team, onClose, liveStats, liveAsOf, record }: 
                 <ul className="sgp-roster">
                   {stats.roster.map((p) => (
                     <li key={p.name}>
-                      <a href={p.hltvUrl} target="_blank" rel="noopener noreferrer">
-                        {p.name}
-                      </a>
+                      <PlayerFace player={p} />
+                      <span className="who">
+                        <a href={p.hltvUrl} target="_blank" rel="noopener noreferrer">
+                          {p.name}
+                        </a>
+                        <Flag country={p.country} />
+                        {p.standIn && <span className="si">Stand-in</span>}
+                      </span>
                       <span className={`tag${p.position.toLowerCase() === "igl" ? " ok" : p.position.toLowerCase() === "awp" ? " warn" : ""}`}>
                         {p.position}
                       </span>
@@ -164,6 +197,27 @@ export function TeamStatsDrawer({ team, onClose, liveStats, liveAsOf, record }: 
                   ))}
                 </ul>
               </section>
+
+              {story && (
+                <section className="sgp-dsec sgp-story">
+                  <div className="eyebrow">Storyline</div>
+                  <h3>{story.headline}</h3>
+                  <p>{story.storyline}</p>
+                  {story.sources.length > 0 && (
+                    <p className="src">
+                      Sources:{" "}
+                      {story.sources.slice(0, 3).map((s, i) => (
+                        <span key={s.url}>
+                          {i > 0 && " · "}
+                          <a href={s.url} target="_blank" rel="noopener noreferrer">
+                            {s.label.split(":")[0]}
+                          </a>
+                        </span>
+                      ))}
+                    </p>
+                  )}
+                </section>
+              )}
 
               <section className="sgp-dsec">
                 <div className="eyebrow">Last 5 matches</div>
@@ -197,7 +251,10 @@ export function TeamStatsDrawer({ team, onClose, liveStats, liveAsOf, record }: 
             </>
           )}
 
-          <p className="sgp-dfoot">World ranking &amp; results via HLTV · snapshot {asOf}</p>
+          <p className="sgp-dfoot">
+            World ranking &amp; results via HLTV · snapshot {asOf}
+            {hasPhotos && " · Photos · HLTV"}
+          </p>
         </div>
       </aside>
     </>,

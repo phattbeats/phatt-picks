@@ -63,7 +63,10 @@ export const TEAM_REGIONS: Record<number, Region> = {
   147: "EU", // Sinners (CZ)
   148: "OCE", // THUNDER dOWNUNDER (AU)
   // PGL Singapore 2026 additions (PHA-1056) — pickids new to the field. The One,
-  // GOSH and DENDELE are left untagged (null) until their region is confirmed.
+  // GOSH and DENDELE confirmed from their HLTV rosters (PHA-5255).
+  149: "EU", // The One (ex-1win, all-RU / CIS)
+  150: "EU", // GOSH (ex-BC.Game; HLTV "World": UA/DK/AU/MN, plays the EU circuit)
+  151: "SA", // DENDELE (BR)
   1: "EU", // Ninjas in Pyjamas (SE)
   61: "EU", // FaZe Clan (intl)
   78: "NA", // 100 Thieves

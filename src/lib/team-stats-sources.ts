@@ -52,18 +52,19 @@ export const TEAM_SOURCES: Readonly<Record<number, TeamSource>> = {
   132: { hltvId: 12774, slug: "flyquest", name: "FlyQuest" },
   134: { hltvId: 11861, slug: "aurora", name: "Aurora" },
   135: { hltvId: 11241, slug: "b8", name: "B8" },
-  137: { hltvId: 12394, slug: "betboom", name: "BetBoom" },
   139: { hltvId: 11283, slug: "falcons", name: "Falcons" },
   140: { hltvId: 12376, slug: "m80", name: "M80" },
-  142: { hltvId: 12467, slug: "parivision", name: "PARIVISION" },
   145: { hltvId: 13286, slug: "fut", name: "FUT" },
   146: { hltvId: 11571, slug: "gaimin-gladiators", name: "Gaimin Gladiators" },
   147: { hltvId: 10577, slug: "sinners", name: "SINNERS" },
   148: { hltvId: 13486, slug: "thunder-downunder", name: "THUNDER dOWNUNDER" },
   // PGL Singapore 2026 additions (PHA-1056), HLTV ids from singapore-field.json.
   // The One / GOSH are the Valve-layout names for 1win / BC.Game (PHA-5256). BB Team (152)
-  // and PVISION (153) share HLTV ids with BetBoom (137) / PARIVISION (142); ids must stay
-  // distinct (verify-team-stats-live), so they get no stats source until PHA-5255 maps them.
+  // and PVISION (153) are BetBoom / PARIVISION under new Valve pickids; ids must stay
+  // distinct (verify-team-stats-live), so the HLTV source moved off the Cologne pickids
+  // 137 / 142 (archived; their frozen dossiers stay in team-stats-core) — PHA-5255.
+  152: { hltvId: 12394, slug: "betboom", name: "BB Team" },
+  153: { hltvId: 12467, slug: "parivision", name: "PVISION" },
   149: { hltvId: 10621, slug: "1win", name: "1win" },
   150: { hltvId: 12878, slug: "bc-game", name: "BC.Game" },
   1: { hltvId: 4411, slug: "nip", name: "Ninjas in Pyjamas" },
