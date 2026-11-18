@@ -82,6 +82,16 @@ main.shell{overflow-x:clip}
 .bleed .display{font-size:clamp(52px,10vw,132px);line-height:.84}
 .bleed p{font-size:clamp(16px,1.6vw,19px);color:var(--ink-mid);max-width:560px;text-wrap:pretty}.bleed p b{color:var(--ink-hi);font-weight:500}
 .bleed .credit{position:absolute;right:14px;top:14px;z-index:2;font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.45)}
+/* Wider than the 1240px shell, the photo used to stop in hard vertical edges.
+   Mask its sides (and the tint over it) to transparent so it melts into the page
+   behind — void + vignette, so no colour to match. The fade grows with the gutter
+   (60px at 1300, capped at 10% of the column); only the photo layers are masked,
+   so text keeps its contrast. The credit moves in past the fade. */
+@media(min-width:1300px){
+  .bleed{--bleed-fade:min(10%,100vw - 1240px)}
+  .bleed>img,.bleed::after{-webkit-mask-image:linear-gradient(90deg,transparent,#000 var(--bleed-fade),#000 calc(100% - var(--bleed-fade)),transparent);mask-image:linear-gradient(90deg,transparent,#000 var(--bleed-fade),#000 calc(100% - var(--bleed-fade)),transparent)}
+  .bleed .credit{right:calc(var(--bleed-fade) + 14px)}
+}
 .chap{display:grid;gap:22px}
 .chap-h{display:grid;gap:10px;max-width:720px}
 .chap-h .n{font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;color:var(--heat);text-transform:uppercase}
