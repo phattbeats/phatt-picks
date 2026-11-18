@@ -5,8 +5,10 @@
 .sgp-page { display: grid; gap: 22px; min-width: 0; }
 @media (min-width: 1024px) { .sgp-page { gap: 28px; } }
 /* Room for the fixed action bar so the last pool row never hides under it. */
-.sgp-page.with-bar { padding-bottom: 72px; }
-@media (min-width: 1024px) { .sgp-page.with-bar { padding-bottom: 64px; } }
+/* Bar height is measured at runtime (useBarHeight → --sgp-bar-h). On mobile the bar
+   floats 64px above the bottom nav, so reserve nav + safe area as well. */
+.sgp-page.with-bar { padding-bottom: calc(var(--sgp-bar-h, 80px) + 24px + 64px + env(safe-area-inset-bottom)); }
+@media (min-width: 1024px) { .sgp-page.with-bar { padding-bottom: calc(var(--sgp-bar-h, 80px) + 24px); } }
 .sgp-stack { display: grid; gap: 18px; min-width: 0; }
 
 /* ── Stage header: photo banner + countdown / result ───────────────────── */

@@ -6,6 +6,7 @@ import { authCodeStatus, savedForLabel } from "@/lib/authcode";
 import { prisma } from "@/lib/db";
 import { mirrorPlayerPredictionsThrottled } from "@/lib/predictions-sync";
 import { PicksBoard } from "@/components/PicksBoard";
+import { SignInBar } from "@/components/sg/picks/ActionBar";
 import {
   isStagePickable,
   selectCurrentStageIndex,
@@ -759,20 +760,7 @@ export default async function PicksPage({
         <LockedStageCard pickability={activePickability} />
       )}
 
-      {!session && (
-        <div className="sgp-action" role="region" aria-label="Sign in">
-          <div className="sgp-action-in">
-            <div className="sgp-prog">
-              <div className="c">
-                <span className="s">Sign in to save your calls.</span>
-              </div>
-            </div>
-            <Link href="/login" className="btn-solid" prefetch={false}>
-              Sign in to Save
-            </Link>
-          </div>
-        </div>
-      )}
+      {!session && <SignInBar />}
     </div>
   );
 }

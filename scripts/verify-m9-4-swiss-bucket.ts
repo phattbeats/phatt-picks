@@ -74,6 +74,7 @@ check("0-slot bucket has 0 indexes", zero[0].slotIndexes.length === 0);
 check("section 105 is Swiss", isSwissSection(105));
 check("section 106 is Swiss", isSwissSection(106));
 check("section 107 is Swiss", isSwissSection(107));
+for (const id of [111, 112, 113]) check(`section ${id} (Singapore Swiss) is Swiss`, isSwissSection(id));
 check("section 108 (QF) is NOT Swiss", !isSwissSection(108));
 check("section 109 (SF) is NOT Swiss", !isSwissSection(109));
 check("section 110 (GF) is NOT Swiss", !isSwissSection(110));

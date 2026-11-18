@@ -1,4 +1,29 @@
-import type { ReactNode } from "react";
+"use client";
+
+import Link from "next/link";
+import { useEffect, useRef, type ReactNode } from "react";
+
+/**
+ * Publish the fixed bar's real height as --sgp-bar-h so `.sgp-page.with-bar`
+ * pads by what the bar actually occupies instead of a magic number.
+ */
+export function useBarHeight<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const root = document.documentElement;
+    const set = () => root.style.setProperty("--sgp-bar-h", `${el.offsetHeight}px`);
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      root.style.removeProperty("--sgp-bar-h");
+    };
+  }, []);
+  return ref;
+}
 
 export type BarTone = "ok" | "warn" | "err" | "info";
 
@@ -23,8 +48,9 @@ export function ActionBar({
   cta?: ReactNode;
 }) {
   const ticks = Math.max(total, 1);
+  const ref = useBarHeight<HTMLDivElement>();
   return (
-    <div className="sgp-action" role="region" aria-label="Pick progress">
+    <div ref={ref} className="sgp-action" role="region" aria-label="Pick progress">
       <div className="sgp-action-in">
         <div className="sgp-prog">
           <div className="c">
@@ -42,6 +68,25 @@ export function ActionBar({
           </div>
         </div>
         {cta}
+      </div>
+    </div>
+  );
+}
+
+/** Signed-out variant of the bar; client component so it can publish its height. */
+export function SignInBar() {
+  const ref = useBarHeight<HTMLDivElement>();
+  return (
+    <div ref={ref} className="sgp-action" role="region" aria-label="Sign in">
+      <div className="sgp-action-in">
+        <div className="sgp-prog">
+          <div className="c">
+            <span className="s">Sign in to save your calls.</span>
+          </div>
+        </div>
+        <Link href="/login" className="btn-solid" prefetch={false}>
+          Sign in to Save
+        </Link>
       </div>
     </div>
   );
