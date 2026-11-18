@@ -9,13 +9,14 @@
  *   - the 200-response → assigned-itemid extraction,
  *   - classifying a Valve failure as "degrade gracefully" vs "escalate" (rules #7/#8).
  *
- * Only value-imports ./bigint (also pure); the Prediction/PredictionsEnvelope
+ * Value-imports only pure leaves (./playoff-bracket-core → ./events-core); the Prediction/PredictionsEnvelope
  * imports are type-only so this module runs under bare `node` (the verify path)
  * without dragging in the fixture-aliased predictions.ts. (Same trick the M4
  * pure cores use — see scoring.ts / outcomes-core.ts.)
  */
 
 import type { PredictionsEnvelope } from "./predictions";
+import { isPlayoffSection, playoffRoundsFor } from "./playoff-bracket-core";
 
 /**
  * Local digit-string guard (rule #2). Kept inline — with no runtime relative
@@ -47,12 +48,16 @@ export interface LocalPick {
   itemId: string; // stored as a digit string (Pick.itemId); may be "" if unset
 }
 
-/** Playoff sections, in submission order (handoff §6: 108 QF, 109 SF, 110 GF). */
-export const PLAYOFF_SECTION_IDS = [108, 109, 110] as const;
-
-export function isPlayoffSection(sectionId: number): boolean {
-  return (PLAYOFF_SECTION_IDS as readonly number[]).includes(sectionId);
+/**
+ * An event's playoff sections, in submission order (handoff §6: QF, SF, GF),
+ * derived from the registry (PHA-5275) — Cologne 108/109/110, Singapore
+ * 114/115/116.
+ */
+export function playoffSectionIdsForEvent(eventId: number): number[] {
+  return playoffRoundsFor(eventId).map((r) => r.sectionId);
 }
+
+export { isPlayoffSection };
 
 /**
  * Resolve a stored local pick into an UploadPick, sourcing the itemid from the
@@ -95,7 +100,7 @@ export function resolveUploadPick(
 /**
  * Deterministic submission order for a batch: by section, then group, then slot.
  * Swiss stages are a single group so this is just slot order; the playoff bracket
- * relies on it for the QF(108) → SF(109) → GF(110) ordering (§0.1).
+ * relies on it for the QF → SF → GF ordering (ascending section ids) (§0.1).
  */
 export function orderPicks(picks: UploadPick[]): UploadPick[] {
   return [...picks].sort(

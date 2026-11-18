@@ -35,6 +35,7 @@ function check(name: string, cond: boolean) {
 // Minimal layout: only `sections[].sectionid` is read by the selector. Sections
 // 105/106/107 are authored (real Stage Wrapped content); 108 (Playoffs) is not.
 const layout = {
+  event: 26,
   sections: [{ sectionid: 105 }, { sectionid: 106 }, { sectionid: 107 }, { sectionid: 108 }],
 } as unknown as Layout;
 
@@ -57,8 +58,14 @@ check("all resolved, but only authored ones count → 107", latestWrappedSection
 check("authored 105 unresolved → null", latestWrappedSectionId(layout, resolved()) === null);
 
 // Layout order, not numeric id: reverse the order so 105 is "latest".
-const reversed = { sections: [{ sectionid: 107 }, { sectionid: 106 }, { sectionid: 105 }] } as unknown as Layout;
+const reversed = { event: 26, sections: [{ sectionid: 107 }, { sectionid: 106 }, { sectionid: 105 }] } as unknown as Layout;
 check("layout order wins: reversed sections, both authored resolved → 105", latestWrappedSectionId(reversed, resolved(105, 106)) === 105);
+
+// PHA-5275: a resolved Singapore stage gets its (plain) Stage Wrapped; its
+// playoff sections never get a stage deck, and Cologne's ids don't count.
+const sg = { event: 27, sections: [{ sectionid: 111 }, { sectionid: 112 }, { sectionid: 113 }, { sectionid: 114 }] } as unknown as Layout;
+check("Singapore Stage I resolved → 111", latestWrappedSectionId(sg, resolved(111)) === 111);
+check("Singapore Stage II + QF resolved → 112 (playoffs have no stage deck)", latestWrappedSectionId(sg, resolved(111, 112, 114)) === 112);
 
 console.log(`\nverify-stage-wrapped-launch: ${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);

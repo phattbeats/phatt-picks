@@ -9,6 +9,7 @@ import type { TeamDef } from "@/lib/layout";
 import type { TeamStats } from "@/lib/team-stats-core";
 
 interface Props {
+  eventId: number;
   teams: TeamDef[];
   liveTeamStats?: Record<number, TeamStats>;
   liveStatsAsOf?: string;
@@ -23,11 +24,11 @@ interface Props {
  * lights it up here automatically. Renders nothing until at least one team is
  * authored, and the playoffs view drops it once the real bracket seeds.
  */
-export function QualifiedStrip({ teams, liveTeamStats, liveStatsAsOf }: Props) {
+export function QualifiedStrip({ eventId, teams, liveTeamStats, liveStatsAsOf }: Props) {
   const [openTeam, setOpenTeam] = useState<TeamDef | null>(null);
 
   const byId = new Map(teams.map((t) => [t.pickid, t]));
-  const qualified = authoredSpotlightPickids()
+  const qualified = authoredSpotlightPickids(eventId)
     .map((id) => byId.get(id))
     .filter((t): t is TeamDef => !!t);
 
@@ -64,6 +65,7 @@ export function QualifiedStrip({ teams, liveTeamStats, liveStatsAsOf }: Props) {
       </div>
       {openTeam && (
         <SpotlightModal
+          eventId={eventId}
           team={openTeam}
           onClose={() => setOpenTeam(null)}
           liveStats={liveTeamStats?.[openTeam.pickid]}

@@ -37,7 +37,7 @@ import {
   partitionBySteamState,
   steamStateKey,
   WriteShapeError,
-  PLAYOFF_SECTION_IDS,
+  playoffSectionIdsForEvent,
   type LocalPick,
 } from "../src/lib/write-core.ts";
 
@@ -126,7 +126,9 @@ function provePlayoffOrder(): void {
   const last = buildUploadBody(AUTH, ordered[ordered.length - 1]);
   check("first ordered pick body targets QF section 108", first.get("sectionid") === "108");
   check("last ordered pick body targets GF section 110", last.get("sectionid") === "110");
-  check("playoff sections constant matches layout", JSON.stringify([...PLAYOFF_SECTION_IDS]) === "[108,109,110]");
+  check("Cologne playoff sections derive from the registry", JSON.stringify(playoffSectionIdsForEvent(26)) === "[108,109,110]");
+  // PHA-5275: Singapore's bracket upload reads its own sections, not Cologne's.
+  check("Singapore playoff sections derive from the registry", JSON.stringify(playoffSectionIdsForEvent(27)) === "[114,115,116]");
 }
 
 // [4] graceful degrade vs escalate (rules #7/#8).

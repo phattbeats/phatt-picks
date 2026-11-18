@@ -59,18 +59,27 @@ const PERSONAL: StageWrappedPersonal = {
 };
 
 /* ---- NO-OP invariant (Playoffs 108 is still unauthored) ---- */
-const unauthored = buildStageWrappedDeck(108, "Playoffs", PERSONAL);
+const unauthored = buildStageWrappedDeck(26, 108, "Playoffs", PERSONAL);
 check("unauthored section (108) yields an EMPTY deck (no-op)", unauthored.length === 0);
-check("unauthored section with null personal is also empty", buildStageWrappedDeck(108, "Playoffs", null).length === 0);
-check("an entirely unknown section is empty", buildStageWrappedDeck(999, "Stage X", PERSONAL).length === 0);
-check("stageWrappedHasContent: 105 true", stageWrappedHasContent(105) === true);
-check("stageWrappedHasContent: 106 true", stageWrappedHasContent(106) === true);
-check("stageWrappedHasContent: 107 true (Stage III authored)", stageWrappedHasContent(107) === true);
-check("stageWrappedHasContent: 108 false (not authored yet)", stageWrappedHasContent(108) === false);
-check("stageWrappedHasContent: unknown false", stageWrappedHasContent(999) === false);
+check("unauthored section with null personal is also empty", buildStageWrappedDeck(26, 108, "Playoffs", null).length === 0);
+// PHA-5275: Singapore stages get their own (plain) deck — never Cologne's beats.
+{
+  const sg = buildStageWrappedDeck(27, 111, "Stage I", PERSONAL);
+  check("Singapore Stage I has a deck", stageWrappedHasContent(27, 111) && sg.length > 0);
+  check("Singapore deck carries no Cologne moments", sg.every((s) => s.kind !== "moment" || s.id.startsWith("personal-")));
+  check("Singapore deck still has the personal score", sg.some((s) => s.id === "personal-score"));
+  check("Cologne's 105 is not Singapore content", !stageWrappedHasContent(27, 105));
+  check("Singapore playoff section has no stage deck", !stageWrappedHasContent(27, 114));
+}
+check("an entirely unknown section is empty", buildStageWrappedDeck(26, 999, "Stage X", PERSONAL).length === 0);
+check("stageWrappedHasContent: 105 true", stageWrappedHasContent(26, 105) === true);
+check("stageWrappedHasContent: 106 true", stageWrappedHasContent(26, 106) === true);
+check("stageWrappedHasContent: 107 true (Stage III authored)", stageWrappedHasContent(26, 107) === true);
+check("stageWrappedHasContent: 108 false (not authored yet)", stageWrappedHasContent(26, 108) === false);
+check("stageWrappedHasContent: unknown false", stageWrappedHasContent(26, 999) === false);
 
 /* ---- Authored Stage I, personal ---- */
-const s1 = buildStageWrappedDeck(105, "Stage I", PERSONAL);
+const s1 = buildStageWrappedDeck(26, 105, "Stage I", PERSONAL);
 check("Stage I deck is non-empty", s1.length > 0);
 check("Stage I opens on the intro slide", s1[0]?.kind === "intro");
 check("Stage I ends on the outro slide", s1[s1.length - 1]?.kind === "outro");
@@ -90,7 +99,7 @@ check("best-call slide shows field share %", s1.some((s) => s.id === "personal-b
 check("personal outro promises replay (button is wired)", s1.some((s) => s.kind === "outro" && /[Rr]eplay/.test(s.body ?? "")));
 
 /* ---- Authored Stage II, personal ---- */
-const s2 = buildStageWrappedDeck(106, "Stage II", PERSONAL);
+const s2 = buildStageWrappedDeck(26, 106, "Stage II", PERSONAL);
 check("Stage II deck is non-empty", s2.length > 0);
 check("Stage II carries 5 authored event moments", s2.filter((s) => s.id.startsWith("s2-")).length === 5);
 check("Stage II has a FUCK YOUR PICK'EMS slide", s2.some((s) => s.id === "s2-fyp" && /PICK'EMS/.test(s.eyebrow ?? "")));
@@ -98,7 +107,7 @@ check("Stage II has the donk/Spirit dominance moment", s2.some((s) => s.id === "
 check("Stage II has the Astralis drought moment", s2.some((s) => s.id === "s2-drought-astralis"));
 
 /* ---- Authored Stage III, personal (#1120) ---- */
-const s3 = buildStageWrappedDeck(107, "Stage III", PERSONAL);
+const s3 = buildStageWrappedDeck(26, 107, "Stage III", PERSONAL);
 check("Stage III deck is non-empty", s3.length > 0);
 check("Stage III opens on the intro slide", s3[0]?.kind === "intro");
 check("Stage III ends on the outro slide", s3[s3.length - 1]?.kind === "outro");
@@ -109,22 +118,22 @@ check("Stage III carries 5 authored event moments", s3.filter((s) => s.id.starts
 check("Stage III has a FUCK YOUR PICK'EMS slide", s3.some((s) => s.id === "s3-fyp" && /PICK'EMS/.test(s.eyebrow ?? "")));
 check("Stage III has the two flawless 3-0 clinchers moment", s3.some((s) => s.id === "s3-perfect-furia-spirit" && /3-0/.test(s.figure ?? "")));
 check("Stage III has the 0-3 elimination moment", s3.some((s) => s.id === "s3-elim-parivision-b8" && /0-3/.test(s.figure ?? "")));
-check("Stage III intro badge numeral is III", buildStageWrappedDeck(107, "Stage III", PERSONAL).find((s) => s.kind === "intro")?.stageBadge?.numeral === "III");
+check("Stage III intro badge numeral is III", buildStageWrappedDeck(26, 107, "Stage III", PERSONAL).find((s) => s.kind === "intro")?.stageBadge?.numeral === "III");
 
 /* ---- Best call absent → no best-call slide ---- */
-const noBest = buildStageWrappedDeck(105, "Stage I", { ...PERSONAL, bestCall: null });
+const noBest = buildStageWrappedDeck(26, 105, "Stage I", { ...PERSONAL, bestCall: null });
 check("no best call → no best-call slide", !noBest.some((s) => s.id === "personal-best-call"));
 check("no best call → still has score + rank slides", noBest.some((s) => s.id === "personal-score") && noBest.some((s) => s.id === "personal-rank"));
 
 /* ---- Signed-out (personal null) ---- */
-const out = buildStageWrappedDeck(105, "Stage I", null);
+const out = buildStageWrappedDeck(26, 105, "Stage I", null);
 check("signed-out deck still has the intro + moments", out[0]?.kind === "intro" && out.some((s) => s.id.startsWith("s1-")));
 check("signed-out deck has NO personal slides", !out.some((s) => s.id.startsWith("personal-")));
 check("signed-out outro prompts sign-in", out.some((s) => s.kind === "outro" && /[Ss]ign in/.test(s.body ?? "")));
 
 /* ---- Rank slide variants ---- */
 function rankFigure(move: StageWrappedPersonal["rankMove"], rankAfter: number | null): string | undefined {
-  const deck = buildStageWrappedDeck(105, "Stage I", { ...PERSONAL, rankMove: move, rankAfter });
+  const deck = buildStageWrappedDeck(26, 105, "Stage I", { ...PERSONAL, rankMove: move, rankAfter });
   return deck.find((s) => s.id === "personal-rank")?.figure;
 }
 check("rank up → ▲N", rankFigure({ delta: 4, direction: "up" }, 3) === "▲4");
@@ -134,11 +143,11 @@ check("rank new → #rank", rankFigure({ delta: null, direction: "new" }, 7) ===
 check("rank new with unknown rank → —", rankFigure({ delta: null, direction: "new" }, null) === "—");
 
 /* ---- Visuals: logos / brand marks / avatar (Brandon: "more visuals") ---- */
-const vis = buildStageWrappedDeck(105, "Stage I", PERSONAL, ASSETS);
+const vis = buildStageWrappedDeck(26, 105, "Stage I", PERSONAL, ASSETS);
 const vIntro = vis.find((s) => s.kind === "intro");
 const vOutro = vis.find((s) => s.kind === "outro");
 const vUpset = vis.find((s) => s.id === "s1-upset-flyquest-liquid");
-const vDom = buildStageWrappedDeck(106, "Stage II", PERSONAL, ASSETS).find((s) => s.id === "s2-dominance-spirit-donk");
+const vDom = buildStageWrappedDeck(26, 106, "Stage II", PERSONAL, ASSETS).find((s) => s.id === "s2-dominance-spirit-donk");
 const vScore = vis.find((s) => s.id === "personal-score");
 const vBest = vis.find((s) => s.id === "personal-best-call");
 check("intro carries the major brand logo", vIntro?.brandLogo?.src === "/watch/iem-cologne.png");
@@ -150,7 +159,7 @@ check("personal score slide carries the viewer avatar", vScore?.avatar?.label ==
 check("best-call slide carries the called team's logo", (vBest?.teamLogos?.length ?? 0) === 1);
 
 /* ---- Backward-compat: no assets → no visuals (text-only deck still valid) ---- */
-const noAssets = buildStageWrappedDeck(105, "Stage I", PERSONAL);
+const noAssets = buildStageWrappedDeck(26, 105, "Stage I", PERSONAL);
 check("no assets → moments have no teamLogos", noAssets.every((s) => s.teamLogos === undefined));
 check("no assets → intro has no brandLogo", noAssets.find((s) => s.kind === "intro")?.brandLogo === undefined);
 check("no assets → deck is still well-formed (intro..outro)", noAssets[0]?.kind === "intro" && noAssets[noAssets.length - 1]?.kind === "outro");
@@ -162,7 +171,7 @@ check("stageNumeral: 'Stage III' → III", stageNumeral("Stage III") === "III");
 check("stageNumeral: numeric 'Stage 2' → II", stageNumeral("Stage 2") === "II");
 const s1Intro = s1.find((s) => s.kind === "intro");
 const s1Outro = s1.find((s) => s.kind === "outro");
-const s2Intro = buildStageWrappedDeck(106, "Stage II", PERSONAL).find((s) => s.kind === "intro");
+const s2Intro = buildStageWrappedDeck(26, 106, "Stage II", PERSONAL).find((s) => s.kind === "intro");
 check("Stage I intro carries a STAGE badge with numeral I", s1Intro?.stageBadge?.numeral === "I" && s1Intro?.stageBadge?.label === "STAGE");
 check("Stage I intro badge sub is WRAPPED", s1Intro?.stageBadge?.sub === "WRAPPED");
 check("Stage II intro badge numeral is II", s2Intro?.stageBadge?.numeral === "II");
@@ -170,22 +179,22 @@ check("outro also carries a STAGE badge", !!s1Outro?.stageBadge?.numeral);
 
 /* ---- "YOU CALLED IT" personal reward (#1054) ---- */
 // Brandon's example: picked FUT (145) to go 3:0 in Stage II → reward on the FUT slide.
-const s2Called = buildStageWrappedDeck(106, "Stage II", { ...PERSONAL, claims: ["145:3:0"] }, ASSETS);
+const s2Called = buildStageWrappedDeck(26, 106, "Stage II", { ...PERSONAL, claims: ["145:3:0"] }, ASSETS);
 const futSlide = s2Called.find((s) => s.id === "s2-fut-3-0");
 const futFyp = s2Called.find((s) => s.id === "s2-fyp");
 check("FUT 3-0 slide rewards a matching pick (145:3:0)", futSlide?.calledIt?.label === "YOU CALLED IT");
 check("FUCK YOUR PICK'EMS slide also rewards the FUT 3-0 caller", futFyp?.calledIt?.label === "YOU CALLED IT");
 check("a non-matching moment is NOT rewarded", s2Called.find((s) => s.id === "s2-drought-astralis")?.calledIt === undefined);
 // No claims → no rewards anywhere.
-const s2None = buildStageWrappedDeck(106, "Stage II", { ...PERSONAL, claims: [] }, ASSETS);
+const s2None = buildStageWrappedDeck(26, 106, "Stage II", { ...PERSONAL, claims: [] }, ASSETS);
 check("no viewer claims → no calledIt on any slide", s2None.every((s) => s.calledIt === undefined));
 // Stage I: picked BetBoom 3:0 (137) → flawless slide lights up.
-const s1Called = buildStageWrappedDeck(105, "Stage I", { ...PERSONAL, claims: ["137:3:0"] }, ASSETS);
+const s1Called = buildStageWrappedDeck(26, 105, "Stage I", { ...PERSONAL, claims: ["137:3:0"] }, ASSETS);
 check("Stage I flawless slide rewards BetBoom 3:0 caller", s1Called.find((s) => s.id === "s1-flawless-betboom-b8")?.calledIt?.label === "YOU CALLED IT");
 // Signed-out (personal null) → never rewarded.
-check("signed-out deck has no calledIt", buildStageWrappedDeck(106, "Stage II", null, ASSETS).every((s) => s.calledIt === undefined));
+check("signed-out deck has no calledIt", buildStageWrappedDeck(26, 106, "Stage II", null, ASSETS).every((s) => s.calledIt === undefined));
 // Stage III: picked FURIA 3:0 (85) → the flawless clincher slide lights up.
-const s3Called = buildStageWrappedDeck(107, "Stage III", { ...PERSONAL, claims: ["85:3:0"] }, ASSETS);
+const s3Called = buildStageWrappedDeck(26, 107, "Stage III", { ...PERSONAL, claims: ["85:3:0"] }, ASSETS);
 check("Stage III flawless slide rewards FURIA 3:0 caller", s3Called.find((s) => s.id === "s3-perfect-furia-spirit")?.calledIt?.label === "YOU CALLED IT");
 
 console.log(`\nverify-stage-wrapped-content: ${pass} passed, ${fail} failed`);

@@ -30,7 +30,7 @@ import { isStageWritable } from "@/lib/reveal-core";
 import { isLockTimePassed } from "@/lib/lock-schedule-core";
 import { currentEventId, getEventConfig } from "@/lib/events-core";
 import { isWriteFrozenById } from "@/lib/event-freeze";
-import { isPlayoffSection, PLAYOFF_ROUNDS, playoffFieldTeams } from "@/lib/playoff-bracket-core";
+import { isPlayoffSection, playoffRoundsFor, playoffFieldTeams } from "@/lib/playoff-bracket-core";
 import { getSeal } from "@/lib/pick-lock";
 
 export async function GET(req: NextRequest) {
@@ -96,8 +96,8 @@ export async function POST(req: NextRequest) {
   // every playoff section's write on the Quarterfinals: writable until any
   // playoff match resolves or the QF's published start passes.
   const playoff = isPlayoffSection(secId);
-  const playoffSectionIds = PLAYOFF_ROUNDS.map((r) => r.sectionId);
-  const lockSectionId = playoff ? PLAYOFF_ROUNDS[0].sectionId : secId;
+  const playoffSectionIds = playoffRoundsFor(evtId).map((r) => r.sectionId);
+  const lockSectionId = playoff ? playoffSectionIds[0] ?? secId : secId;
   const lockSection = playoff
     ? layout.sections.find((s) => s.sectionid === lockSectionId) ?? section
     : section;

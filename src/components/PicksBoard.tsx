@@ -590,6 +590,7 @@ export function PicksBoard({
       {statsTeam &&
         (isPlayoff ? (
           <SpotlightModal
+            eventId={eventId}
             team={statsTeam}
             onClose={() => setStatsTeam(null)}
             liveStats={liveTeamStats?.[statsTeam.pickid]}

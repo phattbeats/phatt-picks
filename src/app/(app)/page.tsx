@@ -151,7 +151,7 @@ export default async function DashboardPage() {
     pick: PICKEM_NOT_OPEN,
   };
 
-  // The three single-elim sections (108/109/110) read as ONE "Playoffs" stage on
+  // The three single-elim sections (QF/SF/GF) read as ONE "Playoffs" stage on
   // the hero, the same way the picks page consolidates them (#1007).
   const activePlayoff = isPlayoffSection(active.section.sectionid);
   const activeLabel = activePlayoff ? "Playoffs" : active.section.name.split(" | ")[0];

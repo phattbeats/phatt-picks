@@ -25,7 +25,7 @@ import {
   summarizePlayoffPicks,
   isPlayoffSection,
   playoffRoundForSection,
-  PLAYOFF_ROUNDS,
+  playoffRoundsFor,
 } from "../src/lib/playoff-bracket-core.ts";
 import type { Layout, Section } from "../src/lib/layout.ts";
 
@@ -63,7 +63,13 @@ check("a Swiss section (105) is NOT a playoff section", !isPlayoffSection(105));
 check("playoffRoundForSection(108) → QF", playoffRoundForSection(108)?.key === "QF");
 check("playoffRoundForSection(110) → GF", playoffRoundForSection(110)?.key === "GF");
 check("playoffRoundForSection(105) → null", playoffRoundForSection(105) === null);
-check("PLAYOFF_ROUNDS is QF→SF→GF in order", PLAYOFF_ROUNDS.map((r) => r.key).join(",") === "QF,SF,GF");
+check("Cologne rounds are QF→SF→GF in order", playoffRoundsFor(26).map((r) => `${r.key}${r.sectionId}`).join(",") === "QF108,SF109,GF110");
+// PHA-5275: Singapore's rounds come from the registry, not Cologne's literals.
+check("Singapore rounds are QF114→SF115→GF116", playoffRoundsFor(27).map((r) => `${r.key}${r.sectionId}`).join(",") === "QF114,SF115,GF116");
+check("114/115/116 are playoff sections", [114, 115, 116].every(isPlayoffSection));
+check("Singapore Swiss (113) is NOT a playoff section", !isPlayoffSection(113));
+check("playoffRoundForSection(116) → GF", playoffRoundForSection(116)?.key === "GF");
+check("unregistered event has no rounds", playoffRoundsFor(999).length === 0);
 
 console.log("\nplayoff-bracket - committed layout has the QF/SF/GF skeleton");
 check("found all three playoff sections in the committed layout", playoffSections.length === 3,

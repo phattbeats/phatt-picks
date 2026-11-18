@@ -19,7 +19,6 @@ import { normalizeOutcomes } from "../src/lib/outcomes-core.ts";
 const ALLOWED: Record<string, string> = {
   "src/lib/layout.ts": "defines it",
   "src/components/sg/teams/team-data.ts": "last-resort fallback only when the live event has no fixture",
-  "src/lib/stage-wrapped-launch.ts": "playoff Wrapped; moves with the event-generic playoff rounds",
 };
 
 const root = new URL("..", import.meta.url).pathname;
@@ -51,10 +50,42 @@ if (offenders.length > 0) {
 } else {
   console.log("  PASS  no live path reads getCommittedLayout() outside the allowlist");
 }
+// PHA-5275: no live path may hardcode Cologne's playoff sections. QF/SF/GF
+// derive from the registry (playoffRoundsFor / playoffSectionIdsForEvent /
+// playoffSealUnitFor), so a bare 108/109/110 outside the files below is a
+// Cologne assumption that breaks Singapore's 114/115/116. Comments and string
+// literals are ignored.
+const PLAYOFF_LITERAL_ALLOWED: Record<string, string> = {
+  "src/lib/lock-schedule-core.ts": "Cologne's committed playoff schedule + section names (registry data)",
+  "src/lib/regions-core.ts": "pickid 110 is Eternal Fire",
+  "src/lib/team-stats-sources.ts": "pickid 110 is Eternal Fire",
+  "src/lib/team-stats-singapore.ts": "pickid 110 is Eternal Fire",
+};
+const literalOffenders: string[] = [];
+for (const file of walk(join(root, "src"))) {
+  const rel = relative(root, file);
+  if (rel in PLAYOFF_LITERAL_ALLOWED) continue;
+  const lines = readFileSync(file, "utf8").split("\n");
+  lines.forEach((line, i) => {
+    const code = line
+      .replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`/g, '""')
+      .replace(/\/\/.*$/, "");
+    if (/^\s*\*/.test(code) || /^\s*\/\*/.test(code)) return;
+    if (/(?<![\w.])(108|109|110)(?![\w.])/.test(code)) literalOffenders.push(`${rel}:${i + 1}: ${line.trim()}`);
+  });
+}
+if (literalOffenders.length > 0) {
+  fail++;
+  console.error("  FAIL  bare Cologne playoff section id (108/109/110) in live code (derive it from the registry):");
+  for (const o of literalOffenders) console.error("        " + o);
+} else {
+  console.log("  PASS  no bare 108/109/110 in live code outside the allowlist");
+}
+
 // The failure this guard exists for, reproduced on the real validator: a
 // Singapore Stage I result checked against Cologne's fixture is rejected,
 // against Singapore's own layout it resolves.
-let pass = fail === 0 ? 1 : 0;
+let pass = (offenders.length === 0 ? 1 : 0) + (literalOffenders.length === 0 ? 1 : 0);
 {
   const load = (f: string) => JSON.parse(readFileSync(join(root, "src/fixtures", f), "utf8")).result;
   const cologne = load("cologne-layout.json");

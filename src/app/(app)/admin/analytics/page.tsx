@@ -4,7 +4,7 @@ import { getSession } from "@/lib/session";
 import { isOwner } from "@/lib/owner";
 import { prisma } from "@/lib/db";
 import { sessionize } from "@/lib/analytics-core";
-import { fmtLead, PLAYOFF_SEAL_UNIT, sealMetrics, sealUnitFor } from "@/lib/pick-lock-core";
+import { fmtLead, isPlayoffSealUnit, sealMetrics, sealUnitFor } from "@/lib/pick-lock-core";
 import { unitLockAtMs } from "@/lib/pick-lock";
 import { getEventConfig } from "@/lib/events-core";
 import { eventShortName } from "@/lib/leaderboard";
@@ -89,7 +89,7 @@ async function sealedPicksReport() {
     .map(([eventId, unit]) => {
       const cfg = getEventConfig(eventId);
       const sectionName = cfg?.sectionNames[unit];
-      const stage = unit === PLAYOFF_SEAL_UNIT ? "Playoffs" : sectionName ?? `Section ${unit}`;
+      const stage = isPlayoffSealUnit(unit) ? "Playoffs" : sectionName ?? `Section ${unit}`;
       const unitSeals = sealsByUnit.get(key(eventId, unit)) ?? [];
       return {
         eventId,

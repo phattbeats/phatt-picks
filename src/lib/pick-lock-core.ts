@@ -26,22 +26,35 @@
  * the player's own view AND publicly next to a public seal (honesty).
  */
 
+import { playoffEventForSection, playoffRoundForSection, playoffRoundsFor } from "./playoff-bracket-core";
+
 export type SealVisibility = "public" | "hidden";
 export const SEAL_VISIBILITIES: readonly SealVisibility[] = ["public", "hidden"];
 
-/** Playoff bracket sections (QF, SF, GF) — mirrors write-core / PLAYOFF_ROUNDS. */
-export const PLAYOFF_SEAL_SECTIONS: readonly number[] = [108, 109, 110];
-/** The seal unit id for the whole playoff bracket (the Quarterfinals). */
-export const PLAYOFF_SEAL_UNIT = 108;
+/**
+ * The seal unit id for an event's whole playoff bracket: its Quarterfinals
+ * section (Cologne 108, Singapore 114), derived from the registry (PHA-5275).
+ * Null when the event has no playoff rounds.
+ */
+export function playoffSealUnitFor(eventId: number): number | null {
+  return playoffRoundsFor(eventId)[0]?.sectionId ?? null;
+}
 
-/** Which seal unit a section belongs to: playoffs collapse onto the QF id. */
+/** Is this unit id a playoff bracket's seal unit (any event's Quarterfinals)? */
+export function isPlayoffSealUnit(unit: number): boolean {
+  return playoffRoundForSection(unit)?.key === "QF";
+}
+
+/** Which seal unit a section belongs to: playoffs collapse onto their event's QF id. */
 export function sealUnitFor(sectionId: number): number {
-  return PLAYOFF_SEAL_SECTIONS.includes(sectionId) ? PLAYOFF_SEAL_UNIT : sectionId;
+  const eventId = playoffEventForSection(sectionId);
+  return eventId == null ? sectionId : playoffSealUnitFor(eventId) ?? sectionId;
 }
 
 /** Every section a seal unit covers. */
 export function sectionsInUnit(unit: number): number[] {
-  return unit === PLAYOFF_SEAL_UNIT ? [...PLAYOFF_SEAL_SECTIONS] : [unit];
+  const eventId = isPlayoffSealUnit(unit) ? playoffEventForSection(unit) : null;
+  return eventId == null ? [unit] : playoffRoundsFor(eventId).map((r) => r.sectionId);
 }
 
 /** Strict parse of an API-supplied visibility. */
