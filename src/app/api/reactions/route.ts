@@ -24,7 +24,7 @@ import { isSwissSection } from "@/lib/swiss-bucket-core";
 import { isPublicSeal } from "@/lib/pick-lock-core";
 import { getSeal } from "@/lib/pick-lock";
 import { currentEventId, getEventConfig } from "@/lib/events-core";
-import { getCommittedLayout } from "@/lib/layout";
+import { scoringLayoutFor } from "@/lib/layout-state";
 import { isPushConfigured, sendPushToPlayer } from "@/lib/notify";
 import { buildReactionPayload } from "@/lib/notify-core";
 import { parseNotifPrefs } from "@/lib/notifications-core";
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
   // match-by-match while it's still the live event everyone reacts to
   // (#1262), so the resolved gate must not fire on QF/SF/GF picks — only on
   // a fully-resolved Swiss group.
-  const layout = getCommittedLayout();
+  const layout = await scoringLayoutFor(eventId);
   const section = layout.sections.find((s) => s.sectionid === sId);
   const group = section?.groups.find((g) => g.groupid === gId);
   if (group && isSwissSection(sId)) {

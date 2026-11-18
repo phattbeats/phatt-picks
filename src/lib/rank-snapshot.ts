@@ -11,7 +11,7 @@
  */
 
 import { prisma } from "./db";
-import { getCommittedLayout } from "./layout";
+import { scoringLayoutFor } from "./layout-state";
 import { type PlayerPickMap, type OutcomeMap } from "./scoring";
 import { buildSnapshotRows } from "./rank-snapshot-core";
 
@@ -59,7 +59,7 @@ export async function writeRankSnapshots(
   eventId: number,
   now: Date = new Date(),
 ): Promise<{ written: number }> {
-  const layout = getCommittedLayout();
+  const layout = await scoringLayoutFor(eventId);
   const { players, pickMap, outcomeMap, resolvedSectionIds } = await loadScoringInputs(eventId);
   if (resolvedSectionIds.length === 0) return { written: 0 };
 

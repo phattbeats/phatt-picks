@@ -7,7 +7,7 @@
  */
 
 import { prisma } from "@/lib/db";
-import { getCommittedLayout, type Layout } from "@/lib/layout";
+import { committedLayoutFor, type Layout } from "@/lib/layout";
 import { scorePlayer, type OutcomeMap, type PlayerPickMap } from "@/lib/scoring";
 import { getEventBySlug, getEventConfig, type EventConfig } from "@/lib/events-core";
 import { resolveEffectiveStatus } from "@/lib/event-lifecycle-core";
@@ -74,8 +74,7 @@ export function requestedEvent(sp: { [key: string]: string | string[] | undefine
 
 /** The layout fixture that describes a given event, or null if not loadable. */
 function layoutFor(eventId: number): Layout | null {
-  const committed = getCommittedLayout();
-  return committed.event === eventId ? committed : null;
+  return committedLayoutFor(eventId);
 }
 
 /** One Major's whole field, scored and ranked exactly like its leaderboard. */

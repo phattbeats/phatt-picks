@@ -15,7 +15,7 @@
  */
 
 import { prisma } from "./db";
-import { getCommittedLayout, type Layout } from "./layout";
+import { committedLayoutFor, type Layout } from "./layout";
 import { scorePlayer, type OutcomeMap, type PlayerPickMap } from "./scoring";
 import { EVENTS, getEventConfig, type EventConfig } from "./events-core";
 import { computeFinish } from "./majors-core";
@@ -39,8 +39,7 @@ interface ScoredField {
 
 /** The layout fixture that describes a given event, or null if not loadable. */
 function layoutFor(eventId: number): Layout | null {
-  const committed = getCommittedLayout();
-  return committed.event === eventId ? committed : null;
+  return committedLayoutFor(eventId);
 }
 
 /** Score + rank one Major's whole field — two queries, no per-player reads. */

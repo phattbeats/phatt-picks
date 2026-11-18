@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { LastUpdated } from "@/components/LastUpdated";
-import { getCommittedLayout } from "@/lib/layout";
+import { scoringLayoutFor } from "@/lib/layout-state";
 import { getSession } from "@/lib/session";
 import { rankMapForSection, snapshotSectionIds } from "@/lib/rank-snapshot";
 import { baselineSectionId, latestSectionId, rankDelta, type RankDelta } from "@/lib/rank-snapshot-core";
@@ -98,7 +98,7 @@ async function LiveBoard() {
 
   const { rows, latestResolvedAt } = await buildLeaderboard({
     eventId: EVENT_ID,
-    layout: getCommittedLayout(),
+    layout: await scoringLayoutFor(EVENT_ID),
     sessionPlayerId: session?.playerId,
   });
   const { deltas, showDeltas, latestSection } = await rankDeltas(EVENT_ID, rows);

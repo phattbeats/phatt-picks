@@ -18,7 +18,6 @@
 
 import { prisma } from "./db";
 import { claimRefreshSlot, runDeferred } from "./source-refresh";
-import { getCommittedLayout } from "./layout";
 import {
   normalizeOutcomes,
   pickLockedUnresolvedSlots,
@@ -31,7 +30,7 @@ import {
 import { fetchLiquipediaResults, LiquipediaThrottledError } from "./liquipedia";
 import { fetchTournamentLayout, ValveApiError } from "./valve";
 import { isEventFrozenById } from "./event-freeze";
-import { cacheLiveLayout } from "./layout-state";
+import { cacheLiveLayout, scoringLayoutFor } from "./layout-state";
 import { writeRankSnapshots } from "./rank-snapshot";
 import { getSwissStandings, getSwissBracket, ingestStandingsNow, standingsSectionIds } from "./swiss-results";
 import { bracketMatchRecords, bracketTerminalRecords } from "./swiss-bracket-core";
@@ -43,6 +42,15 @@ import {
   playoffSectionIds,
 } from "./lock-schedule-core";
 import { getEventConfig } from "./events-core";
+
+/**
+ * Liquipedia bracket page per Valve event, for the outcome fallback. An event
+ * without one skips the fallback: Valve's answer key plus the HLTV Swiss bridge
+ * are the live sources, and Liquipedia cannot resolve Swiss buckets (#869).
+ */
+const LIQUIPEDIA_PAGE_BY_EVENT: Readonly<Record<number, string>> = {
+  26: "IEM_Cologne_2026",
+};
 
 export interface IngestSummary {
   eventId: number;
@@ -116,7 +124,9 @@ async function tryValveOracle(eventId: number): Promise<RawResolvedSlot[] | null
  * before persist, so re-running after full resolution writes nothing.
  */
 export async function ingestOutcomes(eventId: number): Promise<IngestSummary> {
-  const layout = getCommittedLayout();
+  // This event's layout with Valve's live seeding, never Cologne's fixture
+  // (PHA-1406): validating against another event rejects every slot.
+  const layout = await scoringLayoutFor(eventId);
 
   const existing = await prisma.stageOutcome.findMany({
     where: { eventId },
@@ -162,7 +172,8 @@ export async function ingestOutcomes(eventId: number): Promise<IngestSummary> {
       }
       // Fallback: Liquipedia. The bracket page + slot mapper are event-specific;
       // pre-tournament this yields [] (no completed matches yet).
-      raw = await fetchLiquipediaResults("IEM_Cologne_2026", () => null);
+      const page = LIQUIPEDIA_PAGE_BY_EVENT[eventId];
+      raw = page ? await fetchLiquipediaResults(page, () => null) : [];
       source = "liquipedia";
     }
   } catch (e) {
@@ -284,7 +295,7 @@ export async function bridgeSwissOutcomes(
   eventId: number,
   nowMs: number = Date.now(),
 ): Promise<number> {
-  const layout = getCommittedLayout();
+  const layout = await scoringLayoutFor(eventId);
   const matchTeams = layout.teams.map((t) => ({ pickid: t.pickid, name: t.name }));
   let written = 0;
 
