@@ -50,9 +50,6 @@ export default async function LoginPage({
           <span className="brand">
             <HotlineLockup height={28} />
           </span>
-          <span className="eyebrow rise">
-            PGL Major <b>Singapore 2026</b>
-          </span>
         </div>
         <div className="body">
           <h1 className="display h1 rise d1">Call your shots.</h1>

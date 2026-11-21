@@ -48,9 +48,6 @@ export default async function PhattIdPage() {
         <img src={PHOTOS.phattIdHero} alt="" />
         <span className="credit">Photo · HLTV</span>
         <div className="in">
-          <span className="eyebrow rise">
-            <b>PHATT ID</b> · New on HOTLINE
-          </span>
           <h1 className="display rise d1">{n > 0 ? "Your calls count" : "Achievements"}</h1>
           <p className="rise d2">
             HOTLINE is part of PHATT ID now: one account that levels up across the PHATT arcade.

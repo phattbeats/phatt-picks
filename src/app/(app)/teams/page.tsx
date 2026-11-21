@@ -4,7 +4,6 @@
  */
 
 import Link from "next/link";
-import { getEventConfig } from "@/lib/events-core";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
 import { regionMetaForPickid } from "@/lib/regions-core";
@@ -16,7 +15,6 @@ export const metadata = { title: "Teams · HOTLINE" };
 
 export default function TeamsIndexPage() {
   const layout = servedLayout();
-  const event = getEventConfig(layout.event);
   const field = fieldTeams(layout)
     .map((t) => ({ t, rank: statsForPickid(t.pickid)?.worldRank ?? null, region: regionMetaForPickid(t.pickid) }))
     .sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999) || a.t.name.localeCompare(b.t.name));
@@ -25,7 +23,7 @@ export default function TeamsIndexPage() {
     <div className="sg-page sgt">
       <header className="page-head">
         <span className="eyebrow">
-          <b>{field.length}</b> teams · {(event?.name ?? layout.name).replace(/\s+CS2 Major Championship$/i, "")}
+          <b>{field.length}</b> teams
         </span>
         <h1 className="display">The field.</h1>
       </header>

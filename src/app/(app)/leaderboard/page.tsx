@@ -117,7 +117,7 @@ async function LiveBoard() {
         <span className="credit">Photo · IEM Cologne Major 2026 · HLTV</span>
         <div className="in">
           <span className="eyebrow rise">
-            Leaderboard · <b>{eventName}</b> · {rows.length} player{rows.length !== 1 ? "s" : ""}
+            <b>{rows.length} player{rows.length !== 1 ? "s" : ""}</b>
           </span>
           <h1 className="display rise d1">The board</h1>
         </div>
@@ -245,7 +245,7 @@ async function FinalBoard({ event }: { event: EventConfig }) {
       <span className="credit">Photo · IEM Cologne Major 2026 · HLTV</span>
       <div className="in">
         <span className="eyebrow rise">
-          Final standings · <b>{eventName}</b>
+          <b>{eventName}</b>
           {count !== null && ` · ${count} player${count !== 1 ? "s" : ""}`}
         </span>
         <h1 className="display rise d1">Final standings</h1>

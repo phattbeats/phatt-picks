@@ -221,9 +221,6 @@ export default async function DashboardPage() {
   // Before anything scores, every player sits at 0 — ranks would be alphabetical
   // noise, so the standing card and board say so honestly.
   const boardLevel = !eventStarted && standings.every((r) => r.score === 0);
-  // Once the Grand Final crowns a champion the Major is DONE — the eyebrow stops
-  // saying "Live now" and the hero becomes a send-off (#1274).
-  const eventLabel = champion ? "Major complete" : eventStarted ? "Live now" : "Pre-event";
   // Re-open the actual Major Wrapped deck (the app-wide launcher mounted in the
   // layout) via the replay bus — NOT a /reveal/<GF>?wrapped=1 link (#1274).
   const wrappedStageKey = majorWrappedStageKey(EVENT_ID);
@@ -354,13 +351,6 @@ export default async function DashboardPage() {
           <span className="credit">Photo · {PHOTO_CREDIT}</span>
           <div className="in">
             <div className="hm-hero-main">
-              <span className="eyebrow rise hm-eyebrow">
-                {eventStarted ? <span className="live">{eventLabel}</span> : <span>{eventName} · <b>{eventLabel}</b></span>}
-                <span>
-                  {activePlayoff ? "Playoffs" : `Stage ${String(Math.max(activeIdx, 0) + 1).padStart(2, "0")}`}
-                </span>
-                <StageStatusTag pickability={active.pick} />
-              </span>
               <h1 className="display rise d1">
                 {preStage ? (
                   <>
@@ -377,11 +367,6 @@ export default async function DashboardPage() {
                   <StageCountdown
                     target={stageOneIso}
                     serverNow={now}
-                    label={
-                      <>
-                        Stage I · <b>Opens {stageOneDay}</b> · {city}
-                      </>
-                    }
                     live={{ href: "/picks", text: "Stage I is live" }}
                   />
                 </div>
@@ -391,11 +376,7 @@ export default async function DashboardPage() {
                     target={lockAt}
                     serverNow={now}
                     size="md"
-                    label={
-                      <>
-                        {activeLabel} · <b>until picks lock</b>
-                      </>
-                    }
+                    label={<b>Until picks lock</b>}
                   />
                 </div>
               ) : null}
@@ -719,15 +700,6 @@ function ConcludedHero({
       </div>
     </section>
   );
-}
-
-function StageStatusTag({ pickability }: { pickability: ReturnType<typeof isStagePickable> }) {
-  if (pickability.pickable) return <span className="tag warn">Picks Open</span>;
-  if (pickability.reason === "pickem-not-open") return <span className="tag">Picks not open</span>;
-  if (pickability.reason === "locked-time-passed") return <span className="tag">Underway · Locked</span>;
-  if (pickability.reason === "locked-by-valve") return <span className="tag">Locked by Valve</span>;
-  if (pickability.reason === "teams-not-set") return <span className="tag">Teams not set</span>;
-  return null;
 }
 
 function StageBody({
