@@ -3,6 +3,7 @@ import { PushToggle } from "@/components/PushToggle";
 import { NotifPrefsPanel } from "@/components/NotifPrefsPanel";
 import { InviteLink } from "@/components/InviteLink";
 import { AvatarUpload } from "@/components/AvatarUpload";
+import { ClubhouseAvatarPicker } from "@/components/ClubhouseAvatarPicker";
 import { AdminLocalPlayers } from "@/components/AdminLocalPlayers";
 import { LoginTokenPanel } from "@/components/LoginTokenPanel";
 import { ClaimLocalPicksPanel } from "@/components/ClaimLocalPicksPanel";
@@ -90,6 +91,7 @@ export default async function SettingsPage() {
             Steam sync — Steam accounts only
           </button>
         )}
+        {!connected && <ClubhouseAvatarPicker currentAvatarUrl={playerRow?.avatarUrl ?? null} />}
       </section>
 
       <div className="lay rise d2">

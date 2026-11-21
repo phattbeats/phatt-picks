@@ -157,6 +157,17 @@ export async function register(): Promise<void> {
     console.log(`[autopilot] self-check armed — every ${TICK_MS / 60_000} min`);
   }
 
+  // PHA-5341 — Clubhouse avatars for local players. Every local player with no
+  // avatar (never an uploaded photo, never a Steam player) gets one random
+  // Clubhouse avatar, kept. Idempotent: after the first boot it finds nobody.
+  // New local accounts get theirs at creation; this covers the ones before that.
+  {
+    const { backfillClubhouseAvatars } = await import("@/lib/clubhouse-avatar-backfill");
+    void backfillClubhouseAvatars()
+      .then((r) => console.log(`[clubhouse-avatars] backfill: ${r.candidates} local player(s) without an avatar, ${r.updated} given one`))
+      .catch((err) => console.error("[clubhouse-avatars] backfill failed:", err));
+  }
+
   // PHA-4506 — PHATT ID progression sweep. Replays every linked player's
   // Hotline XP, achievements, coins and charms to the arcade, hourly. Each
   // replay is idempotent on the arcade side, so the sweep is also the retry for

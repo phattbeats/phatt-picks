@@ -390,6 +390,28 @@
 .nf-av-act.ok { color: var(--tac-green); }
 .nf-av-act.err { color: var(--ember); }
 
+/* PHA-5341: Clubhouse avatar picker, a full row under the identity card */
+.nf-set .who .nf-chav { grid-column: 1 / -1; min-width: 0; }
+.nf-chav summary {
+  cursor: pointer; font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-low); padding: 6px 0;
+}
+.nf-chav summary:hover { color: var(--ink-hi); }
+.nf-chav summary .err { color: var(--ember); }
+.nf-chav-grid {
+  list-style: none; margin: 10px 0 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 8px;
+}
+.nf-chav-opt {
+  display: block; width: 100%; aspect-ratio: 1; padding: 0; overflow: hidden; cursor: pointer;
+  background: var(--surf-3); border: 1px solid var(--hair-3); border-radius: var(--r-md);
+}
+.nf-chav-opt img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.nf-chav-opt:hover:not(:disabled) { border-color: var(--ink-mid); }
+.nf-chav-opt.on { border-color: var(--tac-green); box-shadow: 0 0 0 2px var(--tac-green); }
+.nf-chav-opt.busy { opacity: .6; }
+.nf-chav-opt:disabled { cursor: default; }
+
 /* layout: sticky TOC on desktop */
 .nf-set .lay { display: grid; gap: 56px; min-width: 0; }
 @media (min-width: 1024px) {
