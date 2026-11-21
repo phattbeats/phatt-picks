@@ -112,7 +112,7 @@ function Lead({ item, now }: { item: WireItem; now: number }) {
       {!img && <span className="credit">Photo · HLTV</span>}
       <div className="in">
         <span className="eyebrow rise">
-          The wire · <b>{meta(item, now)}</b>
+          <b>{meta(item, now)}</b>
         </span>
         <h1 className="display rise d1">{item.headline}</h1>
         {item.summary && <p className="rise d2">{item.summary}</p>}

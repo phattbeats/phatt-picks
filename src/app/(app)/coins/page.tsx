@@ -168,7 +168,7 @@ export default async function CoinsPage() {
         </div>
         <div className="in">
           <span className="eyebrow rise">
-            Challenge coins · <b>{total} struck</b>
+            <b>{total} struck</b>
           </span>
           <h1 className="display rise d1">Coin holders</h1>
           <p className="rise d2">

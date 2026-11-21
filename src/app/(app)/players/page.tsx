@@ -84,7 +84,7 @@ export default async function DirectoryPage() {
         <span className="credit">Photo · HLTV</span>
         <div className="in">
           <span className="eyebrow rise">
-            {majorShortName(event)} · <b>{rows.length} player{rows.length !== 1 ? "s" : ""}</b>
+            <b>{rows.length} player{rows.length !== 1 ? "s" : ""}</b>
           </span>
           <h1 className="display rise d1">The room</h1>
           <p className="rise d2">

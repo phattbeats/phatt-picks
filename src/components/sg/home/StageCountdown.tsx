@@ -27,8 +27,9 @@ export function StageCountdown({
   target: string;
   /** Server request time (epoch ms) — the first render's clock. */
   serverNow: number;
-  /** Mono label above the digits, e.g. "Stage I · Opens 25 Nov · Singapore". */
-  label: React.ReactNode;
+  /** Optional mono label above the digits, e.g. "Until picks lock". Omit when
+   *  the heading above already says what the clock counts down to. */
+  label?: React.ReactNode;
   /** Shown once the instant has passed. Omit to render nothing then. */
   live?: { href: string; text: string };
   size?: "lg" | "md";
@@ -57,7 +58,7 @@ export function StageCountdown({
     if (!live) return null;
     return (
       <div className="sgcd sgcd-done">
-        <span className="sgcd-label">{label}</span>
+        {label && <span className="sgcd-label">{label}</span>}
         <Link href={live.href} prefetch={false} className="sgcd-live">
           <span className="live">Live</span>
           <span>{live.text}</span>
@@ -83,7 +84,7 @@ export function StageCountdown({
 
   return (
     <div className={`sgcd sgcd-${size}`}>
-      <span className="sgcd-label">{label}</span>
+      {label && <span className="sgcd-label">{label}</span>}
       <div className="sgcd-clock" role="timer" aria-label={spoken}>
         {units.map(([v, u]) => (
           <div key={u} aria-hidden="true">

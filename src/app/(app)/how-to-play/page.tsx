@@ -97,7 +97,6 @@ export default async function HowToPlayPage() {
         <img src={PHOTOS.howToPlayHero} alt="" />
         <span className="credit">Photo · HLTV</span>
         <div className="in">
-          <span className="eyebrow rise">Field manual · PGL Major Singapore 2026</span>
           <h1 className="display rise d1">
             How
             <br />

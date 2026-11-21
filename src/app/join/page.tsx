@@ -22,9 +22,6 @@ export default function JoinHotlinePage() {
         <Link href="/login?intro=return" prefetch={false} className="brand" aria-label="HOTLINE sign-in">
           <HotlineLockup height={28} />
         </Link>
-        <span className="eyebrow">
-          PGL Major <b>Singapore 2026</b>
-        </span>
       </div>
       <div className="body">
         <h1 className="display h1 rise d1">Join HOTLINE for Singapore</h1>
