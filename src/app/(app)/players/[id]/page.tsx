@@ -59,7 +59,8 @@ import { profilePhoto } from "@/lib/photos";
 import { getPlayerProgression } from "@/lib/progression";
 import { ACHIEVEMENT_BY_KEY, CHARMS, CHARM_BY_KEY, feltByKey, keyringFor, levelProgress, showcaseFor } from "@/lib/progression-core";
 import { Showcase, AchievementList, LevelBadge } from "@/components/sg/people/Achievements";
-import { CHARM_ATTACHMENTS, Keyring } from "@/components/Keyring";
+import { Keyring } from "@/components/Keyring";
+import { CHARM_ATTACHMENTS, DEFAULT_CHARM_ATTACHMENT } from "@/lib/keyring-attachments";
 import { coinShortName } from "@/components/heat/ChallengeCoinShelf";
 
 /** Short pick-type tag for a slot (3:0 / 3:1·3:2 / 0:3 for Swiss; — otherwise). */
@@ -185,7 +186,7 @@ export default async function PlayerProfilePage({
   const showcase = showcaseFor(progression.loadout.showcase, progression.unlocked);
   const keyring = keyringFor(progression.loadout.charms, progression.unlocked).map((k) => {
     const c = CHARM_BY_KEY.get(k)!;
-    return { key: c.key, name: c.name, model: c.model, poster: c.poster, attachment: CHARM_ATTACHMENTS[c.key] ?? { x: 0.5, y: 0.5 } };
+    return { key: c.key, name: c.name, model: c.model, poster: c.poster, attachment: CHARM_ATTACHMENTS[c.key] ?? DEFAULT_CHARM_ATTACHMENT };
   });
   // PHA-5305: the keyring shows what is still missing — greyed out, so the
   // collection reads whole. Your own profile only; nobody else's gaps.
@@ -195,7 +196,7 @@ export default async function PlayerProfilePage({
         name: c.name,
         model: c.model,
         poster: c.poster,
-        attachment: CHARM_ATTACHMENTS[c.key] ?? { x: 0.5, y: 0.5 },
+        attachment: CHARM_ATTACHMENTS[c.key] ?? DEFAULT_CHARM_ATTACHMENT,
       }))
     : [];
   const majorName = (eid: number) => {

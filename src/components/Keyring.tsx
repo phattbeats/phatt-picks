@@ -15,6 +15,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DEFAULT_CHARM_ATTACHMENT } from "@/lib/keyring-attachments";
 import type { CharmScene } from "./charm-scene";
 import {
   DEFAULT_PHYSICS,
@@ -40,16 +41,6 @@ export interface KeyringCharm {
 
 /** How many charms a keyring holds. */
 export const KEYRING_SLOTS = 3;
-
-/**
- * The physics body is the point where a real keyring would connect, not the
- * centre of its art. These coordinates land on the visible metal hardware in
- * each poster: the C4's upper split-ring and the defuse kit's top-left loop.
- */
-export const CHARM_ATTACHMENTS: Record<string, CharmAttachment> = {
-  c4_plush: { x: 0.5, y: 0.16 },
-  defuse_kit: { x: 0.22, y: 0.15 },
-};
 
 let can3d: boolean | null = null;
 
@@ -234,7 +225,7 @@ export function Keyring({ charms, locked = [] }: { charms: KeyringCharm[]; locke
         if (el) {
           const tilt = threadAngle(body) * 0.35;
           const charm = charms.find((c) => c.key === key);
-          const attachment = charm?.attachment ?? { x: 0.5, y: 0.5 };
+          const attachment = charm?.attachment ?? DEFAULT_CHARM_ATTACHMENT;
           const position = charmTopLeft(body, el.offsetWidth, el.offsetHeight, attachment);
           el.style.transformOrigin = `${attachment.x * 100}% ${attachment.y * 100}%`;
           el.style.transform = `translate3d(${position.x}px, ${position.y}px, 0) rotate(${(tilt * 180) / Math.PI}deg)`;
