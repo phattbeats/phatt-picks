@@ -22,6 +22,13 @@ export function AvatarUpload({
   editable: boolean;
 }) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl);
+  // PHA-5341: follow the server value after a refresh, so a Clubhouse avatar
+  // chosen in the picker beside this control shows here too.
+  const [prevInitial, setPrevInitial] = useState(initialAvatarUrl);
+  if (initialAvatarUrl !== prevInitial) {
+    setPrevInitial(initialAvatarUrl);
+    setAvatarUrl(initialAvatarUrl);
+  }
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false); // #1213: green "Saved" flash after a change
   const [error, setError] = useState<string | null>(null);

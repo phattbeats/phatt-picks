@@ -25,6 +25,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/db";
+import { randomClubhouseAvatarUrl } from "@/lib/clubhouse-avatars";
 import { getSession } from "@/lib/session";
 import { verifyTurnstile } from "@/lib/captcha";
 import { attributeReferral } from "@/lib/invite";
@@ -100,6 +101,7 @@ async function createLocalPlayer(
       isLocal: true,
       inviteCode,
       createdFromIp: ip ?? null,
+      avatarUrl: randomClubhouseAvatarUrl(), // PHA-5341: a random Clubhouse avatar, kept; changeable in Settings
     },
   });
 

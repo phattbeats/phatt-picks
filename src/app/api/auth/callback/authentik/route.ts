@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { randomClubhouseAvatarUrl } from "@/lib/clubhouse-avatars";
 import { attributeReferral } from "@/lib/invite";
 import { signSessionToken, sessionCookieOptions } from "@/lib/session-core";
 import { phattIdConfig, exchangeAndVerify } from "@/lib/phatt-id";
@@ -56,7 +57,9 @@ export async function GET(req: NextRequest) {
     let player;
     if (d.kind === "create") {
       player = await prisma.player.create({
-        data: { phattIdSub: sub, steamId: d.steamId, displayName: phattIdDisplayName(claims, sub), isLocal: !d.steamId },
+        data: { phattIdSub: sub, steamId: d.steamId, displayName: phattIdDisplayName(claims, sub), isLocal: !d.steamId,
+          // PHA-5341: no Steam picture to show yet, so a random Clubhouse avatar (Steam sign-in replaces it)
+          ...(d.steamId ? {} : { avatarUrl: randomClubhouseAvatarUrl() }) },
         // no Steam link yet -> plays like a local player (unsynced picks) until Steam is linked
       });
       try {

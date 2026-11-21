@@ -362,13 +362,21 @@ export default async function PlayerProfilePage({
         <span className="credit">Photo · HLTV</span>
         {isSelf && gear}
         <div className="in">
-          <div className="pp-hero-av rise">
-            {player.avatarUrl ? (
+          {(() => {
+            const face = player.avatarUrl ? (
               <Image src={player.avatarUrl} alt="" width={132} height={132} unoptimized />
             ) : (
               player.displayName.slice(0, 2).toUpperCase()
-            )}
-          </div>
+            );
+            // PHA-5341: your own avatar (local players) opens the Clubhouse avatar picker in Settings.
+            return isSelf && !player.steamId ? (
+              <Link href="/settings#avatar" prefetch={false} className="pp-hero-av rise edit" aria-label="Change your avatar" title="Change your avatar">
+                {face}
+              </Link>
+            ) : (
+              <div className="pp-hero-av rise">{face}</div>
+            );
+          })()}
           <div className="pp-hero-id rise d1">
             <span className="eyebrow">
               {isSelf ? "Your profile" : "Player"} · <b>{provenance}</b>
