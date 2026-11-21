@@ -34,6 +34,34 @@ export interface KeyringBody {
   vy: number;
 }
 
+/**
+ * Where a charm's hardware loop sits in its square artwork. The physics body
+ * represents this point — never the visual centre of the plush/model — so a
+ * thread visibly terminates at the charm's actual keyring hardware.
+ */
+export interface CharmAttachment {
+  /** Fraction of the artwork width, from its left edge. */
+  x: number;
+  /** Fraction of the artwork height, from its top edge. */
+  y: number;
+}
+
+/**
+ * Top-left artwork position that puts its attachment point at the physics
+ * body. Keeping this pure lets the visual contract be checked without a DOM.
+ */
+export function charmTopLeft(
+  body: Pick<KeyringBody, "x" | "y">,
+  width: number,
+  height: number,
+  attachment: CharmAttachment,
+): { x: number; y: number } {
+  return {
+    x: body.x - width * attachment.x,
+    y: body.y - height * attachment.y,
+  };
+}
+
 export interface PhysicsOpts {
   /** px/s². */
   gravity: number;

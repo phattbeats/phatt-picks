@@ -17,6 +17,7 @@ import {
   DEFAULT_PHYSICS,
   FIXED_DT,
   collide,
+  charmTopLeft,
   enforceThread,
   makeBody,
   placeBody,
@@ -41,6 +42,18 @@ function hang(b: KeyringBody, seconds: number): void {
 }
 
 console.log("verify-keyring-physics");
+
+// 0. The thread's physics point is the charm's hardware loop, not its art centre.
+{
+  const b = makeBody("a", 100, 40, 78, 34);
+  const attachment = { x: 0.5, y: 0.16 };
+  const topLeft = charmTopLeft(b, 124, 124, attachment);
+  check(
+    "hardware attachment stays pinned to the physics point",
+    Math.abs(topLeft.x + 124 * attachment.x - b.x) < 0.001 && Math.abs(topLeft.y + 124 * attachment.y - b.y) < 0.001,
+    `topLeft=(${topLeft.x.toFixed(2)},${topLeft.y.toFixed(2)})`,
+  );
+}
 
 // 1. A charm hangs at exactly its thread length and stays there.
 {
