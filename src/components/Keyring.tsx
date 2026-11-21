@@ -24,7 +24,6 @@ import {
   placeBody,
   step,
   throwBody,
-  charmTopLeft,
   threadAngle,
   type CharmAttachment,
   type KeyringBody,
@@ -226,9 +225,16 @@ export function Keyring({ charms, locked = [] }: { charms: KeyringCharm[]; locke
           const tilt = threadAngle(body) * 0.35;
           const charm = charms.find((c) => c.key === key);
           const attachment = charm?.attachment ?? DEFAULT_CHARM_ATTACHMENT;
-          const position = charmTopLeft(body, el.offsetWidth, el.offsetHeight, attachment);
+          // Pin the charm art's connector to the physics point: place the
+          // child so its connector sits on the body, then pivot the child
+          // around that connector. Rotating the wrapper about its own centre
+          // drifts the connector off the thread.
+          const wrap = el.parentElement;
+          const offsetX = el.offsetWidth * attachment.x;
+          const offsetY = el.offsetHeight * attachment.y;
           el.style.transformOrigin = `${attachment.x * 100}% ${attachment.y * 100}%`;
-          el.style.transform = `translate3d(${position.x}px, ${position.y}px, 0) rotate(${(tilt * 180) / Math.PI}deg)`;
+          el.style.transform = `translate3d(${body.x - offsetX}px, ${body.y - offsetY}px, 0) rotate(${(tilt * 180) / Math.PI}deg)`;
+          if (wrap) wrap.style.transform = "none";
         }
         const line = threads.current.get(key);
         if (line) {
