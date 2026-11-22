@@ -311,4 +311,6 @@ a real match is genuinely stuck — check the source and the `rejected` summary 
 working. Adding or replacing a logo or photo? Run `node scripts/optimize-images.mjs` (the
 team-marks build runs it for you) and commit the `.webp` output, or the new image 404s;
 `verify-m6-logos` fails if a logo variant is missing. Encode at build time, not with next/image:
-the vps1 container has 0.30 CPU.
+the vps1 container has 0.30 CPU (`images.unoptimized` is on). **Never replace an image in place.**
+Art is cached 7 days by browsers and the Cloudflare edge, so a changed file needs a new URL
+(that's why the re-encoded portraits moved to `public/wrapped/cutouts/`).

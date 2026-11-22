@@ -31,7 +31,7 @@ export function teamHref(team: { pickid: number; name: string }): string {
 }
 
 /**
- * Teams with a cleared HLTV player cutout at /public/wrapped/player-<pickid>.webp
+ * Teams with a cleared HLTV player cutout at /public/wrapped/cutouts/player-<pickid>.webp
  * (see /public/wrapped/CREDITS.md).
  */
 const PORTRAIT_PICKIDS: ReadonlySet<number> = new Set([59, 81, 85, 89, 112, 134, 137, 139]);
@@ -45,7 +45,7 @@ const PORTRAIT_PICKIDS: ReadonlySet<number> = new Set([59, 81, 85, 89, 112, 134,
 export function teamPortrait(pickid: number): string | null {
   const pinned = pinnedFacePhoto(pickid);
   if (pinned) return pinned;
-  if (PORTRAIT_PICKIDS.has(pickid)) return `/wrapped/player-${pickid}.webp`;
+  if (PORTRAIT_PICKIDS.has(pickid)) return `/wrapped/cutouts/player-${pickid}.webp`;
   const starters = (statsForPickid(pickid)?.roster ?? []).filter((p) => !p.standIn && p.photo?.startsWith("/players/"));
   const star = starters.reduce<(typeof starters)[number] | null>(
     (best, p) => (best == null || (p.rating ?? 0) > (best.rating ?? 0) ? p : best),
