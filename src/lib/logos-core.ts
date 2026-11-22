@@ -36,9 +36,27 @@ export interface ResolvableTeam {
   name: string;
 }
 
-/** Self-hosted fallback path, keyed by the layout's logo slug. */
+/**
+ * Self-hosted mark path, keyed by the layout's logo slug. WebP built from the
+ * committed PNG by scripts/optimize-images.mjs (PHA-5360): fits 256×256.
+ */
 export function selfHostUrl(logoSlug: string): string {
-  return `/logos/${logoSlug}.png`;
+  return `/logos/${logoSlug}.webp`;
+}
+
+/** Width descriptors of the two built sizes (fits 144×144 and 256×256). */
+export const SELF_HOST_WIDTHS = { sm: 144, full: 256 } as const;
+
+/**
+ * `srcset` for a self-hosted mark (PHA-5360): a 144 px copy for list/tile sizes
+ * and the 256 px one for big heroes, so a 24 px pool-card logo stops pulling a
+ * 100 KB PNG. Pair with `sizes="<rendered css px>px"`. Returns undefined for any
+ * URL that isn't a self-hosted mark (ByMykel stickers have one size).
+ */
+export function selfHostSrcSet(src: string): string | undefined {
+  const m = /^\/logos\/([^/]+)\.webp$/.exec(src);
+  if (!m) return undefined;
+  return `/logos/sm/${m[1]}.webp ${SELF_HOST_WIDTHS.sm}w, ${src} ${SELF_HOST_WIDTHS.full}w`;
 }
 
 /** Up-to-two-letter monogram; "?" for TBD / empty. */

@@ -12,6 +12,10 @@ const nextConfig: NextConfig = {
     // Silence BigInt serialization warnings — we handle this manually
   },
   images: {
+    // PHA-5360: optimized heroes/podium photos were served max-age=4h, must-
+    // revalidate, so each return visit re-pulled ~100 KB per hero. Sources are
+    // static files that rarely change, so a week is safe.
+    minimumCacheTTL: 604800,
     remotePatterns: [
       // Steam avatars
       { protocol: "https", hostname: "avatars.steamstatic.com" },
@@ -29,11 +33,22 @@ const nextConfig: NextConfig = {
   // at the origin so CF treats it as dynamic and every visit re-checks for a new
   // worker. (manifest.json is already max-age=0; hashed /_next/static stays immutable.)
   async headers() {
+    // PHA-5360: static art (logos, photos, player shots, flags, brand, coin and
+    // Wrapped art) used to go out with no Cache-Control, so Cloudflare stamped a
+    // 4h browser TTL and every return visit re-downloaded it. These files are
+    // not content-hashed, so not `immutable`: a week fresh, then up to a month
+    // served from cache while it revalidates in the background. A replaced
+    // file shows up within a week; renaming it shows it at once.
+    const ART = "public, max-age=604800, stale-while-revalidate=2592000";
     return [
       {
         source: "/sw.js",
         headers: [{ key: "Cache-Control", value: "no-store, must-revalidate" }],
       },
+      ...["logos", "photos", "players", "flags", "brand", "wrapped", "coins", "art", "charms", "watch"].map((dir) => ({
+        source: `/${dir}/:path*`,
+        headers: [{ key: "Cache-Control", value: ART }],
+      })),
     ];
   },
 };

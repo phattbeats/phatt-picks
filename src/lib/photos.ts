@@ -6,7 +6,8 @@
  * (COLOGNE_PHOTOS in playoff-wrapped-core.ts).
  */
 
-const p = (name: string) => `/photos/${name}.jpg`;
+// WebP built from the committed JPGs by scripts/optimize-images.mjs (PHA-5360).
+const p = (name: string) => `/photos/${name}.webp`;
 
 /** Fixed slots: the surface a shot belongs to. */
 export const PHOTOS = {

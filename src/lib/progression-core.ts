@@ -188,7 +188,8 @@ export interface AchievementDef {
   bannerLabel: string;
 }
 
-const photo = (name: string) => `/photos/${name}.jpg`;
+// WebP siblings of the JPGs (scripts/optimize-images.mjs, PHA-5360). Banners persist by key, not path.
+const photo = (name: string) => `/photos/${name}.webp`;
 
 export const ACHIEVEMENTS: readonly AchievementDef[] = [
   { key: "first_call", name: "First Call", description: "Save a full set of picks for a stage.", trinket: "Rotary handset", banner: photo("crowd-march"), bannerLabel: "The fan march" },
