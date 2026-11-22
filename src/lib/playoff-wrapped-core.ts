@@ -194,7 +194,7 @@ export const COLOGNE_PLAYOFF_MOMENTS: readonly PlayoffMoment[] = [
     headline: "donk turned the Swiss into a highlight reel.",
     body: "Spirit barely conceded a round on the way through Cologne — a clean 3-0 over NaVi, Aurora and 9z, with donk, the Major MVP at sixteen, posting one of the most dominant individual runs the Major has seen. For a stretch, the rest of the field was playing for second.",
     logoPickIds: [81],
-    portrait: { src: "/wrapped/player-81.webp", alt: "donk" },
+    portrait: { src: "/wrapped/cutouts/player-81.webp", alt: "donk" },
   },
   {
     id: "po-m-woxic",
@@ -204,7 +204,7 @@ export const COLOGNE_PLAYOFF_MOMENTS: readonly PlayoffMoment[] = [
     figureCaption: "Aurora clinch on Dust2, Stage 3",
     body: "With the Playoff berth on the line, woxic stood up in a 1v4 on Dust2 and won it — sealing Aurora's first run to a Major playoff stage since Copenhagen 2024, and the Turkish core back among the last eight.",
     logoPickIds: [134],
-    portrait: { src: "/wrapped/player-woxic.webp", alt: "woxic" },
+    portrait: { src: "/wrapped/cutouts/player-woxic.webp", alt: "woxic" },
   },
   {
     id: "po-m-cinderellas",
@@ -216,7 +216,7 @@ export const COLOGNE_PLAYOFF_MOMENTS: readonly PlayoffMoment[] = [
     logoPickIds: [112, 137],
     // 9z's luchov as the hero — the bigger upset (downed the #1 seed); both
     // Cinderella teams' logos still show in the row below.
-    portrait: { src: "/wrapped/player-112.webp", alt: "luchov, 9z" },
+    portrait: { src: "/wrapped/cutouts/player-112.webp", alt: "luchov, 9z" },
     photo: COLOGNE_PHOTOS.cinderella,
   },
   {
@@ -325,7 +325,7 @@ export const COLOGNE_EDITION: PlayoffWrappedEdition = {
   photos: COLOGNE_PHOTOS,
   moments: COLOGNE_PLAYOFF_MOMENTS,
   teams: COLOGNE_PLAYOFF_TEAMS,
-  portraitFor: (pickId) => `/wrapped/player-${pickId}.webp`,
+  portraitFor: (pickId) => `/wrapped/cutouts/player-${pickId}.webp`,
 };
 
 /** A Singapore team's cut-out: its pinned face (PHA-5359), else the top-rated player's (PHA-5253), or null. */
@@ -545,7 +545,7 @@ export function buildPlayoffWrappedDeck(
       body: `Eight teams entered the single-elim bracket. ${championName} ran the table${overRunnerUp} to be the last team standing in ${ed.venue}.`,
       teamLogos: logo(champId),
       // The champion's marquee player as the hero (#1274) — the playoff field
-      // all have a /wrapped/player-<pickid>.webp portrait; falls back to the
+      // all have a /wrapped/cutouts/player-<pickid>.webp portrait; falls back to the
       // trophy still if absent.
       portrait: portrait(champId, championName),
       photo: ed.photos.champion,
@@ -622,7 +622,7 @@ export function buildPlayoffWrappedDeck(
       figureCaption: region ? region.label : undefined,
       body: t.blurb || undefined,
       // The team's marquee player as the slide picture (#1274) — cut-out
-      // HLTV portrait at /wrapped/player-<pickId>.webp; hides itself if absent.
+      // HLTV portrait at /wrapped/cutouts/player-<pickId>.webp; hides itself if absent.
       portrait: portrait(t.pickId, nameFor(t.pickId, assets)),
       teamLogos: logo(t.pickId),
       autoAdvanceMs: AUTO_MS,

@@ -13,10 +13,10 @@ import { useState } from "react";
 type DemoTeam = { key: string; name: string; img: string };
 
 const TEAMS: DemoTeam[] = [
-  { key: "fal", name: "Falcons", img: "/wrapped/player-139.webp" },
-  { key: "vit", name: "Vitality", img: "/wrapped/player-89.webp" },
-  { key: "fur", name: "FURIA", img: "/wrapped/player-85.webp" },
-  { key: "9z", name: "9z", img: "/wrapped/player-112.webp" },
+  { key: "fal", name: "Falcons", img: "/wrapped/cutouts/player-139.webp" },
+  { key: "vit", name: "Vitality", img: "/wrapped/cutouts/player-89.webp" },
+  { key: "fur", name: "FURIA", img: "/wrapped/cutouts/player-85.webp" },
+  { key: "9z", name: "9z", img: "/wrapped/cutouts/player-112.webp" },
 ];
 
 const SLOTS: { code: string; label: string }[] = [
