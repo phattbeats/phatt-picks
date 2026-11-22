@@ -33,6 +33,7 @@ import { stageNumeral } from "@/lib/stage-wrapped-core";
 import { LockedPicksBoard } from "@/components/heat/LockedPicksBoard";
 import { LiveSwissStandings } from "@/components/heat/LiveSwissStandings";
 import { LiveSwissBracketBoard } from "@/components/heat/LiveSwissBracketBoard";
+import { hasPublishedMatchups, liveBracketVisible } from "@/lib/stage-discovery-core";
 import { refreshStandingsOnRead, getSwissStandings, getSwissBracket } from "@/lib/swiss-results";
 import { recordsByPickId } from "@/lib/swiss-results-core";
 import { refreshTeamStatsOnRead, getLiveTeamStats } from "@/lib/team-stats";
@@ -203,7 +204,6 @@ export default async function PicksPage({
   // don't render it (and the crawl is gated off). Playoff sections have no lock
   // time → isBracketRevealed is false; they render via the playoff branch below.
   const bracketRevealed = isBracketRevealed(activeSectionId, nowMs, event?.lockSchedule);
-  const showLiveBracket = !!section && isSwiss && (showLineup || bracketRevealed);
   const matchTeams = layout.teams.map((t) => ({ pickid: t.pickid, name: t.name }));
 
   let swissStandings: ReturnType<typeof buildSwissStandings> | null = null;
@@ -221,10 +221,26 @@ export default async function PicksPage({
   // standings as well for stage II and III"). Both come from the same HLTV crawl,
   // whose refresh window opens at the same instant, so they appear together the
   // moment HLTV publishes the field.
-  if (showLiveBracket && section) {
-    await refreshStandingsOnRead(EVENT_ID, activeSectionId, nowMs); // ~1h claim, deferred crawl
+  //
+  // PHA-5358: the reveal is also data-driven. The live tick crawls each
+  // sourced stage hourly before its 24h window, so the moment HLTV publishes
+  // the opening matchups (Singapore's Stage I: three days early) the bracket
+  // appears under the picker. Before that it stays dark: nothing is drawn from
+  // a guessed draw.
+  if (section && isSwiss) {
+    if (showLineup || bracketRevealed) {
+      await refreshStandingsOnRead(EVENT_ID, activeSectionId, nowMs); // ~1h claim, deferred crawl
+    }
     liveBracket = await getSwissBracket(EVENT_ID, activeSectionId, matchTeams);
     liveStandings = await getSwissStandings(EVENT_ID, activeSectionId, matchTeams);
+  }
+  const bracketPublished = !!liveBracket && hasPublishedMatchups(liveBracket.rounds);
+  const showLiveBracket =
+    !!section &&
+    liveBracketVisible({ isSwiss, locked: showLineup, revealedByClock: bracketRevealed, publishedMatchups: bracketPublished });
+  if (!showLiveBracket) {
+    liveBracket = null;
+    liveStandings = null;
   }
 
   // The viewer's locked-picks board + the resolved answer key are the post-lock
@@ -661,11 +677,11 @@ export default async function PicksPage({
             recordByTeam={liveStandings ? Object.fromEntries(recordsByPickId(liveStandings.rows)) : undefined}
             initialSeal={mySeal}
           />
-          {/* #943: 24h before this stage locks, the live Swiss bracket AND the
+          {/* #943 / PHA-5358: once HLTV publishes this stage's opening
+              matchups (or from 24h before lock), the live Swiss bracket AND the
               W-L standings table appear beneath the picker so you can study the
-              opening matchups + field before you lock. Render once HLTV has
-              published them; an honest placeholder stands in while they're live
-              but not yet announced. */}
+              field before you lock. An honest placeholder stands in inside the
+              24h window while nothing is announced yet. */}
           {showLiveBracket &&
             (liveBracket || liveStandings ? (
               <>

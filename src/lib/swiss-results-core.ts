@@ -50,6 +50,31 @@ export interface StandingRow extends RawStandingRow {
 export interface MatchableTeam {
   pickid: number;
   name: string;
+  /**
+   * Other names the source may print for this team (PHA-5358: Valve's
+   * "PVISION" / "FaZe Clan" / "GOSH" are HLTV's PARIVISION / FaZe / BC.Game).
+   * Matched after every primary name, so they never steal another team's name.
+   */
+  aliases?: readonly string[];
+}
+
+/** normalized name -> pickid, primary names first, then aliases. */
+export function teamNameIndex(
+  teams: readonly MatchableTeam[],
+  normalize: (raw: string) => string,
+): Map<string, number> {
+  const byNorm = new Map<string, number>();
+  for (const t of teams) {
+    const key = normalize(t.name);
+    if (key && !byNorm.has(key)) byNorm.set(key, t.pickid);
+  }
+  for (const t of teams) {
+    for (const a of t.aliases ?? []) {
+      const key = normalize(a);
+      if (key && !byNorm.has(key)) byNorm.set(key, t.pickid);
+    }
+  }
+  return byNorm;
 }
 
 /**
@@ -171,11 +196,7 @@ export function matchStandingsToLayout(
   teams: readonly MatchableTeam[],
   opts: { advanceAt?: number; eliminateAt?: number } = {},
 ): StandingRow[] {
-  const byNorm = new Map<string, number>();
-  for (const t of teams) {
-    const key = normalizeTeamName(t.name);
-    if (key && !byNorm.has(key)) byNorm.set(key, t.pickid);
-  }
+  const byNorm = teamNameIndex(teams, normalizeTeamName);
   return rows.map((r) => ({
     ...r,
     pickid: byNorm.get(normalizeTeamName(r.name)) ?? null,

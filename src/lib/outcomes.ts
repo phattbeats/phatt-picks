@@ -32,7 +32,15 @@ import { fetchTournamentLayout, ValveApiError } from "./valve";
 import { isEventFrozenById } from "./event-freeze";
 import { cacheLiveLayout, scoringLayoutFor } from "./layout-state";
 import { writeRankSnapshots } from "./rank-snapshot";
-import { getSwissStandings, getSwissBracket, ingestStandingsNow, standingsSectionIds } from "./swiss-results";
+import {
+  getSwissStandings,
+  getSwissBracket,
+  ingestStandingsNow,
+  ingestStandingsPreReveal,
+  discoverPendingStages,
+  standingsSectionIds,
+} from "./swiss-results";
+import { loadStageFacts } from "./stage-discovery";
 import { bracketMatchRecords, bracketTerminalRecords } from "./swiss-bracket-core";
 import { deriveClinchedSlots, findContradictedSlots } from "./swiss-clinch-core";
 import { bucketSwissSlots, isSwissSection } from "./swiss-bucket-core";
@@ -443,13 +451,20 @@ export async function refreshLiveResultsTick(
 ): Promise<LiveResultsTick> {
   if (await isEventFrozenById(eventId, nowMs)) return { eventId, ingested: 0, resolved: 0, stale: 0 };
 
+  // PHA-5358: pull the latest HLTV-published stage facts into the registry
+  // overlay before reading any lock or window below.
+  await loadStageFacts();
+
   let ingested = 0;
   for (const sectionId of standingsSectionIds(eventId)) {
-    {
-      const evt = getEventConfig(eventId);
-      if (!isWithinRefreshWindow(sectionId, nowMs, evt?.lockSchedule, evt?.matchWindows)) continue; // off-window → serve cache, don't crawl
-    }
     try {
+      const evt = getEventConfig(eventId);
+      if (!isWithinRefreshWindow(sectionId, nowMs, evt?.lockSchedule, evt?.matchWindows)) {
+        // Before the hot window: an hourly look, so opening matchups and the
+        // real first-match time land as soon as HLTV publishes them.
+        ingested += await ingestStandingsPreReveal(eventId, sectionId, nowMs);
+        continue;
+      }
       ingested += await ingestStandingsNow(eventId, sectionId);
     } catch (e) {
       console.error(
@@ -457,6 +472,15 @@ export async function refreshLiveResultsTick(
         e instanceof Error ? e.message : e,
       );
     }
+  }
+
+  // PHA-5358: hourly look at linked stage pages that have no source yet
+  // (Stage III on the hub). Once one lists a timed matchup the overlay wires
+  // its source, lock and window, and the loop above picks it up next tick.
+  try {
+    await discoverPendingStages(eventId);
+  } catch (e) {
+    console.error("[live-tick] stage discovery failed (non-fatal):", e instanceof Error ? e.message : e);
   }
 
   let resolved = 0;
