@@ -18,7 +18,7 @@ import {
 } from "./logos-core";
 
 export type { LogoTier, ResolvableTeam } from "./logos-core";
-export { selfHostUrl, monogramLabel } from "./logos-core";
+export { selfHostUrl, selfHostSrcSet, monogramLabel } from "./logos-core";
 
 // Pickids are stable per team across Majors, so a later event overrides an earlier
 // one and teams without a new sticker keep the previous event's mark.
@@ -50,7 +50,7 @@ export function resolveLogoTiers(team: ResolvableTeam): LogoTier[] {
   return resolveLogoTiersCore(withMark(team), LOGOS, MARKS);
 }
 
-/** True when public/logos/<slug>.png ships (so an <img> for it never 404s). */
+/** True when public/logos/<slug>.webp ships (so an <img> for it never 404s). */
 export function hasTeamMark(slug: string): boolean {
   return MARKS.has(slug);
 }

@@ -1,8 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
-import type { LogoTier } from "@/lib/logos";
+import { selfHostSrcSet, type LogoTier } from "@/lib/logos";
 
 interface TeamLogoProps {
   tiers: LogoTier[]; // ordered candidates from resolveLogoTiers()
@@ -37,16 +36,23 @@ export function TeamLogo({ tiers, teamName, size = 32 }: TeamLogoProps) {
     return <Monogram label={current?.kind === "monogram" ? current.label : "?"} teamName={teamName} size={size} />;
   }
 
+  // Plain <img> (was next/image `unoptimized`, which renders the same tag but
+  // can't take a srcset). The srcset lets a small tile pull the 144 px mark and a
+  // hero the 256 px one (PHA-5360); lazy because most logos sit below the fold.
   return (
-    <Image
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
       src={current.src}
+      srcSet={selfHostSrcSet(current.src)}
+      sizes={`${size}px`}
       alt={teamName}
       title={teamName}
       width={size}
       height={size}
+      loading="lazy"
+      decoding="async"
       style={{ borderRadius: "var(--r-md)", objectFit: "contain", flexShrink: 0 }}
       onError={() => setIndex((i) => i + 1)}
-      unoptimized
     />
   );
 }

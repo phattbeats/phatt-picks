@@ -25,6 +25,7 @@ import { dirname, join } from "node:path";
 import {
   resolveLogoTiers,
   selfHostUrl,
+  selfHostSrcSet,
   monogramLabel,
   type LogoMap,
   type LogoTier,
@@ -134,6 +135,18 @@ check(
   "every indexed mark exists under public/logos",
   absent.length === 0,
   absent.length ? `missing files: ${absent.join(", ")}` : "",
+);
+// PHA-5360: TeamLogo's srcset points at every file it lists, so each must ship.
+const srcsetMissing = [...MARKS].flatMap((m) =>
+  (selfHostSrcSet(selfHostUrl(m)) ?? "")
+    .split(",")
+    .map((c) => c.trim().split(" ")[0])
+    .filter((u) => !existsSync(join(ROOT, "public", u))),
+);
+check(
+  "every srcset candidate (sm + full WebP) exists — run scripts/optimize-images.mjs",
+  srcsetMissing.length === 0,
+  srcsetMissing.length ? `missing: ${srcsetMissing.join(", ")}` : "",
 );
 
 // 3. terminal tier never fails + monogram labels.
