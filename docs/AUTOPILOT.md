@@ -25,7 +25,7 @@ clock with no restart.
 
 | Driver | Cadence | What it does | Gates (no-op when…) | Log line |
 |---|---|---|---|---|
-| **Live results** (`refreshLiveResultsTick`, `outcomes.ts`) | 5 min | Crawls the HLTV standings and bracket for each Swiss stage. Reads Valve's live layout, which holds both the answer key and the seeding: it caches the layout (Stage III advancers, playoff seeds, `picks_allowed`) and writes results. Bridges the HLTV Swiss records into results. Runs the stale-playoff watchdog. | The Major is frozen (archived). The crawl only runs from 24h before a stage locks until its window `end`. | `[live-tick] event N: ingested …, resolved …` and `[live-tick] STALE …` |
+| **Live results** (`refreshLiveResultsTick`, `outcomes.ts`) | 5 min | Crawls the HLTV standings and bracket for each Swiss stage. Reads Valve's live layout, which holds both the answer key and the seeding: it caches the layout (Stage III advancers, playoff seeds, `picks_allowed`) and writes results. Bridges the HLTV Swiss records into results. Runs the stale-playoff watchdog. | The Major is frozen (archived). Every tick from 24h before a stage locks until its window `end`; **hourly before that** (PHA-5358), so opening matchups and the real first-match time land as soon as HLTV posts them. Also loads the stage-discovery overlay and, hourly, crawls linked stage pages that have no source yet (section 3a). | `[live-tick] event N: ingested …, resolved …` and `[live-tick] STALE …` |
 | **Slow lane** (`ingestTeamStatsNow`, `ingestSpotlightOddsNow`, `refreshWireNow`) | hourly, first run 30s after boot | Refreshes the team dossier "Last 5" (32 HLTV profiles), the Polymarket odds for authored playoff matchups, and the HLTV news wire. | Frozen Major. Team stats skip days with no stage being played. Odds skip when no matchup is authored. | `[slow-tick] event N: team stats …, odds lines …, wire items …` |
 | **Autopilot self-check** (`runAutopilotCheck`, `autopilot.ts`) | 5 min | Works out each section's phase and reports any config gap a human has to close (section 4). | The event isn't effectively live. | `[autopilot] NEEDS-HUMAN …` / `[autopilot] WARN …` |
 | **Pushes** (`prelock-reminders`, `recap-pushes`, `announcement-pushes`, `coin-earned-pushes`) | 5 min | Pre-lock warnings 24h and 1h before each lock (the playoffs get **one** reminder), a "recap ready" push when a stage resolves, broadcasts, and "you earned a coin". | `PRELOCK_REMINDERS_DISABLED=1`. Each player's notification prefs. | `[prelock] …`, `[recap-push] …` |
@@ -74,9 +74,28 @@ shows each section's current phase.
 |---|---|---|---|
 | `dark` | No published lock time | default | No countdown, reveal or reminder. Valve still locks it on time. |
 | `scheduled` | Lock time known, more than 24h out | `lockSchedule[id]` committed | Countdown, the 24h/1h reminders queued, picks open. |
-| `revealed` | Within 24h of lock | `lockAt − 24h` | Live bracket and standings appear, and the HLTV crawl starts. |
+| `revealed` | Within 24h of lock | `lockAt − 24h` | The HLTV crawl goes to every tick. The live bracket and standings show under the picker from here at the latest, or earlier once HLTV publishes the opening matchups (PHA-5358). |
 | `live` | Locked, results arriving | `lockAt` passed **or** Valve's `picks_allowed` is false, whichever comes first | Picks freeze (HOTLINE returns 409) and reveal to everyone. Results turn green and points land within a tick. Bleachers reactions open. |
 | `decided` | Every slot has a result | last result written | Recap push. The next stage's teams come from Valve's seeding. |
+
+### 3a. Stage discovery: where a stage's dates come from (PHA-5358)
+
+A Swiss stage's **lock, crawl window and HLTV page come from HLTV**. Nobody
+commits them by hand. `stage-discovery-core.ts` reads them off the stage pages
+the crawl already fetches, `StageDiscovery` rows store them, and
+`mergeStageFacts` (`events-core.ts`) overlays them on the committed registry.
+Every `getEventConfig` / `EVENTS` read sees the merged config.
+
+| Fact | Read from | Rule |
+|---|---|---|
+| Lock (`lockSchedule[id]`) | Earliest start time of a match with both teams named, from the stage page's group table | Published beats committed. Singapore's committed Stage I `11:00Z` was HLTV's day marker; the first match is `04:00Z`. |
+| Source (`sectionSources[id]`) | The "Grouped events" strip on any crawled stage page ("Stage 2", "Stage 3 & Playoffs") | Only for a Swiss section with no committed source. Added once that page lists a timed matchup. |
+| Window (`matchWindows[id]`) | The page header's date span, plus one day of grace on the end | Only when none is committed. A crawl stop, never shown as a time. |
+
+A stage whose page has no timed matchup yet (TBD slots, or matchups with no
+times) **stays dark**: no lock, no countdown, no reveal. Nothing is estimated.
+Check it with `docker logs phatt-picks | grep stage-discovery` (it logs each
+link and each overlay change) or by reading the `StageDiscovery` table.
 
 **Two lock signals, and Valve wins.** A stage counts as locked when either our
 committed time has passed or Valve has closed it (`isStageLocked` in
@@ -105,7 +124,7 @@ human surface is a few registry edits, each gated by CI
 
 | Gap | When the self-check raises it | The edit (all in `src/lib/events-core.ts`) |
 |---|---|---|
-| **Next Swiss stage undated** (`undated-stage-next`, needs-human) | The previous stage has locked and this one still has no time | Add `lockSchedule[id]` (first match, UTC) and `matchWindows[id]` (play days), plus `sectionSources[id]` once HLTV posts the page. All three together: the registry invariants reject a source without a lock and window. |
+| **Next Swiss stage undated** (`undated-stage-next`, needs-human) | The previous stage has locked and this one still has no time | Normally nothing: stage discovery (section 3a) fills it the hour HLTV lists the stage's timed matchups. If the alert persists after HLTV shows them, check the `[stage-discovery]` log. The manual fallback is unchanged: add `lockSchedule[id]`, `matchWindows[id]` and `sectionSources[id]` together. |
 | **Playoffs undated** (`undated-stage-next` on the QF section) | The last Swiss stage has locked and the bracket has no game times | Fill `SINGAPORE_PLAYOFF_SCHEDULE` (per-game UTC instants, bracket order). The bracket's lock, reveal and its one reminder are derived from it automatically (invariant F). |
 | **Dated stage with no HLTV page** (`no-source-before-reveal`, needs-human) | Within 24h of lock with no `sectionSources[id]` | Add the HLTV stage URL. If HLTV makes no sub-event, use the hub page (Cologne's Stage III used hub 8301). |
 | **Lock drift** (`valve-closed-early` / `valve-still-open`, warn) | Valve closed before our time, or was still open 45 min after it | Correct `lockSchedule[id]`. Picks are already frozen by Valve's flag either way. |
@@ -133,12 +152,14 @@ unless the "human" column says so.
 | When | What happens on its own | Human |
 |---|---|---|
 | 11-17 11:00 | Major went live (first lock − 7d) | — |
-| 11-23 11:00 | Stage I reveals: live bracket and standings, crawl starts | — |
-| 11-23 11:00 / 11-24 10:00 | Stage I reminders (24h / 1h) | — |
-| **11-24 11:00** | **Stage I locks** (and Valve's flag, whichever is first). Results and points start landing every 5 min. | — |
+| 11-22 | Stage I bracket shows under the picker (HLTV published the opening round early) | — |
+| 11-23 04:00 | Stage I crawl goes to every tick | — |
+| 11-23 04:00 / 11-24 03:00 | Stage I reminders (24h / 1h) | — |
+| **11-24 04:00** | **Stage I locks** (HLTV's first match, 12:00 SGT; or Valve's flag, whichever is first). Results and points start landing every 5 min. | — |
 | 11-27 23:59 | Stage I crawl window closes | — |
-| 11-27 11:00 | Stage II reveals | — |
-| **11-28 11:00** | **Stage II locks.** From this tick, if Stage III is still undated, the self-check raises `undated-stage-next 113` | **Commit Stage III's lock, window and HLTV page** as soon as PGL or HLTV publish them |
+| After Stage I | HLTV draws Stage II; within the hour its lock moves to the real first match and the bracket shows | — |
+| **11-28** | **Stage II locks** (committed fallback `11:00Z` is HLTV's day marker until the draw replaces it). | — |
+| After Stage II | HLTV draws Stage III on hub 8302; discovery wires its source, lock and window within the hour | Only if `undated-stage-next 113` persists after HLTV lists the matches |
 | Stage III lock | Locks (Valve's flag even if our time is missing). From this tick, if the bracket is undated, the self-check raises `undated-stage-next 114` | **Commit the playoff game times** |
 | Dec 10–13 | QF, SF and GF resolve from Valve's answer key. The bracket locks at the first QF. | Optional: author the Polymarket matchups |
 | GF result | Coins mint, Major Wrapped opens | — |
@@ -175,7 +196,7 @@ docker logs phatt-picks 2>&1 | grep -E '\[(autopilot|live-tick|slow-tick)\]' | t
 
 ---
 
-## 8. Known gaps (as of 2026-11-18)
+## 8. Known gaps (as of 2026-11-22)
 
 Tracked on the PHA-1406 epic. Each one is code, not a missing fact.
 
@@ -188,8 +209,11 @@ Tracked on the PHA-1406 epic. Each one is code, not a missing fact.
   "Cologne Major" title, `COLOGNE_PLAYOFF_TEAMS`), and the per-stage
   `stage-wrapped-content.ts` entries exist only for 105–107. Singapore needs
   its own entries, keyed by event.
-- **Schedule discovery is not automated.** Stage III and playoff times still
-  arrive as a commit. The next step toward zero-touch is a deterministic
-  HLTV match-list reader that proposes the times (it needs crawl4ai access to
-  test against real pages). Until then, the self-check tells you exactly when
-  the commit is due.
+- **Playoff game times are not discovered yet.** Swiss stages are (section
+  3a, PHA-5358). The playoff bracket's per-game times still arrive as a
+  commit to `SINGAPORE_PLAYOFF_SCHEDULE`. HLTV has not published a Singapore
+  playoff bracket to build the reader against. `undated-stage-next 114`
+  says when it's due.
+- **crawl4ai runs on RAID** (`CRAWL4AI_URL` over Tailscale). If the container
+  stops, every HLTV crawl fails and the bracket freezes on its last cache. On
+  2026-11-22 it sat in `Created` after a recreate until it was started by hand.

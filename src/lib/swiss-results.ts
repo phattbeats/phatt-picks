@@ -45,6 +45,9 @@ import {
   type SwissRound,
 } from "./swiss-bracket-core";
 import { isWithinRefreshWindow } from "./lock-schedule-core";
+import { recordStagePage, pendingStagePages } from "./stage-discovery";
+import { TEAM_SOURCES } from "./team-stats-sources";
+import { parseHltvEventPage } from "./stage-discovery-core";
 // Which HLTV event page carries the live Swiss table for each pick'em section
 // is now per-event config in the registry (#948). For the active event
 // (Cologne) these are exactly the section ids/urls this module declared before.
@@ -112,6 +115,20 @@ export interface LiveBracket {
   source: string;
   sourceUrl: string;
   fetchedAtIso: string;
+}
+
+/**
+ * Add each team's HLTV name and slug as match aliases (PHA-5358). Valve and
+ * HLTV disagree on some names (Valve "PVISION" / "FaZe Clan" / "GOSH" are
+ * HLTV "PARIVISION" / "FaZe" / "BC.Game"); without this the bracket shows no
+ * logo for them and the standings bridge never scores them.
+ */
+function withHltvAliases(teams: readonly MatchableTeam[]): MatchableTeam[] {
+  return teams.map((t) => {
+    const src = TEAM_SOURCES[t.pickid];
+    if (!src) return t;
+    return { ...t, aliases: [...(t.aliases ?? []), src.name, src.slug.replace(/-/g, " ")] };
+  });
 }
 
 function hasStandingsSource(eventId: number, sectionId: number): boolean {
@@ -216,6 +233,9 @@ async function ingestStandings(eventId: number, sectionId: number): Promise<numb
     const { markdown, html } = await crawlPage(src.url);
     const rows = parseHltvSwissStandings(markdown);
     const bracket = parseSwissBracket(html);
+    // PHA-5358: the same page carries the stage's published match times and
+    // its sibling stage pages; record them for the registry overlay.
+    await recordStagePage(eventId, sectionId, src.url, html, bracket);
     if (rows.length === 0 && bracket.length === 0) {
       // Parsed nothing from either view — keep whatever we have, don't blank it.
       console.warn(`[standings] parsed 0 rows + 0 bracket rounds for section ${sectionId} — keeping prior cache`);
@@ -345,6 +365,63 @@ export async function ingestStandingsNow(eventId: number, sectionId: number): Pr
   return rows;
 }
 
+/** Minimum spacing between discovery passes over not-yet-sourced stage pages. */
+const DISCOVERY_MIN_INTERVAL_MS = 60 * 60_000;
+/** Minimum spacing between crawls of a sourced stage before its reveal window. */
+const PRE_REVEAL_MIN_INTERVAL_MS = 60 * 60_000;
+
+/**
+ * Hourly crawl of a sourced Swiss stage BEFORE its hot window opens (PHA-5358).
+ * Picks up the opening matchups and the real first-match time the moment HLTV
+ * publishes them, instead of waiting for `lockAt − 24h`. No-op once the
+ * stage's window has ended. Returns rows/matches ingested (0 when skipped).
+ */
+export async function ingestStandingsPreReveal(
+  eventId: number,
+  sectionId: number,
+  nowMs: number = Date.now(),
+): Promise<number> {
+  if (!hasStandingsSource(eventId, sectionId)) return 0;
+  const w = getEventConfig(eventId)?.matchWindows[sectionId];
+  const end = w ? Date.parse(w.end) : NaN;
+  if (Number.isFinite(end) && nowMs > end) return 0; // decided stage
+  if (!(await claimRefreshSlot(`hltv-prereveal:${eventId}:${sectionId}`, PRE_REVEAL_MIN_INTERVAL_MS))) return 0;
+  return ingestStandings(eventId, sectionId);
+}
+
+/**
+ * Crawl the stage pages HLTV links that are not sourced yet (Stage III on the
+ * hub page, before its matchups and times are out). Each crawl records what it
+ * finds; once a timed matchup appears, the overlay adds the section's source,
+ * lock and window and the regular crawl takes over. At most hourly per event.
+ * Never throws. Returns the number of pages crawled.
+ */
+export async function discoverPendingStages(eventId: number): Promise<number> {
+  const evt = getEventConfig(eventId);
+  if (!evt) return 0;
+  const pending = await pendingStagePages(eventId, evt.sectionSources);
+  if (pending.length === 0) return 0;
+  if (!(await claimRefreshSlot(`stage-discovery:${eventId}`, DISCOVERY_MIN_INTERVAL_MS))) return 0;
+  let crawled = 0;
+  for (const p of pending) {
+    try {
+      const { html } = await crawlPage(p.sourceUrl);
+      crawled++;
+      const page = parseHltvEventPage(html);
+      await recordStagePage(eventId, p.sectionId, p.sourceUrl, html, parseSwissBracket(html));
+      console.log(
+        `[stage-discovery] event ${eventId}: crawled section ${p.sectionId} (${page.title ?? p.sourceUrl})`,
+      );
+    } catch (e) {
+      console.warn(
+        `[stage-discovery] crawl failed for section ${p.sectionId} (non-fatal):`,
+        e instanceof Error ? e.message : e,
+      );
+    }
+  }
+  return crawled;
+}
+
 /** The sections that have a live standings source for an event (warm-all entry point). */
 export function standingsSectionIds(eventId: number): number[] {
   return Object.keys(sectionSourcesFor(eventId)).map(Number);
@@ -380,7 +457,7 @@ export async function getSwissStandings(
   }
   if (!Array.isArray(blob.rows) || blob.rows.length === 0) return null;
   return {
-    rows: matchStandingsToLayout(blob.rows, teams),
+    rows: matchStandingsToLayout(blob.rows, withHltvAliases(teams)),
     source: blob.source,
     sourceUrl: blob.sourceUrl,
     fetchedAtIso: new Date(blob.fetchedAt ?? row.fetchedAt.getTime()).toISOString(),
@@ -431,7 +508,7 @@ export async function getSwissBracket(
   }
   if (!Array.isArray(blob.bracket) || blob.bracket.length === 0) return null;
   return {
-    rounds: matchBracketToLayout(blob.bracket, teams),
+    rounds: matchBracketToLayout(blob.bracket, withHltvAliases(teams)),
     source: blob.source,
     sourceUrl: blob.sourceUrl,
     fetchedAtIso: new Date(blob.fetchedAt ?? row.fetchedAt.getTime()).toISOString(),
