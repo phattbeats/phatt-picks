@@ -52,6 +52,7 @@ import {
   type MatchWindow,
 } from "./lock-schedule-core";
 import { isSwissSection } from "./swiss-bucket-core";
+import type { StageFacts } from "./stage-discovery-core";
 import {
   isEffectivelyLive,
   resolveEffectiveStatus,
@@ -248,8 +249,10 @@ const SINGAPORE_2026: EventConfig = {
   // ceiling (mirrors Cologne's reasoning). Refine both dates when stage day-
   // splits publish.
   dates: { start: "2026-11-25T00:00:00Z", end: "2026-12-15T23:59:59Z" },
-  // Stage I's first match: 24 Nov 19:00 SGT (UTC+8) = 11:00Z, per HLTV.
-  stageOneStart: "2026-11-24T11:00:00Z",
+  // Stage I's first match: HEROIC vs Imperial and 9z vs Lynn Vision, 24 Nov
+  // 12:00 SGT (UTC+8) = 04:00Z, per HLTV event 9303's match list (PHA-5358).
+  // The earlier 11:00Z was HLTV's event-day marker, not a match time.
+  stageOneStart: "2026-11-24T04:00:00Z",
   // Section ids from the Valve layout (event 27): 111-113 Swiss Stages I-III,
   // 114/115/116 QF/SF/GF.
   sectionNames: {
@@ -260,13 +263,17 @@ const SINGAPORE_2026: EventConfig = {
     115: "Semifinals",
     116: "Grand Final",
   },
-  // First-match instants (HLTV, 19:00 SGT = 11:00Z). Stage III's opener and the
-  // playoff games are unpublished; they stay dark until committed.
+  // First-match instants. Stage I is HLTV's first published match (04:00Z).
+  // Stage II's 11:00Z is still HLTV's day marker: its matchups are drawn after
+  // Stage I. Both are fallbacks only. Once HLTV lists a stage's matches, the
+  // stage-discovery overlay (mergeStageFacts, PHA-5358) replaces the lock with
+  // the earliest published match, and fills Stage III's lock, window and hub
+  // source the same way. Nothing here is estimated.
   // Playoff locks are DERIVED from playoffSchedule (the whole bracket locks at
   // its first game), so publishing the bracket is one edit: fill
   // SINGAPORE_PLAYOFF_SCHEDULE and the bracket locks, reveals and reminds.
   lockSchedule: {
-    111: "2026-11-24T11:00:00Z",
+    111: "2026-11-24T04:00:00Z",
     112: "2026-11-28T11:00:00Z",
     ...derivePlayoffLocks(SINGAPORE_PLAYOFF_SCHEDULE),
   },
@@ -295,10 +302,127 @@ const SINGAPORE_2026: EventConfig = {
  * new entry here (plus the per-fixture swaps in NEXT-MAJOR.md); going live is
  * flipping its `status` to "live" and the previous event's to "archived".
  */
-export const EVENTS: Readonly<Record<number, EventConfig>> = {
+export const BASE_EVENTS: Readonly<Record<number, EventConfig>> = {
   [COLOGNE_2026.eventId]: COLOGNE_2026,
   [SINGAPORE_2026.eventId]: SINGAPORE_2026,
 };
+
+/**
+ * Overlay HLTV-published stage facts on a committed event (PHA-5358). For each
+ * Swiss section with a published first match:
+ *   - `lockSchedule[id]` becomes that first match. Published beats committed:
+ *     Singapore's committed Stage I lock (11:00Z) was HLTV's day marker, the
+ *     real first match is 04:00Z.
+ *   - `sectionSources[id]` is filled from the discovered page when none is
+ *     committed (Stage III on the hub page). A committed source always wins.
+ *   - `matchWindows[id]` is filled from the page's header span when none is
+ *     committed. A committed window always wins.
+ * A fact with no published first match changes nothing (the stage stays dark),
+ * and a discovered source with no window end is not added, so the merged
+ * config always satisfies `validateEventRevealConfig`. Non-Swiss sections are
+ * ignored. Pure; returns `base` itself when no fact applies.
+ */
+export function mergeStageFacts(base: EventConfig, facts: readonly StageFacts[]): EventConfig {
+  let lockSchedule: Record<number, string> | null = null;
+  let matchWindows: Record<number, MatchWindow> | null = null;
+  let sectionSources: Record<number, SectionSource> | null = null;
+  for (const f of facts) {
+    const name = base.sectionNames[f.sectionId];
+    if (!name || !isStructurallySwiss(name)) continue;
+    if (!f.firstMatchAt || !Number.isFinite(Date.parse(f.firstMatchAt))) continue;
+    const committedSource = base.sectionSources[f.sectionId];
+    const committedWindow = base.matchWindows[f.sectionId];
+    const discoveredWindow =
+      f.windowEnd && Number.isFinite(Date.parse(f.windowEnd))
+        ? { start: f.windowStart ?? f.firstMatchAt, end: f.windowEnd }
+        : null;
+    if (!committedSource) {
+      // A new source needs a lock AND a window (invariants A/B).
+      if (!committedWindow && !discoveredWindow) continue;
+      sectionSources ??= { ...base.sectionSources };
+      sectionSources[f.sectionId] = { url: f.sourceUrl, label: "HLTV" };
+    }
+    if (!committedWindow && discoveredWindow) {
+      matchWindows ??= { ...base.matchWindows };
+      matchWindows[f.sectionId] = discoveredWindow;
+    }
+    if (base.lockSchedule[f.sectionId] !== f.firstMatchAt) {
+      lockSchedule ??= { ...base.lockSchedule };
+      lockSchedule[f.sectionId] = f.firstMatchAt;
+    }
+  }
+  if (!lockSchedule && !matchWindows && !sectionSources) return base;
+  return {
+    ...base,
+    lockSchedule: lockSchedule ?? base.lockSchedule,
+    matchWindows: matchWindows ?? base.matchWindows,
+    sectionSources: sectionSources ?? base.sectionSources,
+  };
+}
+
+/**
+ * The process-wide overlay store. Kept on `globalThis` because Next bundles
+ * `instrumentation.ts` (which loads the facts on its tick) separately from the
+ * app routes (which read them); a module-level variable would not be shared.
+ */
+interface StageFactsStore {
+  facts: Map<number, string>;
+  merged: Map<number, EventConfig>;
+}
+const STORE_KEY = Symbol.for("hotline.stageFacts.v1");
+function factsStore(): StageFactsStore {
+  const g = globalThis as unknown as Record<symbol, StageFactsStore | undefined>;
+  return (g[STORE_KEY] ??= { facts: new Map(), merged: new Map() });
+}
+
+/**
+ * Install the discovered facts for an event; every registry read after this
+ * sees the merged config. Idempotent: identical facts keep the same merged
+ * object. Unknown event ids are ignored. Returns true when the effective
+ * config changed.
+ */
+export function setStageFacts(eventId: number, facts: readonly StageFacts[]): boolean {
+  const base = BASE_EVENTS[eventId];
+  if (!base) return false;
+  const store = factsStore();
+  const key = JSON.stringify([...facts].sort((a, b) => a.sectionId - b.sectionId));
+  if (store.facts.get(eventId) === key) return false;
+  store.facts.set(eventId, key);
+  const merged = mergeStageFacts(base, facts);
+  const before = store.merged.get(eventId) ?? base;
+  if (merged === base) store.merged.delete(eventId);
+  else store.merged.set(eventId, merged);
+  return JSON.stringify(before) !== JSON.stringify(merged);
+}
+
+/** Drop every installed overlay (tests). */
+export function clearStageFacts(): void {
+  const store = factsStore();
+  store.facts.clear();
+  store.merged.clear();
+}
+
+function effectiveEvent(id: number): EventConfig | undefined {
+  return factsStore().merged.get(id) ?? BASE_EVENTS[id];
+}
+
+/**
+ * The event registry as every consumer reads it: the committed config with the
+ * HLTV-published stage facts overlaid (`setStageFacts`). Each property is a
+ * getter, so `EVENTS[id]` and `Object.values(EVENTS)` always see the latest
+ * overlay. Adding a Major is a new entry in BASE_EVENTS.
+ */
+export const EVENTS: Readonly<Record<number, EventConfig>> = Object.freeze(
+  Object.defineProperties(
+    {} as Record<number, EventConfig>,
+    Object.fromEntries(
+      Object.keys(BASE_EVENTS).map((k) => [
+        k,
+        { enumerable: true, get: () => effectiveEvent(Number(k)) },
+      ]),
+    ),
+  ),
+);
 
 /** Look up an event's config by Valve event id; null when not registered. */
 export function getEventConfig(id: number): EventConfig | null {

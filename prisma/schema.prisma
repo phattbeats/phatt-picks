@@ -185,6 +185,25 @@ model NewsItem {
 // source of mid-stage W-L; a source outage degrades to the last cached blob (or
 // empty), never a fabricated record. Single-row-per-section blob (like
 // LayoutCache) keeps writes atomic and avoids 16-row churn each refresh.
+// HLTV-published stage facts (PHA-5358): per Swiss section, the page carrying
+// its bracket and the earliest published match. events-core overlays these on
+// the committed registry (mergeStageFacts), so a stage's lock, crawl window and
+// source follow HLTV with no code edit. firstMatchAt stays null until HLTV
+// lists a timed matchup; such a row only records where to look.
+model StageDiscovery {
+  id           String    @id @default(cuid())
+  eventId      Int
+  sectionId    Int
+  sourceUrl    String
+  firstMatchAt DateTime?
+  windowStart  DateTime?
+  windowEnd    DateTime?
+  checkedAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([eventId, sectionId])
+}
+
 model SwissStandingsCache {
   id        String   @id @default(cuid())
   eventId   Int

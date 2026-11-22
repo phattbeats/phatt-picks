@@ -304,3 +304,13 @@ slot to a specific group (that mapping is the very seed assumption that broke QF
 catches a stuck match no matter which group it is, and never false-fires on a game still in
 progress. The grace is the *detection* deadline, not a retry interval. If you see that warning,
 a real match is genuinely stuck — check the source and the `rejected` summary from `ingestOutcomes`.
+
+**Images ship as built WebP, not the committed PNG/JPG (PHA-5360).** The app references
+`public/logos/<slug>.webp` (+ `public/logos/sm/<slug>.webp`, 144 px, picked via srcset) and
+`public/photos/<name>.webp`. The PNG/JPG next to them are the sources and stay so old URLs keep
+working. Adding or replacing a logo or photo? Run `node scripts/optimize-images.mjs` (the
+team-marks build runs it for you) and commit the `.webp` output, or the new image 404s;
+`verify-m6-logos` fails if a logo variant is missing. Encode at build time, not with next/image:
+the vps1 container has 0.30 CPU (`images.unoptimized` is on). **Never replace an image in place.**
+Art is cached 7 days by browsers and the Cloudflare edge, so a changed file needs a new URL
+(that's why the re-encoded portraits moved to `public/wrapped/cutouts/`).

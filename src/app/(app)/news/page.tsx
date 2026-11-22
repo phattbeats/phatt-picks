@@ -39,9 +39,6 @@ function EmptyWire() {
       <img src={PHOTOS.newsHero} alt="" />
       <span className="credit">Photo · HLTV</span>
       <div className="in">
-        <span className="eyebrow rise">
-          The wire · <b>Scanning frequencies</b>
-        </span>
         <h1 className="display rise d1">No signal yet</h1>
         <p className="rise d2">
           A match-news feed is still on the way. For now HOTLINE stays focused on{" "}

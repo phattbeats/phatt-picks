@@ -12,6 +12,13 @@ const nextConfig: NextConfig = {
     // Silence BigInt serialization warnings — we handle this manually
   },
   images: {
+    // PHA-5360: every image is already a pre-built, right-sized static file
+    // (scripts/optimize-images.mjs), so next/image serves it as-is. The
+    // optimizer made each hero a /_next/image request that Cloudflare can't
+    // cache (DYNAMIC): the LCP image of every page was re-served by the 0.30-CPU
+    // origin (0.45-0.8 s) and re-encoded after every deploy. Static files are
+    // edge-cached and keep the long Cache-Control set in headers() below.
+    unoptimized: true,
     remotePatterns: [
       // Steam avatars
       { protocol: "https", hostname: "avatars.steamstatic.com" },
@@ -29,11 +36,22 @@ const nextConfig: NextConfig = {
   // at the origin so CF treats it as dynamic and every visit re-checks for a new
   // worker. (manifest.json is already max-age=0; hashed /_next/static stays immutable.)
   async headers() {
+    // PHA-5360: static art (logos, photos, player shots, flags, brand, coin and
+    // Wrapped art) used to go out with no Cache-Control, so Cloudflare stamped a
+    // 4h browser TTL and every return visit re-downloaded it. These files are
+    // not content-hashed, so not `immutable`: a week fresh, then up to a month
+    // served from cache while it revalidates in the background. A replaced
+    // file shows up within a week; renaming it shows it at once.
+    const ART = "public, max-age=604800, stale-while-revalidate=2592000";
     return [
       {
         source: "/sw.js",
         headers: [{ key: "Cache-Control", value: "no-store, must-revalidate" }],
       },
+      ...["logos", "photos", "players", "flags", "brand", "wrapped", "coins", "art", "charms", "watch"].map((dir) => ({
+        source: `/${dir}/:path*`,
+        headers: [{ key: "Cache-Control", value: ART }],
+      })),
     ];
   },
 };

@@ -24,6 +24,7 @@ import {
   bracketTerminalRecords,
 } from "../src/lib/swiss-bracket-core.ts";
 import type { Layout, Section } from "../src/lib/layout.ts";
+import { TEAM_SOURCES } from "../src/lib/team-stats-sources.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p: string) => readFileSync(join(ROOT, p), "utf8");
@@ -253,6 +254,52 @@ check("stacked deciding column: 1:3 holds the decided eliminated (NOT 2:3)", (()
 })());
 check("stacked deciding column: 2:3 stays empty (fills after today's games)", () =>
   stacked.find((r) => r.label === "2:3") === undefined);
+
+console.log("\nswiss-bracket - lazy ref-popup markup (HLTV, Nov 2026, PHA-5358)");
+
+// HLTV's popups became `{"ref":{"matchId":…}}` with no teams; the old parser
+// returned 8 empty matches for Singapore's published opening round.
+const sg = parseSwissBracket(read("src/fixtures/hltv-sg-stage1-upcoming.sample.html"));
+const sgR1 = sg.find((r) => r.label === "0:0");
+check("SG Stage I: one 0:0 round with all 8 opening matchups", sg.length === 1 && sgR1?.matches.length === 8);
+check("SG Stage I: every opening matchup has both team names", !!sgR1 && sgR1.matches.every((m) => !!m.team1.name && !!m.team2.name));
+check("SG Stage I: HEROIC vs Imperial is the first cell", sgR1?.matches[0].team1.name === "HEROIC" && sgR1?.matches[0].team2.name === "Imperial");
+check("SG Stage I: unplayed (no winner, no score)", !!sgR1 && sgR1.matches.every((m) => !m.played && m.team1.score === null && !m.team1.winner));
+check("SG Stage I: start times come from the group table (first at 04:00Z)", (() => {
+  const t = sgR1!.matches.map((m) => m.startTimeMs).filter((x): x is number => x !== null);
+  return t.length === 8 && new Date(Math.min(...t)).toISOString() === "2026-11-24T04:00:00.000Z";
+})());
+const cr = parseSwissBracket(read("src/fixtures/hltv-cologne-stage1-refpopup.sample.html"));
+const cr00 = cr.find((r) => r.label === "0:0")!;
+check("Cologne ref markup: full bracket, 33 matches across contention rounds", cr.reduce((n, r) => n + r.matches.length, 0) === 33);
+check("Cologne ref markup: M80 13–8 Lynn Vision, M80 the winner", (() => {
+  const m = cr00.matches[0];
+  return m.played && m.team1.name === "M80" && m.team1.score === 13 && m.team1.winner && m.team2.name === "Lynn Vision" && m.team2.score === 8 && !m.team2.winner;
+})());
+check("Cologne ref markup: loser-first cell keeps the right winner (FlyQuest 16–14)", (() => {
+  const m = cr00.matches[1];
+  return m.team1.name === "SINNERS" && !m.team1.winner && m.team2.name === "FlyQuest" && m.team2.winner && m.team2.score === 16;
+})());
+check("Cologne ref markup: deciding rounds are Bo3", cr.find((r) => r.label === "2:2")!.matches.every((m) => m.bestOf === 3));
+check("Cologne ref markup: terminal columns still list settled teams", cr.find((r) => r.label === "3:0")!.teams.length === 2);
+check("ref markup agrees with the old inline-json capture on every 0:0 winner (HLTV now upper-cases some names)", (() => {
+  const old = parseSwissBracket(html).find((r) => r.label === "0:0")!.matches;
+  const w = (m: { team1: { name: string | null; winner: boolean }; team2: { name: string | null } }) => (m.team1.winner ? m.team1.name : m.team2.name)?.toLowerCase();
+  return old.length === cr00.matches.length && old.every((m, i) => w(m) === w(cr00.matches[i]));
+})());
+
+check("SG Stage I: all 16 HLTV names map to Valve pickids once HLTV aliases are added", (() => {
+  const sgLayout = (JSON.parse(read("src/fixtures/pgl-singapore-2026-layout.json")) as { result: Layout }).result;
+  const plain = sgLayout.teams.map((t) => ({ pickid: t.pickid, name: t.name }));
+  const aliased = plain.map((t) => {
+    const src = TEAM_SOURCES[t.pickid];
+    return src ? { ...t, aliases: [src.name, src.slug.replace(/-/g, " ")] } : t;
+  });
+  const sides = (teams: typeof plain) => matchBracketToLayout(sg, teams)[0].matches.flatMap((m) => [m.team1.pickid, m.team2.pickid]);
+  const without = sides(plain).filter((p) => p === null).length;
+  const withA = sides(aliased);
+  return without > 0 && withA.every((p) => p !== null) && new Set(withA).size === 16;
+})());
 
 console.log("\nswiss-bracket - graceful empty");
 

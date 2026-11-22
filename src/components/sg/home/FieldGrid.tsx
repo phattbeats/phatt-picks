@@ -5,7 +5,7 @@
  * CSS only, no client JS.
  */
 import Link from "next/link";
-import { selfHostUrl } from "@/lib/logos";
+import { selfHostSrcSet, selfHostUrl } from "@/lib/logos";
 import { regionMetaForPickid } from "@/lib/regions-core";
 import { statsForPickid } from "@/lib/team-stats-core";
 import { teamHref } from "@/components/sg/teams/team-assets";
@@ -43,7 +43,7 @@ export function FieldGrid({ field }: { field: FieldEntry[] }) {
           <>
             {t.badge && <span className="hm-tile-badge">{t.badge}</span>}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={selfHostUrl(t.logo)} alt="" width={96} height={96} loading={i < 8 ? "eager" : "lazy"} decoding="async" />
+            <img src={selfHostUrl(t.logo)} srcSet={selfHostSrcSet(selfHostUrl(t.logo))} sizes="96px" alt="" width={96} height={96} loading={i < 8 ? "eager" : "lazy"} decoding="async" />
             <span className="hm-tile-name">{t.name}</span>
             {t.region && (
               <span className="hm-tile-region" title={t.region.label}>

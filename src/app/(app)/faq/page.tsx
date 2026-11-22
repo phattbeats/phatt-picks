@@ -267,7 +267,6 @@ export default function FaqPage() {
         <img src={PHOTOS.faqHero} alt="" />
         <span className="credit">Photo · HLTV</span>
         <div className="in">
-          <span className="eyebrow rise">Field manual</span>
           <h1 className="display rise d1">FAQ</h1>
           <p className="rise d2">
             Short answers. For the full picture,{" "}

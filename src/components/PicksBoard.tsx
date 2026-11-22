@@ -88,6 +88,7 @@ function PoolLogoArt({ team }: { team: TeamDef }) {
       src={srcs[index]}
       alt=""
       draggable={false}
+      loading="lazy"
       decoding="async"
       onError={() => setIndex((i) => i + 1)}
     />

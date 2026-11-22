@@ -79,6 +79,10 @@ export async function register(): Promise<void> {
   {
     const { refreshLiveResultsTick } = await import("@/lib/outcomes");
     const { currentEventId } = await import("@/lib/events-core");
+    // PHA-5358: install the HLTV-published stage overlay at boot, before the
+    // first render reads a lock time. Each live tick reloads it.
+    const { loadStageFacts } = await import("@/lib/stage-discovery");
+    await loadStageFacts();
     let liveTickInFlight = false;
     const liveTick = async (): Promise<void> => {
       if (liveTickInFlight) return;
