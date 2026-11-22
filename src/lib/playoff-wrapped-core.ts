@@ -25,6 +25,7 @@ import type { WrappedPhoto, WrappedSlide, WrappedTeamLogo } from "./stage-wrappe
 import type { StageWrappedRankMove } from "./stage-wrapped-content";
 import { regionMetaForPickid } from "./regions-core";
 import { SINGAPORE_TEAM_STATS } from "./team-stats-singapore";
+import { pinnedFacePhoto } from "./team-stats-core";
 
 /** Per-slide auto-advance for the recap (floored by the shell to MIN_AUTO_ADVANCE_MS). */
 const AUTO_MS = 6000;
@@ -327,8 +328,10 @@ export const COLOGNE_EDITION: PlayoffWrappedEdition = {
   portraitFor: (pickId) => `/wrapped/player-${pickId}.webp`,
 };
 
-/** The top-rated player's committed cut-out for a Singapore team (PHA-5253), or null. */
+/** A Singapore team's cut-out: its pinned face (PHA-5359), else the top-rated player's (PHA-5253), or null. */
 function singaporePortrait(pickId: number): string | null {
+  const pinned = pinnedFacePhoto(pickId);
+  if (pinned) return pinned;
   const players = SINGAPORE_TEAM_STATS[pickId]?.roster ?? [];
   const best = [...players].filter((p) => p.photo).sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))[0];
   return best?.photo ?? null;
