@@ -655,3 +655,27 @@ export const TEAM_STATS: Record<number, TeamStats> = { ...COLOGNE_TEAM_STATS, ..
 export function statsForPickid(pickid: number): TeamStats | null {
   return TEAM_STATS[pickid] ?? null;
 }
+
+/**
+ * Hand-picked team faces (PHA-5359): pickid → HLTV player id. A pinned player
+ * is the team's face on every surface (pool card, dossier, team page, bracket
+ * champion, wrapped) and beats both the curated wrapped cutout and the
+ * top-rating rule. Brandon's call, not data: 100 Thieves is rain.
+ */
+export const TEAM_FACE_PINS: Readonly<Record<number, number>> = {
+  78: 8183, // 100 Thieves → rain
+};
+
+/**
+ * The pinned face's photo for a team, or null when the team has no pin, or
+ * the pinned player is no longer on the roster or has no photo. The caller then
+ * applies its usual rule.
+ */
+export function pinnedFacePhoto(pickid: number): string | null {
+  const hltvId = TEAM_FACE_PINS[pickid];
+  if (hltvId == null) return null;
+  const player = (statsForPickid(pickid)?.roster ?? []).find((p) =>
+    new RegExp(`/player/${hltvId}/`).test(p.hltvUrl),
+  );
+  return player?.photo ?? null;
+}

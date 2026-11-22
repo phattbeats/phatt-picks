@@ -1,9 +1,10 @@
 /**
  * Pick'Em board art helpers (Singapore skin, HANDOFF §3).
  *
- * Pool cards and the dossier use the team's player cutout (teamPortrait: the
- * curated wrapped portrait, else the top-rated starter's HLTV bodyshot); a team
- * with neither falls back to its colour + code.
+ * Pool cards and the dossier use the team's player cutout (teamPortrait: a
+ * pinned face from TEAM_FACE_PINS, else the curated wrapped portrait, else the
+ * top-rated starter's HLTV bodyshot); a team with none falls back to its
+ * colour + code.
  */
 import type { TeamDef } from "@/lib/layout";
 import { teamAccent } from "@/lib/playoff-spotlights";
