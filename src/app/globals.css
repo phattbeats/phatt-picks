@@ -288,7 +288,8 @@ body {
   display: none;
   position: sticky; top: 0;
   z-index: 40;
-  background: rgba(7,7,8,0.94);
+  /* PHA-5398: fully opaque — at 0.94 bright page text was readable through the bar. */
+  background: var(--void);
   border-bottom: 1px solid var(--hair);
 }
 .topnav-inner {
@@ -351,7 +352,7 @@ body {
   justify-content: space-between;
   padding: 14px 20px;
   padding-top: max(14px, env(safe-area-inset-top));
-  background: rgba(7,7,8,0.94);
+  background: var(--void); /* PHA-5398: opaque, see .topnav */
   border-bottom: 1px solid var(--hair);
 }
 .apphead .brand .lockup { height: 22px; }
@@ -364,7 +365,7 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 50;
   /* #1269: solid, near-opaque — no backdrop-filter on a fixed full-width bar. */
-  background: rgba(7,7,8,0.975);
+  background: var(--void); /* PHA-5398: opaque, see .topnav */
   border-top: 1px solid var(--hair);
   display: grid;
   grid-template-columns: repeat(5, 1fr);

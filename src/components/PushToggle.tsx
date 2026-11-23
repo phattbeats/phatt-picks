@@ -69,6 +69,30 @@ function requestPermissionCompat(): Promise<NotificationPermission> {
   });
 }
 
+/**
+ * Brave exposes `navigator.brave.isBrave()`; it's the only reliable signal (its UA
+ * is identical to Chrome's). Never throws — anything odd just means "not Brave".
+ */
+async function isBraveBrowser(): Promise<boolean> {
+  try {
+    const brave = (navigator as unknown as { brave?: { isBrave?: () => Promise<boolean> } }).brave;
+    return typeof brave?.isBrave === "function" ? Boolean(await brave.isBrave()) : false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Why the last enable attempt failed (PHA-5398). `push-service` / `brave` both mean
+ * pushManager.subscribe() threw AbortError ("Registration failed - push service
+ * error"): permission was granted and our VAPID key is fine, but the browser's push
+ * service refused. Brave desktop does this by default — "Use Google services for
+ * push messaging" ships off. `detail` is the raw error, kept small for diagnosis.
+ */
+type Failure = { kind: "brave" | "push-service" | "other"; detail: string };
+
+const BRAVE_SETTINGS_URL = "brave://settings/privacy";
+
 type State =
   | "loading"
   | "unsupported"
@@ -82,6 +106,8 @@ export function PushToggle() {
   const [vapidKey, setVapidKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [failure, setFailure] = useState<Failure | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const isIos =
     typeof navigator !== "undefined" &&
@@ -161,6 +187,8 @@ export function PushToggle() {
     if (!vapidKey) return;
     setBusy(true);
     setNote(null);
+    setFailure(null);
+    setCopied(false);
     try {
       const permission = await requestPermissionCompat();
       if (permission !== "granted") {
@@ -223,9 +251,29 @@ export function PushToggle() {
       // (blocked push service, bad key, lapsed session) and made this unfixable.
       const reason =
         err instanceof DOMException ? err.name : err instanceof Error ? err.message : "unknown error";
-      setNote(`Couldn't enable reminders (${reason}). Try again, or check notification settings.`);
+      const detail = err instanceof DOMException && err.message ? `${err.name}: ${err.message}` : reason;
+      if (err instanceof DOMException && err.name === "AbortError") {
+        // Our own failures (SW timeout, save error) are plain Errors, so an
+        // AbortError here can only be the browser's push service refusing.
+        setFailure({ kind: (await isBraveBrowser()) ? "brave" : "push-service", detail });
+      } else {
+        setFailure({ kind: "other", detail });
+      }
+      // The toggle stays off (state is still "idle"); the explanation stays up
+      // until the next attempt.
+      setState("idle");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function copyBraveUrl() {
+    try {
+      await navigator.clipboard.writeText(BRAVE_SETTINGS_URL);
+      setCopied(true);
+    } catch {
+      // Clipboard can be refused; the address is user-select:all, so it's one tap to select.
+      setCopied(false);
     }
   }
 
@@ -340,6 +388,41 @@ export function PushToggle() {
           <button type="button" className="btn-ghost nf-btn-sm" onClick={sendTest} disabled={busy} aria-label="Send a test reminder">
             {busy ? "Working…" : "Send test"}
           </button>
+        </div>
+      )}
+      {failure && !subscribed && (
+        <div className="push-fail" role="alert">
+          {failure.kind === "brave" ? (
+            <>
+              <p className="push-fail-h">Brave blocks push by default.</p>
+              <ol className="push-fail-steps">
+                <li>
+                  Open Brave Settings &gt; Privacy and security. Paste this into the address bar:{" "}
+                  <code className="push-fail-url">{BRAVE_SETTINGS_URL}</code>{" "}
+                  <button type="button" className="btn-ghost nf-btn-sm" onClick={copyBraveUrl}>
+                    {copied ? "Copied" : "Copy"}
+                  </button>
+                </li>
+                <li>
+                  Turn on <b>Use Google services for push messaging</b>.
+                </li>
+                <li>Relaunch Brave, come back here, and try again.</li>
+              </ol>
+            </>
+          ) : failure.kind === "push-service" ? (
+            <p className="push-fail-h">
+              Your browser&apos;s push service refused the request. This usually means push is turned off in
+              browser settings, or a network or ad blocker is blocking it.
+            </p>
+          ) : (
+            <p className="push-fail-h">Couldn&apos;t enable reminders. Try again, or check notification settings.</p>
+          )}
+          <div className="push-fail-foot">
+            <button type="button" className="btn-ghost nf-btn-sm" onClick={subscribe} disabled={busy}>
+              {busy ? "Trying…" : "Try again"}
+            </button>
+            <span className="push-fail-raw">{failure.detail}</span>
+          </div>
         </div>
       )}
       {note && <p className="push-opt-note" role="status">{note}</p>}
