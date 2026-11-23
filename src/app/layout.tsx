@@ -16,9 +16,29 @@ import "./styles/sg-coins.css";
 import { PwaRegister } from "@/components/PwaRegister";
 import { HeatBackground } from "@/components/heat/HeatBackground";
 
+const OG_TITLE = "HOTLINE";
+const OG_DESCRIPTION = "CS2 Major Pick'Em companion — PGL Major Singapore 2026";
+
 export const metadata: Metadata = {
-  title: "HOTLINE",
-  description: "CS2 Major Pick'Em companion — PGL Major Singapore 2026",
+  metadataBase: new URL("https://hotline.phatt.vip"),
+  title: OG_TITLE,
+  description: OG_DESCRIPTION,
+  // Link previews (Discord, iMessage, Slack). The image is a static file in /brand, so it
+  // bypasses the auth middleware (its matcher skips anything with a file extension).
+  openGraph: {
+    type: "website",
+    url: "https://hotline.phatt.vip",
+    siteName: "HOTLINE",
+    title: OG_TITLE,
+    description: OG_DESCRIPTION,
+    images: [{ url: "/brand/og.png", width: 1200, height: 630, alt: "HOTLINE — CS2 Pick'Em companion" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: OG_TITLE,
+    description: OG_DESCRIPTION,
+    images: ["/brand/og.png"],
+  },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
