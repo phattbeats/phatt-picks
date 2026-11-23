@@ -537,6 +537,6 @@
 .push-fail-h { margin: 0; color: var(--ink-hi); }
 .push-fail-steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
 .push-fail-steps b { color: var(--ink-hi); font-weight: 500; }
-.push-fail-url { font-family: var(--font-mono); font-size: 12px; padding: 2px 6px; border: 1px solid var(--hair-2); border-radius: var(--r-sm); background: var(--void); color: var(--ink-hi); user-select: all; -webkit-user-select: all; word-break: break-all; }
+.push-fail-url { font-family: var(--font-mono); font-size: 12px; padding: 2px 6px; border: 1px solid var(--hair-2); border-radius: var(--r-sm); background: var(--void); color: var(--ink-hi); user-select: all; -webkit-user-select: all; white-space: nowrap; }
 .push-fail-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .push-fail-raw { font-family: var(--font-mono); font-size: 11px; color: var(--ink-lo, var(--ink-mid)); opacity: .8; word-break: break-word; }
