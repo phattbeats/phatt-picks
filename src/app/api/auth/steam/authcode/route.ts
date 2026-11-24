@@ -16,6 +16,11 @@ import { prisma } from "@/lib/db";
 import { encryptAuthCode } from "@/lib/crypto";
 import { mirrorPlayerPredictions } from "@/lib/predictions-sync";
 import { currentEventId } from "@/lib/events-core";
+import { fetchTournamentPredictions, ValveApiError } from "@/lib/valve";
+import { isPickemOpen } from "@/lib/layout-state";
+import { isEventFrozenById } from "@/lib/event-freeze";
+import { answerForCheck, classifyCodeCheck, type CodeCheck } from "@/lib/authcode-check-core";
+import { markCodeAccepted, markCodeRejected } from "@/lib/authcode";
 
 // Valve auth codes are uppercase alphanumeric in a 4-5-4 hyphenated shape (e.g. ABCD-12345-WXYZ).
 const AUTH_CODE_RE = /^[A-Z0-9]{4}-[A-Z0-9]{5}-[A-Z0-9]{4}$/;
@@ -44,12 +49,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid_auth_code_format" }, { status: 400 });
   }
 
+  // Ask Valve once whether it accepts this code for this Major, BEFORE storing it.
+  // Saving used to check only the 4-5-4 shape, so a wrong code that fit the shape
+  // got the same green check as a working one and every sync then failed with a
+  // 403 nobody could see. Only a real 403 rejects (nothing is stored); an outage,
+  // a 429/5xx, or a Pick'Em that has not opened saves the code and says it could
+  // not be checked yet (lib/authcode-check-core.ts).
+  const check = await checkCodeWithValve(session.steamId, EVENT_ID, authCode);
+  const answer = answerForCheck(check);
+  if (!answer.store) {
+    markCodeRejected(session.playerId, EVENT_ID);
+    return NextResponse.json(answer.body, { status: answer.httpStatus });
+  }
+
   await prisma.player.update({
     where: { id: session.playerId },
     // Remember which Major the code was saved for: a code saved for another
     // Major is only used once Valve accepts it for this one (lib/authcode.ts).
     data: { authCode: encryptAuthCode(authCode), authCodeEventId: EVENT_ID },
   });
+  if (check.verdict === "accepted") markCodeAccepted(session.playerId, EVENT_ID);
 
   // #853: as soon as the auth code is stored, pull any existing/partial
   // Valve picks into the local Pick table so the user's next /picks visit
@@ -61,11 +80,30 @@ export async function POST(req: NextRequest) {
   );
 
   return NextResponse.json({
-    ok: true,
-    hasAuthCode: true,
+    ...answer.body,
     mirrored: mirror.mirrored,
     mirrorOk: mirror.ok,
   });
+}
+
+/**
+ * One read-only Valve call (GetTournamentPredictions) with the pasted code. Skips the
+ * call, as "unchecked", when there is nothing to ask: the event is archived or its
+ * Pick'Em has not opened (Valve 404s every read until then).
+ */
+async function checkCodeWithValve(
+  steamId: string,
+  eventId: number,
+  code: string,
+): Promise<CodeCheck> {
+  if (await isEventFrozenById(eventId)) return { verdict: "unchecked", reason: "event-archived" };
+  if (!(await isPickemOpen(eventId))) return { verdict: "unchecked", reason: "pickem-not-open" };
+  try {
+    await fetchTournamentPredictions(eventId, steamId, code);
+    return classifyCodeCheck(200);
+  } catch (e) {
+    return classifyCodeCheck(e instanceof ValveApiError ? e.status : null);
+  }
 }
 
 export async function DELETE() {

@@ -859,14 +859,16 @@ function SteamLinkNotice({ staleFor, rejected }: { staleFor: string | null; reje
     <Link href="/help/auth-code" className="sgp-note solo" prefetch={false}>
       <div>
         <span className="tag warn">
-          {staleFor ? (rejected ? "New Major, new code" : "Saved code on file") : "Saved here — not on Steam yet"}
+          {staleFor ? (rejected ? "New Major, new code" : "Saved code on file") : rejected ? "Steam rejected your code" : "Saved here — not on Steam yet"}
         </span>
         <h2>
           {staleFor
             ? rejected
               ? "Add this Major's auth code"
               : "We'll check your saved code"
-            : "Your picks are saved in HOTLINE"}
+            : rejected
+              ? "Your auth code isn't working"
+              : "Your picks are saved in HOTLINE"}
         </h2>
         {staleFor ? (
           rejected ? (
@@ -878,6 +880,11 @@ function SteamLinkNotice({ staleFor, rejected }: { staleFor: string | null; reje
               {`Your saved code is from ${staleFor}. We'll check it when Valve opens Pick'Em for this Major. If it still works, syncing just carries on; if not, we'll ask you for a new one.`}
             </p>
           )
+        ) : rejected ? (
+          <p>
+            Valve said no to the code on file for this Major, so your picks stay saved here but can&apos;t
+            reach your official in-game Pick&apos;Em. Copy a fresh code from Steam and paste it again.
+          </p>
         ) : (
           <p>
             To push them to your <b>official in-game CS2 Pick&apos;Em</b>, connect your Steam Game

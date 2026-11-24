@@ -18,7 +18,7 @@ export function AuthCodeForm({
   majorName,
   staleFor,
 }: {
-  initialStatus: "none" | "current" | "stale";
+  initialStatus: "none" | "current" | "stale" | "rejected";
   majorName: string;
   /** The Major a stale code was saved for, e.g. "IEM Cologne 2026". */
   staleFor: string | null;
@@ -26,6 +26,7 @@ export function AuthCodeForm({
   const [value, setValue] = useState("");
   const [status, setStatus] = useState(initialStatus);
   const saved = status !== "none";
+  const [unchecked, setUnchecked] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -47,11 +48,18 @@ export function AuthCodeForm({
         error?: string;
         mirrored?: number;
         mirrorOk?: boolean;
+        check?: "accepted" | "unchecked" | "rejected";
       };
-      if (res.ok && data.ok) {
+      if (res.status === 422 && data.error === "code_rejected") {
+        // Valve answered 403 for this code. Nothing was saved; keep what was there.
+        setMsg(`Steam didn't accept that code for ${majorName}. Copy it again from Steam (all 14 characters, with dashes) and paste it here.`);
+      } else if (res.ok && data.ok) {
         setStatus("current");
         setValue("");
-        if (data.mirrorOk && (data.mirrored ?? 0) > 0) {
+        setUnchecked(data.check === "unchecked");
+        if (data.check === "unchecked") {
+          setMsg("Saved, but Steam can't confirm it yet (Pick'Em isn't open or Steam is busy). We'll check it when you sync.");
+        } else if (data.mirrorOk && (data.mirrored ?? 0) > 0) {
           setMsg(`Saved. Imported ${data.mirrored} pick${data.mirrored === 1 ? "" : "s"} from Steam.`);
         } else if (data.mirrorOk) {
           setMsg("Saved. No existing picks on Steam yet — start picking on /picks.");
@@ -84,8 +92,16 @@ export function AuthCodeForm({
 
   return (
     <div className="sg-authform">
-      {status === "current" && (
+      {status === "current" && !unchecked && (
         <p className="saved">✓ Your {majorName} code is on file. You can replace it below.</p>
+      )}
+      {status === "current" && unchecked && (
+        <p className="stale">Your {majorName} code is on file, but Steam hasn&apos;t confirmed it yet. You can replace it below.</p>
+      )}
+      {status === "rejected" && (
+        <p className="stale">
+          {`Steam didn't accept the ${majorName} code on file, so syncing is paused. Copy a fresh code from Steam and paste it below.`}
+        </p>
       )}
       {status === "stale" && (
         <p className="stale">
@@ -109,7 +125,7 @@ export function AuthCodeForm({
       </div>
       <span className="hint">Format 4–5–4, with dashes</span>
       <button type="button" className="btn-solid" onClick={save} disabled={!valid || busy}>
-        {busy ? "Saving…" : status === "current" ? "Replace code" : status === "stale" ? `Save ${majorName} code` : "Save code"}
+        {busy ? "Saving…" : status === "current" || status === "rejected" ? "Replace code" : status === "stale" ? `Save ${majorName} code` : "Save code"}
       </button>
       {saved && (
         <button type="button" className="btn-ghost" onClick={remove} disabled={busy}>
