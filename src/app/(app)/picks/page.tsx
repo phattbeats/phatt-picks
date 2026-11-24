@@ -33,7 +33,7 @@ import { stageWrappedHasContent } from "@/lib/stage-wrapped-content";
 import { stageNumeral } from "@/lib/stage-wrapped-core";
 import { LockedPicksBoard } from "@/components/heat/LockedPicksBoard";
 import { LiveSwissStandings } from "@/components/heat/LiveSwissStandings";
-import { LiveSwissBracketBoard } from "@/components/heat/LiveSwissBracketBoard";
+import { LiveSwissBracketSim } from "@/components/heat/LiveSwissBracketSim";
 import { hasPublishedMatchups, liveBracketVisible } from "@/lib/stage-discovery-core";
 import { refreshStandingsOnRead, getSwissStandings, getSwissBracket } from "@/lib/swiss-results";
 import { recordsByPickId } from "@/lib/swiss-results-core";
@@ -687,7 +687,10 @@ export default async function PicksPage({
             (liveBracket || liveStandings ? (
               <>
                 {liveBracket && (
-                  <LiveSwissBracketBoard
+                  <LiveSwissBracketSim
+                    eventId={EVENT_ID}
+                    sectionId={activeSectionId}
+                    layout={layout}
                     rounds={liveBracket.rounds}
                     teamMap={buildTeamMap(layout)}
                     source={liveBracket.source}
@@ -755,7 +758,10 @@ export default async function PicksPage({
               highlights the viewer's picks — that's the build's job. Both hidden
               until the first hourly crawl lands. */}
           {liveBracket && (
-            <LiveSwissBracketBoard
+            <LiveSwissBracketSim
+              eventId={EVENT_ID}
+              sectionId={activeSectionId}
+              layout={layout}
               rounds={liveBracket.rounds}
               teamMap={buildTeamMap(layout)}
               source={liveBracket.source}

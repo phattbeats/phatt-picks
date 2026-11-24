@@ -424,3 +424,52 @@ a.std-name:hover { color: var(--heat); }
 .sgt-clip figcaption { display: grid; gap: 3px; font-size: 13px; min-width: 0; }
 .sgt-clip .t { color: var(--ink-hi); overflow-wrap: anywhere; }
 .sgt-clip .mono { font-size: 11px; }
+
+/* ── Swiss bracket simulator (PHA-5453) ──────────────────────────────── */
+.sim-bar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 20px;
+  padding: 10px 0 4px;
+}
+.sim-switch { display: inline-flex; align-items: center; gap: 12px; cursor: pointer; }
+.sim-switch .lbl, .sim-btn {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-mid);
+}
+.sim-switch .sw {
+  position: relative; width: 40px; height: 22px; padding: 0; cursor: pointer;
+  border: 1px solid var(--hair-3); border-radius: 999px; background: var(--surf-1);
+  transition: background-color 150ms var(--ease), border-color 150ms var(--ease);
+}
+.sim-switch .sw::before { content: ""; position: absolute; inset: -12px -4px; }
+.sim-switch .sw .knob {
+  position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--ink-mid); transition: transform 150ms var(--ease), background-color 150ms var(--ease);
+}
+.sim-switch .sw.on { background: var(--heat); border-color: var(--heat); }
+.sim-switch .sw.on .knob { transform: translateX(18px); background: var(--ink-hi); }
+.sim-switch .sw:focus-visible, .sim-btn:focus-visible, .sim-pick:focus-visible { outline: 2px solid var(--heat); outline-offset: 2px; }
+.sim-actions { display: inline-flex; gap: 8px; }
+.sim-btn {
+  min-height: 36px; padding: 0 12px; cursor: pointer;
+  border: 1px solid var(--hair-3); border-radius: var(--r-sm); background: transparent;
+}
+.sim-btn:hover:not(:disabled) { color: var(--ink-hi); border-color: var(--ink-hi); }
+.sim-btn:disabled { opacity: .4; cursor: default; }
+.sim-on .brkt-box { border-color: var(--hair-2); }
+.sim-pick {
+  padding: 0; margin: 0; border: 0; background: none; cursor: pointer; border-radius: var(--r-md);
+  transition: opacity 120ms var(--ease), box-shadow 120ms var(--ease);
+}
+.sim-pick:hover { opacity: 1; box-shadow: 0 0 0 2px var(--hair-3); }
+.sim-pick.won { box-shadow: 0 0 0 2px var(--heat); }
+.sim-locked { background: var(--surf-2, transparent); }
+.sim-mid { display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+.sim-real { font-size: 9px; letter-spacing: .14em; text-transform: uppercase; }
+.sim-pct { font-size: 12px; }
+.sim-pct .dash { margin: 0 3px; }
+.sim-pct-u { display: block; font-size: 8px; letter-spacing: .12em; color: var(--ink-low); }
+.sim-src { line-height: 1.5; }
+@media (min-width: 760px) {
+  .sim-pct { font-size: 16px; }
+  .sim-pct-u { font-size: 9px; }
+}
+@media (prefers-reduced-motion: reduce) { .sim-switch .sw, .sim-switch .sw .knob, .sim-pick { transition: none; } }
