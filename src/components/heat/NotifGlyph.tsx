@@ -12,7 +12,7 @@
 import { getEventConfig } from "@/lib/events-core";
 import { COIN_TIERS, coinArtSrc, type CoinTier } from "@/lib/challenge-coin-core";
 
-export type NotifGlyphKind = "reaction" | "stage" | "recap" | "announcement" | "coin" | "achievement";
+export type NotifGlyphKind = "reaction" | "stage" | "recap" | "announcement" | "coin" | "achievement" | "fantasy";
 
 /** Resolve the struck-coin art for a coin-earned feed entry, or null. */
 export function coinArtForEntry(id: string, title: string): { src: string; tier: CoinTier } | null {
@@ -52,6 +52,12 @@ function Icon({ kind }: { kind: NotifGlyphKind }) {
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M4 10v4h3l6 4V6l-6 4z" />
           <path d="M17 9a4 4 0 010 6" />
+        </svg>
+      );
+    case "fantasy":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 4l2.5 5.2 5.5.8-4 4 1 5.6-5-2.7-5 2.7 1-5.6-4-4 5.5-.8z" />
         </svg>
       );
     case "achievement":

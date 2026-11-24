@@ -7,13 +7,15 @@ import { RankAvatar } from "@/components/sg/ranks/RankAvatar";
 import { FantasyDraft } from "@/components/fantasy/FantasyDraft";
 import { PlayerFace } from "@/components/fantasy/PlayerFace";
 import { getSession } from "@/lib/session";
-import { currentEvent, getEventConfig } from "@/lib/events-core";
-import { eventShortName } from "@/lib/leaderboard";
+import { EVENTS, currentEvent, getEventConfig, type EventConfig } from "@/lib/events-core";
+import { eventShortName, resolveArchiveEvent } from "@/lib/leaderboard";
 import { PHOTOS } from "@/lib/photos";
 import { getSwissBracket } from "@/lib/swiss-results";
 import {
   actionFor,
   buildFantasyBoard,
+  fantasyArchiveEvents,
+  hasFantasy,
   refreshFantasyOnRead,
   teamStanding,
   type FantasyBoard,
@@ -33,7 +35,9 @@ import {
   TIERS,
   TIER_LABEL,
   WIN_POINTS,
+  playerStageTable,
   scoreMatch,
+  type FantasyMatchData,
   type FantasyPlayer,
   type ScoredLineup,
 } from "@/lib/fantasy-core";
@@ -61,13 +65,17 @@ function first(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
 }
 
-/** A /fantasy link. Carries `event` only when previewing a Major that is not the current one. */
-function href(eventId: number, stageId: number, view: View, manager?: string): string {
+/** A /fantasy link. Carries `major` only for a Major that is not the current one. */
+function href(eventId: number, stageId: number, view: View, manager?: string, scope?: "all"): string {
   const q = new URLSearchParams({ stage: String(stageId), view });
-  if (eventId !== currentEvent().eventId) q.set("event", String(eventId));
+  if (eventId !== currentEvent().eventId) q.set("major", EVENTS[eventId]?.slug ?? String(eventId));
   if (manager) q.set("manager", manager);
+  if (scope) q.set("scope", scope);
   return `/fantasy?${q.toString()}`;
 }
+
+/** Tabs of a past Major's board: nothing to draft, so no "My team" and no rules. */
+const ARCHIVE_VIEWS: readonly View[] = ["players", "matches", "league"];
 
 export default async function FantasyPage({
   searchParams,
@@ -80,7 +88,10 @@ export default async function FantasyPage({
   // can be looked at.
   const preview = process.env.NODE_ENV !== "production" || process.env.FANTASY_PREVIEW === "1";
   const debugEvent = preview ? getEventConfig(Number(first(params.event))) : null;
-  const event = debugEvent ?? currentEvent();
+  // `?major=<slug>` opens a past Major's board, like /leaderboard?major=.
+  const pastEvent = resolveArchiveEvent(first(params.major));
+  const event = debugEvent ?? (pastEvent && hasFantasy(pastEvent.eventId) ? pastEvent : currentEvent());
+  const archive = event.eventId !== currentEvent().eventId;
   const session = await getSession();
   const board = await buildFantasyBoard(event.eventId, session?.playerId ?? null);
 
@@ -96,7 +107,10 @@ export default async function FantasyPage({
     );
   }
 
+  if (archive) return <ArchivePage board={board} event={event} params={params} selfId={session?.playerId ?? null} />;
+
   refreshFantasyOnRead(event.eventId);
+  const past = await fantasyArchiveEvents();
 
   const { ctx } = board;
   const stageParam = Number(first(params.stage));
@@ -123,6 +137,15 @@ export default async function FantasyPage({
           </p>
         </div>
       </section>
+
+      {past.map((e) => (
+        <Link key={e.eventId} href={`/fantasy?major=${encodeURIComponent(e.slug)}`} prefetch={false} className="rk-archive fx-archive">
+          <span className="eyebrow">Past Major</span>
+          <span className="rk-archive-t">
+            Fantasy board · {eventShortName(e)} <span aria-hidden>→</span>
+          </span>
+        </Link>
+      ))}
 
       <nav className="fx-rail" aria-label="Stages">
         {ctx.stages.map((v, i) => {
@@ -167,6 +190,229 @@ export default async function FantasyPage({
         <RulesView />
       )}
     </div>
+  );
+}
+
+/* ── A past Major ─────────────────────────────────────────────────────── */
+
+/**
+ * A finished Major's fantasy board, read-only: who scored what in each stage
+ * and over the whole Major, every match, and the league as it ended. Built
+ * from the stored matches alone, so it does not depend on today's rosters.
+ */
+function ArchivePage({
+  board,
+  event,
+  params,
+  selfId,
+}: {
+  board: FantasyBoard;
+  event: EventConfig;
+  params: Record<string, string | string[] | undefined>;
+  selfId: string | null;
+}) {
+  const { ctx } = board;
+  const live = currentEvent();
+  const stageParam = Number(first(params.stage));
+  const played = ctx.stages.filter((v) => v.matches.length > 0);
+  const view: StageView = ctx.stages.find((v) => v.stage.id === stageParam) ?? played[played.length - 1] ?? ctx.stages[0];
+  const viewParam = first(params.view) as View | undefined;
+  const tab: View = viewParam && ARCHIVE_VIEWS.includes(viewParam) ? viewParam : "players";
+  const managerParam = first(params.manager);
+  const whole = first(params.scope) === "all";
+  const allMatches = ctx.stages.flatMap((v) => v.matches);
+
+  return (
+    <div className="fx-page">
+      <section className="bleed short">
+        <Image src={PHOTOS.playersHero} alt="" fill priority sizes="100vw" />
+        <span className="credit">Photo · IEM Cologne Major 2026 · HLTV</span>
+        <div className="in">
+          <span className="eyebrow rise">
+            <b>Fantasy</b> · {eventShortName(event)} · Final
+          </span>
+          <h1 className="display rise d1">The final board</h1>
+          <p className="rise d2">
+            How every player scored at {eventShortName(event)}, <b>stage by stage</b>.
+          </p>
+        </div>
+      </section>
+
+      <Link href="/fantasy" prefetch={false} className="rk-archive fx-archive">
+        <span className="eyebrow">Live fantasy</span>
+        <span className="rk-archive-t">
+          <span aria-hidden>←</span> {eventShortName(live)}
+        </span>
+      </Link>
+
+      <nav className="fx-rail" aria-label="Stages">
+        {ctx.stages.map((v, i) => {
+          const mine = selfId ? board.scored.get(`${selfId}:${v.stage.id}`) : undefined;
+          const on = v.stage.id === view.stage.id && !(whole && tab === "players");
+          return (
+            <Link
+              key={v.stage.id}
+              href={href(event.eventId, v.stage.id, tab)}
+              prefetch={false}
+              className={`fx-rail-step ${v.matches.length > 0 ? "final" : "waiting"}${on ? " on" : ""}`}
+              aria-current={on ? "step" : undefined}
+            >
+              <span className="fx-rail-n">{String(i + 1).padStart(2, "0")}</span>
+              <span className="fx-rail-name">{v.stage.short}</span>
+              <span className={`tag${v.matches.length > 0 ? " ok" : ""}`}>{v.matches.length > 0 ? "Final" : "No data"}</span>
+              <span className="fx-rail-pts mono">
+                {mine ? `${mine.score.total} pts` : `${v.matches.length} match${v.matches.length === 1 ? "" : "es"}`}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="tabs fx-tabs" role="tablist">
+        {ARCHIVE_VIEWS.map((v) => (
+          <Link key={v} href={href(event.eventId, view.stage.id, v)} prefetch={false} className={v === tab && !managerParam ? "on" : undefined} role="tab" aria-selected={v === tab}>
+            {VIEW_LABEL[v]}
+          </Link>
+        ))}
+      </div>
+
+      {managerParam ? (
+        <ManagerView board={board} view={view} managerId={managerParam} selfId={selfId} />
+      ) : tab === "league" ? (
+        board.overall.length > 0 ? (
+          <LeagueView board={board} view={view} />
+        ) : (
+          <section className="chap">
+            <p className="rk-note">
+              <b>No fantasy teams were drafted for {eventShortName(event)}.</b> The player and match boards show how a draft would have scored.
+            </p>
+          </section>
+        )
+      ) : tab === "matches" ? (
+        <MatchesView board={board} view={view} selfId={selfId} />
+      ) : (
+        <ArchivePlayersView
+          eventId={event.eventId}
+          view={view}
+          matches={whole ? allMatches : view.matches}
+          whole={whole}
+          eventName={eventShortName(event)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ArchivePlayersView({
+  eventId,
+  view,
+  matches,
+  whole,
+  eventName,
+}: {
+  eventId: number;
+  view: StageView;
+  matches: FantasyMatchData[];
+  whole: boolean;
+  eventName: string;
+}) {
+  const table = playerStageTable(matches, null);
+  // Each player's nick and team as HLTV printed them in his latest match.
+  const who = new Map<number, { nick: string; team: string }>();
+  for (const m of [...matches].sort((a, b) => a.startMs - b.startMs)) {
+    for (const p of m.players) {
+      who.set(p.id, { nick: p.nick, team: p.hltvTeamId === m.team1.hltvTeamId ? m.team1.name : m.team2.name });
+    }
+  }
+  const photoOf = new Map(view.pool.map((p) => [p.id, p.photo]));
+  const scope = whole ? eventName : view.stage.short;
+  const top = table.slice(0, 3);
+  return (
+    <section className="chap">
+      <div className="chap-h">
+        <span className="n">{scope}</span>
+        <h2>Top scorers</h2>
+        <p>
+          Placement and win points from {matches.length} match{matches.length === 1 ? "" : "es"}, before role cards and captain multipliers.
+        </p>
+      </div>
+      <div className="tabs fx-scope" role="tablist" aria-label="Scope">
+        <Link href={href(eventId, view.stage.id, "players")} prefetch={false} className={whole ? undefined : "on"} role="tab" aria-selected={!whole}>
+          {view.stage.short}
+        </Link>
+        <Link href={href(eventId, view.stage.id, "players", undefined, "all")} prefetch={false} className={whole ? "on" : undefined} role="tab" aria-selected={whole}>
+          Whole Major
+        </Link>
+      </div>
+      {table.length === 0 ? (
+        <p className="rk-note">No stored matches for {scope}.</p>
+      ) : (
+        <>
+          <div className="cells fx-sum fx-top3" style={{ ["--n" as string]: top.length }}>
+            {top.map((l, i) => (
+              <div key={l.playerId}>
+                <span className="k">#{i + 1}</span>
+                <span className="v fx-sum-name">{who.get(l.playerId)?.nick ?? `Player ${l.playerId}`}</span>
+                <span className="s">
+                  {l.points} pts · {who.get(l.playerId)?.team} · {l.avgRating.toFixed(2)} avg
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="fx-table-wrap">
+            <table className="fx-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Player</th>
+                  <th>Pts</th>
+                  <th>M</th>
+                  <th>W-L</th>
+                  <th>K-D</th>
+                  <th>Avg</th>
+                </tr>
+              </thead>
+              <tbody>
+                {table.map((l, i) => {
+                  const w = who.get(l.playerId);
+                  return (
+                    <tr key={l.playerId}>
+                      <td className="mono">{String(i + 1).padStart(2, "0")}</td>
+                      <td>
+                        <span className="fx-mgr">
+                          <PlayerFace src={photoOf.get(l.playerId) ?? null} name={w?.nick ?? "?"} size={30} />
+                          <span>
+                            <span className="fx-mgr-team">{w?.nick ?? `Player ${l.playerId}`}</span>
+                            <span className="fx-mgr-name">{w?.team}</span>
+                          </span>
+                        </span>
+                      </td>
+                      <td className="mono fx-total">{l.points}</td>
+                      <td className="mono">{l.matches}</td>
+                      <td className="mono">
+                        {l.wins}-{l.losses}
+                      </td>
+                      <td className="mono">
+                        {l.kills}-{l.deaths}
+                      </td>
+                      <td className="mono">{l.avgRating.toFixed(2)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+      <footer className="rk-foot">
+        <p>
+          Match stats:{" "}
+          <a href="https://www.hltv.org" target="_blank" rel="noopener noreferrer">
+            HLTV
+          </a>
+        </p>
+      </footer>
+    </section>
   );
 }
 

@@ -22,7 +22,7 @@
 import { prisma } from "./db";
 import { claimRefreshSlot, runDeferred } from "./source-refresh";
 import { getEffectiveLayout } from "./layout-state";
-import { getEventConfig, sectionsInPlayOrder, type EventConfig } from "./events-core";
+import { currentEventId, getEventConfig, sectionsInPlayOrder, type EventConfig } from "./events-core";
 import { isEventFrozenById } from "./event-freeze";
 import { TEAM_SOURCES } from "./team-stats-sources";
 import { statsForPickid } from "./team-stats-core";
@@ -81,6 +81,23 @@ const CRAWL_TIMEOUT_MS = 150_000;
 /** Does this event have a fantasy game at all? */
 export function hasFantasy(eventId: number): boolean {
   return eventId in FANTASY_EVENTS && getEventConfig(eventId) != null;
+}
+
+/**
+ * Past Majors with a fantasy board worth opening: not the current event, and
+ * at least one stored match. Newest first.
+ */
+export async function fantasyArchiveEvents(nowMs: number = Date.now()): Promise<EventConfig[]> {
+  const current = currentEventId(nowMs);
+  const ids = Object.keys(FANTASY_EVENTS).map(Number).filter((id) => id !== current && getEventConfig(id) != null);
+  if (ids.length === 0) return [];
+  const have = await prisma.fantasyMatch
+    .findMany({ where: { eventId: { in: ids } }, select: { eventId: true }, distinct: ["eventId"] })
+    .catch(() => [] as { eventId: number }[]);
+  return have
+    .map((r) => getEventConfig(r.eventId))
+    .filter((e): e is EventConfig => e != null && Date.parse(e.dates.end) < nowMs)
+    .sort((a, b) => Date.parse(b.dates.end) - Date.parse(a.dates.end));
 }
 
 /* ── crawl ────────────────────────────────────────────────────────────── */
@@ -306,9 +323,9 @@ export async function ingestHltvEvent(opts: {
   hltvEventId: number;
   maxNew?: number;
   onProgress?: (line: string) => void;
-}): Promise<{ listed: number; ingested: number; pending: number; unplaced: number }> {
+}): Promise<{ listed: number; ingested: number; pending: number; unplaced: number; stored: number[] }> {
   const event = getEventConfig(opts.eventId);
-  if (!event) return { listed: 0, ingested: 0, pending: 0, unplaced: 0 };
+  if (!event) return { listed: 0, ingested: 0, pending: 0, unplaced: 0, stored: [] };
   const stages = fantasyStagesFor(sectionsInPlayOrder(event));
   const stageHltvEvent = stageHltvEvents(event, stages);
   const html = await crawlHtml(`https://www.hltv.org/results?event=${opts.hltvEventId}`);
@@ -329,6 +346,7 @@ export async function ingestHltvEvent(opts: {
   let ingested = 0;
   let pending = 0;
   let unplaced = 0;
+  const stored: number[] = [];
   for (const link of fresh) {
     try {
       const page = await crawlHtml(`https://www.hltv.org${link.path}`);
@@ -346,13 +364,14 @@ export async function ingestHltvEvent(opts: {
       }
       await storeMatch(opts.eventId, stage.id, { ...m, path: link.path }, false);
       ingested++;
+      stored.push(m.hltvMatchId);
       opts.onProgress?.(`stored ${stage.short} ${m.team1.name} ${m.team1.score}-${m.team2.score} ${m.team2.name}`);
     } catch (e) {
       pending++;
       opts.onProgress?.(`failed ${link.path}: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
-  return { listed: links.length, ingested, pending, unplaced };
+  return { listed: links.length, ingested, pending, unplaced, stored };
 }
 
 /** Re-read up to `limit` stored matches once, to pick up HLTV's corrections. */
@@ -408,6 +427,7 @@ export async function ingestFantasyTick(
     const stageHltvEvent = stageHltvEvents(ctx.event, ctx.stages.map((v) => v.stage));
     const hltvEvents = [...new Set(poll.map((v) => stageHltvEvent[v.stage.id]).filter((id): id is number => id != null))];
     let budget = MAX_NEW_MATCHES_PER_TICK;
+    const newMatchIds: number[] = [];
     for (const hltvEventId of hltvEvents) {
       if (budget <= 0) break;
       try {
@@ -415,9 +435,20 @@ export async function ingestFantasyTick(
         result.listed++;
         result.ingested += r.ingested;
         result.pending += r.pending;
+        newMatchIds.push(...r.stored);
         budget -= r.ingested + r.pending;
       } catch (e) {
         console.warn(`[fantasy] results page for HLTV event ${hltvEventId} failed:`, e instanceof Error ? e.message : e);
+      }
+    }
+    if (newMatchIds.length > 0) {
+      // Tell each manager what the new results did to his five. Imported
+      // lazily: fantasy-pushes reads the board from this module.
+      try {
+        const { runFantasyPointsPushes } = await import("./fantasy-pushes");
+        await runFantasyPointsPushes(eventId, newMatchIds);
+      } catch (e) {
+        console.warn("[fantasy-push] points push failed (non-fatal):", e instanceof Error ? e.message : e);
       }
     }
     result.reread = await rereadSettled(eventId, nowMs, MAX_REREADS_PER_TICK);

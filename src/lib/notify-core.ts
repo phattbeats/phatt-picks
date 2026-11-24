@@ -224,3 +224,103 @@ export function isReminderRecipient(args: {
 }): boolean {
   return args.hasSubscription && !args.hasLockedStage;
 }
+
+/* ── HOTLINE Fantasy (PHA-5454) ───────────────────────────────────────── */
+
+/** Reminder offsets before a fantasy stage starts scoring. */
+export const FANTASY_REMINDER_OFFSETS_MS: readonly number[] = [DAY_MS, HOUR_MS];
+
+function fantasyUrl(stageId: number, view: "team" | "league" = "team"): string {
+  return `/fantasy?stage=${stageId}&view=${view}`;
+}
+
+/** A stage's pool is set: the draft is open. Sent to everyone opted in. */
+export function buildFantasyOpenPayload(args: {
+  stageName: string;
+  stageId: number;
+  /** When the stage starts scoring, or null while unpublished. */
+  startMs: number | null;
+  nowMs: number;
+}): PreLockPayload {
+  const eta = args.startMs != null && args.startMs > args.nowMs ? humanizeLockEta(args.startMs - args.nowMs) : null;
+  return {
+    title: "HOTLINE Fantasy",
+    body: eta
+      ? `${args.stageName} draft is open. Pick your five: it starts in ${eta}.`
+      : `${args.stageName} draft is open. Pick your five.`,
+    url: fantasyUrl(args.stageId),
+    tag: `fantasy-open:${args.stageId}`,
+    actions: [{ action: "draft", title: "Draft now" }],
+  };
+}
+
+/** The stage is about to start and this manager has no five yet. */
+export function buildFantasyReminderPayload(args: {
+  stageName: string;
+  stageId: number;
+  startMs: number;
+  nowMs: number;
+}): PreLockPayload {
+  return {
+    title: "HOTLINE Fantasy",
+    body: `${args.stageName} starts in ${humanizeLockEta(args.startMs - args.nowMs)} and you have no team. Draft your five.`,
+    url: fantasyUrl(args.stageId),
+    tag: `fantasy-open:${args.stageId}`,
+    actions: [{ action: "draft", title: "Draft now" }],
+  };
+}
+
+export interface FantasyGain {
+  nick: string;
+  points: number;
+}
+
+/** Thousands-separated integer, locale-free ("1,240"). */
+export function formatPoints(n: number): string {
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+/**
+ * New match results moved this manager's score. `gains` are his players who
+ * scored in the new matches, best first; at most three are named.
+ */
+export function buildFantasyPointsPayload(args: {
+  stageName: string;
+  stageId: number;
+  gained: number;
+  gains: readonly FantasyGain[];
+  total: number;
+  rank: number;
+  managers: number;
+}): PreLockPayload {
+  const named = args.gains
+    .filter((g) => g.points > 0)
+    .slice(0, 3)
+    .map((g) => `${g.nick} +${formatPoints(g.points)}`)
+    .join(", ");
+  const standing = `${args.stageName}: ${formatPoints(args.total)} pts, #${args.rank} of ${args.managers}.`;
+  return {
+    title: `Your five: +${formatPoints(args.gained)} pts`,
+    body: named ? `${named}. ${standing}` : standing,
+    url: fantasyUrl(args.stageId),
+    tag: `fantasy-points:${args.stageId}`,
+    actions: [{ action: "view", title: "See my team" }],
+  };
+}
+
+/** A stage is played out: where this manager finished. */
+export function buildFantasyFinalPayload(args: {
+  stageName: string;
+  stageId: number;
+  total: number;
+  rank: number;
+  managers: number;
+}): PreLockPayload {
+  return {
+    title: "HOTLINE Fantasy",
+    body: `${args.stageName} is final. Your five finished #${args.rank} of ${args.managers} with ${formatPoints(args.total)} pts.`,
+    url: fantasyUrl(args.stageId, "league"),
+    tag: `fantasy-final:${args.stageId}`,
+    actions: [{ action: "view", title: "See the league" }],
+  };
+}

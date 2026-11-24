@@ -21,6 +21,8 @@ import {
   stageLockEntry,
   recapEntry,
   coinEarnedEntry,
+  fantasyDraftEntry,
+  fantasyFinalEntry,
   assembleFeed,
   emptyReadContext,
   isRead,
@@ -33,6 +35,14 @@ import {
   type PickLabeller,
   type ReadContext,
 } from "../src/lib/notifications-core.ts";
+import {
+  FANTASY_REMINDER_OFFSETS_MS,
+  buildFantasyFinalPayload,
+  buildFantasyOpenPayload,
+  buildFantasyPointsPayload,
+  buildFantasyReminderPayload,
+  formatPoints,
+} from "../src/lib/notify-core.ts";
 
 let pass = 0, fail = 0;
 function check(name: string, cond: boolean) {
@@ -255,6 +265,42 @@ check("parseNotifPrefs: coin falls back to defaults when absent", (() => {
   check("delete: a deleted entry leaves the feed", gone.total === 1 && gone.items[0].id === "y");
   const back = assembleFeed([{ ...e, atMs: NOW }], rc(NOW - HOUR / 2), 30, NOW);
   check("delete: new activity on a deleted entry brings it back, unread", back.total === 1 && back.items[0].isNew);
+}
+
+// ── 7. Fantasy (PHA-5454) ─────────────────────────────────────────────────
+{
+  const H = 3600_000;
+  const open = buildFantasyOpenPayload({ stageName: "Stage I", stageId: 111, startMs: NOW + 21 * H, nowMs: NOW });
+  check("fantasy open push: names the stage, the countdown and deep-links to the draft",
+    open.body === "Stage I draft is open. Pick your five: it starts in 21 hours." && open.url === "/fantasy?stage=111&view=team" && open.tag === "fantasy-open:111");
+  check("fantasy open push: no countdown while the start is unpublished",
+    buildFantasyOpenPayload({ stageName: "Stage II", stageId: 112, startMs: null, nowMs: NOW }).body === "Stage II draft is open. Pick your five.");
+  check("fantasy reminder push: 1 hour out",
+    buildFantasyReminderPayload({ stageName: "Stage I", stageId: 111, startMs: NOW + H, nowMs: NOW }).body === "Stage I starts in 1 hour and you have no team. Draft your five.");
+  const pts = buildFantasyPointsPayload({
+    stageName: "Stage I", stageId: 111, gained: 1345,
+    gains: [{ nick: "donk", points: 535 }, { nick: "ZywOo", points: 400 }, { nick: "m0NESY", points: 300 }, { nick: "ropz", points: 110 }],
+    total: 2640, rank: 2, managers: 6,
+  });
+  check("fantasy points push: gain in the title, top three named, standing last",
+    pts.title === "Your five: +1,345 pts" && pts.body === "donk +535, ZywOo +400, m0NESY +300. Stage I: 2,640 pts, #2 of 6." && pts.tag === "fantasy-points:111");
+  check("fantasy final push: rank and total",
+    buildFantasyFinalPayload({ stageName: "Stage I", stageId: 111, total: 2640, rank: 2, managers: 6 }).body === "Stage I is final. Your five finished #2 of 6 with 2,640 pts.");
+  check("formatPoints: thousands separators", formatPoints(999) === "999" && formatPoints(1000) === "1,000" && formatPoints(1234567) === "1,234,567");
+  check("fantasy reminders fire 24 h and 1 h before the start", FANTASY_REMINDER_OFFSETS_MS.join() === `${24 * H},${H}`);
+  check("fantasy prefs default: in-app + push on", DEFAULT_NOTIF_PREFS.fantasy.inApp === true && DEFAULT_NOTIF_PREFS.fantasy.push === true);
+  check("parseNotifPrefs: fantasy falls back to defaults on an old blob, and honours an opt-out",
+    parseNotifPrefs(JSON.stringify({ stage: { inApp: true, push: false } })).fantasy.push === true &&
+    parseNotifPrefs(JSON.stringify({ fantasy: { inApp: true, push: false } })).fantasy.push === false);
+  const draft = fantasyDraftEntry({ stageId: 111, stageName: "Stage I", openedAtMs: NOW - H, startMs: NOW + 5 * H, hasLineup: false }, NOW);
+  check("fantasy draft entry: shown while open with no team", !!draft && draft.id === "fantasy-open:111" && draft.kind === "fantasy" && draft.atMs === NOW - H);
+  check("fantasy draft entry: gone once you have a team", fantasyDraftEntry({ stageId: 111, stageName: "Stage I", openedAtMs: NOW - H, startMs: NOW + 5 * H, hasLineup: true }, NOW) === null);
+  check("fantasy draft entry: gone once the stage has started", fantasyDraftEntry({ stageId: 111, stageName: "Stage I", openedAtMs: NOW - 9 * H, startMs: NOW - H, hasLineup: false }, NOW) === null);
+  const fin = fantasyFinalEntry({ stageId: 111, stageName: "Stage I", finalAtMs: NOW - H, rank: 2, managers: 6, total: 2640 }, NOW);
+  check("fantasy final entry: rank in the body, links to the league", !!fin && fin.body === "Your five finished #2 of 6 with 2640 pts." && fin.href === "/fantasy?stage=111&view=league");
+  check("fantasy final entry: an old stage does not backfill", fantasyFinalEntry({ stageId: 111, stageName: "Stage I", finalAtMs: NOW - 30 * 24 * H, rank: 2, managers: 6, total: 1 }, NOW) === null);
+  check("filterEntriesByPrefs: fantasy.inApp=false drops fantasy entries",
+    filterEntriesByPrefs([draft!], parseNotifPrefs(JSON.stringify({ fantasy: { inApp: false, push: false } }))).length === 0);
 }
 
 console.log(`\nverify-notifications: ${pass} passed, ${fail} failed`);
