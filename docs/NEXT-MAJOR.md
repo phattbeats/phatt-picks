@@ -265,3 +265,7 @@ Once live, each stage start is a small recurring routine:
 
 If a future change adds a new per-major seam, **add a row here** and a pointer in the
 code comment next to the constant. That's the contract that keeps this runbook true.
+
+## Fantasy (PHA-5454)
+
+Add the Major to `FANTASY_EVENTS` in `src/lib/fantasy-core.ts` with its HLTV hub event id (the number in the hub page url, e.g. `/events/8302/…`). That is the only fantasy-specific step: stages, pools, tiers and match sources follow the registry, the layout and the roster snapshot. A Major with no entry simply has no Fantasy tab content. Re-run the roster snapshot before Stage I so tiers reflect current ratings.
