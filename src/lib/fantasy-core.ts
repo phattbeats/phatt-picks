@@ -709,6 +709,28 @@ export function scoreLineup(lineup: Lineup, lockedAtMs: number, ctx: ScoreContex
   };
 }
 
+/**
+ * What a set of newly read matches added to a lineup: its score with them
+ * minus its score without them. Captain multipliers and a 3-0 bonus that one
+ * of the new matches clinched are therefore included. Per player, best first;
+ * players who gained nothing are left out.
+ */
+export function lineupGain(
+  lineup: Lineup,
+  lockedAtMs: number,
+  ctx: ScoreContext,
+  newMatchIds: ReadonlySet<number>,
+): { gained: number; total: number; players: { playerId: number; points: number }[] } {
+  const now = scoreLineup(lineup, lockedAtMs, ctx);
+  const before = scoreLineup(lineup, lockedAtMs, { ...ctx, matches: ctx.matches.filter((m) => !newMatchIds.has(m.hltvMatchId)) });
+  const prevOf = new Map(before.players.map((p) => [p.playerId, p.total]));
+  const players = now.players
+    .map((p) => ({ playerId: p.playerId, points: p.total - (prevOf.get(p.playerId) ?? 0) }))
+    .filter((g) => g.points > 0)
+    .sort((a, b) => b.points - a.points || a.playerId - b.playerId);
+  return { gained: now.total - before.total, total: now.total, players };
+}
+
 /* ── Standings ────────────────────────────────────────────────────────── */
 
 export interface StandingInput {

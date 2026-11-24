@@ -28,6 +28,8 @@ import {
   recapEntry,
   coinEarnedEntry,
   achievementEntries,
+  fantasyDraftEntry,
+  fantasyFinalEntry,
   assembleFeed,
   filterEntriesByPrefs,
   parseNotifPrefs,
@@ -36,6 +38,7 @@ import {
   type PickLabeller,
   type ReadContext,
 } from "@/lib/notifications-core";
+import { fantasyFeedStages } from "@/lib/fantasy-pushes";
 import { getPlayerChallengeCoins } from "@/lib/challenge-coins";
 import { getPlayerProgression, prelaunchXp, prelaunchMajorName } from "@/lib/progression";
 import { ACHIEVEMENT_BY_KEY } from "@/lib/progression-core";
@@ -164,6 +167,25 @@ export async function buildPlayerFeed(
       nowMs,
     );
     if (e) rawEntries.push(e);
+  }
+
+  // Fantasy (PHA-5454): a draft that is open and not entered yet, and where
+  // your five finished once a stage is final. Never breaks the feed.
+  for (const f of await fantasyFeedStages(eventId, nowMs).catch(() => [])) {
+    const mine = f.standing.get(playerId);
+    if (f.phase === "open") {
+      const e = fantasyDraftEntry(
+        { stageId: f.stageId, stageName: f.stageName, openedAtMs: f.openedAtMs ?? 0, startMs: f.startMs, hasLineup: mine != null },
+        nowMs,
+      );
+      if (e) rawEntries.push(e);
+    } else if (f.phase === "final" && mine && f.finalAtMs != null) {
+      const e = fantasyFinalEntry(
+        { stageId: f.stageId, stageName: f.stageName, finalAtMs: f.finalAtMs, rank: mine.rank, managers: f.managers, total: mine.total },
+        nowMs,
+      );
+      if (e) rawEntries.push(e);
+    }
   }
 
   // Challenge coins earned (#1278) — one entry per concluded Major the player

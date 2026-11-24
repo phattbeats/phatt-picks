@@ -186,3 +186,14 @@ a.fx-mgr:hover .fx-mgr-team{text-decoration:underline;text-underline-offset:3px}
 .fx-home:focus-visible{outline:2px solid var(--heat);outline-offset:2px}
 .fx-home-t{font-family:var(--font-display);font-weight:800;font-size:clamp(22px,3vw,30px);text-transform:uppercase;line-height:1}
 .fx-home-s{font-size:13px;color:var(--ink-mid);margin-top:4px}
+
+/* ── past Major board ───────────────────────────────────────────────────── */
+.fx-archive{margin-top:0}
+@media(min-width:1024px){.fx-archive{margin-top:0}}
+.fx-scope{margin-bottom:8px}
+.fx-top3 .fx-sum-name{text-transform:none}
+.fx-top3>div:last-child{grid-column:auto}
+@media(max-width:560px){.fx-top3{grid-template-columns:1fr}}
+/* the tab row scrolls sideways, which clipped the active underline */
+.fx-page .fx-tabs a{margin-bottom:0}
+.fx-page .fx-tabs a.on,.fx-page .fx-scope a.on{color:var(--ink-hi);border-bottom-color:var(--heat)}

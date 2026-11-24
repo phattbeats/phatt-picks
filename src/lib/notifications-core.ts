@@ -35,7 +35,7 @@ import { getStamp } from "./bleachers-core";
 import { humanizeLockEta, DEFAULT_REMINDER_OFFSETS_MS } from "./notify-core";
 import type { CoinTier } from "./challenge-coin-core";
 
-export type NotifKind = "reaction" | "stage" | "recap" | "announcement" | "coin" | "achievement";
+export type NotifKind = "reaction" | "stage" | "recap" | "announcement" | "coin" | "achievement" | "fantasy";
 
 // ── NOTIFICATION PREFERENCES (#1240) ──────────────────────────────────────
 
@@ -53,6 +53,8 @@ export interface NotifPrefs {
   coin: NotifTypePrefs;
   /** PHA-4477: an achievement unlocked. In-app only for now (no push sender yet). */
   achievement: NotifTypePrefs;
+  /** PHA-5454: fantasy draft open / starting soon, points landed, stage final. */
+  fantasy: NotifTypePrefs;
 }
 
 export const DEFAULT_NOTIF_PREFS: NotifPrefs = {
@@ -64,6 +66,7 @@ export const DEFAULT_NOTIF_PREFS: NotifPrefs = {
   // it "pings" (#1278, Brandon).
   coin:      { inApp: true, push: true },
   achievement: { inApp: true, push: false },
+  fantasy:   { inApp: true, push: true },
 };
 
 /** Parse and normalise Player.notifPrefs JSON. Missing keys fall back to defaults. */
@@ -78,6 +81,7 @@ export function parseNotifPrefs(json: string | null | undefined): NotifPrefs {
       announce:  { ...DEFAULT_NOTIF_PREFS.announce,  ...(p.announce ?? {}) },
       coin:      { ...DEFAULT_NOTIF_PREFS.coin,       ...(p.coin ?? {}) },
       achievement: { ...DEFAULT_NOTIF_PREFS.achievement, ...(p.achievement ?? {}) },
+      fantasy:   { ...DEFAULT_NOTIF_PREFS.fantasy,   ...(p.fantasy ?? {}) },
     };
   } catch {
     return DEFAULT_NOTIF_PREFS;
@@ -96,6 +100,7 @@ export function filterEntriesByPrefs(
     if (e.kind === "announcement") return prefs.announce.inApp;
     if (e.kind === "coin")         return prefs.coin.inApp;
     if (e.kind === "achievement")  return prefs.achievement.inApp;
+    if (e.kind === "fantasy")      return prefs.fantasy.inApp;
     return true;
   });
 }
@@ -366,6 +371,52 @@ export function recapEntry(
     // "/" did nothing once the localStorage seen-flag was set.
     href: `/reveal/${sectionId}?wrapped=1`,
     atMs: resolvedAtMs,
+  };
+}
+
+// ── FANTASY (PHA-5454) ────────────────────────────────────────────────────
+
+/**
+ * "{Stage} fantasy draft is open" while a stage can be drafted and this player
+ * has no five for it. `openedAtMs` is when the draft opened (drives sort and
+ * unread). Null once the stage has started or the player has a team.
+ */
+export function fantasyDraftEntry(
+  input: { stageId: number; stageName: string; openedAtMs: number; startMs: number | null; hasLineup: boolean },
+  nowMs: number,
+): Omit<NotifEntry, "isNew" | "readAt"> | null {
+  if (input.hasLineup) return null;
+  if (input.startMs != null && nowMs >= input.startMs) return null;
+  const eta = input.startMs != null ? humanizeLockEta(input.startMs - nowMs) : null;
+  return {
+    id: `fantasy-open:${input.stageId}`,
+    kind: "fantasy",
+    icon: "★",
+    title: `${input.stageName} fantasy draft is open`,
+    body: eta ? `Pick your five. It starts in ${eta}.` : "Pick your five.",
+    href: `/fantasy?stage=${input.stageId}&view=team`,
+    atMs: Math.min(input.openedAtMs, nowMs),
+  };
+}
+
+/**
+ * "{Stage} fantasy is final" with where this player's five finished. Capped at
+ * maxAgeMs so an old stage never backfills the feed.
+ */
+export function fantasyFinalEntry(
+  input: { stageId: number; stageName: string; finalAtMs: number; rank: number; managers: number; total: number },
+  nowMs: number,
+  maxAgeMs: number = 14 * DAY_MS,
+): Omit<NotifEntry, "isNew" | "readAt"> | null {
+  if (!Number.isFinite(input.finalAtMs) || nowMs - input.finalAtMs > maxAgeMs) return null;
+  return {
+    id: `fantasy-final:${input.stageId}`,
+    kind: "fantasy",
+    icon: "★",
+    title: `${input.stageName} fantasy is final`,
+    body: `Your five finished #${input.rank} of ${input.managers} with ${input.total} pts.`,
+    href: `/fantasy?stage=${input.stageId}&view=league`,
+    atMs: input.finalAtMs,
   };
 }
 

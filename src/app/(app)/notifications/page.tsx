@@ -133,6 +133,7 @@ const GO_LABEL: Record<string, string> = {
   recap: "Open recap",
   coin: "Inspect",
   achievement: "See it",
+  fantasy: "Open fantasy",
   reaction: "View picks",
   announcement: "Open",
 };

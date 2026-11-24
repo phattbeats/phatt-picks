@@ -169,6 +169,11 @@ export async function register(): Promise<void> {
         fantasyInFlight = false;
       }
     };
+    // Past Majors' boards: copy the committed archive into the match table.
+    const { seedFantasyArchive } = await import("@/lib/fantasy-archive");
+    void seedFantasyArchive().then((r) => {
+      if (r.inserted > 0) console.log(`[fantasy] archive: added ${r.inserted} past match(es) across ${r.events} Major(s)`);
+    });
     setTimeout(() => void fantasyTick(), FIRST_TICK_DELAY_MS * 3);
     const fantasyTimer = setInterval(() => void fantasyTick(), FANTASY_MS);
     if (typeof fantasyTimer.unref === "function") fantasyTimer.unref();
@@ -255,12 +260,15 @@ export async function register(): Promise<void> {
   const { runRecapPushes } = await import("@/lib/recap-pushes");
   const { runAnnouncementPushes } = await import("@/lib/announcement-pushes");
   const { runCoinEarnedPushes } = await import("@/lib/coin-earned-pushes");
+  const { runFantasyPushes } = await import("@/lib/fantasy-pushes");
+  const { currentEventId: liveEventId } = await import("@/lib/events-core");
 
   const tick = (): void => {
     runPreLockReminders().catch((err) => console.error("[prelock] tick failed:", err));
     runRecapPushes().catch((err) => console.error("[recap-push] tick failed:", err));
     runAnnouncementPushes().catch((err) => console.error("[announce-push] tick failed:", err));
     runCoinEarnedPushes().catch((err) => console.error("[coin-push] tick failed:", err));
+    runFantasyPushes(liveEventId()).catch((err) => console.error("[fantasy-push] tick failed:", err));
   };
 
   setTimeout(tick, FIRST_TICK_DELAY_MS);
@@ -268,5 +276,5 @@ export async function register(): Promise<void> {
   // Don't keep the process alive solely for this timer.
   if (typeof timer.unref === "function") timer.unref();
 
-  console.log(`[prelock] scheduler armed — every ${TICK_MS / 60_000} min (+ recap + announce pushes)`);
+  console.log(`[prelock] scheduler armed — every ${TICK_MS / 60_000} min (+ recap + announce + fantasy pushes)`);
 }

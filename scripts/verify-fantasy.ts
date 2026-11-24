@@ -22,6 +22,7 @@ import {
   isPlayoffInfo,
   isStageComplete,
   lineupAction,
+  lineupGain,
   parseHltvMatchPage,
   parseHltvResultsPage,
   parseLineup,
@@ -208,6 +209,15 @@ const tooLate = scoreLineup(good, T0 + 35, ctx);
 check("joining after the clinch earns no 3-0 bonus", tooLate.players.find((p) => p.playerId === A.id)!.perfectBonus === 0);
 check("matches before the stage's scoring start count for nobody", scoreLineup(good, T0 - 1, { ...ctx, stageStartMs: T0 + 15 }).players.find((p) => p.playerId === A.id)!.placementPoints === 200);
 check("no bonus in the playoffs", scoreLineup(good, T0 - 1, { ...ctx, stage: { ...swiss, kind: "playoff", fieldSize: 8 } }).players.find((p) => p.playerId === A.id)!.perfectBonus === 0);
+
+console.log("\nfantasy - what new matches add (points push)");
+const clinch = lineupGain(good, T0 - 1, ctx, new Set([3]));
+check("the clinching match adds placement + win + role + the 3-0 bonus", clinch.gained === 235 && clinch.players.length === 1 && clinch.players[0].playerId === A.id, JSON.stringify(clinch));
+const capGain = lineupGain(good, T0 - 1, ctx, new Set([4]));
+check("a captain's new match adds his multiplied points", capGain.gained === sb.total && capGain.players[0].playerId === B.id);
+check("every match new at once adds the whole score", lineupGain(good, T0 - 1, ctx, new Set([1, 2, 3, 4])).gained === early.total);
+check("a match from before a late entry adds nothing", lineupGain(good, T0 + 35, ctx, new Set([3])).gained === 0);
+check("a match nobody in the five played adds nothing", lineupGain(good, T0 - 1, ctx, new Set([999])).gained === 0);
 
 console.log("\nfantasy - records, completion, tables");
 const rec = teamRecords(ms);

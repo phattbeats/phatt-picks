@@ -34,7 +34,7 @@ const TITLE_PREFIX_RE = /^\(\d+\)\s+/;
 interface NotifStamp { id: string; glyph: string; label: string; kind: "props" | "heat"; count: number }
 interface NotifEntry {
   id: string;
-  kind: "reaction" | "stage" | "recap" | "announcement" | "coin" | "achievement";
+  kind: "reaction" | "stage" | "recap" | "announcement" | "coin" | "achievement" | "fantasy";
   icon: string;
   title: string;
   body: string;
@@ -72,6 +72,7 @@ const TOAST_KIND_LABEL: Record<string, string> = {
   announcement: "Broadcast",
   coin: "Coin minted",
   achievement: "Achievement",
+  fantasy: "Fantasy",
 };
 
 function timeAgo(ms: number): string {

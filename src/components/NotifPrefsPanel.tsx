@@ -91,6 +91,7 @@ function PrefRow({ label, hint, pref, showPush, pushNA, disabled, onToggle }: Ro
 const ROWS: ReadonlyArray<{ kind: PrefKind; label: string; hint: string; inAppOnly?: boolean }> = [
   { kind: "stage", label: "Stage locks", hint: "24 hours and 1 hour before picks lock" },
   { kind: "recap", label: "Stage results", hint: "When your recap is ready" },
+  { kind: "fantasy", label: "Fantasy", hint: "Draft open, points landed, stage final" },
   { kind: "reactions", label: "Reactions", hint: "When someone stamps one of your picks" },
   { kind: "coin", label: "Coin minted", hint: "When a Major concludes" },
   { kind: "achievement", label: "Achievements", hint: "When you unlock one (in-app only for now)", inAppOnly: true },
