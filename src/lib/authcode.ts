@@ -11,6 +11,7 @@ import { decryptAuthCode } from "@/lib/crypto";
 import { getEventBySlug, getEventConfig } from "@/lib/events-core";
 import { eventShortName } from "@/lib/leaderboard";
 import { fetchTournamentPredictions, ValveApiError } from "@/lib/valve";
+import { codeState } from "@/lib/authcode-check-core";
 
 /**
  * Codes saved before we recorded the Major (authCodeEventId null) were all
@@ -81,6 +82,24 @@ export async function hasAuthCode(playerId: string): Promise<boolean> {
 }
 
 /**
+ * Record what Valve said about the stored code for this Major. The save route calls
+ * these after its own check; carryOver already sets the same maps for a carried code.
+ * In-process only (a restart forgets it and the next read or sync asks Valve again),
+ * which is the same lifetime the 403 back-off above already has.
+ */
+export function markCodeRejected(playerId: string, eventId: number): void {
+  const key = `${playerId}:${eventId}`;
+  carryRejected.add(key);
+  carryRetryAt.set(key, Date.now() + CARRY_REJECTED_MS);
+}
+
+export function markCodeAccepted(playerId: string, eventId: number): void {
+  const key = `${playerId}:${eventId}`;
+  carryRejected.delete(key);
+  carryRetryAt.delete(key);
+}
+
+/**
  * Is the stored code for this Major? A code saved for another Major is
  * "stale" until Valve accepts it for this one (carryOver) or the player
  * pastes a new code; until then sync doesn't use it.
@@ -89,7 +108,7 @@ export async function authCodeStatus(
   playerId: string,
   eventId: number,
 ): Promise<{
-  status: "none" | "current" | "stale";
+  status: "none" | "current" | "stale" | "rejected";
   savedForEventId: number | null;
   /** True only once Valve has really answered 403 for the saved code (this process, within the back-off). */
   rejected: boolean;
@@ -101,10 +120,13 @@ export async function authCodeStatus(
   if (!player?.authCode) return { status: "none", savedForEventId: null, rejected: false };
   const savedFor = codeEventId(player.authCodeEventId);
   const current = savedFor === eventId;
+  const key = `${playerId}:${eventId}`;
+  // Valve answered 403 for this code within the back-off window (this process).
+  const valveRejected = carryRejected.has(key) && (carryRetryAt.get(key) ?? 0) > Date.now();
   return {
-    status: current ? "current" : "stale",
+    status: codeState({ hasCode: true, savedForCurrentEvent: current, valveRejected }),
     savedForEventId: savedFor,
-    rejected: !current && carryRejected.has(`${playerId}:${eventId}`) && (carryRetryAt.get(`${playerId}:${eventId}`) ?? 0) > Date.now(),
+    rejected: valveRejected,
   };
 }
 
