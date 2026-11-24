@@ -38,6 +38,8 @@ model Player {
   rankSnapshots     RankSnapshot[]
   notificationReads NotificationRead[]
   pickLocks         PickLock[]
+  fantasyLineups    FantasyLineup[]
+  fantasyTeams      FantasyTeam[]
 }
 
 // Individual slot picks — one row per (player, event, section, group, slotIndex)
@@ -345,4 +347,57 @@ model PageView {
   @@index([path])
   @@index([event])
   @@index([visitor])
+}
+
+// HOTLINE Fantasy (PHA-5454). A manager's team name for one Major. Free text,
+// cleaned and length-capped at the API boundary (fantasy-core cleanTeamName).
+model FantasyTeam {
+  id        String   @id @default(cuid())
+  playerId  String
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  eventId   Int
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([playerId, eventId])
+}
+
+// One manager's five for one fantasy stage (a Swiss section id, or the
+// Quarterfinals id for the whole playoff bracket). `slots` is JSON
+// [{ playerId: <HLTV player id>, role }] x5; `captainId` is one of those ids.
+// `lockedAt` is the last save: a lineup scores only matches that start after
+// it, unless it was saved before the stage started (then everything counts).
+model FantasyLineup {
+  id        String   @id @default(cuid())
+  playerId  String
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  eventId   Int
+  stageId   Int
+  slots     String
+  captainId Int
+  lockedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([playerId, eventId, stageId])
+  @@index([eventId, stageId])
+}
+
+// One finished match's per-player stat lines, parsed from its HLTV match page
+// (fantasy-core parseHltvMatchPage). `data` is the JSON FantasyMatchData. Rows
+// are written once the page shows a complete stats table and re-read once
+// (`refreshed`) a few hours later to pick up HLTV's post-match corrections.
+model FantasyMatch {
+  id          String   @id @default(cuid())
+  eventId     Int
+  stageId     Int
+  hltvMatchId Int      @unique
+  startAt     DateTime
+  data        String
+  refreshed   Boolean  @default(false)
+  fetchedAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([eventId, stageId])
 }

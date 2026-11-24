@@ -9,6 +9,7 @@ import { NotificationBell } from "./NotificationBell";
 const NAV_LINKS = [
   { href: "/", label: "Home", match: (p: string) => p === "/" },
   { href: "/picks", label: "Picks", match: (p: string) => p.startsWith("/picks") },
+  { href: "/fantasy", label: "Fantasy", match: (p: string) => p.startsWith("/fantasy") },
   { href: "/leaderboard", label: "Leaderboard", match: (p: string) => p.startsWith("/leaderboard") },
   { href: "/news", label: "News", match: (p: string) => p.startsWith("/news") },
   // INFO (#1283) — help & guides as a first-class desktop tab. Also lights up

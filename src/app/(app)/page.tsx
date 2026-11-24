@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { hasFantasy } from "@/lib/fantasy";
 import { type Layout } from "@/lib/layout";
 import { getEffectiveLayout } from "@/lib/layout-state";
 import { prisma } from "@/lib/db";
@@ -402,6 +403,21 @@ export default async function DashboardPage() {
       )}
 
       {/* Stage path */}
+      {hasFantasy(EVENT_ID) && (
+        <Link href="/fantasy" prefetch={false} className="fx-home">
+          <span>
+            <span className="eyebrow">
+              <b>New</b> · Fantasy
+            </span>
+            <div className="fx-home-t">Draft your five</div>
+            <div className="fx-home-s">Pick five players each stage and score from every match they play.</div>
+          </span>
+          <span className="fx-home-t" aria-hidden>
+            →
+          </span>
+        </Link>
+      )}
+
       <section className="chap">
         <div className="chap-h">
           <h2>{pathHeadline}</h2>

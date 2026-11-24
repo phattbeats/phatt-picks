@@ -179,8 +179,8 @@ Unchanged rules, Brandon's:
    pending changelog.
 3. Merge locally under the phattbeats identity (CONTRIBUTING), never with the
    GitHub merge button.
-4. After the deploy, check the boot log for the four `armed` lines
-   (`[live-tick]`, `[slow-tick]`, `[autopilot]`, `[prelock]`) and open
+4. After the deploy, check the boot log for the five `armed` lines
+   (`[live-tick]`, `[slow-tick]`, `[fantasy]`, `[autopilot]`, `[prelock]`) and open
    `/api/autopilot`. A manual cache warm is optional now (section 1).
 
 ---

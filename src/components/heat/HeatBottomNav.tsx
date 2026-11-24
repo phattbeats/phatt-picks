@@ -21,6 +21,11 @@ const PicksIcon = (
     <path d="M9 12l2 2 4-4" />
   </svg>
 );
+const FantasyIcon = (
+  <svg viewBox="0 0 24 24">
+    <path strokeLinejoin="round" d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.3 6L12 16.3 6.6 19.4l1.3-6L3.4 9.3l6-.7z" />
+  </svg>
+);
 const RanksIcon = (
   <svg viewBox="0 0 24 24">
     <rect x="4" y="10" width="4" height="10" />
@@ -45,6 +50,7 @@ const YouIcon = (
 const NAV_ITEMS: readonly NavItem[] = [
   { href: "/", label: "Home", match: (p) => p === "/", icon: HomeIcon },
   { href: "/picks", label: "Picks", match: (p) => p.startsWith("/picks"), icon: PicksIcon },
+  { href: "/fantasy", label: "Fantasy", match: (p) => p.startsWith("/fantasy"), icon: FantasyIcon },
   {
     href: "/leaderboard",
     label: "Ranks",

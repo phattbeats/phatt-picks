@@ -283,6 +283,34 @@ leaves / pure helpers) or the verifier can't load it standalone.
   **per-Major seam**: front PNGs `public/coins/<event-slug>-{tier}.png` (`coinArtSrc`) over shared
   reverses `public/coins/_back-{tier}.png` — see NEXT-MAJOR.
 
+### Fantasy — draft five players per stage (PHA-5454)
+- A second game beside Pick'Em, modelled on BLAST.tv fantasy. Each stage (Stage I, II, III, and the
+  playoffs as one) a manager fields **five players, one per tier** (Diamond to Bronze, cut by HLTV
+  rating from the roster snapshot), at most two per team, one **captain** (x1.2 Diamond up to x2.0
+  Bronze) and five different **role cards** (+25 a match when hit). Every finished match ranks its ten
+  players by HLTV rating: 100 down to 10, +10 for a win, +100 each for a 3-0 Swiss run.
+- **One rule replaces the lock:** a lineup scores only matches that *start after it was saved*. Before
+  the stage starts you edit freely and everything counts; once it is live you may still enter, once,
+  and score from then on (`lineupCountsFromMs`, `lineupAction`). Other managers' lineups are hidden
+  until the stage starts.
+- `fantasy-core.ts` is the pure seam (tiers, validation, the HLTV match + results page parsers, all
+  scoring; `scripts/verify-fantasy.ts` runs it against two real captured HLTV pages). `fantasy.ts` is
+  the IO: three tables (`FantasyTeam`, `FantasyLineup`, `FantasyMatch`), the crawl, and the read model
+  behind `/fantasy`. Players are keyed by **HLTV player id** (from the roster's `hltvUrl`), the same id
+  the match page prints.
+- **Ingestion.** Per-match stats exist only on HLTV match pages, so they come through crawl4ai. A
+  10-minute timer in `instrumentation.ts` (`[fantasy] match ingest armed`) reads each in-play stage's
+  `results?event=<id>` page and then up to four new match pages a tick, one at a time (a page takes
+  about a minute when crawl4ai is busy). A page whose stats table is incomplete parses to nothing and
+  is retried; each stored match is re-read once ~3h later for HLTV's corrections. `GET
+  /api/fantasy/refresh` runs a tick and reports what is stored.
+- **Stage pools** come from the layout section once Valve has trimmed it to the real field; until
+  then they are derived (direct seeds + the previous stage's three-win teams, `deriveStageField`).
+- Per-Major config is `FANTASY_EVENTS` in `fantasy-core.ts`: the HLTV hub event id (the last Swiss
+  stage and the playoffs are listed under the hub; HLTV's info line tells them apart) and an optional
+  later `scoringStart` per stage. Singapore's Stage I scores from day two because fantasy shipped
+  after day one. Display and its own leaderboard only: it never touches Pick'Em scoring.
+
 ## Where the per-major seams are
 
 Everything that changes for the *next* Major is committed config, not fetched. The

@@ -368,7 +368,7 @@ body {
   background: var(--void); /* PHA-5398: opaque, see .topnav */
   border-top: 1px solid var(--hair);
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr); /* PHA-5454: Fantasy is the sixth tab */
 }
 .botnav a {
   display: flex;

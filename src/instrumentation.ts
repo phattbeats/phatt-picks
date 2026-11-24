@@ -145,6 +145,36 @@ export async function register(): Promise<void> {
     console.log("[slow-tick] team stats + odds + news driver armed — hourly");
   }
 
+  // PHA-5454 — HOTLINE Fantasy ingest. Reads each finished match's HLTV page
+  // into the fantasy match cache while a stage is being played. Self-gating
+  // (no fantasy game, frozen Major, or no stage in play means no crawl) and
+  // bounded to a few match pages a tick, on its own in-flight guard so a slow
+  // crawl never delays scoring or the standings.
+  {
+    const { ingestFantasyTick } = await import("@/lib/fantasy");
+    const { currentEventId } = await import("@/lib/events-core");
+    const FANTASY_MS = 10 * 60 * 1000;
+    let fantasyInFlight = false;
+    const fantasyTick = async (): Promise<void> => {
+      if (fantasyInFlight) return;
+      fantasyInFlight = true;
+      try {
+        const r = await ingestFantasyTick(currentEventId());
+        if (r.ingested > 0 || r.reread > 0 || r.pending > 0) {
+          console.log(`[fantasy] event ${r.eventId}: stored ${r.ingested} match(es), re-read ${r.reread}, ${r.pending} waiting on stats`);
+        }
+      } catch (err) {
+        console.error("[fantasy] tick failed:", err);
+      } finally {
+        fantasyInFlight = false;
+      }
+    };
+    setTimeout(() => void fantasyTick(), FIRST_TICK_DELAY_MS * 3);
+    const fantasyTimer = setInterval(() => void fantasyTick(), FANTASY_MS);
+    if (typeof fantasyTimer.unref === "function") fantasyTimer.unref();
+    console.log(`[fantasy] match ingest armed — every ${FANTASY_MS / 60_000} min`);
+  }
+
   // PHA-1406 — the autopilot self-check: the deterministic replacement for the
   // weekly LLM watchers. Every tick it derives each section's phase and names
   // any config gap a human has to close (an undated next stage, a stage inside

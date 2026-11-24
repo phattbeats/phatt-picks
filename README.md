@@ -29,6 +29,7 @@ entire mobile story (no native apps).
   playoff bracket** you place at once (tap a winner, they advance).
 - **Steam mirror** — pull your live Valve Pick'Em and (optionally) push locally-set picks back up.
 - **Shared leaderboard** — scored on Valve's own weighting; picks hidden until each stage locks.
+- **Fantasy** — draft five players per stage (one per tier, a captain, role cards) and score from every match they play, BLAST.tv style, on its own league table.
 - **Stage Reveal & Wrapped** — per-stage reveal boards and a click-through "Stage Wrapped" recap.
 - **The Bleachers** — drop a fixed reaction stamp on someone's revealed pick; anonymous in the moment, unmasked when the stage resolves.
 - **Playoff Spotlight** — per-team narrative + highlight, with live Polymarket implied odds.
