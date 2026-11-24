@@ -1,0 +1,613 @@
+{
+ "note": "Replay fixture for the Swiss simulator (PHA-5453). Real IEM Cologne Major 2026 Stage 1, 2 and 3 match-ups and winners, round by round, read with parseSwissBracket from HLTV event pages 9028 (src/fixtures/hltv-cologne-stage1-refpopup.sample.html) 9029 and 8301 (Stage 3; both captured 2026-11-24). Pre-event seeds are Valve's global VRS of 2026-05-04 (ValveSoftware/counter-strike_regional_standings invitation/2026/standings_global_2026_05_04.md), which reproduces all 8 real Stage 1 round-1 match-ups (1v9..8v16). Round N = the matches played at W+L = N-1. Each match: [team1, team2, winner].",
+ "vrsSource": "https://github.com/ValveSoftware/counter-strike_regional_standings/blob/main/invitation/2026/standings_global_2026_05_04.md",
+ "vrsRank": {
+  "GamerLegion": 13,
+  "B8": 16,
+  "HEROIC": 20,
+  "BETBOOM": 21,
+  "BIG": 23,
+  "M80": 24,
+  "MIBR": 27,
+  "SINNERS": 30,
+  "NRG": 31,
+  "TYLOO": 34,
+  "Sharks": 37,
+  "Gaimin Gladiators": 40,
+  "Liquid": 47,
+  "Lynn Vision": 49,
+  "THUNDER dOWNUNDER": 56,
+  "FlyQuest": 74,
+  "FUT": 4,
+  "Spirit": 5,
+  "Astralis": 6,
+  "G2": 12,
+  "Legacy": 14,
+  "paiN": 17,
+  "Monte": 18,
+  "9z": 19,
+  "Vitality": 1,
+  "Natus Vincere": 2,
+  "Falcons": 3,
+  "The MongolZ": 7,
+  "PARIVISION": 8,
+  "Aurora": 9,
+  "FURIA": 10,
+  "MOUZ": 11
+ },
+ "stage1": {
+  "seeds": [
+   "GamerLegion",
+   "B8",
+   "HEROIC",
+   "BETBOOM",
+   "BIG",
+   "M80",
+   "MIBR",
+   "SINNERS",
+   "NRG",
+   "TYLOO",
+   "Sharks",
+   "Gaimin Gladiators",
+   "Liquid",
+   "Lynn Vision",
+   "THUNDER dOWNUNDER",
+   "FlyQuest"
+  ],
+  "rounds": {
+   "1": [
+    [
+     "M80",
+     "Lynn Vision",
+     "M80"
+    ],
+    [
+     "SINNERS",
+     "FlyQuest",
+     "FlyQuest"
+    ],
+    [
+     "MIBR",
+     "THUNDER dOWNUNDER",
+     "THUNDER dOWNUNDER"
+    ],
+    [
+     "B8",
+     "TYLOO",
+     "B8"
+    ],
+    [
+     "HEROIC",
+     "Sharks",
+     "Sharks"
+    ],
+    [
+     "GamerLegion",
+     "NRG",
+     "GamerLegion"
+    ],
+    [
+     "BETBOOM",
+     "Gaimin Gladiators",
+     "BETBOOM"
+    ],
+    [
+     "BIG",
+     "Liquid",
+     "Liquid"
+    ]
+   ],
+   "2": [
+    [
+     "B8",
+     "THUNDER dOWNUNDER",
+     "B8"
+    ],
+    [
+     "M80",
+     "Sharks",
+     "M80"
+    ],
+    [
+     "GamerLegion",
+     "FlyQuest",
+     "GamerLegion"
+    ],
+    [
+     "BETBOOM",
+     "Liquid",
+     "BETBOOM"
+    ],
+    [
+     "HEROIC",
+     "Lynn Vision",
+     "Lynn Vision"
+    ],
+    [
+     "MIBR",
+     "TYLOO",
+     "MIBR"
+    ],
+    [
+     "SINNERS",
+     "NRG",
+     "NRG"
+    ],
+    [
+     "BIG",
+     "Gaimin Gladiators",
+     "BIG"
+    ]
+   ],
+   "3": [
+    [
+     "GamerLegion",
+     "BETBOOM",
+     "BETBOOM"
+    ],
+    [
+     "M80",
+     "B8",
+     "B8"
+    ],
+    [
+     "NRG",
+     "FlyQuest",
+     "NRG"
+    ],
+    [
+     "Sharks",
+     "Lynn Vision",
+     "Lynn Vision"
+    ],
+    [
+     "THUNDER dOWNUNDER",
+     "BIG",
+     "BIG"
+    ],
+    [
+     "Liquid",
+     "MIBR",
+     "MIBR"
+    ],
+    [
+     "TYLOO",
+     "SINNERS",
+     "TYLOO"
+    ],
+    [
+     "Gaimin Gladiators",
+     "HEROIC",
+     "HEROIC"
+    ]
+   ],
+   "4": [
+    [
+     "GamerLegion",
+     "BIG",
+     "GamerLegion"
+    ],
+    [
+     "MIBR",
+     "Lynn Vision",
+     "MIBR"
+    ],
+    [
+     "M80",
+     "NRG",
+     "M80"
+    ],
+    [
+     "THUNDER dOWNUNDER",
+     "FlyQuest",
+     "FlyQuest"
+    ],
+    [
+     "TYLOO",
+     "Sharks",
+     "TYLOO"
+    ],
+    [
+     "Liquid",
+     "HEROIC",
+     "Liquid"
+    ]
+   ],
+   "5": [
+    [
+     "TYLOO",
+     "Lynn Vision",
+     "TYLOO"
+    ],
+    [
+     "Liquid",
+     "FlyQuest",
+     "FlyQuest"
+    ],
+    [
+     "NRG",
+     "BIG",
+     "BIG"
+    ]
+   ]
+  }
+ },
+ "stage2": {
+  "invited": [
+   "FUT",
+   "Spirit",
+   "Astralis",
+   "G2",
+   "Legacy",
+   "paiN",
+   "Monte",
+   "9z"
+  ],
+  "rounds": {
+   "1": [
+    [
+     "Astralis",
+     "GamerLegion",
+     "Astralis"
+    ],
+    [
+     "9z",
+     "FlyQuest",
+     "9z"
+    ],
+    [
+     "FUT",
+     "B8",
+     "FUT"
+    ],
+    [
+     "paiN",
+     "TYLOO",
+     "TYLOO"
+    ],
+    [
+     "G2",
+     "M80",
+     "G2"
+    ],
+    [
+     "Monte",
+     "BIG",
+     "Monte"
+    ],
+    [
+     "Spirit",
+     "BETBOOM",
+     "Spirit"
+    ],
+    [
+     "Legacy",
+     "MIBR",
+     "MIBR"
+    ]
+   ],
+   "2": [
+    [
+     "FUT",
+     "TYLOO",
+     "FUT"
+    ],
+    [
+     "Astralis",
+     "9z",
+     "9z"
+    ],
+    [
+     "G2",
+     "Monte",
+     "G2"
+    ],
+    [
+     "Spirit",
+     "MIBR",
+     "Spirit"
+    ],
+    [
+     "paiN",
+     "BIG",
+     "BIG"
+    ],
+    [
+     "Legacy",
+     "FlyQuest",
+     "Legacy"
+    ],
+    [
+     "BETBOOM",
+     "GamerLegion",
+     "BETBOOM"
+    ],
+    [
+     "B8",
+     "M80",
+     "M80"
+    ]
+   ],
+   "3": [
+    [
+     "Spirit",
+     "9z",
+     "Spirit"
+    ],
+    [
+     "G2",
+     "FUT",
+     "FUT"
+    ],
+    [
+     "Monte",
+     "Legacy",
+     "Monte"
+    ],
+    [
+     "Astralis",
+     "TYLOO",
+     "TYLOO"
+    ],
+    [
+     "MIBR",
+     "BIG",
+     "BIG"
+    ],
+    [
+     "BETBOOM",
+     "M80",
+     "BETBOOM"
+    ],
+    [
+     "FlyQuest",
+     "paiN",
+     "paiN"
+    ],
+    [
+     "B8",
+     "GamerLegion",
+     "B8"
+    ]
+   ],
+   "4": [
+    [
+     "Monte",
+     "BETBOOM",
+     "BETBOOM"
+    ],
+    [
+     "TYLOO",
+     "9z",
+     "9z"
+    ],
+    [
+     "G2",
+     "BIG",
+     "G2"
+    ],
+    [
+     "Astralis",
+     "paiN",
+     "paiN"
+    ],
+    [
+     "MIBR",
+     "B8",
+     "B8"
+    ],
+    [
+     "M80",
+     "Legacy",
+     "Legacy"
+    ]
+   ],
+   "5": [
+    [
+     "Monte",
+     "paiN",
+     "Monte"
+    ],
+    [
+     "Legacy",
+     "TYLOO",
+     "Legacy"
+    ],
+    [
+     "BIG",
+     "B8",
+     "B8"
+    ]
+   ]
+  }
+ },
+ "stage3": {
+  "invited": [
+   "Vitality",
+   "Natus Vincere",
+   "Falcons",
+   "The MongolZ",
+   "PARIVISION",
+   "Aurora",
+   "FURIA",
+   "MOUZ"
+  ],
+  "rounds": {
+   "1": [
+    [
+     "PARIVISION",
+     "9z",
+     "9z"
+    ],
+    [
+     "The MongolZ",
+     "BETBOOM",
+     "BETBOOM"
+    ],
+    [
+     "Vitality",
+     "FUT",
+     "Vitality"
+    ],
+    [
+     "MOUZ",
+     "Legacy",
+     "MOUZ"
+    ],
+    [
+     "FURIA",
+     "B8",
+     "FURIA"
+    ],
+    [
+     "Falcons",
+     "G2",
+     "Falcons"
+    ],
+    [
+     "Aurora",
+     "Monte",
+     "Aurora"
+    ],
+    [
+     "Natus Vincere",
+     "Spirit",
+     "Spirit"
+    ]
+   ],
+   "2": [
+    [
+     "FURIA",
+     "MOUZ",
+     "FURIA"
+    ],
+    [
+     "Falcons",
+     "BETBOOM",
+     "BETBOOM"
+    ],
+    [
+     "Vitality",
+     "9z",
+     "9z"
+    ],
+    [
+     "Aurora",
+     "Spirit",
+     "Spirit"
+    ],
+    [
+     "The MongolZ",
+     "B8",
+     "The MongolZ"
+    ],
+    [
+     "PARIVISION",
+     "Monte",
+     "Monte"
+    ],
+    [
+     "FUT",
+     "G2",
+     "G2"
+    ],
+    [
+     "Natus Vincere",
+     "Legacy",
+     "Natus Vincere"
+    ]
+   ],
+   "3": [
+    [
+     "BETBOOM",
+     "FURIA",
+     "FURIA"
+    ],
+    [
+     "Spirit",
+     "9z",
+     "Spirit"
+    ],
+    [
+     "Natus Vincere",
+     "The MongolZ",
+     "Natus Vincere"
+    ],
+    [
+     "Falcons",
+     "Monte",
+     "Falcons"
+    ],
+    [
+     "Aurora",
+     "G2",
+     "Aurora"
+    ],
+    [
+     "Vitality",
+     "MOUZ",
+     "Vitality"
+    ],
+    [
+     "B8",
+     "FUT",
+     "FUT"
+    ],
+    [
+     "PARIVISION",
+     "Legacy",
+     "Legacy"
+    ]
+   ],
+   "4": [
+    [
+     "BETBOOM",
+     "Vitality",
+     "Vitality"
+    ],
+    [
+     "Aurora",
+     "9z",
+     "Aurora"
+    ],
+    [
+     "Natus Vincere",
+     "Falcons",
+     "Falcons"
+    ],
+    [
+     "MOUZ",
+     "FUT",
+     "FUT"
+    ],
+    [
+     "The MongolZ",
+     "Monte",
+     "The MongolZ"
+    ],
+    [
+     "G2",
+     "Legacy",
+     "G2"
+    ]
+   ],
+   "5": [
+    [
+     "9z",
+     "The MongolZ",
+     "9z"
+    ],
+    [
+     "BETBOOM",
+     "FUT",
+     "BETBOOM"
+    ],
+    [
+     "Natus Vincere",
+     "G2",
+     "G2"
+    ]
+   ]
+  }
+ }
+}
