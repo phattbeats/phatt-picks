@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { mirrorPlayerPredictionsThrottled } from "@/lib/predictions-sync";
 import { PicksBoard } from "@/components/PicksBoard";
 import { SignInBar } from "@/components/sg/picks/ActionBar";
+import { PoolPhotoSwitch } from "@/components/sg/picks/PoolPhotos";
 import {
   isStagePickable,
   selectCurrentStageIndex,
@@ -712,6 +713,8 @@ export default async function PicksPage({
                 </div>
               </div>
             ))}
+          {/* Bottom of the page: turn the pool's player photos back on (off by default). */}
+          <PoolPhotoSwitch />
         </div>
       ) : swissStandings ? (
         <div className="sgp-stack rise d2">

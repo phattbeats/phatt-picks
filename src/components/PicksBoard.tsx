@@ -19,6 +19,7 @@ import { ActionBar, type BarTone } from "@/components/sg/picks/ActionBar";
 import { SealPicks, sealStatusText } from "@/components/sg/picks/SealPicks";
 import type { SealView } from "@/lib/pick-lock-core";
 import { bucketDisplay, playerCutout, teamCode, teamColor } from "@/components/sg/picks/team-art";
+import { usePoolPhotos } from "@/components/sg/picks/PoolPhotos";
 
 type GroupId = number;
 type SlotIndex = number;
@@ -117,6 +118,9 @@ export function PicksBoard({
 
   const [picks, setPicks] = useState<PicksMap>(initialPicks);
   const [selected, setSelected] = useState<PickId | null>(null);
+  // Player photos are off unless the viewer flips the switch at the page bottom;
+  // the big team logo behind each card stays exactly as it was.
+  const showPhotos = usePoolPhotos();
   const [saveStates, setSaveStates] = useState<Record<string, SaveState>>({});
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
   const [unsavedSinceSync, setUnsavedSinceSync] = useState(false);
@@ -498,7 +502,7 @@ export function PicksBoard({
                         <span className="bg" aria-hidden="true">
                           <PoolLogoArt team={t} />
                         </span>
-                        {cutout && (
+                        {cutout && showPhotos && (
                           <Image
                             src={cutout}
                             alt=""
