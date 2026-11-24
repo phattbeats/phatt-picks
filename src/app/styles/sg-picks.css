@@ -236,6 +236,24 @@ a.sgp-note:hover { border-color: var(--hair-3); color: var(--ink-hi); }
 }
 @media (prefers-reduced-motion: reduce) { .sgp-team.sel { transform: none; } }
 
+/* "Player photos" switch at the bottom of the picks page (off by default). */
+.sgp-photoswitch { display: flex; justify-content: center; padding: 8px 0 4px; }
+.sgp-photoswitch label { display: inline-flex; align-items: center; gap: 12px; cursor: pointer; }
+.sgp-photoswitch .lbl { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-mid); }
+.sgp-photoswitch .sw {
+  position: relative; width: 40px; height: 22px; padding: 0; cursor: pointer;
+  border: 1px solid var(--hair-3); border-radius: 999px; background: var(--surf-1);
+  transition: background-color 150ms var(--ease), border-color 150ms var(--ease);
+}
+.sgp-photoswitch .sw .knob {
+  position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--ink-mid); transition: transform 150ms var(--ease), background-color 150ms var(--ease);
+}
+.sgp-photoswitch .sw.on { background: var(--heat); border-color: var(--heat); }
+.sgp-photoswitch .sw.on .knob { transform: translateX(18px); background: var(--ink-hi); }
+.sgp-photoswitch .sw:focus-visible { outline: 2px solid var(--heat); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .sgp-photoswitch .sw, .sgp-photoswitch .sw .knob { transition: none; } }
+
 /* Locked board (no pool): three bucket columns on wide screens */
 .sgp-locked { display: grid; gap: 14px; }
 .sgp-locked-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid var(--hair-2); }
