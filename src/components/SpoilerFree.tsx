@@ -26,22 +26,14 @@
  * which swaps it in on the client without a setState-in-effect.
  */
 
-import { useSyncExternalStore, type ReactNode } from "react";
+import { useMemo, useSyncExternalStore, type ReactNode } from "react";
 import {
-  parseStoredChoice,
+  createStoredChoiceReader,
   resolveSpoilerState,
   serializeChoice,
   type SpoilerPhase,
-  type StoredSpoilerChoice,
+  type StorageLike,
 } from "@/lib/spoiler-free-core";
-
-function readChoice(storageKey: string): StoredSpoilerChoice | null {
-  try {
-    return parseStoredChoice(window.localStorage.getItem(storageKey));
-  } catch {
-    return null; // storage blocked (private mode): use the stage default
-  }
-}
 
 // Subscribe to our own writes and to other tabs changing the same key.
 function subscribeTo(storageKey: string) {
@@ -68,9 +60,24 @@ export function SpoilerFree({
   phase: SpoilerPhase;
   children: ReactNode;
 }) {
+  // The snapshot MUST be stable across calls: React's useSyncExternalStore
+  // re-renders (and eventually throws error #185, blanking the page) if
+  // getSnapshot hands back a new object every time. The reader memoises the
+  // parse, so the same reference is returned until the stored string changes.
+  const reader = useMemo(() => {
+    let storage: StorageLike | null = null;
+    try {
+      // Accessing window.localStorage itself can throw (blocked cookies,
+      // sandboxed iframe), not just the getItem call.
+      storage = typeof window === "undefined" ? null : window.localStorage;
+    } catch {
+      storage = null;
+    }
+    return createStoredChoiceReader(storageKey, storage);
+  }, [storageKey]);
   const stored = useSyncExternalStore(
     subscribeTo(storageKey),
-    () => readChoice(storageKey),
+    reader,
     () => null, // server snapshot: no storage, so the stage default renders
   );
   const { on } = resolveSpoilerState({ phase, stored });
