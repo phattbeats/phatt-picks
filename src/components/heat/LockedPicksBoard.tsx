@@ -38,6 +38,11 @@ const CONFIRM_META: Record<PickConfirm, { cls: string; title: string }> = {
   pending: { cls: "", title: "Still in play" },
 };
 
+/* Spoiler-free (PHA-5495): the outcome wording lives on the confirm mark, NOT
+   on the slot. The slot's tooltip is just the team name, so a slot never leaks
+   the answer through its own hover text - the mark (hidden while spoiler-free
+   is on) carries the verdict instead. */
+
 export function LockedPicksBoard({
   section,
   teamMap,
@@ -124,7 +129,7 @@ export function LockedPicksBoard({
                       <div
                         key={slotIndex}
                         className={`sgp-slot on ro${meta.cls ? ` ${meta.cls}` : ""}`}
-                        title={`${team.name} — ${meta.title}`}
+                        title={team.name}
                       >
                         <span className="sgp-mark" aria-hidden="true">
                           <TeamLogo tiers={resolveLogoTiers(team)} teamName={team.name} size={LOGO} />
@@ -136,15 +141,15 @@ export function LockedPicksBoard({
                           </span>
                         )}
                         {confirm === "right" ? (
-                          <span className="hit">
+                          <span className="hit" title={meta.title}>
                             +{pts}
                           </span>
                         ) : confirm === "wrong" ? (
-                          <span className="miss">
+                          <span className="miss" title={meta.title}>
                             ✕
                           </span>
                         ) : (
-                          <span className="pend" aria-hidden="true">
+                          <span className="pend" aria-hidden="true" title={meta.title}>
                             ·
                           </span>
                         )}

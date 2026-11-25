@@ -40,18 +40,22 @@ export function LiveSwissStandings({
   source,
   sourceUrl,
   fetchedAtIso,
+  className,
 }: {
   rows: StandingRow[];
   teamMap: Map<number, TeamDef>;
   source: string;
   sourceUrl: string;
   fetchedAtIso: string;
+  /** Extra class on the board root - e.g. "sf-hide" so spoiler-free (PHA-5495)
+   *  can mask this result view without blurring the viewer's own picks. */
+  className?: string;
 }) {
   if (rows.length === 0) return null;
   const summary = summarizeStandings(rows);
 
   return (
-    <section className="sgb-board">
+    <section className={className ? `sgb-board ${className}` : "sgb-board"}>
       <div className="sect-head">
         <h2 className="display sgb-h">Standings</h2>
         <span className="last-updated">
