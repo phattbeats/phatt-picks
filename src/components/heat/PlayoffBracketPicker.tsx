@@ -17,11 +17,14 @@
  *
  * Persistence: each match is one Pick row (slot 0 of its layout group), saved
  * through POST /api/picks per section. A cascade can touch more than one round,
- * so a single edit may save several groups across sections at once; on failure
- * the whole edit reverts to the last server-confirmed state.
+ * so a single edit may save several groups across sections at once. Every edit
+ * is kept in this browser first (usePickDraft, PHA-5268): a failed save stays
+ * on screen and retries; only a permanent refusal (stage locked) reverts.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useMemo, useState, type CSSProperties } from "react";
+import { SaveError, usePickDraft, type SaveFn } from "@/components/usePickDraft";
+import type { SlotMap } from "@/lib/pick-draft-core";
 import Link from "next/link";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
@@ -63,7 +66,11 @@ const VENUES: Record<number, { venue: string; dates: string }> = {
 };
 const DEFAULT_VENUE = VENUES[27];
 
-type SaveState = "saving" | "saved" | "error";
+/** Bracket map (groupId → winner) ↔ draft slot map (`${groupId}:0`). */
+const toSlots = (m: Record<number, number>): SlotMap =>
+  Object.fromEntries(Object.entries(m).filter(([, p]) => p > 0).map(([g, p]) => [`${g}:0`, p]));
+const fromSlots = (m: SlotMap): Record<number, number> =>
+  Object.fromEntries(Object.entries(m).map(([k, p]) => [Number(k.split(":")[0]), p]));
 
 export function PlayoffBracketPicker({
   model,
@@ -71,6 +78,7 @@ export function PlayoffBracketPicker({
   initialPicks,
   enabled,
   eventId,
+  playerId,
   signedIn,
   steamLinked,
   initiallySynced,
@@ -85,6 +93,8 @@ export function PlayoffBracketPicker({
   initialPicks: Record<number, number>;
   enabled: boolean;
   eventId: number;
+  /** Session player id — scopes the browser draft. */
+  playerId?: string | null;
   signedIn: boolean;
   steamLinked: boolean;
   /** Server-derived: every saved bracket pick is already on Steam (#1214). */
@@ -100,13 +110,9 @@ export function PlayoffBracketPicker({
   // Sealed = committed: no more crowning (the write path refuses it too).
   const canEdit = enabled && !seal;
 
-  // `picks` is always the pruned, self-consistent set (resolveBracketPicks).
-  const [picks, setPicks] = useState<Record<number, number>>(
-    () => resolveBracketPicks(model, initialPicks).picks,
-  );
-  const [saveState, setSaveState] = useState<SaveState | null>(null);
   const [statsTeam, setStatsTeam] = useState<TeamDef | null>(null);
-  const [unsavedSinceSync, setUnsavedSinceSync] = useState(false);
+  // Draft version last pushed to Steam; any later local change = "not on Steam".
+  const [syncedVersion, setSyncedVersion] = useState(0);
   const [dragOver, setDragOver] = useState<number | null>(null);
 
   // Section id for each match group — for persisting the right section.
@@ -116,80 +122,67 @@ export function PlayoffBracketPicker({
     return m;
   }, [model]);
 
-  const resolved = useMemo(() => resolveBracketPicks(model, picks), [model, picks]);
-
-  // Persistence is a debounced, single-flight sync (#1204). A bracket edit
-  // can cascade across rounds and the user can crown several matches faster than
-  // a round-trip; firing one fetch per click with a shared "last saved" snapshot
-  // raced and clobbered earlier picks. Instead we keep the latest desired state
-  // in a ref and flush the DIFF against what the server last confirmed — one save
-  // at a time, re-flushing if more changed while it was in flight. Optimistic:
-  // local state is the source of truth; a failed save surfaces "retry" and the
-  // next edit (or a reload) reconciles it.
-  const picksRef = useRef(picks);
-  const lastSaved = useRef<Record<number, number>>({ ...picks });
-  const savingRef = useRef(false);
-
-  useEffect(() => {
-    picksRef.current = picks;
-  }, [picks]);
-
-  const diffGroups = (next: Record<number, number>, base: Record<number, number>) => {
-    const out: number[] = [];
-    for (const gId of new Set([...Object.keys(next), ...Object.keys(base)].map(Number))) {
-      if ((next[gId] ?? 0) !== (base[gId] ?? 0)) out.push(gId);
-    }
-    return out;
-  };
-
-  const flush = useCallback(async () => {
-    if (savingRef.current) return; // an in-flight save will re-check on completion
-    const next = picksRef.current;
-    const changed = diffGroups(next, lastSaved.current);
-    if (changed.length === 0) return;
-
-    const bySection = new Map<number, Array<{ groupId: number; slotIndex: number; pickId: number; itemId: string }>>();
-    for (const gId of changed) {
-      const secId = sectionByGroup.get(gId);
-      if (secId == null) continue;
-      const arr = bySection.get(secId) ?? [];
-      arr.push({ groupId: gId, slotIndex: 0, pickId: next[gId] ?? 0, itemId: "" });
-      bySection.set(secId, arr);
-    }
-
-    savingRef.current = true;
-    setSaveState("saving");
-    try {
+  // Persistence (#1204, PHA-5268): usePickDraft keeps the desired bracket in
+  // this browser and flushes the DIFF against what the server last confirmed,
+  // single-flight and debounced, so a burst of crowns can't race. A cascade
+  // touching several rounds goes out as one batch per section.
+  const initialSlots = useMemo(
+    () => toSlots(resolveBracketPicks(model, initialPicks).picks),
+    [model, initialPicks],
+  );
+  const save = useCallback<SaveFn>(
+    async (changed, desired) => {
+      const bySection = new Map<number, Array<{ groupId: number; slotIndex: number; pickId: number; itemId: string }>>();
+      for (const k of changed) {
+        const gId = Number(k.split(":")[0]);
+        const secId = sectionByGroup.get(gId);
+        if (secId == null) continue;
+        const arr = bySection.get(secId) ?? [];
+        arr.push({ groupId: gId, slotIndex: 0, pickId: desired[k] ?? 0, itemId: "" });
+        bySection.set(secId, arr);
+      }
       await Promise.all(
         [...bySection.entries()].map(async ([sectionId, batch]) => {
-          const res = await fetch("/api/picks", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ eventId, sectionId, picks: batch }),
-          });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          let res: Response;
+          try {
+            res = await fetch("/api/picks", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ eventId, sectionId, picks: batch }),
+            });
+          } catch {
+            throw new SaveError(null);
+          }
+          if (!res.ok) throw new SaveError(res.status);
         }),
       );
-      lastSaved.current = { ...next };
-      setSaveState("saved");
-      window.setTimeout(() => setSaveState((s) => (s === "saved" ? null : s)), 1400);
-    } catch {
-      setSaveState("error");
-    } finally {
-      savingRef.current = false;
-      // More edits landed while we were saving (or a retry is due)? Go again.
-      if (diffGroups(picksRef.current, lastSaved.current).length > 0) void flush();
-    }
-  }, [eventId, sectionByGroup]);
+    },
+    [eventId, sectionByGroup],
+  );
+  const draft = usePickDraft({
+    eventId,
+    unit: "playoff",
+    owner: playerId,
+    initial: initialSlots,
+    enabled: canEdit,
+    save,
+  });
+  const setSlots = draft.setPicks;
+  // `picks` is always the pruned, self-consistent set (resolveBracketPicks).
+  const picks = useMemo(() => resolveBracketPicks(model, fromSlots(draft.picks)).picks, [model, draft.picks]);
+  const resolved = useMemo(() => resolveBracketPicks(model, picks), [model, picks]);
 
-  // Debounce: coalesce a burst of crowns into a single save of the final state.
-  useEffect(() => {
-    if (!canEdit) return;
-    if (diffGroups(picks, lastSaved.current).length === 0) return;
-    setUnsavedSinceSync(true);
-    const t = window.setTimeout(() => void flush(), 200);
-    return () => window.clearTimeout(t);
-  }, [picks, canEdit, flush]);
+
+  const saveState =
+    draft.status === "retrying"
+      ? "kept"
+      : draft.status === "error"
+        ? "error"
+        : draft.status === "saving" || draft.pending.length > 0
+          ? "saving"
+          : draft.status === "saved"
+            ? "saved"
+            : null;
 
   // Crown `teamId` the winner of `groupId`, then re-resolve so the advance
   // propagates and any now-impossible downstream pick is pruned. The save effect
@@ -197,11 +190,14 @@ export function PlayoffBracketPicker({
   const crown = useCallback(
     (groupId: number, teamId: number) => {
       if (!canEdit || teamId <= 0) return;
-      setPicks((prev) =>
-        prev[groupId] === teamId ? prev : resolveBracketPicks(model, { ...prev, [groupId]: teamId }).picks,
-      );
+      setSlots((prevSlots) => {
+        const prev = resolveBracketPicks(model, fromSlots(prevSlots)).picks;
+        return prev[groupId] === teamId
+          ? prevSlots
+          : toSlots(resolveBracketPicks(model, { ...prev, [groupId]: teamId }).picks);
+      });
     },
-    [canEdit, model],
+    [canEdit, model, setSlots],
   );
 
   const champion =
@@ -210,7 +206,15 @@ export function PlayoffBracketPicker({
   const totalMatches = model.rounds.reduce((n, r) => n + r.matches.length, 0);
   const venue = VENUES[eventId] ?? DEFAULT_VENUE;
   const saveLabel =
-    saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : saveState === "error" ? "Retry" : null;
+    saveState === "saving"
+      ? "Saving…"
+      : saveState === "saved"
+        ? "Saved"
+        : saveState === "kept"
+          ? "Kept in this browser · retrying"
+          : saveState === "error"
+            ? "Refused · stage closed"
+            : null;
 
   // HOTLINE self-seal of the whole bracket (one unit, keyed on the QF section).
   const sealControl = (
@@ -218,7 +222,7 @@ export function PlayoffBracketPicker({
       sectionId={model.rounds[0]?.sectionId ?? playoffSealUnitFor(eventId) ?? 0}
       stageLabel="Playoffs"
       total={totalMatches}
-      ready={pickCount >= totalMatches && saveState !== "saving" && saveState !== "error"}
+      ready={pickCount >= totalMatches && saveState !== "saving" && saveState !== "kept" && saveState !== "error"}
       seal={seal}
       onChange={setSeal}
       steamLinked={steamLinked}
@@ -264,7 +268,7 @@ export function PlayoffBracketPicker({
           )}
         </span>
         {enabled && saveLabel && (
-          <span className={`sgb-save${saveState === "error" ? " err" : ""}`}>{saveLabel}</span>
+          <span className={`sgb-save${saveState === "error" || saveState === "kept" ? " err" : ""}`}>{saveLabel}</span>
         )}
       </div>
 
@@ -299,9 +303,9 @@ export function PlayoffBracketPicker({
         (steamLinked ? (
           <LockInStage
             sectionId="playoff"
-            unsavedSinceSync={unsavedSinceSync}
+            unsavedSinceSync={draft.version !== syncedVersion}
             initiallySynced={initiallySynced}
-            onSynced={() => setUnsavedSinceSync(false)}
+            onSynced={() => setSyncedVersion(draft.version)}
             secondary={sealControl}
           />
         ) : (

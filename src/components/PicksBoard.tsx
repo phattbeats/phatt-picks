@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useMemo, useState, type CSSProperties } from "react";
 import Image from "next/image";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { TeamStatsDrawer } from "@/components/ui/TeamStatsDrawer";
@@ -20,12 +20,13 @@ import { SealPicks, sealStatusText } from "@/components/sg/picks/SealPicks";
 import type { SealView } from "@/lib/pick-lock-core";
 import { bucketDisplay, playerCutout, teamCode, teamColor } from "@/components/sg/picks/team-art";
 import { usePoolPhotos } from "@/components/sg/picks/PoolPhotos";
+import { SaveError, usePickDraft, type SaveFn } from "@/components/usePickDraft";
+import { flatten, slotKey, unflatten } from "@/lib/pick-draft-core";
 
 type GroupId = number;
 type SlotIndex = number;
 type PickId = number;
 type PicksMap = Record<GroupId, Record<SlotIndex, PickId>>;
-type SaveState = "saving" | "saved" | "error";
 
 interface Props {
   section: Section;
@@ -33,6 +34,8 @@ interface Props {
   initialPicks: PicksMap;
   enabled: boolean;
   eventId: number;
+  /** Session player id — scopes the browser draft so a shared browser can't mix accounts. */
+  playerId?: string | null;
   steamLinked: boolean;
   /** Server-derived: every stored pick for this stage is already on Steam (#1214). */
   initiallySynced?: boolean;
@@ -59,7 +62,6 @@ interface Props {
   initialSeal?: SealView | null;
 }
 
-const SAVED_FLASH_MS = 1200;
 const DND_MIME = "application/x-phatt-picks-team";
 
 // Singapore board (HANDOFF §3): slots are 54px rows with a 34px team mark;
@@ -102,6 +104,7 @@ export function PicksBoard({
   initialPicks,
   enabled: signedIn,
   eventId,
+  playerId,
   steamLinked,
   initiallySynced,
   liveTeamStats,
@@ -116,68 +119,56 @@ export function PicksBoard({
   const enabled = signedIn && !seal;
   const teamMap = useMemo(() => new Map(teams.map((t) => [t.pickid, t])), [teams]);
 
-  const [picks, setPicks] = useState<PicksMap>(initialPicks);
   const [selected, setSelected] = useState<PickId | null>(null);
   // Player photos are off unless the viewer flips the switch at the page bottom;
   // the big team logo behind each card stays exactly as it was.
   const showPhotos = usePoolPhotos();
-  const [saveStates, setSaveStates] = useState<Record<string, SaveState>>({});
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
-  const [unsavedSinceSync, setUnsavedSinceSync] = useState(false);
+  // Draft version last pushed to Steam; any later local change = "not on Steam".
+  const [syncedVersion, setSyncedVersion] = useState(0);
   // Off-board team dossier (#893): roster/standing/recent matches. Closed by
   // default — opened by the [i] affordance on a pool tile, viewable regardless
   // of whether the stage is pickable or the team is already placed.
   const [statsTeam, setStatsTeam] = useState<TeamDef | null>(null);
-  const lastSavedRef = useRef<PicksMap>(initialPicks);
 
-  const slotKey = (groupId: GroupId, slotIndex: SlotIndex) => `${groupId}:${slotIndex}`;
 
-  const persist = useCallback(
-    async (groupId: GroupId, slotIndex: SlotIndex, pickId: PickId) => {
-      const key = slotKey(groupId, slotIndex);
-      setSaveStates((s) => ({ ...s, [key]: "saving" }));
-      setUnsavedSinceSync(true);
+  // Every call is written to this browser first, then pushed to HOTLINE
+  // (PHA-5268). A failed push keeps the pick on the board and retries; it is
+  // never thrown away unless the server refuses it for good (stage locked).
+  const initialFlat = useMemo(() => flatten(initialPicks), [initialPicks]);
+  const save = useCallback<SaveFn>(
+    async (changed, desired) => {
+      const batch = changed.map((k) => {
+        const [groupId, slotIndex] = k.split(":").map(Number);
+        return { groupId, slotIndex, pickId: desired[k] ?? 0, itemId: "" };
+      });
+      let res: Response;
       try {
-        const res = await fetch("/api/picks", {
+        res = await fetch("/api/picks", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            eventId,
-            sectionId: section.sectionid,
-            picks: [{ groupId, slotIndex, pickId, itemId: "" }],
-          }),
+          body: JSON.stringify({ eventId, sectionId: section.sectionid, picks: batch }),
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        lastSavedRef.current = {
-          ...lastSavedRef.current,
-          [groupId]: { ...(lastSavedRef.current[groupId] ?? {}), [slotIndex]: pickId },
-        };
-        setSaveStates((s) => ({ ...s, [key]: "saved" }));
-        window.setTimeout(() => {
-          setSaveStates((s) => {
-            if (s[key] !== "saved") return s;
-            const next = { ...s };
-            delete next[key];
-            return next;
-          });
-        }, SAVED_FLASH_MS);
       } catch {
-        setPicks((prev) => {
-          const lastForGroup = lastSavedRef.current[groupId] ?? {};
-          const revertedSlot = lastForGroup[slotIndex];
-          const groupCopy = { ...(prev[groupId] ?? {}) };
-          if (revertedSlot === undefined || revertedSlot === 0) {
-            delete groupCopy[slotIndex];
-          } else {
-            groupCopy[slotIndex] = revertedSlot;
-          }
-          return { ...prev, [groupId]: groupCopy };
-        });
-        setSaveStates((s) => ({ ...s, [key]: "error" }));
+        throw new SaveError(null);
       }
+      if (!res.ok) throw new SaveError(res.status);
     },
     [eventId, section.sectionid],
   );
+  const draft = usePickDraft({
+    eventId,
+    unit: section.sectionid,
+    owner: playerId,
+    initial: initialFlat,
+    enabled,
+    save,
+  });
+  const setFlat = draft.setPicks;
+  const picks = useMemo<PicksMap>(() => unflatten(draft.picks), [draft.picks]);
+  const pendingKeys = useMemo(() => new Set(draft.pending), [draft.pending]);
+  const rejectedKeys = useMemo(() => new Set(draft.rejected), [draft.rejected]);
+
 
   // Drop a team into a slot — swaps if that team is already placed elsewhere
   // in the same group (Valve's behavior: every team appears at most once per
@@ -185,37 +176,28 @@ export function PicksBoard({
   const dropTeamOnSlot = useCallback(
     (groupId: GroupId, slotIndex: SlotIndex, teamId: PickId) => {
       if (!enabled || teamId <= 0) return;
-      let previousSlotIndex: number | null = null;
-      setPicks((prev) => {
-        const groupCopy = { ...(prev[groupId] ?? {}) };
-        for (const [si, pid] of Object.entries(groupCopy)) {
-          if (pid === teamId && Number(si) !== slotIndex) {
-            previousSlotIndex = Number(si);
-            delete groupCopy[Number(si)];
-          }
+      setFlat((prev) => {
+        const next = { ...prev };
+        for (const [k, pid] of Object.entries(next)) {
+          if (pid === teamId && k.startsWith(`${groupId}:`)) delete next[k];
         }
-        groupCopy[slotIndex] = teamId;
-        return { ...prev, [groupId]: groupCopy };
+        next[slotKey(groupId, slotIndex)] = teamId;
+        return next;
       });
-      void persist(groupId, slotIndex, teamId);
-      if (previousSlotIndex !== null) {
-        void persist(groupId, previousSlotIndex, 0);
-      }
     },
-    [enabled, persist],
+    [enabled, setFlat],
   );
 
   const clearSlot = useCallback(
     (groupId: GroupId, slotIndex: SlotIndex) => {
       if (!enabled) return;
-      setPicks((prev) => {
-        const groupCopy = { ...(prev[groupId] ?? {}) };
-        delete groupCopy[slotIndex];
-        return { ...prev, [groupId]: groupCopy };
+      setFlat((prev) => {
+        const next = { ...prev };
+        delete next[slotKey(groupId, slotIndex)];
+        return next;
       });
-      void persist(groupId, slotIndex, 0);
     },
-    [enabled, persist],
+    [enabled, setFlat],
   );
 
   const handleSlotTap = (groupId: GroupId, slotIndex: SlotIndex) => {
@@ -253,12 +235,14 @@ export function PicksBoard({
     (n, g) => n + new Set(Object.values(picks[g.groupid] ?? {}).filter((p) => p > 0)).size,
     0,
   );
-  const saveValues = Object.values(saveStates);
-  const localStatus: { text: string; tone: BarTone } | null = saveValues.includes("error")
-    ? { text: "Save failed — tap the slot to retry", tone: "err" }
-    : saveValues.includes("saving")
-      ? { text: "Saving…", tone: "info" }
-      : null;
+  const localStatus: { text: string; tone: BarTone } | null =
+    draft.status === "retrying"
+      ? { text: "Couldn't reach HOTLINE — kept in this browser, retrying", tone: "warn" }
+      : draft.status === "error"
+        ? { text: "That change was refused — stage closed or sealed", tone: "err" }
+        : draft.status === "saving" || draft.pending.length > 0
+          ? { text: "Saving…", tone: "info" }
+          : null;
 
   // HOTLINE self-seal (distinct from the amber Valve "Lock in & sync").
   const sealStatus: { text: string; tone: BarTone } | null = seal
@@ -331,7 +315,13 @@ export function PicksBoard({
                       const pickedId = groupPicksMap[slotIndex];
                       const team = pickedId ? teamMap.get(pickedId) : null;
                       const key = slotKey(group.groupid, slotIndex);
-                      const save = saveStates[key];
+                      const save = rejectedKeys.has(key)
+                        ? "error"
+                        : pendingKeys.has(key)
+                          ? draft.status === "retrying"
+                            ? "kept"
+                            : "saving"
+                          : null;
                       const armed = enabled && selected !== null && !team;
                       const over = enabled && dragOverKey === key;
 
@@ -340,7 +330,6 @@ export function PicksBoard({
                         team ? "on" : "",
                         armed ? "armed" : "",
                         over ? "over" : "",
-                        save === "saved" ? "saved" : "",
                         save === "error" ? "error" : "",
                       ]
                         .filter(Boolean)
@@ -413,9 +402,10 @@ export function PicksBoard({
                           )}
                           {save && (
                             <span
-                              className={`st${save === "error" ? " err" : save === "saved" ? " ok" : ""}`}
+                              className={`st${save === "error" ? " err" : ""}`}
+                              title={save === "kept" ? "Saved in this browser; sending to HOTLINE when it's reachable" : undefined}
                             >
-                              {save === "saving" ? "Saving" : save === "saved" ? "Saved" : "Retry"}
+                              {save === "saving" ? "Saving" : save === "kept" ? "Kept here" : "Refused"}
                             </span>
                           )}
                           {team && enabled && (
@@ -570,9 +560,9 @@ export function PicksBoard({
         (steamLinked ? (
           <LockInStage
             sectionId={isPlayoff ? "playoff" : section.sectionid}
-            unsavedSinceSync={unsavedSinceSync}
+            unsavedSinceSync={draft.version !== syncedVersion}
             initiallySynced={initiallySynced}
-            onSynced={() => setUnsavedSinceSync(false)}
+            onSynced={() => setSyncedVersion(draft.version)}
             progress={{ filled: filledTotal, total: slotTotal }}
             localStatus={localStatus ?? sealStatus}
             secondary={sealControl}

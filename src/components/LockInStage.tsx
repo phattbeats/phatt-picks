@@ -18,8 +18,10 @@ interface Props {
   onSynced: () => void;
   /**
    * Swiss board (Singapore §3): render as the sticky action bar with this
-   * progress. The CTA stays disabled until every slot is filled, then reads
-   * "Lock in & sync". Omit for the inline card (playoff bracket picker).
+   * progress. Incomplete stages can sync too (Brandon, PHA-5268: "let people
+   * fill in incomplete picks"): the CTA is live from the first call — "Sync N/T
+   * to Steam" while partial, "Lock in & sync" once full. Omit for the inline
+   * card (playoff bracket picker).
    */
   progress?: { filled: number; total: number };
   /** Per-slot autosave status from the board (saving / failed) — wins over the sync state. */
@@ -157,6 +159,7 @@ export function LockInStage({
   if (progress) {
     const { filled, total } = progress;
     const ready = filled >= total;
+    const any = filled > 0;
     // A sync attempt that came back skipped / degraded / failed keeps its
     // explanatory line; otherwise the bar speaks in board terms.
     const failedSync = !!result && !(result.ok && !result.degraded && !result.escalate);
@@ -175,7 +178,7 @@ export function LockInStage({
       text = `✓ ${state.pill}`;
       tone = "ok";
     } else {
-      text = ready ? "All calls made" : "Saved · local";
+      text = ready ? "All calls made" : `Saved · ${total - filled} to go`;
       tone = "info";
     }
 
@@ -184,16 +187,25 @@ export function LockInStage({
         Locking in…
       </button>
     ) : isSynced ? (
-      <button type="button" className="btn-ghost" onClick={onClick} disabled={!ready}>
+      <button type="button" className="btn-ghost" onClick={onClick} disabled={!any}>
         Synced ✓
       </button>
     ) : ready ? (
       <button type="button" className="btn-heat" onClick={onClick}>
         Lock in &amp; sync
       </button>
+    ) : any ? (
+      <button
+        type="button"
+        className="btn-heat"
+        onClick={onClick}
+        title={`${total - filled} still empty — you can fill them in and sync again before the lock`}
+      >
+        Sync {filled}/{total} to Steam
+      </button>
     ) : (
       <button type="button" className="btn-ghost" disabled>
-        {total - filled} to go
+        Make a call first
       </button>
     );
 

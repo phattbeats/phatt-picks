@@ -587,6 +587,7 @@ export default async function PicksPage({
               initialPicks={playoffInitialPicks}
               enabled={!!session}
               eventId={EVENT_ID}
+              playerId={session?.playerId}
               signedIn={!!session}
               steamLinked={!!session?.steamId}
               initiallySynced={playoffSynced}
@@ -671,6 +672,7 @@ export default async function PicksPage({
             initialPicks={myPicks}
             enabled={!!session}
             eventId={EVENT_ID}
+            playerId={session?.playerId}
             steamLinked={!!session?.steamId}
             initiallySynced={mySectionSynced}
             liveTeamStats={liveTeamStats?.byPickid}
