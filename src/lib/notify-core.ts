@@ -192,8 +192,10 @@ export function buildStageEndPayload(args: {
 }): PreLockPayload {
   return {
     title: `${args.stageName} is done`,
-    body: "Your stage is in the books — turn spoiler-free off to see how your picks landed.",
-    // Deep-link to the stage's own picks tab, where the toggle lives.
+    // Spoiler-free automatically lifts once the stage is done; this stays a
+    // spoiler-safe nudge to check the now-visible results.
+    body: "Your stage is in the books — see how your picks landed.",
+    // Deep-link to the stage's own picks tab, where the results are visible.
     url: `/picks?section=${args.sectionId}`,
     tag: `stage-end:${args.sectionId}`,
     actions: [{ action: "view", title: "See results" }],

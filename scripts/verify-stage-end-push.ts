@@ -109,7 +109,8 @@ console.log("\npayload");
 {
   const payload = buildStageEndPayload({ stageName: "Stage I", sectionId: 111 });
   check("the title names the stage", payload.title === "Stage I is done");
-  check("the body points at spoiler-free", /spoiler-free/i.test(payload.body));
+  check("the body invites the player to see their picks", /see how your picks landed/i.test(payload.body));
+  check("the body does not tell the player to flip spoiler-free", !/turn spoiler-free off/i.test(payload.body));
   check(
     "the body reveals no result (no score, no team)",
     !/\d\s*[-–]\s*\d/.test(payload.body) && !/beat|won|lost|\d-\d/.test(payload.body),
