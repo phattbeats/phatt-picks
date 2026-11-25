@@ -1,28 +1,43 @@
 "use client";
 
 /**
- * Spoiler-free mode (PHA-5495) — hides a Swiss stage's results so a player who
+ * Spoiler-free mode (PHA-5495) — hides a Swiss stage's RESULTS so a player who
  * hasn't watched yet keeps the pre-result view.
  *
- * Default is ON while the stage is underway (`defaultOn`, computed on the server
- * as "not complete"), and OFF once the stage is over. The player can flip it
- * either way; that choice is stored per stage in localStorage and survives reloads.
- * Hidden = results blurred in place and the viewer's own ✓/✕ marks faded, so the
- * layout does not shift (blur/opacity only, never display:none).
+ * What it hides and what it doesn't (PHA-5495 revision): the viewer's own picks
+ * are ALWAYS visible. That is the whole point of the mode — people open the page
+ * to check what they picked. What gets masked is the outcome layer: the live
+ * bracket, the W-L standings table, and each pick's confirm/record chrome
+ * (the green/red bar, the +pts / ✕, the running W-L). The picks board itself
+ * is rendered unmarked, not blurred.
  *
- * Server render and first client render both use `defaultOn`, so there is no
- * hydration mismatch. The stored choice is read through useSyncExternalStore,
+ * When it turns on by itself: the mode follows the stage lifecycle. It is ON
+ * while the stage is underway (its first match has kicked off and not every
+ * slot has resolved) and OFF once the stage is over - and OFF before the stage
+ * starts, where there is nothing to spoil. The phase is computed on the server
+ * (`phase`), so the automatic switch happens on the next render of the stage.
+ *
+ * The viewer's own toggle is kept per stage in localStorage, but it is scoped
+ * to the phase it was made in (see spoiler-free-core): a choice made days ago
+ * cannot quietly override the automatic switch-on when the stage starts.
+ *
+ * Server render and first client render both use the same default, so there is
+ * no hydration mismatch. The stored choice is read through useSyncExternalStore,
  * which swaps it in on the client without a setState-in-effect.
  */
 
 import { useSyncExternalStore, type ReactNode } from "react";
+import {
+  parseStoredChoice,
+  resolveSpoilerState,
+  serializeChoice,
+  type SpoilerPhase,
+  type StoredSpoilerChoice,
+} from "@/lib/spoiler-free-core";
 
-type Choice = "on" | "off" | null;
-
-function readChoice(storageKey: string): Choice {
+function readChoice(storageKey: string): StoredSpoilerChoice | null {
   try {
-    const v = window.localStorage.getItem(storageKey);
-    return v === "on" || v === "off" ? v : null;
+    return parseStoredChoice(window.localStorage.getItem(storageKey));
   } catch {
     return null; // storage blocked (private mode): use the stage default
   }
@@ -45,11 +60,12 @@ function subscribeTo(storageKey: string) {
 
 export function SpoilerFree({
   storageKey,
-  defaultOn,
+  phase,
   children,
 }: {
   storageKey: string;
-  defaultOn: boolean;
+  /** The stage's lifecycle phase ("pre" | "live" | "done") - drives the default. */
+  phase: SpoilerPhase;
   children: ReactNode;
 }) {
   const stored = useSyncExternalStore(
@@ -57,11 +73,14 @@ export function SpoilerFree({
     () => readChoice(storageKey),
     () => null, // server snapshot: no storage, so the stage default renders
   );
-  const on = stored === null ? defaultOn : stored === "on";
+  const { on } = resolveSpoilerState({ phase, stored });
 
   function toggle() {
     try {
-      window.localStorage.setItem(storageKey, on ? "off" : "on");
+      window.localStorage.setItem(
+        storageKey,
+        serializeChoice({ on: !on, phase }),
+      );
     } catch {
       /* not persisted; the toggle still works for this visit only */
     }
@@ -82,7 +101,8 @@ export function SpoilerFree({
         </button>
         {on && (
           <span className="sf-note">
-            Results are hidden while this stage is in progress. Turn it off to see how your picks landed.
+            Results are hidden while this stage is in progress. Your picks stay
+            visible — turn it off to see how they landed.
           </span>
         )}
       </div>
