@@ -401,3 +401,26 @@ a.sgp-note:hover { border-color: var(--hair-3); color: var(--ink-hi); }
 
 /* Pre-open picks screen (no layout yet): links row under the note copy */
 .sgp-note-links { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+
+/* Spoiler-free (PHA-5495): blur every result in place and drop the viewer's
+   ✓/✕ marks, so the stage holds its pre-result layout. No reflow: blur and
+   opacity only, never display:none. */
+.sf-wrap { display: grid; gap: 12px; }
+.sf-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sf-toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border: 1px solid var(--hair-2); border-radius: 999px;
+  background: transparent; color: var(--ink-hi); font: inherit; font-size: 12px;
+  letter-spacing: .04em; cursor: pointer;
+}
+.sf-toggle.on { border-color: var(--ink-hi); }
+.sf-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--hair-2); }
+.sf-toggle.on .sf-dot { background: var(--ink-hi); }
+.sf-note { font-size: 12px; opacity: .75; }
+.sf-results.sf-on { filter: blur(10px); user-select: none; pointer-events: none; }
+.sf-results.sf-on .sgp-mark,
+.sf-results.sf-on .sgp-slot.hit,
+.sf-results.sf-on .sgp-slot.bad { box-shadow: none; }
+.sf-results.sf-on .sgp-mark,
+.sf-results.sf-on .hit,
+.sf-results.sf-on .miss { opacity: 0; }
