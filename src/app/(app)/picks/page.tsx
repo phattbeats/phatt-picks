@@ -47,6 +47,7 @@ import { StageTabs, type StageTab } from "@/components/sg/picks/StageTabs";
 import { getSeal, toSealView } from "@/lib/pick-lock";
 import { PHOTOS } from "@/lib/photos";
 import { SpoilerFree } from "@/components/SpoilerFree";
+import { spoilerPhase } from "@/lib/spoiler-free-core";
 
 export const dynamic = "force-dynamic";
 
@@ -213,6 +214,11 @@ export default async function PicksPage({
   // Whether this Swiss stage is OVER (every slot resolved), not merely locked /
   // underway — drives the "stage complete" copy + the Stage Wrapped entry below.
   let stageComplete = false;
+  // PHA-5495: has this stage actually STARTED? The published lock instant is
+  // the stage's first match (lock-schedule-core), and a resolved outcome row
+  // can only exist once a match has been played - either signal means the stage
+  // is underway, which is what flips spoiler-free on by itself.
+  let stageStarted = false;
   // Live HLTV/BLAST-style W-L standings (#902): the running win-loss table the
   // Valve answer key can't provide. Hourly on-read refresh, graceful-empty.
   let liveStandings: Awaited<ReturnType<typeof getSwissStandings>> = null;
@@ -265,6 +271,8 @@ export default async function PicksPage({
     stageComplete = section.groups.every((g) =>
       g.picks.every((slot) => outcomesForSection[g.groupid]?.[slot.index] !== undefined),
     );
+    stageStarted =
+      isLockTimePassed(activeSectionId, nowMs, event?.lockSchedule) || outcomeRows.length > 0;
     swissStandings = buildSwissStandings(
       section,
       outcomesForSection as SlotPickMap,
@@ -510,6 +518,11 @@ export default async function PicksPage({
     </>
   );
 
+  // PHA-5495: spoiler-free follows the stage lifecycle. It is ON while the
+  // stage is underway (started, not finished), OFF before the stage starts
+  // (nothing to spoil) and OFF once it is over (results are fair game).
+  const spoilerPhaseValue = spoilerPhase({ stageStarted, stageComplete });
+
   const lockbox = headerOpen ? (
     publishedLock || fallbackStart ? (
       <LockCountdown
@@ -746,10 +759,13 @@ export default async function PicksPage({
           {/* Your locked picks, in the SAME bucket-slot UI you picked them in
               (#902, replacing #898's YOUR BUILD / THE FIELD). Each call
               turns green/red as the answer key confirms it. Only when you picked. */}
-          {/* PHA-5495: spoiler-free wraps every result view. ON by default while the
-              stage is underway; OFF once it is over. Per-stage choice is kept in the
-              browser. The board, bracket and standings all sit under it. */}
-          <SpoilerFree storageKey={`sf:${EVENT_ID}:${activeSectionId}`} defaultOn={!stageComplete}>
+          {/* PHA-5495: spoiler-free masks the RESULT layer, never the viewer's
+              own picks. It switches on by itself when the stage starts and off
+              once it ends; the viewer's explicit choice is kept per stage,
+              scoped to the phase it was made in. The board (your picks) stays
+              readable; the bracket and standings carry .sf-hide and are the
+              parts that get masked. */}
+          <SpoilerFree storageKey={`sf:${EVENT_ID}:${activeSectionId}`} phase={spoilerPhaseValue}>
           {Object.values(myPicks).some((g) => Object.values(g).some((p) => p > 0)) && (
             <LockedPicksBoard
               section={section}
@@ -774,6 +790,7 @@ export default async function PicksPage({
               source={liveBracket.source}
               sourceUrl={liveBracket.sourceUrl}
               fetchedAtIso={liveBracket.fetchedAtIso}
+              className="sf-hide"
             />
           )}
           {liveStandings && (
@@ -783,6 +800,7 @@ export default async function PicksPage({
               source={liveStandings.source}
               sourceUrl={liveStandings.sourceUrl}
               fetchedAtIso={liveStandings.fetchedAtIso}
+              className="sf-hide"
             />
           )}
           </SpoilerFree>

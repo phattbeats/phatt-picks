@@ -33,18 +33,22 @@ export function LiveSwissBracketBoard({
   source,
   sourceUrl,
   fetchedAtIso,
+  className,
 }: {
   rounds: SwissRound[];
   teamMap: Map<number, TeamDef>;
   source: string;
   sourceUrl: string;
   fetchedAtIso: string;
+  /** Extra class on the board root - e.g. "sf-hide" so spoiler-free (PHA-5495)
+   *  can mask this result view without blurring the viewer's own picks. */
+  className?: string;
 }) {
   if (rounds.length === 0) return null;
   const byLabel = new Map(rounds.map((r) => [r.label, r]));
 
   return (
-    <section className="sgb-board">
+    <section className={className ? `sgb-board ${className}` : "sgb-board"}>
       <div className="sect-head">
         <h2 className="display sgb-h">Live bracket</h2>
         <span className="last-updated">

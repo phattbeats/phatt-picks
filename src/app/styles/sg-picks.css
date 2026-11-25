@@ -402,9 +402,12 @@ a.sgp-note:hover { border-color: var(--hair-3); color: var(--ink-hi); }
 /* Pre-open picks screen (no layout yet): links row under the note copy */
 .sgp-note-links { display: flex; flex-wrap: wrap; gap: 8px 22px; }
 
-/* Spoiler-free (PHA-5495): blur every result in place and drop the viewer's
-   ✓/✕ marks, so the stage holds its pre-result layout. No reflow: blur and
-   opacity only, never display:none. */
+/* Spoiler-free (PHA-5495): mask the OUTCOME layer, never the viewer's own
+   picks. The picks board stays fully readable — you open the page to check what
+   you picked — and only the results are hidden: the live bracket and the W-L
+   table (blurred in place, marked .sf-hide), plus each pick's confirm chrome
+   (the green/red inset bar, the +pts / ✕, the running W-L). No reflow: blur
+   and opacity only, never display:none. */
 .sf-wrap { display: grid; gap: 12px; }
 .sf-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .sf-toggle {
@@ -417,10 +420,18 @@ a.sgp-note:hover { border-color: var(--hair-3); color: var(--ink-hi); }
 .sf-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--hair-2); }
 .sf-toggle.on .sf-dot { background: var(--ink-hi); }
 .sf-note { font-size: 12px; opacity: .75; }
-.sf-results.sf-on { filter: blur(10px); user-select: none; pointer-events: none; }
-.sf-results.sf-on .sgp-mark,
-.sf-results.sf-on .sgp-slot.hit,
+/* The result views (live bracket, standings) carry .sf-hide and are blurred
+   only while the mode is on. The picks board is NOT blurred — the viewer's own
+   calls stay legible. */
+.sf-results.sf-on .sf-hide { filter: blur(10px); user-select: none; pointer-events: none; }
+/* Confirm chrome on the picks board: drop the ✓/✕, the +pts, the running
+   record and the green/red bar, so a slot shows only WHICH team was picked.
+   The pick's own logo and name stay. */
+.sf-results.sf-on .sgp-slot .hit,
+.sf-results.sf-on .sgp-slot .miss,
+.sf-results.sf-on .sgp-slot .pend,
+.sf-results.sf-on .sgp-slot .rec { opacity: 0; pointer-events: none; }
+.sf-results.sf-on .sgp-slot.good,
 .sf-results.sf-on .sgp-slot.bad { box-shadow: none; }
-.sf-results.sf-on .sgp-mark,
-.sf-results.sf-on .hit,
-.sf-results.sf-on .miss { opacity: 0; }
+.sf-results.sf-on .sgp-slot.bad .nm,
+.sf-results.sf-on .sgp-slot.bad .sgp-mark { opacity: 1; }
