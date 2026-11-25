@@ -30,6 +30,7 @@ import {
   parseStoredChoice,
   serializeChoice,
   resolveSpoilerState,
+  createStoredChoiceReader,
   type SpoilerPhase,
 } from "../src/lib/spoiler-free-core.ts";
 
@@ -81,8 +82,7 @@ console.log("\nstored choice");
 check(
   "legacy bare 'on' is dropped (no phase to scope it to)",
   parseStoredChoice("on") === null,
-);
-check(
+);check(
   "legacy bare 'off' is dropped",
   parseStoredChoice("off") === null,
 );
@@ -162,6 +162,46 @@ console.log("\nresolution across the stage lifecycle");
   );
 }
 
+// ------------------------------------------------------- snapshot stability ---
+// React error #185 ("Maximum update depth exceeded"): useSyncExternalStore
+// requires getSnapshot to return a STABLE value. Parsing the stored JSON on
+// every call returns a new object, React tears the tree down and the picks
+// page goes blank the moment a choice exists. This is the regression guard.
+console.log("\nsnapshot stability (React error #185)");
+{
+  const store = new Map<string, string>();
+  const fake = { getItem: (k: string) => (store.has(k) ? store.get(k)! : null) };
+  const reader = createStoredChoiceReader("sf:27:111", fake);
+
+  store.set("sf:27:111", JSON.stringify({ on: true, phase: "live" }));
+  const first = reader();
+  const second = reader();
+  const third = reader();
+  check("the reader returns the choice", first?.on === true && first?.phase === "live");
+  check("the reader returns the SAME reference on every call", first === second && second === third);
+
+  store.set("sf:27:111", JSON.stringify({ on: false, phase: "live" }));
+  const changed = reader();
+  check("a changed stored value produces a new snapshot", changed !== first);
+  check("the new snapshot is honoured", changed?.on === false);
+  check("the new snapshot is stable too", changed === reader());
+
+  store.set("sf:27:111", "on"); // legacy format
+  const legacy = reader();
+  check("a legacy value reads as no choice", legacy === null);
+  check("and is stable", legacy === reader());
+
+  const throwing = {
+    getItem: () => {
+      throw new Error("storage blocked");
+    },
+  };
+  const blocked = createStoredChoiceReader("sf:27:111", throwing);
+  check("blocked storage reads as no choice (and does not throw)", blocked() === null);
+  const missing = createStoredChoiceReader("sf:27:111", null);
+  check("no storage at all reads as no choice", missing() === null);
+}
+
 // --------------------------------------------------------------- wiring ----
 console.log("\nwiring (source-level)");
 {
@@ -218,6 +258,14 @@ console.log("\nwiring (source-level)");
   check(
     "the client component takes a phase, not a defaultOn flag",
     /phase: SpoilerPhase/.test(spoiler) && !/defaultOn/.test(spoiler),
+  );
+  check(
+    "the stored choice is read through the memoised reader",
+    /createStoredChoiceReader/.test(spoiler),
+  );
+  check(
+    "the component does NOT parse the stored JSON inside getSnapshot",
+    !/parseStoredChoice\(window\.localStorage/.test(spoiler),
   );
 }
 

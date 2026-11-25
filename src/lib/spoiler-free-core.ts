@@ -103,3 +103,44 @@ export function resolveSpoilerState(input: {
   }
   return { on: fallback, stored: null };
 }
+
+/** The bit of the Storage API this module needs (so tests can pass a fake). */
+export interface StorageLike {
+  getItem(key: string): string | null;
+}
+
+/**
+ * A MEMOISED reader for the stored choice — the fix for React error #185.
+ *
+ * `useSyncExternalStore` requires `getSnapshot` to return a cached value: if it
+ * returns a NEW object on every call, React sees the snapshot change during
+ * its own render and throws "Maximum update depth exceeded" (#185), which
+ * unmounts the whole subtree — the picks page goes blank the moment a choice
+ * exists. Parsing the stored JSON into a fresh object per call is exactly that
+ * bug, so the parse is memoised here: the value is rebuilt only when the raw
+ * string actually changes, and the SAME reference is returned until then.
+ *
+ * `useSyncExternalStore` calls `getSnapshot` several times per render, so this
+ * stability is what keeps the page alive.
+ */
+export function createStoredChoiceReader(
+  storageKey: string,
+  storage: StorageLike | null,
+): () => StoredSpoilerChoice | null {
+  let lastRaw: string | null | undefined = undefined;
+  let lastValue: StoredSpoilerChoice | null = null;
+  return () => {
+    if (!storage) return null;
+    let raw: string | null;
+    try {
+      raw = storage.getItem(storageKey);
+    } catch {
+      return null; // storage blocked (private mode): use the stage default
+    }
+    if (raw === lastRaw) return lastValue;
+    lastRaw = raw;
+    lastValue = parseStoredChoice(raw);
+    return lastValue;
+  };
+}
+
