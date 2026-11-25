@@ -182,6 +182,24 @@ export function buildRecapPayload(args: {
   };
 }
 
+/** Build the push payload for a stage ENDING (PHA-5498): the stage is fully
+ *  resolved, so the spoiler-free veil can come off. The notice never says what
+ *  the results were — it only says the stage is done, which is the whole point
+ *  of spoiler-free mode. */
+export function buildStageEndPayload(args: {
+  stageName: string;
+  sectionId: number;
+}): PreLockPayload {
+  return {
+    title: `${args.stageName} is done`,
+    body: "Your stage is in the books — turn spoiler-free off to see how your picks landed.",
+    // Deep-link to the stage's own picks tab, where the toggle lives.
+    url: `/picks?section=${args.sectionId}`,
+    tag: `stage-end:${args.sectionId}`,
+    actions: [{ action: "view", title: "See results" }],
+  };
+}
+
 /** Build the push payload for a challenge coin being earned (#1278). Tier-
  *  agnostic on purpose — the push just "pings" that a coin landed; the in-app
  *  entry and the shelf show which tier. */

@@ -258,6 +258,7 @@ export async function register(): Promise<void> {
   // Import lazily so the heavy DB/web-push module graph loads only when armed.
   const { runPreLockReminders } = await import("@/lib/prelock-reminders");
   const { runRecapPushes } = await import("@/lib/recap-pushes");
+  const { runStageEndPushes } = await import("@/lib/stage-end-pushes");
   const { runAnnouncementPushes } = await import("@/lib/announcement-pushes");
   const { runCoinEarnedPushes } = await import("@/lib/coin-earned-pushes");
   const { runFantasyPushes } = await import("@/lib/fantasy-pushes");
@@ -266,6 +267,7 @@ export async function register(): Promise<void> {
   const tick = (): void => {
     runPreLockReminders().catch((err) => console.error("[prelock] tick failed:", err));
     runRecapPushes().catch((err) => console.error("[recap-push] tick failed:", err));
+    runStageEndPushes().catch((err) => console.error("[stage-end-push] tick failed:", err));
     runAnnouncementPushes().catch((err) => console.error("[announce-push] tick failed:", err));
     runCoinEarnedPushes().catch((err) => console.error("[coin-push] tick failed:", err));
     runFantasyPushes(liveEventId()).catch((err) => console.error("[fantasy-push] tick failed:", err));

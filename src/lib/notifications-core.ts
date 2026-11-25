@@ -55,6 +55,11 @@ export interface NotifPrefs {
   achievement: NotifTypePrefs;
   /** PHA-5454: fantasy draft open / starting soon, points landed, stage final. */
   fantasy: NotifTypePrefs;
+  /** PHA-5498: the stage-end notice ("Stage I is done — spoiler-free can come
+   *  off"). PUSH-ONLY by design: the in-app feed already carries the stage
+   *  recap, so a second in-app card would be the same news twice. The push is
+   *  the ping that says "go look". */
+  stageEnd: NotifTypePrefs;
 }
 
 export const DEFAULT_NOTIF_PREFS: NotifPrefs = {
@@ -67,6 +72,10 @@ export const DEFAULT_NOTIF_PREFS: NotifPrefs = {
   coin:      { inApp: true, push: true },
   achievement: { inApp: true, push: false },
   fantasy:   { inApp: true, push: true },
+  // The stage-end ping is rare and meaningful ("your stage is done, go look"),
+  // so it pushes by default. It has no in-app card - the recap entry covers
+  // the in-app side of the same news.
+  stageEnd:  { inApp: false, push: true },
 };
 
 /** Parse and normalise Player.notifPrefs JSON. Missing keys fall back to defaults. */
@@ -82,6 +91,7 @@ export function parseNotifPrefs(json: string | null | undefined): NotifPrefs {
       coin:      { ...DEFAULT_NOTIF_PREFS.coin,       ...(p.coin ?? {}) },
       achievement: { ...DEFAULT_NOTIF_PREFS.achievement, ...(p.achievement ?? {}) },
       fantasy:   { ...DEFAULT_NOTIF_PREFS.fantasy,   ...(p.fantasy ?? {}) },
+      stageEnd:  { ...DEFAULT_NOTIF_PREFS.stageEnd,  ...(p.stageEnd ?? {}) },
     };
   } catch {
     return DEFAULT_NOTIF_PREFS;
