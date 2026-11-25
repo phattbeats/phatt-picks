@@ -877,9 +877,10 @@ export const FANTASY_EVENTS: Readonly<Record<number, FantasyEventConfig>> = {
   // IEM Cologne 2026 (archived): kept so a finished stage can be replayed
   // through the real pipeline as a test.
   26: { hltvHubEventId: 8301 },
-  // PGL Singapore 2026. Fantasy shipped after Stage I's first day, so Stage I
-  // scores from day two (25 Nov) and everyone drafts on level terms.
-  27: { hltvHubEventId: 8302, scoringStart: { 111: "2026-11-25T00:00:00Z" } },
+  // PGL Singapore 2026. Stage I scores from its first match (24 Nov): both
+  // lineups drafted that day were saved before it, and Brandon asked for the
+  // opening day to count (PHA-5454, 25 Nov).
+  27: { hltvHubEventId: 8302 },
 };
 
 /** The HLTV event id in an `/events/<id>/<slug>` url, or null. */
