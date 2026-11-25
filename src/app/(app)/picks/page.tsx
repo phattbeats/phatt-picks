@@ -46,6 +46,7 @@ import { StageHeader } from "@/components/sg/picks/StageHeader";
 import { StageTabs, type StageTab } from "@/components/sg/picks/StageTabs";
 import { getSeal, toSealView } from "@/lib/pick-lock";
 import { PHOTOS } from "@/lib/photos";
+import { SpoilerFree } from "@/components/SpoilerFree";
 
 export const dynamic = "force-dynamic";
 
@@ -743,6 +744,10 @@ export default async function PicksPage({
           {/* Your locked picks, in the SAME bucket-slot UI you picked them in
               (#902, replacing #898's YOUR BUILD / THE FIELD). Each call
               turns green/red as the answer key confirms it. Only when you picked. */}
+          {/* PHA-5495: spoiler-free wraps every result view. ON by default while the
+              stage is underway; OFF once it is over. Per-stage choice is kept in the
+              browser. The board, bracket and standings all sit under it. */}
+          <SpoilerFree storageKey={`sf:${EVENT_ID}:${activeSectionId}`} defaultOn={!stageComplete}>
           {Object.values(myPicks).some((g) => Object.values(g).some((p) => p > 0)) && (
             <LockedPicksBoard
               section={section}
@@ -778,6 +783,7 @@ export default async function PicksPage({
               fetchedAtIso={liveStandings.fetchedAtIso}
             />
           )}
+          </SpoilerFree>
           {/* Poll while the stage is live; stop once all slots are resolved.
               This is the locked, results-only lineup (no picker), so the poller
               can safely reclaim the heap on a long live session (#1268). */}
