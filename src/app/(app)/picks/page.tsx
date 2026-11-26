@@ -31,6 +31,7 @@ import { QualifiedStrip } from "@/components/ui/QualifiedStrip";
 import { buildSwissStandings, type SlotPickMap } from "@/lib/swiss-standings-core";
 import { stageWrappedHasContent } from "@/lib/stage-wrapped-content";
 import { stageNumeral } from "@/lib/stage-wrapped-core";
+import { isStageFullyResolved } from "@/lib/stage-wrapped-launch-core";
 import { LockedPicksBoard } from "@/components/heat/LockedPicksBoard";
 import { LiveSwissStandings } from "@/components/heat/LiveSwissStandings";
 import { LiveSwissBracketSim } from "@/components/heat/LiveSwissBracketSim";
@@ -266,11 +267,11 @@ export default async function PicksPage({
       if (t > latest) latest = t;
     }
     outcomeResolvedAtIso = latest > 0 ? new Date(latest).toISOString() : null;
-    // The stage is OVER when every Swiss slot has a resolved winner (full answer
-    // key), vs. merely locked while matches are still being played.
-    stageComplete = section.groups.every((g) =>
-      g.picks.every((slot) => outcomesForSection[g.groupid]?.[slot.index] !== undefined),
-    );
+    // Use the same full-answer-key rule as recap and stage-end pushes. Keeping
+    // one definition prevents the picks page and notification timing drifting.
+    stageComplete = isStageFullyResolved(section, {
+      [activeSectionId]: outcomesForSection,
+    });
     stageStarted =
       isLockTimePassed(activeSectionId, nowMs, event?.lockSchedule) || outcomeRows.length > 0;
     swissStandings = buildSwissStandings(

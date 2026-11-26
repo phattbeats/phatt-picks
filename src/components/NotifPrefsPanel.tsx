@@ -40,6 +40,9 @@ interface RowProps {
   showPush: boolean;
   /** This kind has no push sender yet: show a dash instead of a dead switch. */
   pushNA?: boolean;
+  /** Push-only kind (PHA-5498's stage-end notice): no in-app card exists, so
+   *  only the push switch is shown. */
+  pushOnly?: boolean;
   disabled?: boolean;
   onToggle: (channel: PrefChannel) => void;
 }
@@ -60,20 +63,22 @@ function Switch({ on, label, disabled, onClick }: { on: boolean; label: string; 
   );
 }
 
-function PrefRow({ label, hint, pref, showPush, pushNA, disabled, onToggle }: RowProps) {
+function PrefRow({ label, hint, pref, showPush, pushNA, pushOnly, disabled, onToggle }: RowProps) {
   return (
     <div className="row notif-pref-row">
       <div className="notif-pref-label">
         <div className="t">{label}</div>
         <div className="s">{hint}</div>
       </div>
-      <div className={`notif-pref-sws${showPush ? " two" : ""}`}>
-        <Switch
-          on={pref.inApp}
-          label={`${label} in-app notifications`}
-          disabled={disabled}
-          onClick={() => onToggle("inApp")}
-        />
+      <div className={`notif-pref-sws${showPush && !pushOnly ? " two" : ""}`}>
+        {!pushOnly && (
+          <Switch
+            on={pref.inApp}
+            label={`${label} in-app notifications`}
+            disabled={disabled}
+            onClick={() => onToggle("inApp")}
+          />
+        )}
         {showPush && pushNA && <span className="nf-na" aria-label="No push for this kind yet">—</span>}
         {showPush && !pushNA && (
           <Switch
@@ -88,9 +93,10 @@ function PrefRow({ label, hint, pref, showPush, pushNA, disabled, onToggle }: Ro
   );
 }
 
-const ROWS: ReadonlyArray<{ kind: PrefKind; label: string; hint: string; inAppOnly?: boolean }> = [
+const ROWS: ReadonlyArray<{ kind: PrefKind; label: string; hint: string; inAppOnly?: boolean; pushOnly?: boolean }> = [
   { kind: "stage", label: "Stage locks", hint: "24 hours and 1 hour before picks lock" },
   { kind: "recap", label: "Stage results", hint: "When your recap is ready" },
+  { kind: "stageEnd", label: "Stage done", hint: "When a stage ends and your picks are ready to see", pushOnly: true },
   { kind: "fantasy", label: "Fantasy", hint: "Draft open, points landed, stage final" },
   { kind: "reactions", label: "Reactions", hint: "When someone stamps one of your picks" },
   { kind: "coin", label: "Coin minted", hint: "When a Major concludes" },
@@ -130,6 +136,7 @@ export function NotifPrefsPanel({ initialPrefs, hasPushSubscription }: Props) {
           pref={prefs[r.kind]}
           showPush={hasPushSubscription}
           pushNA={r.inAppOnly}
+          pushOnly={r.pushOnly}
           onToggle={(ch) => toggle(r.kind, ch)}
         />
       ))}
