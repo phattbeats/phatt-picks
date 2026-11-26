@@ -309,6 +309,55 @@ export const COLOGNE_MATCH_WINDOWS: Readonly<Record<number, MatchWindow>> = {
 };
 
 /**
+ * Earliest instant a stage's "locks soon" reminder may surface (PHA-5353) —
+ * inbox/bell entry and push alike. Brandon: "the stages wont even begin to be
+ * locked until the previous stage is on the last day." A later stage's teams
+ * aren't settled until the stage before it is on its final day, so nothing may
+ * nudge players toward its picks earlier. (Singapore: Stage II locks Nov 28,
+ * but its card appeared Nov 21 off the flat 7-day lead, while Stage I hadn't
+ * even started.)
+ *
+ *   • The FIRST stage has no previous stage → `-Infinity` (no gate; it keeps
+ *     its own lead window).
+ *   • Otherwise the previous stage is the nearest lower dated section id that
+ *     isn't part of the same stage. Swiss ids ascend I→II→III, and the playoff
+ *     bracket counts as one stage that follows the last Swiss stage, so its
+ *     previous stage is Stage III.
+ *   • Gate = 00:00 UTC of the day the previous stage's match window ENDS (its
+ *     last play day; windows are UTC-day spans ending 23:59:59Z).
+ *   • Previous stage has no window but has a lock → its lock instant (it is at
+ *     least underway; the most we can claim without a published last day).
+ *   • Previous stage is not dated at all → `+Infinity`: we can't tell when its
+ *     last day is, so stay quiet rather than remind early.
+ *
+ * Pure; schedule/windows/playoff ids injectable so every Major uses its own.
+ */
+export function stageReminderOpensAtMs(
+  sectionId: number,
+  schedule: LockSchedule = COLOGNE_LOCK_SCHEDULE,
+  windows: Readonly<Record<number, MatchWindow>> = COLOGNE_MATCH_WINDOWS,
+  playoffIds: ReadonlySet<number> = playoffSectionIds(),
+): number {
+  const isPlayoff = playoffIds.has(sectionId);
+  const dated = new Set<number>([...Object.keys(schedule), ...Object.keys(windows)].map(Number));
+  let prev: number | null = null;
+  for (const id of dated) {
+    if (id >= sectionId) continue;
+    if (isPlayoff && playoffIds.has(id)) continue; // same bracket stage
+    if (!isPlayoff && playoffIds.has(id)) continue; // a bracket never precedes a Swiss stage
+    if (prev === null || id > prev) prev = id;
+  }
+  if (prev === null) return -Infinity;
+  const end = Date.parse(windows[prev]?.end ?? "");
+  if (Number.isFinite(end)) {
+    const d = new Date(end);
+    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  }
+  const lock = lockTimeForSection(prev, schedule);
+  return lock === null ? Infinity : Date.parse(lock);
+}
+
+/**
  * Is `nowMs` inside the section's committed competition window — i.e. is today a
  * day this stage plays games? Used to gate the live-standings hourly refresh so
  * it only crawls on match days. A section with no committed window returns true

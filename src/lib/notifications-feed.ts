@@ -18,7 +18,7 @@ import { prisma } from "@/lib/db";
 import { currentEventId, currentEvent } from "@/lib/events-core";
 import { buildTeamMap } from "@/lib/layout";
 import { scoringLayoutFor } from "@/lib/layout-state";
-import { lockTimeForSection, playoffSectionIds, PLAYOFF_STAGE_NAME } from "@/lib/lock-schedule-core";
+import { lockTimeForSection, playoffSectionIds, PLAYOFF_STAGE_NAME, stageReminderOpensAtMs } from "@/lib/lock-schedule-core";
 import { latestWrappedSectionId } from "@/lib/stage-wrapped-launch-core";
 import { announcementEntries } from "@/lib/announcements-core";
 import type { OutcomeMap } from "@/lib/scoring";
@@ -120,6 +120,9 @@ export async function buildPlayerFeed(
   // they get a SINGLE "Playoffs locks soon" entry, not one per round (#1245) —
   // mirrors the push reminder collapse in stageLocksFromSchedule.
   const playoffIds = playoffSectionIds(event.playoffSchedule);
+  // PHA-5353: no "locks soon" until the previous stage is on its last day.
+  const opensAt = (sectionId: number) =>
+    stageReminderOpensAtMs(sectionId, event.lockSchedule, event.matchWindows, playoffIds);
   let earliestPlayoff: { sectionId: number; lockAtMs: number } | null = null;
   for (const s of layout.sections) {
     const iso = lockTimeForSection(s.sectionid, event.lockSchedule);
@@ -132,14 +135,19 @@ export async function buildPlayerFeed(
       continue;
     }
     const e = stageLockEntry(
-      { sectionId: s.sectionid, stageName: stageName(s.sectionid), lockAtMs },
+      { sectionId: s.sectionid, stageName: stageName(s.sectionid), lockAtMs, opensAtMs: opensAt(s.sectionid) },
       nowMs,
     );
     if (e) rawEntries.push(e);
   }
   if (earliestPlayoff !== null) {
     const e = stageLockEntry(
-      { sectionId: earliestPlayoff.sectionId, stageName: PLAYOFF_STAGE_NAME, lockAtMs: earliestPlayoff.lockAtMs },
+      {
+        sectionId: earliestPlayoff.sectionId,
+        stageName: PLAYOFF_STAGE_NAME,
+        lockAtMs: earliestPlayoff.lockAtMs,
+        opensAtMs: opensAt(earliestPlayoff.sectionId),
+      },
       nowMs,
     );
     if (e) rawEntries.push(e);
