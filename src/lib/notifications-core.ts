@@ -311,6 +311,12 @@ export interface StageLockInput {
   stageName: string;
   /** published lock instant, epoch ms. */
   lockAtMs: number;
+  /**
+   * Earliest instant the entry may exist (PHA-5353): the previous stage's last
+   * day, from `stageReminderOpensAtMs`. Omitted / -Infinity = no gate (first
+   * stage). Before it, no entry at all — a card sent early simply disappears.
+   */
+  opensAtMs?: number;
 }
 
 /**
@@ -329,10 +335,13 @@ export function stageLockEntry(
   nowMs: number,
   leadMs: number = 7 * DAY_MS,
 ): Omit<NotifEntry, "isNew" | "readAt"> | null {
-  const { sectionId, stageName, lockAtMs } = input;
+  const { sectionId, stageName, lockAtMs, opensAtMs = -Infinity } = input;
   if (!Number.isFinite(lockAtMs)) return null;
   if (lockAtMs <= nowMs) return null; // already locked — not upcoming
-  const appearedAtMs = lockAtMs - leadMs;
+  if (nowMs < opensAtMs) return null; // previous stage not on its last day yet
+  // It first appears at the later of the lead window and the gate, so a gated
+  // entry surfaces as new on the previous stage's last day, not backdated.
+  const appearedAtMs = Math.max(lockAtMs - leadMs, opensAtMs);
   if (nowMs < appearedAtMs) return null; // too far out to surface yet
   const crossed = DEFAULT_REMINDER_OFFSETS_MS
     .map((o) => lockAtMs - o)

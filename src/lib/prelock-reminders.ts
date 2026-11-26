@@ -22,13 +22,22 @@ import { prisma } from "@/lib/db";
 import { sendPushToPlayer } from "@/lib/notify";
 import { buildPreLockPayload, dueReminders, isReminderRecipient, reminderFireKey } from "@/lib/notify-core";
 import { parseNotifPrefs } from "@/lib/notifications-core";
-import { stageLocksFromSchedule, type StageLock } from "@/lib/lock-schedule-core";
-import { currentEventId, getEventConfig, liveEvents, playoffSectionIdsFor } from "@/lib/events-core";
+import { stageLocksFromSchedule, stageReminderOpensAtMs, type StageLock } from "@/lib/lock-schedule-core";
+import { currentEvent, getEventConfig, liveEvents, playoffSectionIdsFor, type EventConfig } from "@/lib/events-core";
 
 /** An event's id paired with the stage cutoffs its reminders should fire on. */
 interface ReminderTarget {
   eventId: number;
   locks: Record<number, StageLock>;
+  /** PHA-5353 gate per section: no reminder before the previous stage's last day. */
+  opensAt: (sectionId: number) => number;
+}
+
+/** The PHA-5353 gate for an event's own schedule + windows. */
+function opensAtFor(e: EventConfig | null): (sectionId: number) => number {
+  if (!e) return () => -Infinity;
+  const ids = playoffSectionIdsFor(e);
+  return (sectionId) => stageReminderOpensAtMs(sectionId, e.lockSchedule, e.matchWindows, ids);
 }
 
 /**
@@ -69,13 +78,18 @@ function reminderTargets(now: number = Date.now()): ReminderTarget[] {
   const override = loadOverrideLocks();
 
   if (override) {
-    return [{ eventId: envPin ?? currentEventId(now), locks: override }];
+    const e = envPin !== null ? getEventConfig(envPin) ?? null : currentEvent(now);
+    return [{ eventId: envPin ?? e!.eventId, locks: override, opensAt: opensAtFor(e) }];
   }
 
   if (envPin !== null) {
     const pinned = getEventConfig(envPin);
     if (pinned) {
-      return [{ eventId: pinned.eventId, locks: stageLocksFromSchedule(pinned.lockSchedule, pinned.sectionNames, playoffSectionIdsFor(pinned)) }];
+      return [{
+        eventId: pinned.eventId,
+        locks: stageLocksFromSchedule(pinned.lockSchedule, pinned.sectionNames, playoffSectionIdsFor(pinned)),
+        opensAt: opensAtFor(pinned),
+      }];
     }
     // Pinned to an unregistered id → nothing to do rather than guess.
     return [];
@@ -84,6 +98,7 @@ function reminderTargets(now: number = Date.now()): ReminderTarget[] {
   return liveEvents(now).map((e) => ({
     eventId: e.eventId,
     locks: stageLocksFromSchedule(e.lockSchedule, e.sectionNames, playoffSectionIdsFor(e)),
+    opensAt: opensAtFor(e),
   }));
 }
 
@@ -112,7 +127,7 @@ export async function runPreLockReminders(now: number = Date.now()): Promise<voi
     return;
   }
 
-  for (const { eventId, locks } of targets) {
+  for (const { eventId, locks, opensAt } of targets) {
     for (const sid of Object.keys(locks)) {
       const sectionId = Number(sid);
       const { name, lockAt } = locks[sectionId];
@@ -122,6 +137,8 @@ export async function runPreLockReminders(now: number = Date.now()): Promise<voi
         continue;
       }
 
+      // PHA-5353: nothing for a stage until the previous one is on its last day.
+      if (now < opensAt(sectionId)) continue;
       const due = dueReminders(now, lockAtMs).filter(
         (r) => !fired.has(reminderFireKey(eventId, sectionId, r.fireAtMs)),
       );
