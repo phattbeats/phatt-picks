@@ -169,6 +169,9 @@ const base: EventConfig = {
   lockSchedule: { 200: "2027-01-02T10:30:00Z" },
   matchWindows: { 200: { start: "2027-01-02T00:00:00Z", end: "2027-01-05T23:59:59Z" } },
   sectionSources: { 200: { url: "https://hltv.org/events/1/x", label: "HLTV" } },
+  // Synthetic Swiss-only event: drop the active event's playoff games, whose
+  // derived locks (invariant F) the replaced lockSchedule no longer carries.
+  playoffSchedule: {},
 };
 check("guard passes a fully-consistent synthetic event", validateEventRevealConfig(base).length === 0);
 check(

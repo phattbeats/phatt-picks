@@ -38,6 +38,7 @@ import {
   ingestStandingsNow,
   ingestStandingsPreReveal,
   discoverPendingStages,
+  discoverPlayoffSchedule,
   standingsSectionIds,
 } from "./swiss-results";
 import { loadStageFacts } from "./stage-discovery";
@@ -481,6 +482,13 @@ export async function refreshLiveResultsTick(
     await discoverPendingStages(eventId);
   } catch (e) {
     console.error("[live-tick] stage discovery failed (non-fatal):", e instanceof Error ? e.message : e);
+  }
+  // PHA-5276: hourly look at the hub's match list for the playoff game times,
+  // until every round is dated or the bracket locks.
+  try {
+    await discoverPlayoffSchedule(eventId, nowMs);
+  } catch (e) {
+    console.error("[live-tick] playoff discovery failed (non-fatal):", e instanceof Error ? e.message : e);
   }
 
   let resolved = 0;

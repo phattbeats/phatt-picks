@@ -200,6 +200,9 @@ model StageDiscovery {
   firstMatchAt DateTime?
   windowStart  DateTime?
   windowEnd    DateTime?
+  // Playoff rows only (PHA-5276): JSON array of per-game ISO starts, bracket
+  // order, from the HLTV event match list. Null on Swiss rows.
+  gameTimes    String?
   checkedAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 

@@ -85,10 +85,19 @@ check("no entries outside any window", announcementEntries(AFTER, CG).length ===
 check("reactions-live runs to the midnight after Cologne's GF",
   activeAnnouncements(Date.parse("2026-06-21T23:59:00Z"), CG).some((a) => a.id === "reactions-live") &&
   activeAnnouncements(Date.parse("2026-06-22T00:00:00Z"), CG).every((a) => a.id !== "reactions-live"));
-// PHA-5275: Singapore's bracket is unscheduled today, so no Cologne-dated
-// reactions broadcast leaks onto it (the old fallback was Cologne's QF time).
-check("no reactions broadcast while Singapore's bracket is unscheduled",
-  activeAnnouncements(Date.parse("2026-12-10T12:00:00Z"), EVENTS[27]).every((a) => a.id !== "reactions-live" && a.id !== "compare-surprise"));
+// PHA-5275: an unscheduled bracket gets no Cologne-dated reactions broadcast
+// (the old fallback was Cologne's QF time). Singapore's bracket has been dated
+// since PHA-5276, so this runs on an undated copy of it.
+{
+  const undatedLocks = Object.fromEntries(
+    Object.entries(EVENTS[27].lockSchedule).filter(([k]) => !["114", "115", "116"].includes(k)),
+  );
+  const undated = { ...EVENTS[27], playoffSchedule: {}, lockSchedule: undatedLocks };
+  check("no reactions broadcast while a bracket is unscheduled",
+    activeAnnouncements(Date.parse("2026-12-10T12:00:00Z"), undated).every((a) => a.id !== "reactions-live" && a.id !== "compare-surprise"));
+  check("Singapore's dated bracket gets 'reactions-live' after its first QF",
+    activeAnnouncements(Date.parse("2026-12-10T12:00:00Z"), EVENTS[27]).some((a) => a.id === "reactions-live"));
+}
 {
   // A Singapore-shaped event with its bracket published: windows follow ITS times.
   const sched = { 114: ["2026-12-10T03:00:00Z", "2026-12-10T06:30:00Z", "2026-12-11T03:00:00Z", "2026-12-11T06:30:00Z"], 115: ["2026-12-12T03:00:00Z", "2026-12-12T06:30:00Z"], 116: ["2026-12-13T05:00:00Z"] };

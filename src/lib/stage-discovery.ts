@@ -14,7 +14,12 @@
  */
 
 import { prisma } from "./db";
-import { BASE_EVENTS, setStageFacts } from "./events-core";
+import { BASE_EVENTS, playoffSectionIdsFor, setStageFacts } from "./events-core";
+import {
+  mergePlayoffProposal,
+  parseHltvMatchList,
+  proposePlayoffSchedule,
+} from "./playoff-schedule-core";
 import {
   linkStagesToSections,
   parseHltvEventPage,
@@ -25,6 +30,16 @@ import type { RawSwissRound } from "./swiss-bracket-core";
 
 const toDate = (iso: string | null): Date | null => (iso ? new Date(iso) : null);
 const toIso = (d: Date | null): string | null => (d ? d.toISOString() : null);
+
+function parseGameTimes(json: string | null): string[] | null {
+  if (!json) return null;
+  try {
+    const v: unknown = JSON.parse(json);
+    return Array.isArray(v) && v.every((t) => typeof t === "string") ? (v as string[]) : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Load every persisted stage fact and install the overlay. Returns the number
@@ -46,6 +61,7 @@ export async function loadStageFacts(): Promise<number> {
       firstMatchAt: toIso(r.firstMatchAt),
       windowStart: toIso(r.windowStart),
       windowEnd: toIso(r.windowEnd),
+      gameTimes: parseGameTimes(r.gameTimes),
     });
     byEvent.set(r.eventId, list);
   }
@@ -130,11 +146,89 @@ export async function pendingStagePages(
   effectiveSources: Readonly<Record<number, unknown>>,
 ): Promise<{ sectionId: number; sourceUrl: string }[]> {
   try {
+    const playoff = BASE_EVENTS[eventId] ? playoffSectionIdsFor(BASE_EVENTS[eventId]) : new Set<number>();
     const rows = await prisma.stageDiscovery.findMany({ where: { eventId } });
     return rows
+      .filter((r) => !playoff.has(r.sectionId)) // playoff rows are match-list facts, not stage pages
       .filter((r) => !(r.sectionId in effectiveSources))
       .map((r) => ({ sectionId: r.sectionId, sourceUrl: r.sourceUrl }));
   } catch {
     return [];
   }
+}
+
+/**
+ * Persist what one crawl of an HLTV event match list says about the playoff
+ * bracket (PHA-5276). Rules, all from `mergePlayoffProposal`:
+ *   - a round is written only when HLTV lists every game of it with a time;
+ *   - a round with committed games is never written (committed wins);
+ *   - once the effective bracket has locked nothing is written (frozen), so a
+ *     late HLTV edit can't move a locked bracket.
+ * A crawl that proposes nothing never clears a stored round. Reloads the
+ * overlay afterwards. Never throws. Returns the sections written.
+ */
+export async function recordPlayoffMatchList(
+  eventId: number,
+  sourceUrl: string,
+  html: string,
+  nowMs: number = Date.now(),
+): Promise<number[]> {
+  const base = BASE_EVENTS[eventId];
+  if (!base) return [];
+  const written: number[] = [];
+  try {
+    const playoff = playoffSectionIdsFor(base);
+    const proposal = proposePlayoffSchedule(parseHltvMatchList(html), base.sectionNames);
+    const rows = await prisma.stageDiscovery.findMany({ where: { eventId } });
+    const stored: Record<number, string[]> = {};
+    for (const r of rows) {
+      const t = playoff.has(r.sectionId) ? parseGameTimes(r.gameTimes) : null;
+      if (t && t.length > 0) stored[r.sectionId] = t;
+    }
+    const merged = mergePlayoffProposal({
+      committed: base.playoffSchedule,
+      previous: { ...stored, ...nonEmpty(base.playoffSchedule) },
+      proposal,
+      nowMs,
+    });
+    for (const [key, times] of Object.entries(merged)) {
+      const sectionId = Number(key);
+      if (!playoff.has(sectionId)) continue;
+      if ((base.playoffSchedule[sectionId]?.length ?? 0) > 0) continue; // committed
+      if (JSON.stringify(stored[sectionId] ?? null) === JSON.stringify(times)) continue;
+      const first = [...times].sort((a, b) => Date.parse(a) - Date.parse(b))[0] ?? null;
+      const data = {
+        sourceUrl,
+        firstMatchAt: toDate(first),
+        gameTimes: JSON.stringify(times),
+        checkedAt: new Date(),
+      };
+      await prisma.stageDiscovery.upsert({
+        where: { eventId_sectionId: { eventId, sectionId } },
+        update: data,
+        create: { eventId, sectionId, ...data },
+      });
+      written.push(sectionId);
+      console.log(`[playoff-discovery] event ${eventId}: section ${sectionId} → ${times.join(", ")}`);
+    }
+  } catch (e) {
+    console.warn("[playoff-discovery] record failed (non-fatal):", e instanceof Error ? e.message : e);
+    return written;
+  }
+  if (written.length > 0) await loadStageFacts();
+  return written;
+}
+
+/** Discovered page per section (sourceUrl), for finding the hub before it is sourced. */
+export async function discoveredStagePages(eventId: number): Promise<Record<number, string>> {
+  try {
+    const rows = await prisma.stageDiscovery.findMany({ where: { eventId } });
+    return Object.fromEntries(rows.map((r) => [r.sectionId, r.sourceUrl]));
+  } catch {
+    return {};
+  }
+}
+
+function nonEmpty(s: Readonly<Record<number, readonly string[]>>): Record<number, readonly string[]> {
+  return Object.fromEntries(Object.entries(s).filter(([, t]) => t.length > 0));
 }
