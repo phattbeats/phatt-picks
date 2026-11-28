@@ -1,0 +1,197 @@
+{
+ "_note": "PHA-5538: HLTV Singapore 2026, crawled 2026-11-28. 'boxes' = match ids per record box on each stage page (paired rounds); 'stage2List' = Stage II /events/9304/matches.",
+ "stage1FirstIds": {
+  "1": 2400494,
+  "2": 2400557,
+  "3": 2400565,
+  "4": 2400573,
+  "5": 2400579
+ },
+ "stage2FirstIds": {
+  "1": 2400582,
+  "2": 2400590,
+  "3": 2400598,
+  "4": 2400606,
+  "5": 2400612
+ },
+ "boxes": {
+  "stage1": {
+   "0:0": [
+    2400494,
+    2400495,
+    2400496,
+    2400497,
+    2400498,
+    2400499,
+    2400500,
+    2400501
+   ],
+   "1:0": [
+    2400557,
+    2400559,
+    2400561,
+    2400563
+   ],
+   "0:1": [
+    2400558,
+    2400560,
+    2400562,
+    2400564
+   ],
+   "2:0": [
+    2400569,
+    2400571
+   ],
+   "1:1": [
+    2400565,
+    2400566,
+    2400568,
+    2400567
+   ],
+   "0:2": [
+    2400570,
+    2400572
+   ],
+   "2:1": [
+    2400573,
+    2400575,
+    2400577
+   ],
+   "1:2": [
+    2400574,
+    2400576,
+    2400578
+   ],
+   "2:2": [
+    2400579,
+    2400580,
+    2400581
+   ]
+  },
+  "stage2": {
+   "0:0": [
+    2400582,
+    2400583,
+    2400584,
+    2400585,
+    2400586,
+    2400587,
+    2400588,
+    2400589
+   ],
+   "1:0": [
+    2400590,
+    2400592,
+    2400594,
+    2400596
+   ],
+   "0:1": [
+    2400591,
+    2400593,
+    2400595,
+    2400597
+   ],
+   "2:0": [
+    2400602,
+    2400604
+   ],
+   "1:1": [
+    2400598,
+    2400599,
+    2400600,
+    2400601
+   ],
+   "0:2": [
+    2400603,
+    2400605
+   ]
+  }
+ },
+ "stage2List": [
+  {
+   "matchId": 2400598,
+   "startMs": 1795932000000,
+   "label": ""
+  },
+  {
+   "matchId": 2400599,
+   "startMs": 1795932000000,
+   "label": ""
+  },
+  {
+   "matchId": 2400600,
+   "startMs": 1795935600000,
+   "label": ""
+  },
+  {
+   "matchId": 2400601,
+   "startMs": 1795935600000,
+   "label": ""
+  },
+  {
+   "matchId": 2400602,
+   "startMs": 1795939200000,
+   "label": ""
+  },
+  {
+   "matchId": 2400603,
+   "startMs": 1795939200000,
+   "label": ""
+  },
+  {
+   "matchId": 2400604,
+   "startMs": 1795948200000,
+   "label": ""
+  },
+  {
+   "matchId": 2400605,
+   "startMs": 1795948200000,
+   "label": ""
+  },
+  {
+   "matchId": 2400606,
+   "startMs": 1796018400000,
+   "label": "PGL Major Singapore 2026 Stage 2 - Swiss Round 4 #1"
+  },
+  {
+   "matchId": 2400607,
+   "startMs": 1796018400000,
+   "label": "PGL Major Singapore 2026 Stage 2 - Swiss Round 4 #2"
+  },
+  {
+   "matchId": 2400608,
+   "startMs": 1796027400000,
+   "label": "PGL Major Singapore 2026 Stage 2 - Swiss Round 4 #3"
+  },
+  {
+   "matchId": 2400609,
+   "startMs": 1796027400000,
+   "label": "PGL Major Singapore 2026 Stage 2 - Swiss Round 4 #4"
+  },
+  {
+   "matchId": 2400610,
+   "startMs": 1796036400000,
+   "label": "PGL Major Singapore 2026 Stage 2 - Swiss Round 4 #5"
+  },
+  {
+   "matchId": 2400611,
+   "startMs": 1796036400000,
+   "label": "PGL Major Singapore 2026 Stage 2 - Swiss Round 4 #6"
+  },
+  {
+   "matchId": 2400612,
+   "startMs": 1796104800000,
+   "label": "PGL Major Singapore 2026 Stage 2 - Swiss Round 5 #1"
+  },
+  {
+   "matchId": 2400613,
+   "startMs": 1796113800000,
+   "label": "PGL Major Singapore 2026 Stage 2 - Swiss Round 5 #2"
+  },
+  {
+   "matchId": 2400614,
+   "startMs": 1796122800000,
+   "label": "PGL Major Singapore 2026 Stage 2 - Swiss Round 5 #3"
+  }
+ ]
+}

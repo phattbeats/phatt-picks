@@ -51,7 +51,8 @@ import {
   recordPlayoffMatchList,
   discoveredStagePages,
 } from "./stage-discovery";
-import { playoffMatchListSource } from "./playoff-schedule-core";
+import { playoffMatchListSource, hltvMatchListUrl, parseHltvMatchList } from "./playoff-schedule-core";
+import { listedSwissGames, type ListedSwissGame } from "./swiss-slot-times-core";
 import { TEAM_SOURCES } from "./team-stats-sources";
 import { parseHltvEventPage } from "./stage-discovery-core";
 // Which HLTV event page carries the live Swiss table for each pick'em section
@@ -553,3 +554,87 @@ export async function getSwissBracket(
   };
 }
 
+
+// ── Swiss match lists (PHA-5538) ─────────────────────────────────────────
+// HLTV's event match list carries a stage's whole schedule, unpaired rounds
+// included ("Swiss Round 4 #1", teams blank). The bracket's empty slots and a
+// future stage's countdown read the unpaired games from it.
+
+/** Minimum spacing between crawls of one match list. */
+const MATCH_LIST_MIN_INTERVAL_MS = 60 * 60_000;
+
+/**
+ * The HLTV match list of a Swiss section: its effective source page (Stage I
+ * and II pages; Stage III once discovery sources it on the hub), else the page
+ * discovery found for it. Null when neither is known (never guessed).
+ */
+export async function swissMatchListUrl(eventId: number, sectionId: number): Promise<string | null> {
+  const page = sectionSourcesFor(eventId)[sectionId]?.url ?? (await discoveredStagePages(eventId))[sectionId];
+  return page ? hltvMatchListUrl(page) : null;
+}
+
+/**
+ * Crawl one match list and store its unpaired Swiss games. A crawl that parses
+ * no match entries at all (an outage or challenge page) keeps the prior cache;
+ * a real list with no unpaired Swiss game left stores an empty list (every
+ * round paired). Never throws. Returns the games stored, or null when skipped.
+ */
+async function ingestMatchList(eventId: number, url: string): Promise<number | null> {
+  try {
+    const { html } = await crawlPage(url);
+    const all = parseHltvMatchList(html);
+    if (all.length === 0) {
+      console.warn(`[match-list] ${url}: parsed 0 entries — keeping prior cache`);
+      return null;
+    }
+    const games = listedSwissGames(all);
+    const data = JSON.stringify(games);
+    await prisma.matchListCache.upsert({
+      where: { eventId_url: { eventId, url } },
+      update: { data, fetchedAt: new Date() },
+      create: { eventId, url, data, fetchedAt: new Date() },
+    });
+    return games.length;
+  } catch (e) {
+    console.warn("[match-list] ingest failed (non-fatal):", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
+/**
+ * On-read hourly refresh of a Swiss section's match list, deferred past the
+ * response. Skipped for frozen Majors and for a stage whose committed window
+ * has ended (nothing left to schedule). Never throws.
+ */
+export async function refreshMatchListOnRead(
+  eventId: number,
+  sectionId: number,
+  nowMs: number = Date.now(),
+): Promise<void> {
+  try {
+    if (await isEventFrozenById(eventId, nowMs)) return;
+    const w = getEventConfig(eventId)?.matchWindows[sectionId];
+    const end = w ? Date.parse(w.end) : NaN;
+    if (Number.isFinite(end) && nowMs > end) return; // decided stage
+    const url = await swissMatchListUrl(eventId, sectionId);
+    if (!url) return;
+    if (!(await claimRefreshSlot(`match-list:${url}`, MATCH_LIST_MIN_INTERVAL_MS))) return;
+    runDeferred(() => ingestMatchList(eventId, url), "match-list");
+  } catch {
+    // best-effort
+  }
+}
+
+/** The cached unpaired Swiss games for a section, [] when none are cached. Never throws. */
+export async function getListedSwissGames(eventId: number, sectionId: number): Promise<ListedSwissGame[]> {
+  try {
+    const url = await swissMatchListUrl(eventId, sectionId);
+    if (!url) return [];
+    const row = await prisma.matchListCache.findUnique({ where: { eventId_url: { eventId, url } } });
+    if (!row) return [];
+    const v: unknown = JSON.parse(row.data);
+    return Array.isArray(v) ? (v as ListedSwissGame[]) : [];
+  } catch {
+    return [];
+  }
+}

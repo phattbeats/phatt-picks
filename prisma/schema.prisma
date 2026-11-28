@@ -209,6 +209,21 @@ model StageDiscovery {
   @@unique([eventId, sectionId])
 }
 
+// HLTV event match lists (PHA-5538): the unpaired Swiss games of a stage with
+// their start times, so the bracket's empty slots and a future stage's
+// countdown can show them. One row per event + match-list URL; `data` is JSON
+// ListedSwissGame[] (swiss-slot-times-core). Refreshed hourly on read.
+model MatchListCache {
+  id        String   @id @default(cuid())
+  eventId   Int
+  url       String
+  data      String
+  fetchedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, url])
+}
+
 model SwissStandingsCache {
   id        String   @id @default(cuid())
   eventId   Int
