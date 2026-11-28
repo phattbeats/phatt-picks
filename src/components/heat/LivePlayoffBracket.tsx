@@ -19,6 +19,7 @@ import { TeamLogo } from "@/components/ui/TeamLogo";
 import { resolveLogoTiers } from "@/lib/logos";
 import type { TeamDef } from "@/lib/layout";
 import { LastUpdated } from "@/components/LastUpdated";
+import { MatchTime } from "@/components/heat/MatchTime";
 import { teamHref } from "@/components/sg/teams/team-assets";
 import {
   summarizePlayoffPicks,
@@ -155,6 +156,14 @@ function MatchCell({ match, teamMap }: { match: PlayoffMatch; teamMap: Map<numbe
     <div className={`sgb-mt${match.awaitingResult && !match.decided ? " await" : ""}`}>
       <SideRow side={match.team1} played={match.decided} awaiting={match.awaitingResult} teamMap={teamMap} />
       <SideRow side={match.team2} played={match.decided} awaiting={match.awaitingResult} teamMap={teamMap} />
+      {/* PHA-5538: every unplayed slot carries its start in the viewer's local
+          time (TBD teams included); "Time TBA" when no time is published. */}
+      {!match.decided && (
+        <div className="sgb-when">
+          <MatchTime iso={match.scheduledAtIso} />
+          {match.awaitingResult && <span>Awaiting result</span>}
+        </div>
+      )}
     </div>
   );
 }

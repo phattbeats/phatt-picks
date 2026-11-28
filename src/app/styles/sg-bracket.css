@@ -251,6 +251,73 @@ a.std-name:hover { color: var(--heat); }
   .std-row .std-rd { display: none; }
 }
 
+/* ── Matches: results + schedule (PHA-5538) ─────────────────────────── */
+.sch-days { display: grid; gap: 20px; }
+.sch-day { display: grid; gap: 6px; }
+.sch-dayrow, .sch-day > summary {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--hair-2);
+}
+.sch-day > summary { cursor: pointer; list-style: none; min-height: 44px; align-items: center; padding-bottom: 0; }
+.sch-day > summary::-webkit-details-marker { display: none; }
+.sch-day > summary::after { content: "+"; font-family: var(--font-mono); color: var(--ink-low); }
+.sch-day[open] > summary::after { content: "–"; }
+.sch-dayname b { color: var(--ink-hi); font-weight: 500; }
+.sch-count { margin-left: auto; font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-low); }
+.sch-list { display: grid; }
+.sch-row {
+  display: grid; grid-template-columns: 58px minmax(0, 1fr); align-items: center; gap: 10px;
+  min-height: 52px; padding: 4px 0;
+}
+.sch-row + .sch-row { border-top: 1px solid var(--hair); }
+.sch-when { display: grid; gap: 2px; font-family: var(--font-mono); }
+.sch-clock { font-size: 14px; color: var(--ink-hi); white-space: nowrap; }
+.s-final .sch-clock { color: var(--ink-low); }
+.sch-meta { display: flex; gap: 6px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-low); }
+/* Two labels stacked in one cell; spoiler-free flips which one shows. */
+.sch-swap { display: inline-grid; }
+.sch-swap > * { grid-area: 1 / 1; transition: opacity .15s var(--ease); }
+.sch-rnd, .sch-vs { opacity: 0; }
+.sch-pair {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr);
+  align-items: center; gap: 8px; min-width: 0;
+}
+.sch-side { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--ink-hi); transition: opacity .15s var(--ease); }
+.sch-side.end { flex-direction: row-reverse; text-align: right; }
+.sch-side.lo { opacity: .45; }
+.sch-side.won .sch-name { font-weight: 500; }
+.sch-side.tbd { color: var(--ink-low); font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; }
+.sch-name { min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; }
+.sch-side.tbd .sch-name { font-size: 10px; }
+a.sch-name { padding: 12px 0; }
+a.sch-name:hover { color: var(--heat); }
+.sch-side img, .sch-side svg { flex: none; }
+.sch-mono {
+  width: 22px; height: 22px; flex: none; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--r-sm); background: var(--surf-3); font-family: var(--font-mono); font-size: 9px; color: var(--ink-mid);
+}
+.sch-mid { display: flex; justify-content: center; font-family: var(--font-mono); font-size: 15px; color: var(--ink-low); white-space: nowrap; }
+.sch-mid .w { color: var(--ink-hi); }
+.sch-mid .dash { margin: 0 3px; }
+.sch-mid .vs { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; }
+.sch-mask {
+  position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; pointer-events: none;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-low);
+}
+.s-live .sch-clock { color: var(--heat); }
+@media (min-width: 768px) {
+  .sch-row { grid-template-columns: 96px minmax(0, 1fr); }
+  .sch-name { font-size: 15px; }
+}
+
+/* Playoff slot start time (PHA-5538). */
+.sgb-when {
+  display: flex; justify-content: space-between; gap: 8px; padding: 6px 14px;
+  background: var(--surf-1); font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-mid);
+}
+.mt-time.tba { color: var(--ink-low); }
+
 /* ── Teams (05) ──────────────────────────────────────────────────────── */
 .sgt { display: grid; gap: 64px; min-width: 0; }
 @media (min-width: 1024px) { .sgt { gap: 96px; } }

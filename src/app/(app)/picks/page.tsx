@@ -35,6 +35,7 @@ import { isStageFullyResolved } from "@/lib/stage-wrapped-launch-core";
 import { LockedPicksBoard } from "@/components/heat/LockedPicksBoard";
 import { LiveSwissStandings } from "@/components/heat/LiveSwissStandings";
 import { LiveSwissBracketSim } from "@/components/heat/LiveSwissBracketSim";
+import { SwissMatchList } from "@/components/heat/SwissMatchList";
 import { hasPublishedMatchups, liveBracketVisible } from "@/lib/stage-discovery-core";
 import { refreshStandingsOnRead, getSwissStandings, getSwissBracket } from "@/lib/swiss-results";
 import { recordsByPickId } from "@/lib/swiss-results-core";
@@ -715,6 +716,16 @@ export default async function PicksPage({
                     fetchedAtIso={liveBracket.fetchedAtIso}
                   />
                 )}
+                {/* PHA-5538: the opening matches with their start times. */}
+                {liveBracket && (
+                  <SwissMatchList
+                    rounds={liveBracket.rounds}
+                    teamMap={buildTeamMap(layout)}
+                    source={liveBracket.source}
+                    sourceUrl={liveBracket.sourceUrl}
+                    fetchedAtIso={liveBracket.fetchedAtIso}
+                  />
+                )}
                 {liveStandings && (
                   <LiveSwissStandings
                     rows={liveStandings.rows}
@@ -792,6 +803,19 @@ export default async function PicksPage({
               sourceUrl={liveBracket.sourceUrl}
               fetchedAtIso={liveBracket.fetchedAtIso}
               className="sf-hide"
+            />
+          )}
+          {/* PHA-5538: finished matches with scores, scheduled ones with their
+              local start time. Not blurred as a whole: under spoiler-free it
+              masks scores, records and post-round-1 pairings itself, and keeps
+              the start times readable. */}
+          {liveBracket && (
+            <SwissMatchList
+              rounds={liveBracket.rounds}
+              teamMap={buildTeamMap(layout)}
+              source={liveBracket.source}
+              sourceUrl={liveBracket.sourceUrl}
+              fetchedAtIso={liveBracket.fetchedAtIso}
             />
           )}
           {liveStandings && (

@@ -1,4 +1,4 @@
-import { GameTime } from "@/components/heat/GameTime";
+import { MatchTime } from "@/components/heat/MatchTime";
 
 /**
  * Playoff schedule strip (#1007), Singapore skin.
@@ -21,11 +21,10 @@ export interface ScheduleRound {
 }
 
 export function PlayoffScheduleStrip({ rounds }: { rounds: ScheduleRound[] }) {
-  const withTimes = rounds
-    .map((r) => ({ ...r, games: r.games.filter((g) => g.iso) }))
-    .filter((r) => r.games.length > 0);
-
-  if (withTimes.length === 0) return null; // no published times yet — stay dark
+  // Stay dark until at least one game has a published time; once any does,
+  // list every game, the unscheduled ones as "Time TBA" (PHA-5538).
+  const withTimes = rounds.filter((r) => r.games.length > 0);
+  if (!rounds.some((r) => r.games.some((g) => g.iso))) return null;
 
   return (
     <section className="sgb-sched">
@@ -43,7 +42,7 @@ export function PlayoffScheduleStrip({ rounds }: { rounds: ScheduleRound[] }) {
               {r.games.map((g, i) => (
                 <div key={i} className="sgb-sched-row">
                   <span className="t">{g.label}</span>
-                  <GameTime iso={g.iso} align="left" />
+                  <MatchTime iso={g.iso} />
                 </div>
               ))}
             </div>
