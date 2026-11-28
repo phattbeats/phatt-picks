@@ -97,6 +97,27 @@ times) **stays dark**: no lock, no countdown, no reveal. Nothing is estimated.
 Check it with `docker logs phatt-picks | grep stage-discovery` (it logs each
 link and each overlay change) or by reading the `StageDiscovery` table.
 
+**Playoff game times (PHA-5276)** come the same way. HLTV lists every bracket
+game with its start time on the hub's match list (`/events/<hub>/matches`)
+weeks before the teams are known. Once an hour, while any playoff round is
+undated and the bracket hasn't locked, the live tick crawls that list
+(`discoverPlayoffSchedule`, using the hub page of the last Swiss stage) and
+stores the per-game times on `StageDiscovery` rows for 114/115/116
+(`gameTimes`). `mergeStageFacts` puts them in `playoffSchedule` and re-derives
+the bracket lock. Rules (`playoff-schedule-core.ts`):
+
+- a round is filled only when HLTV lists every game of it with a time (4 QF,
+  2 SF, 1 GF); a partial or duplicated round stays dark;
+- committed games win (`SINGAPORE_PLAYOFF_SCHEDULE` is committed, so for
+  Singapore the crawl is a no-op);
+- once the bracket locks, nothing is written again, so a late HLTV edit can't
+  move a locked bracket;
+- the 3rd-place decider has no Pick'Em slot and is ignored.
+
+Games are taken in HLTV's `#1..#n` order. The bracket lock and its reminder
+use only the earliest game, so they don't depend on that order; the time
+label on each slot does. Logs: `grep playoff-discovery`.
+
 **Two lock signals, and Valve wins.** A stage counts as locked when either our
 committed time has passed or Valve has closed it (`isStageLocked` in
 `reveal-core.ts`). So a wrong or missing committed time can't leave picks
@@ -125,7 +146,7 @@ human surface is a few registry edits, each gated by CI
 | Gap | When the self-check raises it | The edit (all in `src/lib/events-core.ts`) |
 |---|---|---|
 | **Next Swiss stage undated** (`undated-stage-next`, needs-human) | The previous stage has locked and this one still has no time | Normally nothing: stage discovery (section 3a) fills it the hour HLTV lists the stage's timed matchups. If the alert persists after HLTV shows them, check the `[stage-discovery]` log. The manual fallback is unchanged: add `lockSchedule[id]`, `matchWindows[id]` and `sectionSources[id]` together. |
-| **Playoffs undated** (`undated-stage-next` on the QF section) | The last Swiss stage has locked and the bracket has no game times | Fill `SINGAPORE_PLAYOFF_SCHEDULE` (per-game UTC instants, bracket order). The bracket's lock, reveal and its one reminder are derived from it automatically (invariant F). |
+| **Playoffs undated** (`undated-stage-next` on the QF section) | The last Swiss stage has locked and the bracket has no game times | Normally nothing: playoff discovery (section 3a) fills it the hour HLTV's hub match list shows every game with a time. If it persists, check the `[playoff-discovery]` log. Manual fallback: fill the event's playoff schedule (per-game UTC instants, bracket order). The bracket's lock, reveal and its one reminder are derived from it automatically (invariant F). Singapore's is committed (PHA-5276). |
 | **Dated stage with no HLTV page** (`no-source-before-reveal`, needs-human) | Within 24h of lock with no `sectionSources[id]` | Add the HLTV stage URL. If HLTV makes no sub-event, use the hub page (Cologne's Stage III used hub 8301). |
 | **Lock drift** (`valve-closed-early` / `valve-still-open`, warn) | Valve closed before our time, or was still open 45 min after it | Correct `lockSchedule[id]`. Picks are already frozen by Valve's flag either way. |
 | **Spotlight odds** (`odds-unauthored`, info, optional) | The quarterfinals are seeded | Add that event's matchups to `PLAYOFF_MARKET_SLUGS_BY_EVENT[eventId]` in `spotlight-odds-core.ts`. Never re-use another event's entries: pickids collide across Majors. |
@@ -160,7 +181,7 @@ unless the "human" column says so.
 | After Stage I | HLTV draws Stage II; within the hour its lock moves to the real first match and the bracket shows | — |
 | **11-28** | **Stage II locks** (committed fallback `11:00Z` is HLTV's day marker until the draw replaces it). | — |
 | After Stage II | HLTV draws Stage III on hub 8302; discovery wires its source, lock and window within the hour | Only if `undated-stage-next 113` persists after HLTV lists the matches |
-| Stage III lock | Locks (Valve's flag even if our time is missing). From this tick, if the bracket is undated, the self-check raises `undated-stage-next 114` | **Commit the playoff game times** |
+| Stage III lock | Locks (Valve's flag even if our time is missing) | — (playoff times committed 11-28, PHA-5276) |
 | Dec 10–13 | QF, SF and GF resolve from Valve's answer key. The bracket locks at the first QF. | Optional: author the Polymarket matchups |
 | GF result | Coins mint, Major Wrapped opens | — |
 | GF + 48h | Archived: writes freeze, drivers stop, it joins "your Majors" | Post-mortem |
@@ -209,14 +230,10 @@ Tracked on the PHA-1406 epic. Each one is code, not a missing fact.
   "Cologne Major" title, `COLOGNE_PLAYOFF_TEAMS`), and the per-stage
   `stage-wrapped-content.ts` entries exist only for 105–107. Singapore needs
   its own entries, keyed by event.
-- **Playoff game times are not discovered yet.** Swiss stages are (section
-  3a, PHA-5358). The playoff bracket's per-game times still arrive as a
-  commit to `SINGAPORE_PLAYOFF_SCHEDULE`. `undated-stage-next 114`
-  says when it's due. PHA-5276: HLTV lists every playoff game with its time
-  on the hub match list (`/events/8302/matches`) while the teams are still
-  TBD. `playoff-schedule-core.ts` reads it into a proposed schedule
-  (`node scripts/verify-playoff-schedule.ts`). It isn't wired in yet, pending
-  the choice between a live overlay and an automated PR.
+- **Playoff game-to-slot order is HLTV's.** Playoff times are discovered
+  (section 3a, PHA-5276), in HLTV's QF #1..#4 order. Whether that is Valve's
+  slot order can only be checked once seeding is known; only the per-slot
+  time label depends on it, not the lock or the reminder.
 - **crawl4ai runs on RAID** (`CRAWL4AI_URL` over Tailscale). If the container
   stops, every HLTV crawl fails and the bracket freezes on its last cache. On
   2026-11-22 it sat in `Created` after a recreate until it was started by hand.

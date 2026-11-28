@@ -183,3 +183,31 @@ function earliestMs(schedule: Readonly<Record<number, readonly string[]>>): numb
   }
   return min;
 }
+
+/**
+ * The match list of the HLTV event a stage page belongs to:
+ * `https://www.hltv.org/events/8302/pgl-major-singapore-2026` ->
+ * `https://www.hltv.org/events/8302/matches`. Null for anything that is not an
+ * HLTV event URL (never guess a page).
+ */
+export function hltvMatchListUrl(eventPageUrl: string): string | null {
+  const m = /^https:\/\/www\.hltv\.org\/events\/(\d+)(?:[/?#]|$)/.exec(eventPageUrl.trim());
+  return m ? `https://www.hltv.org/events/${m[1]}/matches` : null;
+}
+
+/**
+ * Which HLTV page lists the playoff games: the event page of the LAST Swiss
+ * stage (the one that runs "Stage 3 & Playoffs" under the hub), from the
+ * effective sources first, else the discovered-but-unsourced page. Null until
+ * that page is known.
+ */
+export function playoffMatchListSource(input: {
+  swissSectionIds: readonly number[];
+  sources: Readonly<Record<number, { url: string } | undefined>>;
+  discovered: Readonly<Record<number, string | undefined>>;
+}): string | null {
+  const last = [...input.swissSectionIds].sort((a, b) => b - a)[0];
+  if (last === undefined) return null;
+  const page = input.sources[last]?.url ?? input.discovered[last];
+  return page ? hltvMatchListUrl(page) : null;
+}

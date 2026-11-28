@@ -18,11 +18,14 @@ import { fileURLToPath } from "node:url";
 
 import {
   classifyPlayoffLabel,
+  hltvMatchListUrl,
+  playoffMatchListSource,
   mergePlayoffProposal,
   parseHltvMatchList,
   proposePlayoffSchedule,
 } from "../src/lib/playoff-schedule-core.ts";
 import { derivePlayoffLocks } from "../src/lib/lock-schedule-core.ts";
+import { BASE_EVENTS, mergeStageFacts, validateEventRevealConfig } from "../src/lib/events-core.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(join(here, "../src/fixtures/hltv-sg-hub-matches.sample.html"), "utf8");
@@ -95,6 +98,58 @@ check(
   "follows HLTV before lock",
   eq(mergePlayoffProposal({ committed: {}, previous: proposal, proposal: moved, nowMs: before })[114], moved[114]),
 );
+
+// 4. The committed Singapore schedule is exactly what HLTV lists (fast path).
+const SG = BASE_EVENTS[27];
+const sameInstants = (a: readonly string[] = [], b: readonly string[] = []) =>
+  a.length === b.length && a.every((t, i) => Date.parse(t) === Date.parse(b[i]));
+check(
+  "committed SG schedule matches the capture",
+  [114, 115, 116].every((id) => sameInstants(SG.playoffSchedule[id], proposal[id])),
+);
+check("committed SG bracket locks 12-10 09:00Z", Date.parse(SG.lockSchedule[114]) === Date.parse("2026-12-10T09:00:00Z"));
+check("committed SG passes the reveal guard", validateEventRevealConfig(SG).length === 0, validateEventRevealConfig(SG).join("; "));
+
+// 5. Overlay (option a): an undated bracket takes HLTV's times from facts.
+const undatedLocks = Object.fromEntries(
+  Object.entries(SG.lockSchedule).filter(([k]) => !["114", "115", "116"].includes(k)),
+);
+const UNDATED = { ...SG, playoffSchedule: {}, lockSchedule: undatedLocks };
+check("undated base passes the reveal guard", validateEventRevealConfig(UNDATED).length === 0);
+const facts = Object.entries(proposal).map(([k, t]) => ({
+  sectionId: Number(k),
+  sourceUrl: "https://www.hltv.org/events/8302/matches",
+  firstMatchAt: t[0],
+  windowStart: null,
+  windowEnd: null,
+  gameTimes: t,
+}));
+const overlaid = mergeStageFacts(UNDATED, facts);
+check("overlay fills the playoff schedule", eq(overlaid.playoffSchedule, proposal));
+check("overlay derives the bracket lock", eq(
+  [114, 115, 116].map((id) => overlaid.lockSchedule[id]),
+  Array(3).fill("2026-12-10T09:00:00.000Z"),
+));
+check("overlaid config passes the reveal guard", validateEventRevealConfig(overlaid).length === 0, validateEventRevealConfig(overlaid).join("; "));
+check("Swiss locks untouched by the playoff overlay", overlaid.lockSchedule[111] === UNDATED.lockSchedule[111]);
+const lateEdit = facts.map((f) => (f.sectionId === 116 ? { ...f, gameTimes: ["2026-12-13T11:00:00Z"] } : f));
+check("committed rounds win over the overlay", mergeStageFacts(SG, lateEdit) === SG);
+check("partial facts: only that round dated",
+  eq(Object.keys(mergeStageFacts(UNDATED, facts.filter((f) => f.sectionId === 116)).playoffSchedule), ["116"]));
+check("a fact with a bad time is ignored",
+  mergeStageFacts(UNDATED, [{ ...facts[0], gameTimes: ["not a time"] }]) === UNDATED);
+check("a Swiss fact's gameTimes are ignored",
+  !("111" in mergeStageFacts(UNDATED, [{ ...facts[0], sectionId: 111, firstMatchAt: null }]).playoffSchedule));
+
+// 6. Where the match list lives.
+check("match list url", hltvMatchListUrl("https://www.hltv.org/events/8302/pgl-major-singapore-2026") === "https://www.hltv.org/events/8302/matches");
+check("non-HLTV url refused", hltvMatchListUrl("https://example.com/events/8302/x") === null);
+check("hub from the last Swiss stage's discovered page", playoffMatchListSource({
+  swissSectionIds: [111, 112, 113],
+  sources: { 111: { url: "https://www.hltv.org/events/9303/stage-1" } },
+  discovered: { 113: "https://www.hltv.org/events/8302/pgl-major-singapore-2026" },
+}) === "https://www.hltv.org/events/8302/matches");
+check("no hub known -> null", playoffMatchListSource({ swissSectionIds: [111, 112, 113], sources: {}, discovered: {} }) === null);
 
 if (failures > 0) {
   console.error(`\n${failures} check(s) failed`);

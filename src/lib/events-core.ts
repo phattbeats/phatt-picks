@@ -233,9 +233,21 @@ const COLOGNE_2026: EventConfig = {
  */
 /**
  * Singapore's per-game playoff start instants (UTC), bracket order: 114 QF x4,
- * 115 SF x2, 116 GF x1. Empty until PGL publishes them; never estimate.
+ * 115 SF x2, 116 GF x1. Committed from HLTV's hub match list
+ * (events/8302/matches, crawled 2026-11-27, teams TBD), in HLTV's #1..#n order
+ * (PHA-5276). The 3rd-place decider (12-13 06:30Z) has no Pick'Em slot. The
+ * bracket locks at the first quarterfinal, 12-10 09:00Z.
  */
-const SINGAPORE_PLAYOFF_SCHEDULE: Readonly<Record<number, readonly string[]>> = {};
+const SINGAPORE_PLAYOFF_SCHEDULE: Readonly<Record<number, readonly string[]>> = {
+  114: [
+    "2026-12-10T09:00:00Z",
+    "2026-12-10T12:00:00Z",
+    "2026-12-11T09:00:00Z",
+    "2026-12-11T12:00:00Z",
+  ],
+  115: ["2026-12-12T09:00:00Z", "2026-12-12T12:00:00Z"],
+  116: ["2026-12-13T10:00:00Z"],
+};
 
 const SINGAPORE_2026: EventConfig = {
   eventId: 27,
@@ -320,7 +332,14 @@ export const BASE_EVENTS: Readonly<Record<number, EventConfig>> = {
  * A fact with no published first match changes nothing (the stage stays dark),
  * and a discovered source with no window end is not added, so the merged
  * config always satisfies `validateEventRevealConfig`. Non-Swiss sections are
- * ignored. Pure; returns `base` itself when no fact applies.
+ * ignored by the Swiss rules above.
+ *
+ * Playoff sections (PHA-5276) carry `gameTimes` from HLTV's event match list.
+ * A round with no committed games takes them, and the bracket lock is
+ * re-derived (`derivePlayoffLocks`) from the merged schedule. A committed round
+ * always wins. The lock freeze is applied when the times are recorded
+ * (`mergePlayoffProposal`), so a late HLTV edit never reaches this merge.
+ * Pure; returns `base` itself when no fact applies.
  */
 export function mergeStageFacts(base: EventConfig, facts: readonly StageFacts[]): EventConfig {
   let lockSchedule: Record<number, string> | null = null;
@@ -351,12 +370,30 @@ export function mergeStageFacts(base: EventConfig, facts: readonly StageFacts[])
       lockSchedule[f.sectionId] = f.firstMatchAt;
     }
   }
+  // Playoff sections (PHA-5276): HLTV's per-game times fill a round only when
+  // nothing is committed for it (committed wins). The bracket lock is then
+  // re-derived from the merged schedule, so invariant F holds by construction.
+  let playoffSchedule: Record<number, readonly string[]> | null = null;
+  for (const f of facts) {
+    const name = base.sectionNames[f.sectionId];
+    if (!name || isStructurallySwiss(name)) continue;
+    const times = f.gameTimes ?? [];
+    if (times.length === 0 || !times.every((t) => Number.isFinite(Date.parse(t)))) continue;
+    if ((base.playoffSchedule[f.sectionId]?.length ?? 0) > 0) continue;
+    playoffSchedule ??= { ...base.playoffSchedule };
+    playoffSchedule[f.sectionId] = [...times];
+  }
+  if (playoffSchedule) {
+    lockSchedule ??= { ...base.lockSchedule };
+    Object.assign(lockSchedule, derivePlayoffLocks(playoffSchedule));
+  }
   if (!lockSchedule && !matchWindows && !sectionSources) return base;
   return {
     ...base,
     lockSchedule: lockSchedule ?? base.lockSchedule,
     matchWindows: matchWindows ?? base.matchWindows,
     sectionSources: sectionSources ?? base.sectionSources,
+    playoffSchedule: playoffSchedule ?? base.playoffSchedule,
   };
 }
 

@@ -64,6 +64,11 @@ export interface StageFacts {
   /** Crawl window from the page header (ISO), or null when unknown. */
   windowStart: string | null;
   windowEnd: string | null;
+  /**
+   * Playoff sections only (PHA-5276): HLTV's per-game start instants (ISO,
+   * bracket order) from the event match list. Absent / null for Swiss rows.
+   */
+  gameTimes?: readonly string[] | null;
 }
 
 const HLTV_ORIGIN = "https://www.hltv.org";

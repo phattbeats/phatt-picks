@@ -45,13 +45,19 @@ import {
   type SwissRound,
 } from "./swiss-bracket-core";
 import { isWithinRefreshWindow } from "./lock-schedule-core";
-import { recordStagePage, pendingStagePages } from "./stage-discovery";
+import {
+  recordStagePage,
+  pendingStagePages,
+  recordPlayoffMatchList,
+  discoveredStagePages,
+} from "./stage-discovery";
+import { playoffMatchListSource } from "./playoff-schedule-core";
 import { TEAM_SOURCES } from "./team-stats-sources";
 import { parseHltvEventPage } from "./stage-discovery-core";
 // Which HLTV event page carries the live Swiss table for each pick'em section
 // is now per-event config in the registry (#948). For the active event
 // (Cologne) these are exactly the section ids/urls this module declared before.
-import { getEventConfig, type SectionSource } from "./events-core";
+import { getEventConfig, sectionsInPlayOrder, type SectionSource } from "./events-core";
 
 /**
  * The Swiss standings sources for a SPECIFIC event, resolved per-call from the
@@ -420,6 +426,38 @@ export async function discoverPendingStages(eventId: number): Promise<number> {
     }
   }
   return crawled;
+}
+
+/**
+ * Hourly crawl of the hub's match list for the playoff game times (PHA-5276).
+ * Runs only while some playoff round has no times in the effective config and
+ * the bracket has not locked; once every round is dated (committed or
+ * discovered) it is a no-op, as it is before the hub page is known. Never
+ * throws. Returns the playoff sections written.
+ */
+export async function discoverPlayoffSchedule(eventId: number, nowMs: number = Date.now()): Promise<number[]> {
+  const evt = getEventConfig(eventId);
+  if (!evt) return [];
+  const sections = sectionsInPlayOrder(evt);
+  const playoff = sections.filter((s) => s.kind === "playoff").map((s) => s.sectionId);
+  if (playoff.length === 0) return [];
+  if (playoff.every((id) => (evt.playoffSchedule[id]?.length ?? 0) > 0)) return []; // fully dated
+  const lockIso = playoff.map((id) => evt.lockSchedule[id]).find((iso) => iso);
+  if (lockIso && nowMs >= Date.parse(lockIso)) return []; // bracket locked: frozen
+  const url = playoffMatchListSource({
+    swissSectionIds: sections.filter((s) => s.kind === "swiss").map((s) => s.sectionId),
+    sources: evt.sectionSources,
+    discovered: await discoveredStagePages(eventId),
+  });
+  if (!url) return [];
+  if (!(await claimRefreshSlot(`playoff-discovery:${eventId}`, DISCOVERY_MIN_INTERVAL_MS))) return [];
+  try {
+    const { html } = await crawlPage(url);
+    return await recordPlayoffMatchList(eventId, url, html, nowMs);
+  } catch (e) {
+    console.warn("[playoff-discovery] crawl failed (non-fatal):", e instanceof Error ? e.message : e);
+    return [];
+  }
 }
 
 /** The sections that have a live standings source for an event (warm-all entry point). */
