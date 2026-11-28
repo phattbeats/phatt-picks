@@ -424,6 +424,20 @@ a.sgp-note:hover { border-color: var(--hair-3); color: var(--ink-hi); }
    only while the mode is on. The picks board is NOT blurred — the viewer's own
    calls stay legible. */
 .sf-results.sf-on .sf-hide { filter: blur(10px); user-select: none; pointer-events: none; }
+/* Matches list (PHA-5538): start times and round numbers stay; every score,
+   every record label and every pairing after round 1 (it gives the teams'
+   records away) is masked. Opacity only — no reflow on toggle. */
+.sf-results.sf-on .sch-rec,
+.sf-results.sf-on .sch-res { opacity: 0; }
+.sf-results.sf-on .sch-rnd,
+.sf-results.sf-on .sch-vs { opacity: 1; }
+.sf-results.sf-on .sch-side.lo { opacity: 1; }
+.sf-results.sf-on .sch-side.won .sch-name { font-weight: inherit; }
+.sf-results.sf-on .sch-count { opacity: 0; }
+.sf-results.sf-on .s-final .sch-clock { color: var(--ink-hi); }
+.sf-results.sf-on .sch-row.sf-pair .sch-side,
+.sf-results.sf-on .sch-row.sf-pair .sch-mid { opacity: 0; pointer-events: none; user-select: none; }
+.sf-results.sf-on .sch-row.sf-pair .sch-mask { opacity: 1; }
 /* Confirm chrome on the picks board: drop the ✓/✕, the +pts, the running
    record and the green/red bar, so a slot shows only WHICH team was picked.
    The pick's own logo and name stay. */
