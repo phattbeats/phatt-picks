@@ -35,9 +35,15 @@ import { isStageFullyResolved } from "@/lib/stage-wrapped-launch-core";
 import { LockedPicksBoard } from "@/components/heat/LockedPicksBoard";
 import { LiveSwissStandings } from "@/components/heat/LiveSwissStandings";
 import { LiveSwissBracketSim } from "@/components/heat/LiveSwissBracketSim";
-import { SwissMatchList } from "@/components/heat/SwissMatchList";
 import { hasPublishedMatchups, liveBracketVisible } from "@/lib/stage-discovery-core";
-import { refreshStandingsOnRead, getSwissStandings, getSwissBracket } from "@/lib/swiss-results";
+import {
+  refreshStandingsOnRead,
+  getSwissStandings,
+  getSwissBracket,
+  refreshMatchListOnRead,
+  getListedSwissGames,
+} from "@/lib/swiss-results";
+import { firstListedStartMs, type ListedSwissGame } from "@/lib/swiss-slot-times-core";
 import { recordsByPickId } from "@/lib/swiss-results-core";
 import { refreshTeamStatsOnRead, getLiveTeamStats } from "@/lib/team-stats";
 import { refreshSpotlightOddsOnRead, getSpotlightMarket } from "@/lib/spotlight-odds";
@@ -225,6 +231,9 @@ export default async function PicksPage({
   // Valve answer key can't provide. Hourly on-read refresh, graceful-empty.
   let liveStandings: Awaited<ReturnType<typeof getSwissStandings>> = null;
   let liveBracket: Awaited<ReturnType<typeof getSwissBracket>> = null;
+  // PHA-5538: the stage's unpaired games with their start times (HLTV match
+  // list), for the bracket's empty slots and a future stage's countdown.
+  let listedGames: ListedSwissGame[] = [];
 
   // The bracket (the fan of matchups) AND the W-L standings table both go live
   // from the reveal instant on — pre- and post-lock (Brandon, #943: "and the
@@ -243,6 +252,8 @@ export default async function PicksPage({
     }
     liveBracket = await getSwissBracket(EVENT_ID, activeSectionId, matchTeams);
     liveStandings = await getSwissStandings(EVENT_ID, activeSectionId, matchTeams);
+    await refreshMatchListOnRead(EVENT_ID, activeSectionId, nowMs); // hourly claim, deferred crawl
+    listedGames = await getListedSwissGames(EVENT_ID, activeSectionId);
   }
   const bracketPublished = !!liveBracket && hasPublishedMatchups(liveBracket.rounds);
   const showLiveBracket =
@@ -482,7 +493,16 @@ export default async function PicksPage({
     ? lockTimeForSection(playoffSectionIds[0], event?.lockSchedule)
     : lockTimeForSection(activeSectionId, event?.lockSchedule);
   const registryStart = !publishedLock && isFirstSwiss && event ? stageOneStartFor(event) : null;
-  const fallbackStart = registryStart && Date.parse(registryStart) > nowMs ? registryStart : null;
+  // PHA-5538: otherwise the first game HLTV lists for the stage (Stage III
+  // before discovery dates its lock). Never estimated.
+  const listedStartMs = publishedLock || playoffActive ? null : firstListedStartMs(listedGames);
+  const listedStart = listedStartMs != null ? new Date(listedStartMs).toISOString() : null;
+  const startCandidate = registryStart ?? listedStart;
+  const fallbackStart = startCandidate && Date.parse(startCandidate) > nowMs ? startCandidate : null;
+  const startsLabel = `${activeLabel} ${playoffActive ? "start" : "starts"}`;
+  // A stage that hasn't started counts down to its first match on its own tab,
+  // open for picks or not.
+  const upcomingStart = publishedLock && Date.parse(publishedLock) > nowMs ? publishedLock : fallbackStart;
   const headerOpen = playoffActive ? anyPlayoffPickable : activePickability.pickable;
   const headerNotSeeded = playoffActive
     ? !playoffSeeded
@@ -530,7 +550,7 @@ export default async function PicksPage({
       <LockCountdown
         variant="box"
         lockAt={publishedLock ?? fallbackStart}
-        boxLabel={publishedLock ? "Locks in" : `${activeLabel} starts`}
+        boxLabel={publishedLock ? "Locks in" : startsLabel}
       />
     ) : (
       <>
@@ -539,6 +559,8 @@ export default async function PicksPage({
         <span className="k">Locks at the first match</span>
       </>
     )
+  ) : upcomingStart && !(activeScore && activeScore.possible > 0) ? (
+    <LockCountdown variant="box" lockAt={upcomingStart} boxLabel={startsLabel} />
   ) : activeScore && activeScore.possible > 0 ? (
     <>
       <span className="k">Result</span>
@@ -714,16 +736,7 @@ export default async function PicksPage({
                     source={liveBracket.source}
                     sourceUrl={liveBracket.sourceUrl}
                     fetchedAtIso={liveBracket.fetchedAtIso}
-                  />
-                )}
-                {/* PHA-5538: the opening matches with their start times. */}
-                {liveBracket && (
-                  <SwissMatchList
-                    rounds={liveBracket.rounds}
-                    teamMap={buildTeamMap(layout)}
-                    source={liveBracket.source}
-                    sourceUrl={liveBracket.sourceUrl}
-                    fetchedAtIso={liveBracket.fetchedAtIso}
+                    listed={listedGames}
                   />
                 )}
                 {liveStandings && (
@@ -802,20 +815,8 @@ export default async function PicksPage({
               source={liveBracket.source}
               sourceUrl={liveBracket.sourceUrl}
               fetchedAtIso={liveBracket.fetchedAtIso}
+              listed={listedGames}
               className="sf-hide"
-            />
-          )}
-          {/* PHA-5538: finished matches with scores, scheduled ones with their
-              local start time. Not blurred as a whole: under spoiler-free it
-              masks scores, records and post-round-1 pairings itself, and keeps
-              the start times readable. */}
-          {liveBracket && (
-            <SwissMatchList
-              rounds={liveBracket.rounds}
-              teamMap={buildTeamMap(layout)}
-              source={liveBracket.source}
-              sourceUrl={liveBracket.sourceUrl}
-              fetchedAtIso={liveBracket.fetchedAtIso}
             />
           )}
           {liveStandings && (

@@ -58,3 +58,25 @@ export function MatchTime({ iso, ms, className }: { iso?: string | null; ms?: nu
     </span>
   );
 }
+
+/**
+ * A Swiss bracket slot's start (PHA-5538): two short lines that fit between
+ * the slot's logos at phone width, "TODAY" / "SUN" over the clock, with the
+ * full date in the tooltip. "Live" once a paired match has started (until the
+ * hourly crawl brings its score). Renders "VS" until mounted, since the server
+ * doesn't know the viewer's zone.
+ */
+export function SlotTime({ ms, paired }: { ms: number; paired: boolean }) {
+  const now = useNow();
+  if (now == null) return <span className="vs">VS</span>;
+  if (paired && now >= ms) return <span className="brkt-when live">Live</span>;
+  const rel = relativeDay(localDayKey(ms), localDayKey(now));
+  const day =
+    rel === "today" ? "Today" : rel === "tomorrow" ? "Tmrw" : new Date(ms).toLocaleDateString(undefined, { weekday: "short" });
+  return (
+    <span className="brkt-when" title={`${formatDate(ms)} · ${formatClock(ms)}`}>
+      <span className="d">{day}</span>
+      <span className="t">{formatClock(ms)}</span>
+    </span>
+  );
+}

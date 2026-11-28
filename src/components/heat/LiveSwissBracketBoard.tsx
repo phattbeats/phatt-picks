@@ -11,6 +11,11 @@
  * placeholder "VS" matches / "?" team slots. Columns are top-aligned so the
  * spacing stays uniform as it scales up on desktop. Horizontal-scroll.
  *
+ * PHA-5538: every slot not yet played shows its local start time where the "VS"
+ * sits: a paired match from its own bracket cell, an unpaired slot from HLTV's
+ * match list (`listed`, mapped onto boxes by swiss-slot-times-core). A slot
+ * HLTV hasn't timed stays "VS".
+ *
  * Server component: data is parsed + cached upstream (getSwissBracket from the
  * HLTV crawl); the picks page's <AutoRefresh> re-renders it live. Truthful: every
  * score + winner is HLTV's own; unreached cells are blank, never invented.
@@ -24,6 +29,8 @@ import { LastUpdated } from "@/components/LastUpdated";
 import { teamHref } from "@/components/sg/teams/team-assets";
 import type { BracketSide, BracketTeam, SwissRound } from "@/lib/swiss-bracket-core";
 import { SKELETON, COLUMN_LAYOUT } from "@/lib/swiss-skeleton";
+import { slotTimesForBox, type ListedSwissGame } from "@/lib/swiss-slot-times-core";
+import { SlotTime } from "./MatchTime";
 
 type RoundKind = SwissRound["kind"];
 
@@ -33,6 +40,7 @@ export function LiveSwissBracketBoard({
   source,
   sourceUrl,
   fetchedAtIso,
+  listed = [],
   className,
 }: {
   rounds: SwissRound[];
@@ -40,6 +48,8 @@ export function LiveSwissBracketBoard({
   source: string;
   sourceUrl: string;
   fetchedAtIso: string;
+  /** Unpaired games with their start times, from HLTV's match list (PHA-5538). */
+  listed?: readonly ListedSwissGame[];
   /** Extra class on the board root - e.g. "sf-hide" so spoiler-free (PHA-5495)
    *  can mask this result view without blurring the viewer's own picks. */
   className?: string;
@@ -67,7 +77,7 @@ export function LiveSwissBracketBoard({
             <div key={ci} className="brkt-colwrap">
               <div className="brkt-col">
                 {labels.map((label) => (
-                  <RoundBox key={label} label={label} data={byLabel.get(label)} teamMap={teamMap} />
+                  <RoundBox key={label} label={label} data={byLabel.get(label)} teamMap={teamMap} listed={listed} />
                 ))}
               </div>
               {ci < COLUMN_LAYOUT.length - 1 && <FlowArrows />}
@@ -96,10 +106,12 @@ function RoundBox({
   label,
   data,
   teamMap,
+  listed,
 }: {
   label: string;
   data: SwissRound | undefined;
   teamMap: Map<number, TeamDef>;
+  listed: readonly ListedSwissGame[];
 }) {
   const skel = SKELETON[label] ?? { kind: "contention" as RoundKind, type: "match" as const, cells: 1, bo: 0 };
   const kind = data?.kind ?? skel.kind;
@@ -118,10 +130,15 @@ function RoundBox({
     );
   } else {
     const matches = data?.matches ?? [];
-    rows =
-      matches.length > 0
-        ? matches.map((m, i) => <MatchRow key={m.matchId ?? i} match={m} teamMap={teamMap} />)
-        : Array.from({ length: skel.cells }, (_, i) => <BlankMatchRow key={i} />);
+    // A partly paired box keeps its paired cells and pads the rest; each
+    // empty slot takes the next unpaired start HLTV lists for this box.
+    const times = slotTimesForBox(label, listed, matches.length, skel.cells);
+    rows = [
+      ...matches.map((m, i) => <MatchRow key={m.matchId ?? i} match={m} teamMap={teamMap} />),
+      ...Array.from({ length: Math.max(0, skel.cells - matches.length) }, (_, i) => (
+        <BlankMatchRow key={`b${i}`} startMs={times[i] ?? null} />
+      )),
+    ];
   }
 
   return (
@@ -151,6 +168,8 @@ function MatchRow({ match, teamMap }: { match: SwissRound["matches"][number]; te
             <span className="dash">–</span>
             <span className={team2.winner ? "w" : undefined}>{team2.score}</span>
           </>
+        ) : match.startTimeMs != null ? (
+          <SlotTime ms={match.startTimeMs} paired />
         ) : (
           <span className="vs">VS</span>
         )}
@@ -160,12 +179,12 @@ function MatchRow({ match, teamMap }: { match: SwissRound["matches"][number]; te
   );
 }
 
-function BlankMatchRow() {
+function BlankMatchRow({ startMs }: { startMs: number | null }) {
   return (
-    <div className="brkt-row brkt-blank">
+    <div className={`brkt-row brkt-blank${startMs != null ? " timed" : ""}`}>
       <span className="brkt-logo brkt-ph" />
       <span className="brkt-score">
-        <span className="vs">VS</span>
+        {startMs != null ? <SlotTime ms={startMs} paired={false} /> : <span className="vs">VS</span>}
       </span>
       <span className="brkt-logo brkt-ph" />
     </div>
