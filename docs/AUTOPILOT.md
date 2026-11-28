@@ -211,9 +211,12 @@ Tracked on the PHA-1406 epic. Each one is code, not a missing fact.
   its own entries, keyed by event.
 - **Playoff game times are not discovered yet.** Swiss stages are (section
   3a, PHA-5358). The playoff bracket's per-game times still arrive as a
-  commit to `SINGAPORE_PLAYOFF_SCHEDULE`. HLTV has not published a Singapore
-  playoff bracket to build the reader against. `undated-stage-next 114`
-  says when it's due.
+  commit to `SINGAPORE_PLAYOFF_SCHEDULE`. `undated-stage-next 114`
+  says when it's due. PHA-5276: HLTV lists every playoff game with its time
+  on the hub match list (`/events/8302/matches`) while the teams are still
+  TBD. `playoff-schedule-core.ts` reads it into a proposed schedule
+  (`node scripts/verify-playoff-schedule.ts`). It isn't wired in yet, pending
+  the choice between a live overlay and an automated PR.
 - **crawl4ai runs on RAID** (`CRAWL4AI_URL` over Tailscale). If the container
   stops, every HLTV crawl fails and the bracket freezes on its last cache. On
   2026-11-22 it sat in `Created` after a recreate until it was started by hand.
