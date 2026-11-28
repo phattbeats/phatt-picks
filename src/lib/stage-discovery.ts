@@ -22,6 +22,7 @@ import {
 } from "./playoff-schedule-core";
 import {
   linkStagesToSections,
+  nextFirstMatchAt,
   parseHltvEventPage,
   stageFactsFromPage,
   type StageFacts,
@@ -82,7 +83,8 @@ export async function loadStageFacts(): Promise<number> {
 /**
  * Persist what one crawl of a stage page says. A crawl that parses no timed
  * matchup never clears a previously published first match (a transient parse
- * miss must not re-darken a stage). Linked sibling pages are recorded only for
+ * miss must not re-darken a stage), and once that first match has passed it
+ * is frozen (`nextFirstMatchAt`). Linked sibling pages are recorded only for
  * Swiss sections with no committed source, and never replace a row that
  * already has a published first match. Reloads the overlay afterwards.
  */
@@ -101,7 +103,12 @@ export async function recordStagePage(
     const prior = await prisma.stageDiscovery.findUnique({
       where: { eventId_sectionId: { eventId, sectionId } },
     });
-    const firstMatchAt = toDate(own.firstMatchAt) ?? prior?.firstMatchAt ?? null;
+    const firstMs = nextFirstMatchAt(
+      prior?.firstMatchAt?.getTime() ?? null,
+      own.firstMatchAt ? Date.parse(own.firstMatchAt) : null,
+      Date.now(),
+    );
+    const firstMatchAt = firstMs === null ? null : new Date(firstMs);
     const data = {
       sourceUrl,
       firstMatchAt,
