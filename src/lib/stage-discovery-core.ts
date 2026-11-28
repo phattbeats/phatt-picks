@@ -71,6 +71,19 @@ export interface StageFacts {
   gameTimes?: readonly string[] | null;
 }
 
+/**
+ * The first-match instant to store after a crawl (PHA-5276 freeze rule).
+ * Once the stored first match has passed, the stage has locked and the value
+ * is frozen: matches already played drop off HLTV's timed upcoming list, so a
+ * later crawl reports a LATER "first" match (Singapore Stage II moved 04:00Z ->
+ * 05:00Z at 04:43Z). Before that, a fresh parse wins, and a parse miss never
+ * clears a stored value.
+ */
+export function nextFirstMatchAt(prior: number | null, crawled: number | null, nowMs: number): number | null {
+  if (prior !== null && nowMs >= prior) return prior;
+  return crawled ?? prior;
+}
+
 const HLTV_ORIGIN = "https://www.hltv.org";
 
 /**

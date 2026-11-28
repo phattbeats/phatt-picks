@@ -28,6 +28,7 @@ import {
   liveBracketVisible,
   WINDOW_END_GRACE_MS,
   type StageFacts,
+  nextFirstMatchAt,
 } from "../src/lib/stage-discovery-core.ts";
 import { parseSwissBracket } from "../src/lib/swiss-bracket-core.ts";
 import {
@@ -103,6 +104,22 @@ check("no facts -> base returned unchanged", mergeStageFacts(SG, []) === SG);
 const moved = mergeStageFacts(SG, [{ ...s1Facts, firstMatchAt: "2026-11-24T03:00:00.000Z" }]);
 check("published first match replaces the committed lock", moved.lockSchedule[111] === "2026-11-24T03:00:00.000Z");
 check("committed source and window are kept", moved.sectionSources[111] === SG.sectionSources[111] && moved.matchWindows[111] === SG.matchWindows[111]);
+// PHA-5276 freeze: Singapore Stage II's first match (04:00Z) must not move to
+// 05:00Z when a 04:43Z crawl no longer lists the matches already started.
+{
+  const at = (iso: string) => Date.parse(iso);
+  const s2 = at("2026-11-28T04:00:00Z");
+  check("freeze: after the first match, a later crawl can't move it",
+    nextFirstMatchAt(s2, at("2026-11-28T05:00:00Z"), at("2026-11-28T04:43:39Z")) === s2);
+  check("freeze: exactly at the first match it is already frozen",
+    nextFirstMatchAt(s2, at("2026-11-28T03:00:00Z"), s2) === s2);
+  check("before the first match a fresh parse wins",
+    nextFirstMatchAt(s2, at("2026-11-28T03:30:00Z"), at("2026-11-28T01:00:00Z")) === at("2026-11-28T03:30:00Z"));
+  check("a parse miss never clears the stored value",
+    nextFirstMatchAt(s2, null, at("2026-11-28T01:00:00Z")) === s2);
+  check("first publish fills an empty row",
+    nextFirstMatchAt(null, s2, at("2026-11-28T01:00:00Z")) === s2);
+}
 check("a fact with no first match changes nothing", mergeStageFacts(SG, [{ ...s1Facts, firstMatchAt: null }]) === SG);
 check("a fact for a playoff section is ignored", mergeStageFacts(SG, [{ ...s1Facts, sectionId: 114 }]) === SG);
 check("a fact for an unknown section is ignored", mergeStageFacts(SG, [{ ...s1Facts, sectionId: 999 }]) === SG);
